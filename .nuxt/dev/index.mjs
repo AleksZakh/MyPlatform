@@ -9,6 +9,7 @@ import { escapeHtml } from 'file:///home/local_adm/Projects/MyPlatform/node_modu
 import { PrismaClient } from 'file:///home/local_adm/Projects/MyPlatform/node_modules/@prisma/client/default.js';
 import bcrypt from 'file:///home/local_adm/Projects/MyPlatform/node_modules/bcrypt/bcrypt.js';
 import { z } from 'file:///home/local_adm/Projects/MyPlatform/node_modules/zod/index.js';
+import ActiveDirectory from 'file:///home/local_adm/Projects/MyPlatform/node_modules/activedirectory2/index.js';
 import { createRenderer, getRequestDependencies, getPreloadLinks, getPrefetchLinks } from 'file:///home/local_adm/Projects/MyPlatform/node_modules/vue-bundle-renderer/dist/runtime.mjs';
 import { parseURL, withoutBase, joinURL, getQuery, withQuery, joinRelativeURL, withTrailingSlash, decodePath, withLeadingSlash, withoutTrailingSlash } from 'file:///home/local_adm/Projects/MyPlatform/node_modules/ufo/dist/index.mjs';
 import destr, { destr as destr$1 } from 'file:///home/local_adm/Projects/MyPlatform/node_modules/destr/dist/index.mjs';
@@ -38,7 +39,6 @@ import _wH6JrtIxmaSoA8lCPWFnE9z4lQeXW6H5z3l5aymEQw from 'file:///home/local_adm/
 import { promises } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname as dirname$1, resolve as resolve$1, basename, isAbsolute } from 'file:///home/local_adm/Projects/MyPlatform/node_modules/pathe/dist/index.mjs';
-import ActiveDirectory from 'file:///home/local_adm/Projects/MyPlatform/node_modules/activedirectory2/index.js';
 import { createHead as createHead$1, propsToString, renderSSRHead } from 'file:///home/local_adm/Projects/MyPlatform/node_modules/unhead/dist/server.mjs';
 import { renderToString } from 'file:///home/local_adm/Projects/MyPlatform/node_modules/vue/server-renderer/index.mjs';
 import { walkResolver } from 'file:///home/local_adm/Projects/MyPlatform/node_modules/unhead/dist/utils.mjs';
@@ -967,6 +967,13 @@ const _inlineRuntimeConfig = {
     "auth": {
       "loadStrategy": "server-first"
     }
+  },
+  "ad": {
+    "url": "ldap://10.0.18.1:389",
+    "baseDN": "ou=Groups,ou=Avtodor_ENG,dc=corp,dc=avtodor-eng,dc=ru",
+    "username": "CN=ldapreader,OU=Tech_accounts,OU=Avtodor_ENG,DC=corp,DC=avtodor-eng,DC=ru",
+    "password": "HkLNKPi7",
+    "timeout": 5000
   },
   "session": {
     "name": "nuxt-session",
@@ -2867,7 +2874,7 @@ const _iYewtuE5crcn_XXqAor3doaZbjFeKRVmvqTE6zGuaKk = defineNitroPlugin((nitroApp
 
 const rootDir = "/home/local_adm/Projects/MyPlatform";
 
-const appHead = {"meta":[{"name":"viewport","content":"width=device-width, initial-scale=1"},{"charset":"utf-8"}],"link":[{"rel":"icon","type":"image/x-icon","href":"/logo_logo.svg"}],"style":[],"script":[],"noscript":[],"title":"Первое приложение","htmlAttrs":{"lang":"ru"}};
+const appHead = {"meta":[{"name":"viewport","content":"width=device-width, initial-scale=1"},{"charset":"utf-8"}],"link":[{"rel":"icon","type":"image/x-icon","href":"/logo_logo.svg"}],"style":[],"script":[],"noscript":[],"title":"NewPlatform","htmlAttrs":{"lang":"ru"}};
 
 const appRootTag = "div";
 
@@ -2975,15 +2982,69 @@ const _3IcaGGigBEQYf8R9w1wwNU8KhKtdItQhD1Y4446qRX4 = (function(nitro) {
   });
 });
 
+const _W4jooJ6JHQPWYOpmFWIzzHnw3tKBD2infQP3A2jKBI = defineNitroPlugin(async () => {
+  console.log("\n\u{1F3C1} \u041F\u0420\u041E\u0412\u0415\u0420\u041A\u0410 \u041F\u041E\u0414\u041A\u041B\u042E\u0427\u0415\u041D\u0418\u042F \u041A ACTIVE DIRECTORY");
+  console.log("===========================================\n");
+  const config = useRuntimeConfig();
+  const adConfig = {
+    url: config.ad.url,
+    baseDN: config.ad.baseDN,
+    username: config.ad.username,
+    password: config.ad.password,
+    timeout: config.ad.timeout
+  };
+  const ad = new ActiveDirectory(adConfig);
+  setTimeout(() => {
+    ad.authenticate(adConfig.username, adConfig.password, (err, isAuthenticated) => {
+      if (err) {
+        console.error("\u274C \u274C \u274C \u041F\u0420\u0415\u0414\u0423\u041F\u0420\u0415\u0416\u0414\u0415\u041D\u0418\u0415: \u041D\u0415\u0422 \u041F\u041E\u0414\u041A\u041B\u042E\u0427\u0415\u041D\u0418\u042F \u041A \u0414\u041E\u041C\u0415\u041D\u0423 \u274C \u274C \u274C");
+        const error = err;
+        console.error(`\u{1F4DB} \u041E\u0448\u0438\u0431\u043A\u0430: ${error.message || error}`);
+        if (error.code === "ENOTFOUND") {
+          console.error("\u{1F4A1} \u041A\u043E\u043D\u0442\u0440\u043E\u043B\u043B\u0435\u0440 \u0434\u043E\u043C\u0435\u043D\u0430 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D. \u041F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 AD_URL");
+        } else if (error.code === "ECONNREFUSED") {
+          console.error("\u{1F4A1} \u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0435 \u043E\u0442\u043A\u043B\u043E\u043D\u0435\u043D\u043E. \u041F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u043F\u043E\u0440\u0442 \u0438 firewall");
+        } else if (error.code === "LDAP_INVALID_CREDENTIALS") {
+          console.error("\u{1F4A1} \u041D\u0435\u0432\u0435\u0440\u043D\u044B\u0435 \u0443\u0447\u0435\u0442\u043D\u044B\u0435 \u0434\u0430\u043D\u043D\u044B\u0435. \u041F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 AD_USERNAME \u0438 AD_PASSWORD");
+        } else if (error.code) {
+          console.error(`\u{1F4A1} \u041A\u043E\u0434 \u043E\u0448\u0438\u0431\u043A\u0438: ${error.code}`);
+        }
+        console.error("\u{1F4A1} \u0424\u0443\u043D\u043A\u0446\u0438\u0438 \u0430\u0443\u0442\u0435\u043D\u0442\u0438\u0444\u0438\u043A\u0430\u0446\u0438\u0438 \u0438 \u0430\u0432\u0442\u043E\u0440\u0438\u0437\u0430\u0446\u0438\u0438 \u0431\u0443\u0434\u0443\u0442 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u044B\n");
+      } else if (isAuthenticated) {
+        console.log("\u2705 \u2705 \u2705 \u041F\u041E\u0414\u041A\u041B\u042E\u0427\u0415\u041D\u0418\u0415 \u041A \u0414\u041E\u041C\u0415\u041D\u0423 \u0423\u0421\u0422\u0410\u041D\u041E\u0412\u041B\u0415\u041D\u041E \u2705 \u2705 \u2705");
+        console.log("\u{1F310} \u041F\u0440\u0438\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u043E \u043A AD \u0438 \u0433\u043E\u0442\u043E\u0432\u043E \u043A \u0440\u0430\u0431\u043E\u0442\u0435\n");
+      } else {
+        console.error("\u274C \u041E\u0448\u0438\u0431\u043A\u0430 \u0430\u0443\u0442\u0435\u043D\u0442\u0438\u0444\u0438\u043A\u0430\u0446\u0438\u0438: \u0443\u0447\u0435\u0442\u043D\u044B\u0435 \u0434\u0430\u043D\u043D\u044B\u0435 \u043D\u0435 \u043F\u0440\u043E\u0448\u043B\u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0443\n");
+      }
+    });
+  }, 2e3);
+});
+
 const plugins = [
   _289wjib25d5dcyAPk0QgYYaG_Acp_8KkxfSQZYAsZk,
 _iYewtuE5crcn_XXqAor3doaZbjFeKRVmvqTE6zGuaKk,
 _TyE_DB1kgD0xzXkx62XrSmsNWJaVJGQ39n9sKAKQY,
 _3IcaGGigBEQYf8R9w1wwNU8KhKtdItQhD1Y4446qRX4,
+_W4jooJ6JHQPWYOpmFWIzzHnw3tKBD2infQP3A2jKBI,
 _wH6JrtIxmaSoA8lCPWFnE9z4lQeXW6H5z3l5aymEQw
 ];
 
-const assets = {};
+const assets = {
+  "/index.mjs": {
+    "type": "text/javascript; charset=utf-8",
+    "etag": "\"241cc-1dTAfrz1ENUawTc8NZxsNFNPrGw\"",
+    "mtime": "2026-05-18T11:11:32.568Z",
+    "size": 147916,
+    "path": "index.mjs"
+  },
+  "/index.mjs.map": {
+    "type": "application/json",
+    "etag": "\"856ad-U/WGMVPbxP7UDTL9eIl20VARJvQ\"",
+    "mtime": "2026-05-18T11:11:32.570Z",
+    "size": 546477,
+    "path": "index.mjs.map"
+  }
+};
 
 function readAsset (id) {
   const serverDir = dirname$1(fileURLToPath(globalThis._importMeta_.url));
@@ -3553,6 +3614,7 @@ const _lazy_9sNQwU = () => Promise.resolve().then(function () { return me_get$1;
 const _lazy_yuVYLs = () => Promise.resolve().then(function () { return me$1; });
 const _lazy_hPQiZu = () => Promise.resolve().then(function () { return register_post$1; });
 const _lazy_KSLOIV = () => Promise.resolve().then(function () { return session_get$1; });
+const _lazy_tUcqc4 = () => Promise.resolve().then(function () { return domainConnection_get$1; });
 const _lazy_fj4Rsw = () => Promise.resolve().then(function () { return renderer; });
 
 const handlers = [
@@ -3564,6 +3626,7 @@ const handlers = [
   { route: '/api/auth/me', handler: _lazy_yuVYLs, lazy: true, middleware: false, method: undefined },
   { route: '/api/auth/register', handler: _lazy_hPQiZu, lazy: true, middleware: false, method: "post" },
   { route: '/api/auth/session', handler: _lazy_KSLOIV, lazy: true, middleware: false, method: "get" },
+  { route: '/api/test/domain-connection', handler: _lazy_tUcqc4, lazy: true, middleware: false, method: "get" },
   { route: '/__nuxt_error', handler: _lazy_fj4Rsw, lazy: true, middleware: false, method: undefined },
   { route: '/__nuxt_island/**', handler: handler$1, lazy: false, middleware: false, method: undefined },
   { route: '/api/_auth/session', handler: _Lckxhw, lazy: false, middleware: false, method: "delete" },
@@ -4073,6 +4136,92 @@ const session_get = defineEventHandler(async (event) => {
 const session_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   __proto__: null,
   default: session_get
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const domainConnection_get = defineEventHandler(async (event) => {
+  const config = useRuntimeConfig(event);
+  const adConfig = {
+    url: config.ad.url,
+    baseDN: config.ad.baseDN,
+    username: config.ad.username,
+    password: config.ad.password,
+    timeout: config.ad.timeout
+  };
+  const startTime = Date.now();
+  const ad = new ActiveDirectory(adConfig);
+  const result = {
+    success: false,
+    message: "",
+    details: {},
+    elapsedMs: 0,
+    timestamp: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  console.log("=== \u0422\u0415\u0421\u0422 \u041F\u041E\u0414\u041A\u041B\u042E\u0427\u0415\u041D\u0418\u042F \u041A \u0414\u041E\u041C\u0415\u041D\u0423 (activedirectory2) ===");
+  console.log(`\u{1F4E1} \u0410\u0434\u0440\u0435\u0441: ${adConfig.url}`);
+  console.log(`\u{1F4C1} Base DN: ${adConfig.baseDN}`);
+  console.log(`\u{1F464} \u041F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C: ${adConfig.username}`);
+  return new Promise((resolve) => {
+    const timeoutId = setTimeout(() => {
+      result.message = "\u274C \u0422\u0430\u0439\u043C\u0430\u0443\u0442 \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u044F \u043A \u0434\u043E\u043C\u0435\u043D\u0443";
+      result.details = { error: "Connection timeout" };
+      console.error(result.message);
+      resolve(result);
+    }, adConfig.timeout + 1e3);
+    ad.authenticate(adConfig.username, adConfig.password, (err, isAuthenticated) => {
+      clearTimeout(timeoutId);
+      result.elapsedMs = Date.now() - startTime;
+      const error = err;
+      if (err) {
+        result.success = false;
+        result.message = `\u274C \u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u044F \u043A \u0434\u043E\u043C\u0435\u043D\u0443: ${error.message || error}`;
+        result.details = {
+          error: error.message || error,
+          code: error.code || "UNKNOWN"
+        };
+        console.error(result.message);
+        if (error.code === "ECONNREFUSED") {
+          console.error("\u{1F4A1} \u041A\u043E\u043D\u0442\u0440\u043E\u043B\u043B\u0435\u0440 \u0434\u043E\u043C\u0435\u043D\u0430 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D \u0438\u043B\u0438 \u043F\u043E\u0440\u0442 389 \u0437\u0430\u043A\u0440\u044B\u0442");
+          console.error("   \u041F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435: \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u043E\u0441\u0442\u044C \u0441\u0435\u0440\u0432\u0435\u0440\u0430, firewall, \u0441\u043B\u0443\u0436\u0431\u0443 LDAP");
+        } else if (error.code === "ENOTFOUND") {
+          console.error("\u{1F4A1} DNS \u0438\u043C\u044F \u043D\u0435 \u0440\u0430\u0437\u0440\u0435\u0448\u0430\u0435\u0442\u0441\u044F");
+          console.error(`   \u041F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435: \u043F\u0440\u0430\u0432\u0438\u043B\u044C\u043D\u043E\u0441\u0442\u044C URL "${adConfig.url}"`);
+        } else if (error.code === "LDAP_INVALID_CREDENTIALS") {
+          console.error("\u{1F4A1} \u041D\u0435\u0432\u0435\u0440\u043D\u044B\u0435 \u0443\u0447\u0435\u0442\u043D\u044B\u0435 \u0434\u0430\u043D\u043D\u044B\u0435");
+          console.error(`   \u041F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435: AD_USERNAME="${adConfig.username}" \u0438 \u043F\u0430\u0440\u043E\u043B\u044C`);
+        } else if (error.code === "ETIMEOUT") {
+          console.error("\u{1F4A1} \u0422\u0430\u0439\u043C\u0430\u0443\u0442 \u0441\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u044F");
+          console.error("   \u041F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435: \u0441\u0435\u0442\u0435\u0432\u0443\u044E \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u043E\u0441\u0442\u044C \u0438 \u0443\u0432\u0435\u043B\u0438\u0447\u044C\u0442\u0435 AD_TIMEOUT");
+        }
+      } else if (isAuthenticated) {
+        result.success = true;
+        result.message = "\u2705 \u2705 \u2705 \u0423\u0421\u041F\u0415\u0428\u041D\u041E\u0415 \u041F\u041E\u0414\u041A\u041B\u042E\u0427\u0415\u041D\u0418\u0415 \u041A \u0414\u041E\u041C\u0415\u041D\u0423!";
+        result.details = {
+          authenticated: true,
+          baseDN: adConfig.baseDN,
+          user: adConfig.username
+        };
+        console.log(`\u{1F389} ${result.message}`);
+        console.log(`\u23F1\uFE0F \u0412\u0440\u0435\u043C\u044F \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u044F: ${result.elapsedMs}ms`);
+        console.log(`\u{1F464} \u0410\u0443\u0442\u0435\u043D\u0442\u0438\u0444\u0438\u043A\u0430\u0446\u0438\u044F \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u0430 \u0434\u043B\u044F: ${adConfig.username}`);
+      } else {
+        result.success = false;
+        result.message = "\u274C \u041E\u0448\u0438\u0431\u043A\u0430 \u0430\u0443\u0442\u0435\u043D\u0442\u0438\u0444\u0438\u043A\u0430\u0446\u0438\u0438: \u043D\u0435\u0432\u0435\u0440\u043D\u044B\u0435 \u0443\u0447\u0435\u0442\u043D\u044B\u0435 \u0434\u0430\u043D\u043D\u044B\u0435";
+        result.details = {
+          authenticated: false,
+          error: "Invalid credentials"
+        };
+        console.error(result.message);
+      }
+      console.log(`\u{1F4DD} \u0420\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442: ${result.message}
+`);
+      resolve(result);
+    });
+  });
+});
+
+const domainConnection_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: domainConnection_get
 }, Symbol.toStringTag, { value: 'Module' }));
 
 function renderPayloadResponse(ssrContext) {

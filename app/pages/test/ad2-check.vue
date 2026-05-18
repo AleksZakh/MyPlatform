@@ -1,8 +1,8 @@
 <!-- pages/test/ad2-check.vue -->
 <template>
-  <div class="p-4">
+  <div>
     <h1>Тест подключения к домену (activedirectory2)</h1>
-    <button class="bg-blue-500 text-white px-4 py-2 rounded" @click="checkConnection" :disabled="loading">
+    <button @click="checkConnection" :disabled="loading">
       {{ loading ? 'Проверка...' : 'Проверить подключение' }}
     </button>
     <pre v-if="result">{{ JSON.stringify(result, null, 2) }}</pre>

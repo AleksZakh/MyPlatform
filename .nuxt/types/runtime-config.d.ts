@@ -10,6 +10,18 @@ import { RuntimeConfig as UserRuntimeConfig, PublicRuntimeConfig as UserPublicRu
       cdnURL: string,
    },
 
+   ad: {
+      url: string,
+
+      baseDN: string,
+
+      username: string,
+
+      password: string,
+
+      timeout: number,
+   },
+
    nitro: {
       envPrefix: string,
    },

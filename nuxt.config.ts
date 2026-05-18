@@ -5,9 +5,19 @@ export default defineNuxtConfig({
   experimental: {
     serverAppConfig: false
   },
+  runtimeConfig: {
+    // Серверные переменные (доступны только на сервере)
+    ad: {
+      url: process.env.AD_URL || 'ldap://localhost:389',
+      baseDN: process.env.AD_BASE_DN || 'DC=local,DC=com',
+      username: process.env.AD_USERNAME || '',
+      password: process.env.AD_PASSWORD || '',
+      timeout: parseInt(process.env.AD_TIMEOUT || '5000')
+    }
+  },
   app: {
     head: {
-      title: 'Первое приложение', // default fallback title
+      title: 'NewPlatform', // default fallback title
       htmlAttrs: {
         lang: 'ru',
       },

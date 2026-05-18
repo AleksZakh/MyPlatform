@@ -4,10 +4,10 @@ export default defineNuxtRouteMiddleware((to, from) => {
   // Используем встроенный модуль
   const { loggedIn } = useUserSession();
 
-  console.log('loggedIn:', loggedIn.value);
-  console.log('authStore.isAuth:', authStore.isAuth);
+  // console.log('loggedIn:', loggedIn.value);
+  // console.log('authStore.isAuth:', authStore.isAuth);
   
-  console.log(`Проверяем доступ к ${to.path}...`, loggedIn.value ? '(Пользователь авторизован)' : '(Пользователь НЕ авторизован)')
+  // console.log(`Проверяем доступ к ${to.path}...`, loggedIn.value ? '(Пользователь авторизован)' : '(Пользователь НЕ авторизован)')
 
   // 1. Исключаем саму страницу логина из проверок, чтобы избежать зацикливания
   if (to.path === '/login') {
@@ -26,7 +26,7 @@ export default defineNuxtRouteMiddleware((to, from) => {
 
   // 3. Если пользователь НЕ авторизован и пытается зайти на защищенную страницу
   if (!loggedIn.value) {
-    console.warn(`Доступ запрещен к ${to.path}. Редирект на /login`)
+    // console.warn(`Доступ запрещен к ${to.path}. Редирект на /login`)
     return navigateTo('/login')
   }
 })
