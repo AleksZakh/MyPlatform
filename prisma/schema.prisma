@@ -1,0 +1,35 @@
+
+
+generator client {
+  // provider = "prisma-client"
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+
+model sessions {
+  id        Int    @id @default(autoincrement())
+  userId    Int
+  sessionId String @unique(map: "sessions_sessionid_unique") @db.VarChar(255)
+  timestamp BigInt // Без кастинга
+  users     users  @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "sessions_userid_foreign")
+
+  @@index([sessionId], map: "idx_sessions_sessionId")
+}
+
+model users {
+  id             Int              @id @default(autoincrement())
+  userName       String           @unique(map: "users_username_unique") @db.VarChar(255)
+  password       String           @db.VarChar(255)
+  login          String           @unique @db.VarChar(255)
+  email          String           @unique @db.VarChar(255)
+  role           String           @db.VarChar(100)
+  sessions       sessions[]
+
+  @@index([userName], map: "idx_users_userName")
+}
+
+
