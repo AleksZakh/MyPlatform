@@ -1,9 +1,9 @@
 {
-  "_hash": "qLOa2N4IkR9jmXzzfkzRZ4HgSiaWRL9YqV-8SwnKNNA",
+  "_hash": "vAVHA2PryFvTYq7Z45vZNlLS4jfIoM7001CMUKgu47w",
   "project": {
     "rootDir": "/home/local_adm/Projects/MyPlatform"
   },
   "versions": {
-    "nuxt": "4.4.2"
+    "nuxt": "4.4.6"
   }
 }

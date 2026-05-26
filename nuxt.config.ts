@@ -9,7 +9,7 @@ export default defineNuxtConfig({
     // Серверные переменные (доступны только на сервере)
     ad: {
       url: process.env.AD_URL || 'ldap://localhost:389',
-      baseDN: process.env.AD_BASE_DN || 'DC=local,DC=com',
+      baseDN: process.env.AD_DOMAIN_USERS || 'DC=local,DC=com',
       username: process.env.AD_USERNAME || '',
       password: process.env.AD_PASSWORD || '',
       timeout: parseInt(process.env.AD_TIMEOUT || '5000')
