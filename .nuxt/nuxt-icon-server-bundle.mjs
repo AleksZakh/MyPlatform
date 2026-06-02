@@ -14,4 +14,5 @@ function createRemoteCollection(fetchEndpoint) {
 export const collections = {
   'line-md': () => require('@iconify-json/line-md/icons.json'),
   'lucide': () => require('@iconify-json/lucide/icons.json'),
+  'simple-icons': () => require('@iconify-json/simple-icons/icons.json'),
 }

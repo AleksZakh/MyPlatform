@@ -1,10 +1,10 @@
 <template>
   <UApp>
     <NuxtLayout >
-      <div class="bg-gray-50 min-h-screen">
+      <div class="bg-gray-50 h-full">
         <NuxtPage />
       </div>
-    </NuxtLayout>
+    </NuxtLayout>    
   </UApp>
 </template>
 

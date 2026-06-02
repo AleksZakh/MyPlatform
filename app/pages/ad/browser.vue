@@ -170,7 +170,7 @@
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                 {{ group.member?.length || 0 }}
               </td>
-              <td class="px-6 py-4 text-sm text-gray-500 font-mono text-xs truncate max-w-md">
+              <td class="px-6 py-4 text-sm text-gray-500 font-mono truncate max-w-md">
                 {{ group.dn || '-' }}
               </td>
             </tr>
