@@ -21,7 +21,8 @@ export default defineEventHandler(async (event) => {
       scope: 'sub',                            // Поиск во всех подразделениях
       sizeLimit: 500,                          // Ограничиваем количество
       timeLimit: 30,                           // Таймаут в секундах
-      attributes: ['cn', 'sn', 'givenName', 'mail', 'sAMAccountName', 'department', 'telephoneNumber', 'title', 'l'],
+      attributes: [],
+      // attributes: ['cn', 'sn', 'givenName', 'mail', 'sAMAccountName', 'department', 'telephoneNumber', 'title', 'l'],
       includeMembership: [],                   // Обязательное поле
       includeDeleted: false,                   // Обязательное поле
       includeDerivedMembership: []             // Обязательное поле

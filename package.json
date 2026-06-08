@@ -22,7 +22,7 @@
     "activedirectory2": "^2.2.0",
     "axios": "^1.16.0",
     "chalk": "^5.6.2",
-    "dotenv": "^17.4.2",
+    "csv-parse": "^6.2.1",
     "express": "^5.2.1",
     "nuxt": "^4.4.2",
     "nuxt-auth-utils": "^0.5.29",
@@ -42,11 +42,16 @@
     "@iconify-json/line-md": "^1.2.16",
     "@iconify-json/lucide": "^1.2.102",
     "@iconify-json/simple-icons": "^1.2.84",
+    "@iconify-json/streamline-freehand-color": "^1.2.2",
     "@types/activedirectory2": "^1.2.6",
     "@types/bcrypt": "^6.0.0",
-    "@types/node": "^25.6.0",
+    "@types/node": "^25.9.1",
     "bcrypt": "^6.0.0",
     "concurrently": "^9.2.1",
+    "dotenv": "^17.4.2",
     "tsx": "^4.21.0"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
   }
 }

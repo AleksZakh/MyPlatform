@@ -31,6 +31,7 @@ export { requestIdleCallback, cancelIdleCallback } from '#app/compat/idle-callba
 export { setInterval } from '#app/compat/interval';
 export { definePageMeta, PageMeta } from '#app/composables/pages';
 export { defineLazyHydrationComponent } from '#app/composables/lazy-hydration';
+export { useADUsers } from '../app/composables/useADUsers';
 export { useAuth } from '../app/composables/useAuth';
 export { useAuthStore, actions, useIsLoadingStore } from '../app/stores/auth.store';
 export { useToastStore } from '../app/stores/toast.store';

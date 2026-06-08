@@ -6,6 +6,9 @@ declare module "nitropack/types" {
     '/api/ad/get-groups': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ad/get-groups.get').default>>>>
     }
+    '/api/ad/get-users-shared': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ad/get-users-shared.get').default>>>>
+    }
     '/api/ad/get-users': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ad/get-users.get').default>>>>
     }
@@ -27,6 +30,9 @@ declare module "nitropack/types" {
     }
     '/api/auth/session': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/auth/session.get').default>>>>
+    }
+    '/api/lab-tests': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab-tests.get').default>>>>
     }
     '/api/test/domain-connection': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/test/domain-connection.get').default>>>>

@@ -1,17 +1,19 @@
 import process from 'node:process';globalThis._importMeta_={url:import.meta.url,env:process.env};import { tmpdir } from 'node:os';
-import { defineEventHandler, handleCacheHeaders, splitCookiesString, createEvent, fetchWithEvent, isEvent, eventHandler, setHeaders, createError, sendRedirect, proxyRequest, getRequestHeader, setResponseHeaders, setResponseStatus, send, getRequestHeaders, setResponseHeader, appendResponseHeader, getRequestURL, getResponseHeader, getResponseStatus, useSession, removeResponseHeader, getHeader, getQuery as getQuery$1, readBody, lazyEventHandler, useBase, createApp, createRouter as createRouter$1, toNodeListener, getRouterParam, sendError, deleteCookie, getCookie, getResponseStatusText } from 'file:///home/local_adm/Projects/MyPlatform/node_modules/h3/dist/index.mjs';
+import { defineEventHandler, handleCacheHeaders, splitCookiesString, createEvent, fetchWithEvent, isEvent, eventHandler, setHeaders, createError, sendRedirect, proxyRequest, getRequestHeader, setResponseHeaders, setResponseStatus, send, getRequestHeaders, setResponseHeader, appendResponseHeader, getRequestURL, getResponseHeader, getResponseStatus, useSession, removeResponseHeader, getHeader, getQuery as getQuery$1, readBody, lazyEventHandler, useBase, createApp, createRouter as createRouter$1, toNodeListener, getRouterParam, deleteCookie, getCookie, getResponseStatusText } from 'file:///home/local_adm/Projects/MyPlatform/node_modules/h3/dist/index.mjs';
 import { Server } from 'node:http';
 import { resolve, dirname, join } from 'node:path';
 import crypto$1 from 'node:crypto';
 import { parentPort, threadId } from 'node:worker_threads';
 import wsAdapter from 'file:///home/local_adm/Projects/MyPlatform/node_modules/crossws/dist/adapters/node.mjs';
 import { escapeHtml } from 'file:///home/local_adm/Projects/MyPlatform/node_modules/@vue/shared/dist/shared.cjs.js';
+import ActiveDirectory from 'file:///home/local_adm/Projects/MyPlatform/node_modules/activedirectory2/index.js';
+import { Cron } from 'file:///home/local_adm/Projects/MyPlatform/node_modules/croner/dist/croner.js';
 import viteNodeEntry_mjs from 'file:///home/local_adm/Projects/MyPlatform/node_modules/@nuxt/vite-builder/dist/vite-node-entry.mjs';
 import { viteNodeFetch } from 'file:///home/local_adm/Projects/MyPlatform/node_modules/@nuxt/vite-builder/dist/vite-node.mjs';
-import ActiveDirectory from 'file:///home/local_adm/Projects/MyPlatform/node_modules/activedirectory2/index.js';
 import { PrismaClient } from 'file:///home/local_adm/Projects/MyPlatform/node_modules/@prisma/client/default.js';
 import bcrypt from 'file:///home/local_adm/Projects/MyPlatform/node_modules/bcrypt/bcrypt.js';
 import { z } from 'file:///home/local_adm/Projects/MyPlatform/node_modules/zod/index.js';
+import { readFile } from 'node:fs/promises';
 import { createRenderer, getRequestDependencies, getPreloadLinks, getPrefetchLinks } from 'file:///home/local_adm/Projects/MyPlatform/node_modules/vue-bundle-renderer/dist/runtime.mjs';
 import { parseURL, withoutBase, joinURL, getQuery, withQuery, joinRelativeURL, withTrailingSlash, decodePath, withLeadingSlash, withoutTrailingSlash, encodePath } from 'file:///home/local_adm/Projects/MyPlatform/node_modules/ufo/dist/index.mjs';
 import destr, { destr as destr$1 } from 'file:///home/local_adm/Projects/MyPlatform/node_modules/destr/dist/index.mjs';
@@ -29,7 +31,6 @@ import defu, { defuFn, defu as defu$1 } from 'file:///home/local_adm/Projects/My
 import { snakeCase } from 'file:///home/local_adm/Projects/MyPlatform/node_modules/scule/dist/index.mjs';
 import { getContext } from 'file:///home/local_adm/Projects/MyPlatform/node_modules/unctx/dist/index.mjs';
 import { toRouteMatcher, createRouter } from 'file:///home/local_adm/Projects/MyPlatform/node_modules/radix3/dist/index.mjs';
-import { readFile } from 'node:fs/promises';
 import consola, { consola as consola$1 } from 'file:///home/local_adm/Projects/MyPlatform/node_modules/consola/dist/index.mjs';
 import { ErrorParser } from 'file:///home/local_adm/Projects/MyPlatform/node_modules/youch-core/build/index.js';
 import { Youch } from 'file:///home/local_adm/Projects/MyPlatform/node_modules/youch/build/index.js';
@@ -2802,12 +2803,33 @@ function defineRenderHandler(render) {
   });
 }
 
-const scheduledTasks = false;
+const e=globalThis.process?.env||Object.create(null),t=globalThis.process||{env:e},n=t!==void 0&&t.env&&t.env.NODE_ENV||void 0,r=[[`claude`,[`CLAUDECODE`,`CLAUDE_CODE`]],[`replit`,[`REPL_ID`]],[`gemini`,[`GEMINI_CLI`]],[`codex`,[`CODEX_SANDBOX`,`CODEX_THREAD_ID`]],[`opencode`,[`OPENCODE`]],[`pi`,[i(`PATH`,/\.pi[\\/]agent/)]],[`auggie`,[`AUGMENT_AGENT`]],[`goose`,[`GOOSE_PROVIDER`]],[`devin`,[i(`EDITOR`,/devin/)]],[`cursor`,[`CURSOR_AGENT`]],[`kiro`,[i(`TERM_PROGRAM`,/kiro/)]]];function i(t,n){return ()=>{let r=e[t];return r?n.test(r):false}}function a(){let t=e.AI_AGENT;if(t)return {name:t.toLowerCase()};for(let[t,n]of r)for(let r of n)if(typeof r==`string`?e[r]:r())return {name:t};return {}}const o=a();o.name;!!o.name;const l=[[`APPVEYOR`],[`AWS_AMPLIFY`,`AWS_APP_ID`,{ci:true}],[`AZURE_PIPELINES`,`SYSTEM_TEAMFOUNDATIONCOLLECTIONURI`],[`AZURE_STATIC`,`INPUT_AZURE_STATIC_WEB_APPS_API_TOKEN`],[`APPCIRCLE`,`AC_APPCIRCLE`],[`BAMBOO`,`bamboo_planKey`],[`BITBUCKET`,`BITBUCKET_COMMIT`],[`BITRISE`,`BITRISE_IO`],[`BUDDY`,`BUDDY_WORKSPACE_ID`],[`BUILDKITE`],[`CIRCLE`,`CIRCLECI`],[`CIRRUS`,`CIRRUS_CI`],[`CLOUDFLARE_PAGES`,`CF_PAGES`,{ci:true}],[`CLOUDFLARE_WORKERS`,`WORKERS_CI`,{ci:true}],[`GOOGLE_CLOUDRUN`,`K_SERVICE`],[`GOOGLE_CLOUDRUN_JOB`,`CLOUD_RUN_JOB`],[`CODEBUILD`,`CODEBUILD_BUILD_ARN`],[`CODEFRESH`,`CF_BUILD_ID`],[`DRONE`],[`DRONE`,`DRONE_BUILD_EVENT`],[`DSARI`],[`GITHUB_ACTIONS`],[`GITLAB`,`GITLAB_CI`],[`GITLAB`,`CI_MERGE_REQUEST_ID`],[`GOCD`,`GO_PIPELINE_LABEL`],[`LAYERCI`],[`JENKINS`,`JENKINS_URL`],[`HUDSON`,`HUDSON_URL`],[`MAGNUM`],[`NETLIFY`],[`NETLIFY`,`NETLIFY_LOCAL`,{ci:false}],[`NEVERCODE`],[`RENDER`],[`SAIL`,`SAILCI`],[`SEMAPHORE`],[`SCREWDRIVER`],[`SHIPPABLE`],[`SOLANO`,`TDDIUM`],[`STRIDER`],[`TEAMCITY`,`TEAMCITY_VERSION`],[`TRAVIS`],[`VERCEL`,`NOW_BUILDER`],[`VERCEL`,`VERCEL`,{ci:false}],[`VERCEL`,`VERCEL_ENV`,{ci:false}],[`APPCENTER`,`APPCENTER_BUILD_ID`],[`CODESANDBOX`,`CODESANDBOX_SSE`,{ci:false}],[`CODESANDBOX`,`CODESANDBOX_HOST`,{ci:false}],[`STACKBLITZ`],[`STORMKIT`],[`CLEAVR`],[`ZEABUR`],[`CODESPHERE`,`CODESPHERE_APP_ID`,{ci:true}],[`RAILWAY`,`RAILWAY_PROJECT_ID`],[`RAILWAY`,`RAILWAY_SERVICE_ID`],[`DENO-DEPLOY`,`DENO_DEPLOY`],[`DENO-DEPLOY`,`DENO_DEPLOYMENT_ID`],[`FIREBASE_APP_HOSTING`,`FIREBASE_APP_HOSTING`,{ci:true}],[`EDGEONE_PAGES`,`EO_PAGES_CI`,{ci:true}]];function u(){for(let t of l)if(e[t[1]||t[0]])return {name:t[0].toLowerCase(),...t[2]};return e.SHELL===`/bin/jsh`&&t.versions?.webcontainer?{name:`stackblitz`,ci:false}:{name:``,ci:false}}const d=u();d.name;const p=t.platform||``,m=!!e.CI||d.ci!==false,h=!!t.stdout?.isTTY;!!e.DEBUG;const v=n===`test`||!!e.TEST;n===`production`||e.MODE===`production`;n===`dev`||n===`development`||e.MODE===`development`;!!e.MINIMAL||m||v||!h;const S=/^win/i.test(p);!e.NO_COLOR&&(!!e.FORCE_COLOR||(h||S)&&e.TERM!==`dumb`||m);const E=(t.versions?.node||``).replace(/^v/,``)||null;Number(E?.split(`.`)[0])||null;const O=!!t?.versions?.node,k=`Bun`in globalThis,A=`Deno`in globalThis,j=`fastly`in globalThis,M=`Netlify`in globalThis,N=`EdgeRuntime`in globalThis,P=globalThis.navigator?.userAgent===`Cloudflare-Workers`,F=[[M,`netlify`],[N,`edge-light`],[P,`workerd`],[j,`fastly`],[A,`deno`],[k,`bun`],[O,`node`]];function I(){let e=F.find(e=>e[0]);if(e)return {name:e[1]}}const L=I();L?.name||``;
+
+const scheduledTasks = [{"cron":"*/60 * * * *","tasks":["ad:refresh-ad-cache"]}];
 
 const tasks = {
-  
+  "ad:refresh-ad-cache": {
+          meta: {
+            description: "",
+          },
+          resolve: () => Promise.resolve().then(function () { return refreshAdCache$1; }).then(r => r.default || r),
+        },
+"refreshADCache": {
+          meta: {
+            description: "",
+          },
+          resolve: () => Promise.resolve().then(function () { return refreshADCache$1; }).then(r => r.default || r),
+        }
 };
 
+function defineTask(def) {
+  if (typeof def.run !== "function") {
+    def.run = () => {
+      throw new TypeError("Task must implement a `run` method!");
+    };
+  }
+  return def;
+}
 const __runningTasks__ = {};
 async function runTask(name, {
   payload = {},
@@ -2836,6 +2858,31 @@ async function runTask(name, {
     return res;
   } finally {
     delete __runningTasks__[name];
+  }
+}
+function startScheduleRunner() {
+  if (!scheduledTasks || scheduledTasks.length === 0 || v) {
+    return;
+  }
+  const payload = {
+    scheduledTime: Date.now()
+  };
+  for (const schedule of scheduledTasks) {
+    new Cron(schedule.cron, async () => {
+      await Promise.all(
+        schedule.tasks.map(
+          (name) => runTask(name, {
+            payload,
+            context: {}
+          }).catch((error) => {
+            console.error(
+              `Error while running scheduled task "${name}"`,
+              error
+            );
+          })
+        )
+      );
+    });
   }
 }
 
@@ -2873,6 +2920,72 @@ function getUserGroups(sAMAccountName) {
     });
   });
 }
+
+var __defProp = Object.defineProperty;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+const _ADUserCache = class _ADUserCache {
+  constructor() {
+    __publicField(this, "cacheKey", "ad:users:global");
+  }
+  static getInstance() {
+    if (!_ADUserCache.instance) {
+      _ADUserCache.instance = new _ADUserCache();
+    }
+    return _ADUserCache.instance;
+  }
+  async get() {
+    try {
+      const cached = await useStorage().getItem(this.cacheKey);
+      return cached;
+    } catch (error) {
+      console.error("\u041E\u0448\u0438\u0431\u043A\u0430 \u0447\u0442\u0435\u043D\u0438\u044F \u043A\u044D\u0448\u0430 AD:", error);
+      return null;
+    }
+  }
+  async set(users) {
+    const typedUsers = users.map((user) => ({
+      sAMAccountName: user.sAMAccountName || user.cn || "unknown",
+      cn: user.cn,
+      mail: user.mail,
+      givenName: user.givenName,
+      sn: user.sn,
+      department: user.department,
+      title: user.title,
+      telephoneNumber: user.telephoneNumber,
+      dn: user.dn,
+      ...user
+      // сохраняем все оригинальные поля
+    }));
+    const cache = {
+      users: typedUsers,
+      lastUpdated: (/* @__PURE__ */ new Date()).toISOString(),
+      totalCount: typedUsers.length,
+      version: 1
+    };
+    await useStorage().setItem(this.cacheKey, cache);
+    console.log(`[\u041A\u042D\u0428] \u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u043E ${typedUsers.length} \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u0435\u0439 \u0432 \u043E\u0431\u0449\u0435\u0435 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435`);
+  }
+  async isExpired() {
+    const cache = await this.get();
+    if (!cache) return true;
+    const lastUpdate = new Date(cache.lastUpdated);
+    const hoursSinceUpdate = (Date.now() - lastUpdate.getTime()) / (1e3 * 60 * 60);
+    return hoursSinceUpdate > 1;
+  }
+  async invalidate() {
+    await useStorage().removeItem(this.cacheKey);
+    console.log("[\u041A\u042D\u0428] \u041A\u044D\u0448 AD \u043E\u0447\u0438\u0449\u0435\u043D");
+  }
+};
+__publicField(_ADUserCache, "instance");
+let ADUserCache = _ADUserCache;
+const adCache = ADUserCache.getInstance();
+
+const adCache$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  adCache: adCache
+}, Symbol.toStringTag, { value: 'Module' }));
 
 const sessionHooks = createHooks();
 async function getUserSession(event) {
@@ -3073,7 +3186,22 @@ _W4jooJ6JHQPWYOpmFWIzzHnw3tKBD2infQP3A2jKBI,
 _wH6JrtIxmaSoA8lCPWFnE9z4lQeXW6H5z3l5aymEQw
 ];
 
-const assets = {};
+const assets = {
+  "/index.mjs": {
+    "type": "text/javascript; charset=utf-8",
+    "etag": "\"2b9d6-JaEJ4rZhXC5SJdDIKd9AE8W+wdk\"",
+    "mtime": "2026-06-08T12:44:01.515Z",
+    "size": 178646,
+    "path": "index.mjs"
+  },
+  "/index.mjs.map": {
+    "type": "application/json",
+    "etag": "\"9e4ab-3SFs8J0XcfqYiUuyvEJGDWJ7PaE\"",
+    "mtime": "2026-06-08T12:44:01.515Z",
+    "size": 648363,
+    "path": "index.mjs.map"
+  }
+};
 
 function readAsset (id) {
   const serverDir = dirname$1(fileURLToPath(globalThis._importMeta_.url));
@@ -3709,6 +3837,7 @@ const _VBjkN1 = lazyEventHandler(() => {
 });
 
 const _lazy_PS6888 = () => Promise.resolve().then(function () { return getGroups_get$1; });
+const _lazy_SDMo25 = () => Promise.resolve().then(function () { return getUsersShared_get$1; });
 const _lazy_WIUtrD = () => Promise.resolve().then(function () { return getUsers_get$1; });
 const _lazy_64grGR = () => Promise.resolve().then(function () { return search_get$1; });
 const _lazy_i_VO00 = () => Promise.resolve().then(function () { return login_post$1; });
@@ -3717,6 +3846,7 @@ const _lazy_9sNQwU = () => Promise.resolve().then(function () { return me_get$1;
 const _lazy_yuVYLs = () => Promise.resolve().then(function () { return me$1; });
 const _lazy_hPQiZu = () => Promise.resolve().then(function () { return register_post$1; });
 const _lazy_KSLOIV = () => Promise.resolve().then(function () { return session_get$1; });
+const _lazy_tX89Et = () => Promise.resolve().then(function () { return labTests_get$1; });
 const _lazy_tUcqc4 = () => Promise.resolve().then(function () { return domainConnection_get$1; });
 const _lazy_fj4Rsw = () => Promise.resolve().then(function () { return renderer; });
 
@@ -3724,6 +3854,7 @@ const handlers = [
   { route: '', handler: _1lDZeu, lazy: false, middleware: true, method: undefined },
   { route: '', handler: _H8y5Mi, lazy: false, middleware: true, method: undefined },
   { route: '/api/ad/get-groups', handler: _lazy_PS6888, lazy: true, middleware: false, method: "get" },
+  { route: '/api/ad/get-users-shared', handler: _lazy_SDMo25, lazy: true, middleware: false, method: "get" },
   { route: '/api/ad/get-users', handler: _lazy_WIUtrD, lazy: true, middleware: false, method: "get" },
   { route: '/api/ad/search', handler: _lazy_64grGR, lazy: true, middleware: false, method: "get" },
   { route: '/api/auth/login', handler: _lazy_i_VO00, lazy: true, middleware: false, method: "post" },
@@ -3732,6 +3863,7 @@ const handlers = [
   { route: '/api/auth/me', handler: _lazy_yuVYLs, lazy: true, middleware: false, method: undefined },
   { route: '/api/auth/register', handler: _lazy_hPQiZu, lazy: true, middleware: false, method: "post" },
   { route: '/api/auth/session', handler: _lazy_KSLOIV, lazy: true, middleware: false, method: "get" },
+  { route: '/api/lab-tests', handler: _lazy_tX89Et, lazy: true, middleware: false, method: "get" },
   { route: '/api/test/domain-connection', handler: _lazy_tUcqc4, lazy: true, middleware: false, method: "get" },
   { route: '/__nuxt_error', handler: _lazy_fj4Rsw, lazy: true, middleware: false, method: undefined },
   { route: '/api/_auth/session', handler: _Lckxhw, lazy: false, middleware: false, method: "delete" },
@@ -3934,6 +4066,9 @@ nitroApp.router.use(
     return await runTask(name, { payload });
   })
 );
+{
+  startScheduleRunner();
+}
 function listen(useRandomPort = Boolean(
   NITRO_NO_UNIX_SOCKET || process.versions.webcontainer || "Bun" in globalThis && process.platform === "win32"
 )) {
@@ -3992,6 +4127,112 @@ const template$1 = (messages) => {
 const error500 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   __proto__: null,
   template: template$1
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const refreshAdCache = defineTask({
+  meta: {
+    name: "ad:refresh-ad-cache",
+    description: "\u041E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435 \u043A\u044D\u0448\u0430 \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u0435\u0439 Active Directory"
+    // removed unsupported "version" property — TaskMeta does not include it
+  },
+  async run(payload) {
+    const startTime = Date.now();
+    console.log(`\u{1F504} [TASK] \u0417\u0430\u043F\u0443\u0441\u043A \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F \u043A\u044D\u0448\u0430 AD \u0432 ${(/* @__PURE__ */ new Date()).toISOString()}`);
+    try {
+      const config = useRuntimeConfig();
+      const adConfig = {
+        url: config.ad.url,
+        baseDN: config.ad.baseDN,
+        username: config.ad.username,
+        password: config.ad.password,
+        timeout: config.ad.timeout || 3e4
+      };
+      const ad = new ActiveDirectory(adConfig);
+      const users = await new Promise((resolve, reject) => {
+        const searchOptions = {
+          filter: "(objectClass=user)",
+          scope: "sub",
+          sizeLimit: 2e3,
+          timeLimit: 60,
+          attributes: [],
+          includeMembership: [],
+          includeDeleted: false,
+          includeDerivedMembership: []
+        };
+        ad.findUsers(searchOptions, (err, users2) => {
+          if (err) reject(err);
+          else resolve(users2 || []);
+        });
+      });
+      const { adCache } = await Promise.resolve().then(function () { return adCache$1; });
+      await adCache.set(users);
+      const duration = Date.now() - startTime;
+      console.log(`\u2705 [TASK] \u041A\u044D\u0448 AD \u043E\u0431\u043D\u043E\u0432\u043B\u0451\u043D: ${users.length} \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u0435\u0439 \u0437\u0430 ${duration}ms`);
+      return {
+        result: "success",
+        data: {
+          userCount: users.length,
+          durationMs: duration,
+          timestamp: (/* @__PURE__ */ new Date()).toISOString()
+        }
+      };
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      console.error(`\u274C [TASK] \u041E\u0448\u0438\u0431\u043A\u0430 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F \u043A\u044D\u0448\u0430 AD: ${error.message}`);
+      return {
+        result: "error",
+        error: error.message,
+        durationMs: duration
+      };
+    }
+  }
+});
+
+const refreshAdCache$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: refreshAdCache
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const refreshADCache = defineTask({
+  meta: {
+    name: "refresh-ad-cache",
+    description: "\u041E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435 \u043A\u044D\u0448\u0430 \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u0435\u0439 AD"
+  },
+  async run() {
+    console.log("[TASK] \u041D\u0430\u0447\u0430\u043B\u043E \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F \u043A\u044D\u0448\u0430 AD...");
+    const config = useRuntimeConfig();
+    const ad = new ActiveDirectory({
+      url: config.ad.url,
+      baseDN: config.ad.baseDN,
+      username: config.ad.username,
+      password: config.ad.password
+    });
+    return new Promise((resolve) => {
+      const searchOptions = {
+        filter: "(objectClass=user)",
+        scope: "sub",
+        sizeLimit: 2e3,
+        timeLimit: 60,
+        attributes: []
+      };
+      ad.findUsers(searchOptions, async (err, users) => {
+        if (err) {
+          console.error("[TASK] \u041E\u0448\u0438\u0431\u043A\u0430 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F \u043A\u044D\u0448\u0430:", err);
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          resolve({ result: "error", message: errorMessage });
+        } else {
+          await adCache.set(users || []);
+          console.log(`[TASK] \u041A\u044D\u0448 \u043E\u0431\u043D\u043E\u0432\u043B\u0451\u043D: ${users == null ? void 0 : users.length} \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u0435\u0439`);
+          resolve({ result: "success", userCount: users == null ? void 0 : users.length });
+        }
+      });
+    });
+  }
+});
+
+const refreshADCache$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: refreshADCache
 }, Symbol.toStringTag, { value: 'Module' }));
 
 const server = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
@@ -4059,6 +4300,70 @@ const getGroups_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePro
   default: getGroups_get
 }, Symbol.toStringTag, { value: 'Module' }));
 
+const getUsersShared_get = defineEventHandler(async (event) => {
+  const query = getQuery$1(event);
+  const forceRefresh = query.refresh === "true";
+  const cached = await adCache.get();
+  const isExpired = await adCache.isExpired();
+  if (!forceRefresh && cached && !isExpired) {
+    console.log("[\u041A\u042D\u0428] \u0412\u043E\u0437\u0432\u0440\u0430\u0449\u0430\u0435\u043C \u043E\u0431\u0449\u0438\u0435 \u043A\u044D\u0448\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0435 \u0434\u0430\u043D\u043D\u044B\u0435 AD");
+    return {
+      success: true,
+      users: cached.users,
+      count: cached.totalCount,
+      fromCache: true,
+      lastUpdated: cached.lastUpdated
+    };
+  }
+  console.log("[AD] \u0417\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u0441\u0432\u0435\u0436\u0438\u0445 \u0434\u0430\u043D\u043D\u044B\u0445 \u0438\u0437 Active Directory...");
+  const config = useRuntimeConfig(event);
+  const adConfig = {
+    url: config.ad.url,
+    baseDN: config.ad.baseDN,
+    username: config.ad.username,
+    password: config.ad.password,
+    timeout: config.ad.timeout
+  };
+  const ad = new ActiveDirectory(adConfig);
+  return new Promise((resolve, reject) => {
+    const searchOptions = {
+      filter: "(objectClass=user)",
+      scope: "sub",
+      sizeLimit: 2e3,
+      timeLimit: 60,
+      attributes: [],
+      includeMembership: [],
+      includeDeleted: false,
+      includeDerivedMembership: []
+    };
+    ad.findUsers(searchOptions, async (err, users) => {
+      if (err) {
+        const error = err;
+        console.error("[AD] \u041E\u0448\u0438\u0431\u043A\u0430:", error.message);
+        reject({ success: false, error: error.message });
+      } else {
+        const validUsers = (users || []).filter(
+          (user) => user && (user.sAMAccountName || user.cn)
+        );
+        await adCache.set(validUsers);
+        console.log(`[AD] \u0417\u0430\u0433\u0440\u0443\u0436\u0435\u043D\u043E ${validUsers.length} \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u0435\u0439`);
+        resolve({
+          success: true,
+          users: validUsers,
+          count: validUsers.length,
+          fromCache: false,
+          lastUpdated: (/* @__PURE__ */ new Date()).toISOString()
+        });
+      }
+    });
+  });
+});
+
+const getUsersShared_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: getUsersShared_get
+}, Symbol.toStringTag, { value: 'Module' }));
+
 const getUsers_get = defineEventHandler(async (event) => {
   const config = useRuntimeConfig(event);
   const adConfig = {
@@ -4079,7 +4384,8 @@ const getUsers_get = defineEventHandler(async (event) => {
       // Ограничиваем количество
       timeLimit: 30,
       // Таймаут в секундах
-      attributes: ["cn", "sn", "givenName", "mail", "sAMAccountName", "department", "telephoneNumber", "title", "l"],
+      attributes: [],
+      // attributes: ['cn', 'sn', 'givenName', 'mail', 'sAMAccountName', 'department', 'telephoneNumber', 'title', 'l'],
       includeMembership: [],
       // Обязательное поле
       includeDeleted: false,
@@ -4154,54 +4460,93 @@ const search_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProper
   default: search_get
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$1 = new PrismaClient();
+new PrismaClient();
 const login_post = defineEventHandler(async (event) => {
-  console.log("\u041F\u043E\u043B\u0443\u0447\u0435\u043D \u0437\u0430\u043F\u0440\u043E\u0441 \u043D\u0430 \u0430\u0432\u0442\u043E\u0440\u0438\u0437\u0430\u0446\u0438\u044E");
-  const { login, email, password, sessionId } = await readBody(event);
-  try {
-    console.log("\u0418\u0449\u0435\u043C \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044F \u0432 \u0411\u0414 \u0441 \u043F\u043E\u043C\u043E\u0449\u044C\u044E Prisma:", { login, email });
-    const user = await prisma$1.users.findUnique({
-      where: {
-        login
+  const body = await readBody(event);
+  console.log("\u041F\u043E\u043B\u0443\u0447\u0435\u043D\u043D\u044B\u0435 \u0434\u0430\u043D\u043D\u044B\u0435:", body);
+  console.log("\u0422\u0438\u043F \u0434\u0430\u043D\u043D\u044B\u0445:", typeof body);
+  console.log("\u041A\u043B\u044E\u0447\u0438 \u043E\u0431\u044A\u0435\u043A\u0442\u0430:", Object.keys(body || {}));
+  const { login, password, sessionId } = body;
+  if (!login || !password) {
+    console.log("\u041D\u0435\u043F\u043E\u043B\u043D\u044B\u0435 \u0434\u0430\u043D\u043D\u044B\u0435 \u0434\u043B\u044F \u0432\u0445\u043E\u0434\u0430:", { login, password: password ? "***" : null });
+    throw createError({ statusCode: 4e3, message: "\u041D\u0435\u043E\u0431\u0445\u043E\u0434\u0438\u043C\u043E \u0443\u043A\u0430\u0437\u0430\u0442\u044C \u043B\u043E\u0433\u0438\u043D \u0438 \u043F\u0430\u0440\u043E\u043B\u044C" });
+  }
+  const config = useRuntimeConfig(event);
+  const adConfig = {
+    url: config.ad.url,
+    // Например, 'ldap://dc.company.local'
+    baseDN: config.ad.baseDN,
+    // Например, 'DC=company,DC=local'
+    // !!! ВАЖНО: Используем для поиска техническую учетную запись !!!
+    username: config.ad.username,
+    password: config.ad.password
+  };
+  const ad = new ActiveDirectory(adConfig);
+  return new Promise((resolve, reject) => {
+    console.log(`\u{1F510} \u041F\u043E\u043F\u044B\u0442\u043A\u0430 \u0432\u0445\u043E\u0434\u0430 \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044F: ${login}`);
+    ad.authenticate(login, password, async (err, isAuthenticated) => {
+      if (err) {
+        console.error(`\u274C \u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0435 \u043F\u0430\u0440\u043E\u043B\u044F \u0434\u043B\u044F ${login}:`, err);
+        return reject(createError({ statusCode: 5e3, message: "\u041E\u0448\u0438\u0431\u043A\u0430 \u0441\u0435\u0440\u0432\u0435\u0440\u0430 \u043F\u0440\u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0435 \u0434\u0430\u043D\u043D\u044B\u0445" }));
       }
-    });
-    if (!user) {
-      console.warn("\u041F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D:", { login });
-      return sendError(event, createError({ statusCode: 404, message: "\u041F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D" }));
-    }
-    if (!await bcrypt.compare(password, user.password)) {
-      console.warn("\u041D\u0435\u0432\u0435\u0440\u043D\u044B\u0439 \u043F\u0430\u0440\u043E\u043B\u044C \u0434\u043B\u044F \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044F:", { login });
-      return sendError(event, createError({ statusCode: 400, message: "\u041D\u0435\u0432\u0435\u0440\u043D\u044B\u0439 \u043F\u0430\u0440\u043E\u043B\u044C" }));
-    } else {
+      if (!isAuthenticated) {
+        console.log(`\u274C \u041D\u0435\u0432\u0435\u0440\u043D\u044B\u0439 \u043B\u043E\u0433\u0438\u043D \u0438\u043B\u0438 \u043F\u0430\u0440\u043E\u043B\u044C \u0434\u043B\u044F: ${login}`);
+        return resolve({ success: false, message: "\u041D\u0435\u0432\u0435\u0440\u043D\u043E\u0435 \u0438\u043C\u044F \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044F \u0438\u043B\u0438 \u043F\u0430\u0440\u043E\u043B\u044C" });
+      }
+      console.log(`\u2705 \u041F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C ${login} \u0443\u0441\u043F\u0435\u0448\u043D\u043E \u0430\u0443\u0442\u0435\u043D\u0442\u0438\u0444\u0438\u0446\u0438\u0440\u043E\u0432\u0430\u043D \u0432 AD.`);
       try {
-        await setUserSession(event, {
-          user: {
-            id: user.id,
-            name: user.userName,
-            login: user.login,
-            email: user.email
-          },
-          sessionId,
-          loggedInAt: (/* @__PURE__ */ new Date()).toISOString()
-        });
-        await prisma$1.sessions.create({
-          data: {
-            userId: user.id,
-            sessionId,
-            timestamp: Date.now()
+        const login_ = login.split("\\")[1] || login;
+        const searchOptions = {
+          filter: `(&(objectClass=user)(sAMAccountName=${login_}))`,
+          scope: "sub",
+          attributes: ["cn", "sn", "givenName", "mail", "sAMAccountName", "department", "title"],
+          includeMembership: [],
+          includeDeleted: false,
+          includeDerivedMembership: []
+        };
+        ad.findUsers(searchOptions, async (findErr, users) => {
+          if (findErr || !users || users.length === 0) {
+            console.warn(`\u26A0\uFE0F \u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043D\u0430\u0439\u0442\u0438 \u0434\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0435 \u0434\u0430\u043D\u043D\u044B\u0435 \u0434\u043B\u044F ${login} \u043F\u043E\u0441\u043B\u0435 \u0443\u0441\u043F\u0435\u0448\u043D\u043E\u0433\u043E \u0432\u0445\u043E\u0434\u0430.`);
+            const fallbackUser = { sAMAccountName: login };
+            try {
+              await setUserSession(event, {
+                user: fallbackUser,
+                sessionId,
+                loggedInAt: (/* @__PURE__ */ new Date()).toISOString()
+              });
+            } catch (e) {
+              console.error("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0443\u0441\u0442\u0430\u043D\u043E\u0432\u043A\u0435 \u0441\u0435\u0441\u0441\u0438\u0438 (fallback):", e);
+            }
+            return resolve({ success: true, user: fallbackUser });
           }
+          const fullUserData = users[0];
+          console.log(`\u{1F4E6} \u0414\u0430\u043D\u043D\u044B\u0435 \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044F ${login} \u0437\u0430\u0433\u0440\u0443\u0436\u0435\u043D\u044B.`);
+          const userInfo = {
+            login: fullUserData.sAMAccountName,
+            name: fullUserData.cn || `${fullUserData.givenName} ${fullUserData.sn}`.trim(),
+            email: fullUserData.mail || null,
+            department: fullUserData.department || null
+          };
+          try {
+            await setUserSession(event, {
+              user: userInfo,
+              sessionId,
+              loggedInAt: (/* @__PURE__ */ new Date()).toISOString()
+            });
+          } catch (e) {
+            console.error("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0443\u0441\u0442\u0430\u043D\u043E\u0432\u043A\u0435 \u0441\u0435\u0441\u0441\u0438\u0438:", e);
+          }
+          return resolve({
+            success: true,
+            user: userInfo
+          });
         });
       } catch (error) {
-        console.error("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u0438 \u0441\u0435\u0441\u0441\u0438\u0438:", error);
-        return sendError(event, createError({ statusCode: 500, message: "\u041E\u0448\u0438\u0431\u043A\u0430 \u0441\u0435\u0440\u0432\u0435\u0440\u0430 \u043F\u0440\u0438 \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u0438 \u0441\u0435\u0441\u0441\u0438\u0438" }));
+        console.error(`\u26A0\uFE0F \u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0437\u0430\u0433\u0440\u0443\u0437\u043A\u0435 \u0434\u0430\u043D\u043D\u044B\u0445 \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044F ${login}:`, error);
+        resolve({ success: true, user: { sAMAccountName: login } });
       }
-      const { password: password2, ...userData } = user;
-      return userData;
-    }
-  } catch (err) {
-    console.error("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u0438\u0441\u043A\u0435 \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044F:", err.message);
-    return sendError(event, createError({ statusCode: 500, statusMessage: "\u041E\u0448\u0438\u0431\u043A\u0430 \u0441\u0435\u0440\u0432\u0435\u0440\u0430" }));
-  }
+    });
+  });
 });
 
 const login_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
@@ -4388,6 +4733,45 @@ const session_get = defineEventHandler(async (event) => {
 const session_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   __proto__: null,
   default: session_get
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const labTests_get = defineEventHandler(async (event) => {
+  var _a;
+  try {
+    const csvPath = join(process.cwd(), "server", "assets", "Reestr.csv");
+    const csvContent = await readFile(csvPath, "utf-8");
+    const lines = csvContent.trim().split("\n");
+    const headers = ((_a = lines[0]) == null ? void 0 : _a.split(";").map((h) => h.trim())) || [];
+    const data = lines.slice(1).map((line) => {
+      const values = line.split(";");
+      const row = {};
+      headers.forEach((header, idx) => {
+        var _a2;
+        row[header] = ((_a2 = values[idx]) == null ? void 0 : _a2.trim()) || "";
+      });
+      return row;
+    });
+    return {
+      success: true,
+      headers,
+      data,
+      total: data.length
+    };
+  } catch (error) {
+    console.error("\u041E\u0448\u0438\u0431\u043A\u0430 \u0447\u0442\u0435\u043D\u0438\u044F CSV:", error);
+    return {
+      success: false,
+      error: error.message,
+      headers: [],
+      data: [],
+      total: 0
+    };
+  }
+});
+
+const labTests_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: labTests_get
 }, Symbol.toStringTag, { value: 'Module' }));
 
 const domainConnection_get = defineEventHandler(async (event) => {

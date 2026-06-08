@@ -1,24 +1,26 @@
-<!-- Контент для первой вкладки -->
+<!-- pages/lab-tests/index.vue -->
 <template>
-    <!-- 
-     class="max-w-[1440px] "
-    Родителю этого блока ОБЯЗАТЕЛЬНО задайте overflow-hidden и h-full (или max-h-screen) -->
-    <div class="w-full max-h-[79vh] flex flex-col overflow-hidden mx-auto bg-white p-3 rounded-lg shadow-[0_0_10px_rgba(0,0,0,0.1)]">
-        <div class="flex flex-wrap gap-4 items-center justify-between py-1">
-            <!-- Поиск -->
-            <div class="flex-1 min-w-50">
-                <input
-                    v-model="searchQuery"
-                    type="text"
-                    placeholder="Поиск по всем полям..."
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-            </div>
+  <div class="p-6">
+    <h1 class="text-2xl font-bold mb-2">Лабораторные исследования</h1>
+    <p class="text-gray-600 mb-6">Данные из реестра испытаний</p>
+    
+    <!-- Панель управления -->
+    <div class="bg-gray-50 rounded-lg p-4 mb-6">
+      <div class="flex flex-wrap gap-4 items-center justify-between">
+        <!-- Поиск -->
+        <div class="flex-1 min-w-[200px]">
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Поиск по всем полям..."
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
         
         <!-- Кнопка выбора столбцов -->
         <div class="relative">
           <button
-            @click.stop.prevent="columnSelectorButtonClick"
+            @click="showColumnSelector = !showColumnSelector"
             class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
           >
             <span>📋</span> Выбрать столбцы
@@ -28,12 +30,12 @@
           <!-- Панель выбора столбцов -->
           <div
             v-if="showColumnSelector"
-            class="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-96 overflow-y-auto"
+            class="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-96 overflow-y-auto"
           >
             <div class="p-3 border-b bg-gray-50 font-medium">Выберите столбцы для отображения</div>
             <div class="p-2">
               <label class="flex items-center gap-2 p-2 hover:bg-gray-50 cursor-pointer">
-                <input type="checkbox" v-model="selectAll" @change="toggleAllColumns"  class="w-4 h-4">
+                <input type="checkbox" v-model="selectAll" @change="toggleAllColumns" class="w-4 h-4">
                 <span class="font-medium">Выбрать все</span>
               </label>
               <hr class="my-1">
@@ -41,7 +43,6 @@
                 v-for="header in headers"
                 :key="header"
                 class="flex items-center gap-2 p-2 hover:bg-gray-50 cursor-pointer"
-                @click.stop
               >
                 <input
                   type="checkbox"
@@ -60,7 +61,9 @@
           Всего записей: {{ filteredData.length }} из {{ originalData.length }}
         </div>
       </div>
-      <!-- Таблица данных -->
+    </div>
+    
+    <!-- Таблица данных -->
     <div v-if="loading" class="text-center py-12">
       <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
       <p class="mt-2 text-gray-600">Загрузка данных...</p>
@@ -69,8 +72,8 @@
     <div v-else-if="filteredData.length === 0" class="text-center py-12 text-gray-500">
       <p>Нет данных, соответствующих критериям поиска</p>
     </div>
-
-    <div v-else class="overflow-x-auto shadow-md rounded-lg overflow-y-auto" style="max-height: 70vh;">
+    
+    <div v-else class="overflow-x-auto shadow-md rounded-lg">
       <table class="min-w-full bg-white border border-gray-200 text-sm">
         <thead class="bg-gray-100 sticky top-0">
           <tr>
@@ -78,19 +81,15 @@
               v-for="header in visibleHeaders"
               :key="header"
               @click="sortBy(header)"
-              class="px-4 
-                    py-3 
-                    text-left 
-                    text-xs 
-                    font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition select-none"
+              class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition select-none"
               :class="{ 'bg-blue-50': sortKey === header }"
             >
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-1">
                 {{ getColumnLabel(header) }}
-                <span v-if="sortKey === header" class="text-lg">
+                <span v-if="sortKey === header" class="text-blue-500">
                   {{ sortDirection === 'asc' ? '↑' : '↓' }}
                 </span>
-                <span v-else class="text-gray-300 text-md"><Icon :name="'marketeq:up-down-arrow-2'" size="16" /></span>
+                <span v-else class="text-gray-300">↕️</span>
               </div>
             </th>
           </tr>
@@ -100,12 +99,7 @@
             v-for="(row, index) in paginatedData"
             :key="index"
             class="hover:bg-gray-50 transition"
-            :class="{ 'bg-red-50': row['Результат испытаний'] === 'Не соответствует',
-              'bg-green-50': isRowSelected(index),
-              'hover:bg-gray-50': !isRowSelected(index)
-            }"
-            @click="selectRow(index)"
-            @dblclick="rowDblClick"
+            :class="{ 'bg-red-50': row['Результат испытаний'] === 'Не соответствует' }"
           >
             <td
               v-for="header in visibleHeaders"
@@ -122,7 +116,7 @@
         </tbody>
       </table>
     </div>
-
+    
     <!-- Пагинация -->
     <div v-if="filteredData.length > 0" class="flex justify-between items-center mt-4">
       <div class="text-sm text-gray-600">
@@ -157,35 +151,10 @@
         </button>
       </div>
     </div>
-
-    </div>
-    <!-- <UFormGroup label="Имя" name="name" class="mb-4">
-    <UInput v-model="formData.name" placeholder="Введите имя" />
-    </UFormGroup>
-    <UFormGroup label="Email" name="email" class="mb-4">
-    <UInput v-model="formData.email" placeholder="Введите email" />
-    </UFormGroup> -->
-    
+  </div>
 </template>
 
 <script setup lang="ts">
-  const rowSelectedId = ref<number | null>(null);
-
-  // Функция для проверки, выбрана ли строка
-  const isRowSelected = (index: number): boolean => {
-    return rowSelectedId.value === index;
-  };
-
-  // Функция для выбора/снятия выбора строки
-  const selectRow = (index: number): void => {
-    // Если кликнули на ту же строку - снимаем выделение
-    if (rowSelectedId.value === index) {
-      rowSelectedId.value = null;
-    } else {
-      rowSelectedId.value = index;
-    }
-  };
-
 const loading = ref(true);
 const originalData = ref<Record<string, string>[]>([]);
 const headers = ref<string[]>([]);
@@ -223,40 +192,27 @@ onMounted(async () => {
   await loadData();
 });
 
-const rowDblClick = () => {
-  console.log('Двойной клик по строке');
-}
-
 // Закрытие селектора при клике вне (простой способ через document)
 onMounted(() => {
   const handleClickOutside = (event: MouseEvent) => {
-    
     const target = event.target as HTMLElement;
     const selectorButton = document.querySelector('.relative');
     if (selectorButton && !selectorButton.contains(target)) {
-        // console.log('Клик по документу:');
-        showColumnSelector.value = false;
+      showColumnSelector.value = false;
     }
   };
   document.addEventListener('click', handleClickOutside);
 });
 
-function columnSelectorButtonClick() { // изменение статуса отображения окна выбора столбцов
-    showColumnSelector.value = !showColumnSelector.value;
-    // console.log('Клик по кнопке выбора столбцов', showColumnSelector.value);
-}
-
 async function loadData() {
   loading.value = true;
   try {
     const response = await fetch('/api/lab-tests');
-    // const response = [{}];
     const result = await response.json();
-    // console.log('Ответ от сервера:', result);
     
     if (result.success) {
-      originalData.value = result.data; // Сохраняем данные таблицы в реактивной переменной
-      headers.value = result.headers; // Сохраняем заголовки столбцов в реактивной переменной
+      originalData.value = result.data;
+      headers.value = result.headers;
       
       // По умолчанию показываем все столбцы
       visibleColumns.value = [...headers.value];
@@ -273,7 +229,6 @@ async function loadData() {
 }
 
 function getColumnLabel(header: string): string {
-    // console.log('getColumnLabel:', header);
   return columnLabels[header] || header;
 }
 
@@ -303,9 +258,9 @@ const filteredData = computed(() => {
 
 // Сортировка
 const sortedData = computed(() => {
-const data = [...filteredData.value];
-const key = sortKey.value;
-const direction = sortDirection.value;
+  const data = [...filteredData.value];
+  const key = sortKey.value;
+  const direction = sortDirection.value;
   
   data.sort((a, b) => {
     let aVal = a[key] || '';
@@ -313,13 +268,13 @@ const direction = sortDirection.value;
     
     // Специальная обработка для дат
     if (key.includes('Дата') && aVal && bVal) {
-        const dateA = new Date(aVal.split('.').reverse().join('-'));
-        const dateB = new Date(bVal.split('.').reverse().join('-'));
-        if (!isNaN(dateA.getTime()) && !isNaN(dateB.getTime())) {
-            return direction === 'asc' 
-            ? dateA.getTime() - dateB.getTime()
-            : dateB.getTime() - dateA.getTime();
-        }
+      const dateA = new Date(aVal.split('.').reverse().join('-'));
+      const dateB = new Date(bVal.split('.').reverse().join('-'));
+      if (!isNaN(dateA.getTime()) && !isNaN(dateB.getTime())) {
+        return direction === 'asc' 
+          ? dateA.getTime() - dateB.getTime()
+          : dateB.getTime() - dateA.getTime();
+      }
     }
     
     // Обычное строковое сравнение
@@ -354,17 +309,15 @@ function sortBy(header: string) {
   }
 }
 
-function prevPage() { // Переход на предыдущую страницу
+function prevPage() {
   if (currentPage.value > 1) currentPage.value--;
 }
 
-function nextPage() { // Переход на следующую страницу
+function nextPage() {
   if (currentPage.value < totalPages.value) currentPage.value++;
 }
 
-//
 function toggleAllColumns() {
-    console.log('колонки================')
   if (selectAll.value) {
     visibleColumns.value = [...headers.value];
   } else {
@@ -372,50 +325,40 @@ function toggleAllColumns() {
   }
 }
 
-watch(showColumnSelector, (newVal, oldVal) => {
-    // console.log('showColumnSelector изменился:', newVal);
-    // console.log('Было:', oldVal);
-    // console.log('Стало:', newVal);
-});
-
 // Следим за изменениями visibleColumns для обновления selectAll
 watch(visibleColumns, (newVal) => {
-    // console.log('visibleColumns изменились:', newVal);
-    selectAll.value = newVal.length === headers.value.length;
+  selectAll.value = newVal.length === headers.value.length;
 }, { deep: true });
 
 // Сброс страницы при изменении фильтров
 watch([searchQuery, sortKey, sortDirection, itemsPerPage], () => {
-    currentPage.value = 1;
+  currentPage.value = 1;
 });
 </script>
 
 <style scoped>
-  .row_selected{
-    background: #000;
-  }
-  .sticky {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-  }
+.sticky {
+  position: sticky;
+  top: 0;
+  /* z-index: 10; */
+}
 
-  /* Стили для полос прокрутки */
-  .overflow-x-auto::-webkit-scrollbar {
-    height: 8px;
-  }
+/* Стили для полос прокрутки */
+.overflow-x-auto::-webkit-scrollbar {
+  height: 8px;
+}
 
-  .overflow-x-auto::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-  }
+.overflow-x-auto::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
 
-  .overflow-x-auto::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 4px;
-  }
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
 
-  .overflow-x-auto::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
-  }
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
 </style>

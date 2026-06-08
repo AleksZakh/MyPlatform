@@ -22,6 +22,9 @@ interface _GlobalComponents {
   NavigateTopnav: typeof import("../../app/components/navigate/topnav.vue")['default']
   SidebarMenuData: typeof import("../../app/components/sidebar/menu.data")['default']
   SidebarMenu: typeof import("../../app/components/sidebar/menu.vue")['default']
+  UiTableSettings: typeof import("../../app/components/ui/Table/settings.vue")['default']
+  UiTable: typeof import("../../app/components/ui/Table/table.vue")['default']
+  UiTableTitle: typeof import("../../app/components/ui/Table/title.vue")['default']
   UColorModeAvatar: typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/color-mode/ColorModeAvatar.vue")['default']
   UColorModeButton: typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/color-mode/ColorModeButton.vue")['default']
   UColorModeImage: typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/color-mode/ColorModeImage.vue")['default']
@@ -184,6 +187,9 @@ interface _GlobalComponents {
   LazyNavigateTopnav: LazyComponent<typeof import("../../app/components/navigate/topnav.vue")['default']>
   LazySidebarMenuData: LazyComponent<typeof import("../../app/components/sidebar/menu.data")['default']>
   LazySidebarMenu: LazyComponent<typeof import("../../app/components/sidebar/menu.vue")['default']>
+  LazyUiTableSettings: LazyComponent<typeof import("../../app/components/ui/Table/settings.vue")['default']>
+  LazyUiTable: LazyComponent<typeof import("../../app/components/ui/Table/table.vue")['default']>
+  LazyUiTableTitle: LazyComponent<typeof import("../../app/components/ui/Table/title.vue")['default']>
   LazyUColorModeAvatar: LazyComponent<typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/color-mode/ColorModeAvatar.vue")['default']>
   LazyUColorModeButton: LazyComponent<typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/color-mode/ColorModeButton.vue")['default']>
   LazyUColorModeImage: LazyComponent<typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/color-mode/ColorModeImage.vue")['default']>

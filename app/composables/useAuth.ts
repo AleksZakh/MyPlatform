@@ -9,9 +9,7 @@ export const useAuth = () => {
 
     // Функция входа
     const login = async (credentials: {
-        name: string;
         login: string;
-        email: string;
         password: string;
         sessionId: string;
     }) => {
@@ -19,7 +17,9 @@ export const useAuth = () => {
         error.value = null;
         
         try {
+            // console.log('Попытка входа с данными:', credentials.login);
             const response = await axios.post('/api/auth/login', credentials);
+            console.log('response: ', response)
             return { success: true, data: response.data };
         } catch (err) {
             if (isAxiosError(err) && err.response?.status === 404) {
@@ -42,7 +42,7 @@ export const useAuth = () => {
     }) => {
         isLoading.value = true;
         error.value = null;
-        
+        console.log('Попытка регистрации с данными:', userData.login);
         try {
             const response = await axios.post('/api/auth/register', userData);
             return { success: true, data: response.data };

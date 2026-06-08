@@ -28,7 +28,8 @@ export default defineNuxtConfig({
   },
   nitro: {
     experimental: {
-      websocket: true
+      websocket: true,
+      tasks: true // Включает подсистему Nitro Tasks
     },
     storage: {
       // Создаем собственную область хранения под названием 'adCache'
@@ -38,6 +39,10 @@ export default defineNuxtConfig({
         url: process.env.REDIS_URL || 'redis://localhost:6379', 
         ttl: 900 // Время жизни кэша по умолчанию в секундах (15 минут)
       }
+    },
+    scheduledTasks: {
+      // Обновление кэша каждый час
+      '*/60 * * * *': ['ad:refresh-ad-cache']
     }
   },
   vite: {

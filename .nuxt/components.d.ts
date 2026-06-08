@@ -22,6 +22,9 @@ export const LabResearch: typeof import("../app/components/lab/research.vue")['d
 export const NavigateTopnav: typeof import("../app/components/navigate/topnav.vue")['default']
 export const SidebarMenuData: typeof import("../app/components/sidebar/menu.data")['default']
 export const SidebarMenu: typeof import("../app/components/sidebar/menu.vue")['default']
+export const UiTableSettings: typeof import("../app/components/ui/Table/settings.vue")['default']
+export const UiTable: typeof import("../app/components/ui/Table/table.vue")['default']
+export const UiTableTitle: typeof import("../app/components/ui/Table/title.vue")['default']
 export const UColorModeAvatar: typeof import("../node_modules/@nuxt/ui/dist/runtime/components/color-mode/ColorModeAvatar.vue")['default']
 export const UColorModeButton: typeof import("../node_modules/@nuxt/ui/dist/runtime/components/color-mode/ColorModeButton.vue")['default']
 export const UColorModeImage: typeof import("../node_modules/@nuxt/ui/dist/runtime/components/color-mode/ColorModeImage.vue")['default']
@@ -184,6 +187,9 @@ export const LazyLabResearch: LazyComponent<typeof import("../app/components/lab
 export const LazyNavigateTopnav: LazyComponent<typeof import("../app/components/navigate/topnav.vue")['default']>
 export const LazySidebarMenuData: LazyComponent<typeof import("../app/components/sidebar/menu.data")['default']>
 export const LazySidebarMenu: LazyComponent<typeof import("../app/components/sidebar/menu.vue")['default']>
+export const LazyUiTableSettings: LazyComponent<typeof import("../app/components/ui/Table/settings.vue")['default']>
+export const LazyUiTable: LazyComponent<typeof import("../app/components/ui/Table/table.vue")['default']>
+export const LazyUiTableTitle: LazyComponent<typeof import("../app/components/ui/Table/title.vue")['default']>
 export const LazyUColorModeAvatar: LazyComponent<typeof import("../node_modules/@nuxt/ui/dist/runtime/components/color-mode/ColorModeAvatar.vue")['default']>
 export const LazyUColorModeButton: LazyComponent<typeof import("../node_modules/@nuxt/ui/dist/runtime/components/color-mode/ColorModeButton.vue")['default']>
 export const LazyUColorModeImage: LazyComponent<typeof import("../node_modules/@nuxt/ui/dist/runtime/components/color-mode/ColorModeImage.vue")['default']>
