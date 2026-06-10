@@ -1,5 +1,5 @@
 import process from 'node:process';globalThis._importMeta_={url:import.meta.url,env:process.env};import { tmpdir } from 'node:os';
-import { defineEventHandler, handleCacheHeaders, splitCookiesString, createEvent, fetchWithEvent, isEvent, eventHandler, setHeaders, createError, sendRedirect, proxyRequest, getRequestHeader, setResponseHeaders, setResponseStatus, send, getRequestHeaders, setResponseHeader, appendResponseHeader, getRequestURL, getResponseHeader, getResponseStatus, useSession, removeResponseHeader, getHeader, getQuery as getQuery$1, readBody, lazyEventHandler, useBase, createApp, createRouter as createRouter$1, toNodeListener, getRouterParam, deleteCookie, getCookie, getResponseStatusText } from 'file:///home/local_adm/Projects/MyPlatform/node_modules/h3/dist/index.mjs';
+import { defineEventHandler, handleCacheHeaders, splitCookiesString, createEvent, fetchWithEvent, isEvent, eventHandler, setHeaders, createError, sendRedirect, proxyRequest, getRequestHeader, setResponseHeaders, setResponseStatus, send, getRequestHeaders, setResponseHeader, appendResponseHeader, getRequestURL, getResponseHeader, getResponseStatus, useSession, removeResponseHeader, getHeader, getQuery as getQuery$1, readBody, lazyEventHandler, useBase, createApp, createRouter as createRouter$1, toNodeListener, getRouterParam, deleteCookie, getResponseStatusText } from 'file:///home/local_adm/Projects/MyPlatform/node_modules/h3/dist/index.mjs';
 import { Server } from 'node:http';
 import { resolve, dirname, join } from 'node:path';
 import crypto$1 from 'node:crypto';
@@ -3189,16 +3189,16 @@ _wH6JrtIxmaSoA8lCPWFnE9z4lQeXW6H5z3l5aymEQw
 const assets = {
   "/index.mjs": {
     "type": "text/javascript; charset=utf-8",
-    "etag": "\"2b9d6-JaEJ4rZhXC5SJdDIKd9AE8W+wdk\"",
-    "mtime": "2026-06-08T12:44:01.515Z",
-    "size": 178646,
+    "etag": "\"2b47c-WwhWr9ul121eP2rqO93hPtvjrVg\"",
+    "mtime": "2026-06-10T08:32:15.807Z",
+    "size": 177276,
     "path": "index.mjs"
   },
   "/index.mjs.map": {
     "type": "application/json",
-    "etag": "\"9e4ab-3SFs8J0XcfqYiUuyvEJGDWJ7PaE\"",
-    "mtime": "2026-06-08T12:44:01.515Z",
-    "size": 648363,
+    "etag": "\"9d5e8-WFG0UYqjGQT30+nZFVbjIG4bovo\"",
+    "mtime": "2026-06-10T08:32:15.810Z",
+    "size": 644584,
     "path": "index.mjs.map"
   }
 };
@@ -3313,6 +3313,22 @@ const _H8y5Mi = defineEventHandler(async (event) => {
     username,
     groups
   };
+});
+
+const _D_9U2m = defineEventHandler((event) => {
+  const remoteUser = getHeader(event, "x-remote-user");
+  if (remoteUser) {
+    const username = remoteUser.split("@")[0];
+    event.context.user = {
+      username,
+      authenticated: true
+    };
+  } else {
+    event.context.user = {
+      username: null,
+      authenticated: false
+    };
+  }
 });
 
 const _Lckxhw = eventHandler(async (event) => {
@@ -3842,7 +3858,6 @@ const _lazy_WIUtrD = () => Promise.resolve().then(function () { return getUsers_
 const _lazy_64grGR = () => Promise.resolve().then(function () { return search_get$1; });
 const _lazy_i_VO00 = () => Promise.resolve().then(function () { return login_post$1; });
 const _lazy_c3L85V = () => Promise.resolve().then(function () { return logout_post$1; });
-const _lazy_9sNQwU = () => Promise.resolve().then(function () { return me_get$1; });
 const _lazy_yuVYLs = () => Promise.resolve().then(function () { return me$1; });
 const _lazy_hPQiZu = () => Promise.resolve().then(function () { return register_post$1; });
 const _lazy_KSLOIV = () => Promise.resolve().then(function () { return session_get$1; });
@@ -3853,13 +3868,13 @@ const _lazy_fj4Rsw = () => Promise.resolve().then(function () { return renderer;
 const handlers = [
   { route: '', handler: _1lDZeu, lazy: false, middleware: true, method: undefined },
   { route: '', handler: _H8y5Mi, lazy: false, middleware: true, method: undefined },
+  { route: '', handler: _D_9U2m, lazy: false, middleware: true, method: undefined },
   { route: '/api/ad/get-groups', handler: _lazy_PS6888, lazy: true, middleware: false, method: "get" },
   { route: '/api/ad/get-users-shared', handler: _lazy_SDMo25, lazy: true, middleware: false, method: "get" },
   { route: '/api/ad/get-users', handler: _lazy_WIUtrD, lazy: true, middleware: false, method: "get" },
   { route: '/api/ad/search', handler: _lazy_64grGR, lazy: true, middleware: false, method: "get" },
   { route: '/api/auth/login', handler: _lazy_i_VO00, lazy: true, middleware: false, method: "post" },
   { route: '/api/auth/logout', handler: _lazy_c3L85V, lazy: true, middleware: false, method: "post" },
-  { route: '/api/auth/me', handler: _lazy_9sNQwU, lazy: true, middleware: false, method: "get" },
   { route: '/api/auth/me', handler: _lazy_yuVYLs, lazy: true, middleware: false, method: undefined },
   { route: '/api/auth/register', handler: _lazy_hPQiZu, lazy: true, middleware: false, method: "post" },
   { route: '/api/auth/session', handler: _lazy_KSLOIV, lazy: true, middleware: false, method: "get" },
@@ -4568,45 +4583,8 @@ const logout_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePrope
   default: logout_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const me_get = defineEventHandler(async (event) => {
-  console.log("\u041F\u043E\u043B\u0443\u0447\u0430\u0435\u043C \u0442\u043E\u043A\u0435\u043D \u0438\u0437 \u043A\u0443\u043A\u0438 \u043D\u0430 \u0441\u0435\u0440\u0432\u0435\u0440\u0435...");
-  const token = getCookie(event, "user_data");
-  if (!token) {
-    throw createError({ statusCode: 401, statusMessage: "Unauthenticated" });
-  }
-  try {
-    return { user: { id: 1, name: "Ivan" } };
-  } catch (e) {
-    throw createError({ statusCode: 401, statusMessage: "Invalid token" });
-  }
-});
-
-const me_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
-  __proto__: null,
-  default: me_get
-}, Symbol.toStringTag, { value: 'Module' }));
-
-const me = defineEventHandler(async (event) => {
-  const fullRawUser = getHeader(event, "x-remote-user") || "";
-  if (!fullRawUser) {
-    throw createError({ statusCode: 401, message: "Unauthorized" });
-  }
-  const username = fullRawUser.split("\\")[1] || fullRawUser;
-  try {
-    const adGroups = await getUserGroups(username);
-    const roles = [];
-    if (adGroups.includes("App_Admins_Group")) roles.push("admin");
-    if (adGroups.includes("App_Managers_Group")) roles.push("manager");
-    if (adGroups.includes("Domain Users")) roles.push("user");
-    return {
-      username,
-      roles,
-      groups: adGroups
-      // Полный список групп для точечных проверок
-    };
-  } catch (error) {
-    throw createError({ statusCode: 500, message: "AD Connection Error" });
-  }
+const me = defineEventHandler((event) => {
+  return event.context.user;
 });
 
 const me$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({

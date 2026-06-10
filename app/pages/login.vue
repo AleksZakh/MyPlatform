@@ -18,6 +18,7 @@
                 <a @click="authUser" href="#" class="inline-block text-sm text-white px-3 py-2 bg-emerald-400 border border-emerald-700 rounded-sm hover:shadow-lg active:shadow-sm">Войти</a>
                 <a  href="#" class=" isDisabled inline-block text-sm text-gray-200 px-3 py-2 bg-sky-500 border border-emerald-700 rounded-sm">Зарегистрироваться</a>
             </div>
+             <h1 v-if="user">Привет, {{ user.name }}!</h1>
         </div>
 
     </div>
@@ -32,6 +33,7 @@
     // import  showToast  from "../../utils/showToast";
     import axios, { AxiosError } from 'axios';
     import { el } from "zod/v4/locales";
+    
 
 
     definePageMeta({
@@ -44,6 +46,7 @@
     const isLoadingStore = useIsLoadingStore();
     const authStore = useAuthStore();
     const { fetch: refreshSession } = useUserSession();
+    const { data: user } = await useFetch<{ name?: string }>('/api/me')
     const toastStore = useToastStore();
     const toastId = Math.random().toString();
 

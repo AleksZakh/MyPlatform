@@ -5,60 +5,132 @@
     Родителю этого блока ОБЯЗАТЕЛЬНО задайте overflow-hidden и h-full (или max-h-screen) -->
     <div class="w-full max-h-[79vh] flex flex-col overflow-hidden mx-auto bg-white p-3 rounded-lg shadow-[0_0_10px_rgba(0,0,0,0.1)]">
         <div class="flex flex-wrap gap-4 items-center justify-between py-1">
-            <!-- Поиск -->
-            <div class="flex-1 min-w-50">
-                <input
-                    v-model="searchQuery"
-                    type="text"
-                    placeholder="Поиск по всем полям..."
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-            </div>
-        
-        <!-- Кнопка выбора столбцов -->
-        <div class="relative">
-          <button
-            @click.stop.prevent="columnSelectorButtonClick"
-            class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
-          >
-            <span>📋</span> Выбрать столбцы
-            <span>{{ showColumnSelector ? '▲' : '▼' }}</span>
-          </button>
-          
-          <!-- Панель выбора столбцов -->
-          <div
-            v-if="showColumnSelector"
-            class="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-96 overflow-y-auto"
-          >
-            <div class="p-3 border-b bg-gray-50 font-medium">Выберите столбцы для отображения</div>
-            <div class="p-2">
-              <label class="flex items-center gap-2 p-2 hover:bg-gray-50 cursor-pointer">
-                <input type="checkbox" v-model="selectAll" @change="toggleAllColumns"  class="w-4 h-4">
-                <span class="font-medium">Выбрать все</span>
-              </label>
-              <hr class="my-1">
-              <label
-                v-for="header in headers"
-                :key="header"
-                class="flex items-center gap-2 p-2 hover:bg-gray-50 cursor-pointer"
-                @click.stop
-              >
-                <input
-                  type="checkbox"
-                  v-model="visibleColumns"
-                  :value="header"
-                  class="w-4 h-4"
+          <!-- ========================================================================================================================== -->
+          <!-- ========================================================================================================================== -->
+          <!-- Поиск -->
+          <div class="flex-1 min-w-50">
+              <input
+                  v-model="searchQuery"
+                  type="text"
+                  placeholder="Поиск по всем полям..."
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+          </div>
+
+          <div class="flex align-baseline relative p-1 rounded-md">
+            <button type="button" class="flex"  @click.prevent.stop="isFilterActive = !isFilterActive" >
+              <Icon :name="'streamline-freehand-color:filter'" size="24" />
+            </button>
+            <Transition name="fade-slide">
+              <div v-if="isFilterActive" class="panel-wrapper w-full shadow-md" ref="panelRef">
+                <form 
+                  id="filterForm "
+                  class="flex bg-gray-50 rounded-md flex-col gap-5 p-6 md:p-7"
                 >
-                <span>{{ getColumnLabel(header) }}</span>
-              </label>
+                      <!-- Поле "Категория" -->
+                      <div class="flex flex-wrap items-center gap-3">
+                          <label class="font-semibold min-w-[100px] text-gray-700">📁 Категория:</label>
+                          <input type="text" id="category" placeholder="Например: Электроника, Книги" value="Все" class="flex-1 px-4 py-2.5 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none transition">
+                      </div>
+
+                      <!-- Поле "Цена от/до" -->
+                      <div class="flex flex-wrap items-center gap-3">
+                          <label class="font-semibold min-w-[100px] text-gray-700">💰 Цена:</label>
+                          <div class="flex flex-1 flex-wrap items-center gap-3">
+                              <input type="number" id="priceMin" placeholder="от" value="0" step="100" class="w-28 px-4 py-2.5 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none">
+                              <span class="text-gray-500">—</span>
+                              <input type="number" id="priceMax" placeholder="до" value="10000" step="100" class="w-28 px-4 py-2.5 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none">
+                              <span class="text-gray-500 text-sm">₽</span>
+                          </div>
+                      </div>
+
+                      <!-- Рейтинг (select) -->
+                      <div class="flex flex-wrap items-center gap-3">
+                          <label class="font-semibold min-w-[100px] text-gray-700">⭐ Рейтинг:</label>
+                          <select id="rating" class="flex-1 px-4 py-2.5 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none">
+                              <option value="any">Любой</option>
+                              <option value="4.5">4.5+ (отлично)</option>
+                              <option value="4">4.0+ (хорошо)</option>
+                              <option value="3">3.0+ (средний)</option>
+                          </select>
+                      </div>
+
+                      <!-- Доступность (radio) -->
+                      <div class="flex flex-wrap items-center gap-3">
+                          <label class="font-semibold min-w-[100px] text-gray-700">📦 Доступность:</label>
+                          <div class="flex flex-wrap gap-5 flex-1">
+                              <label class="flex items-center gap-2 text-gray-700"><input type="radio" name="availability" value="all" checked class="accent-brand"> Все товары</label>
+                              <label class="flex items-center gap-2 text-gray-700"><input type="radio" name="availability" value="inStock" class="accent-brand"> Только в наличии</label>
+                              <label class="flex items-center gap-2 text-gray-700"><input type="radio" name="availability" value="preorder" class="accent-brand"> Предзаказ</label>
+                          </div>
+                      </div>
+
+                      <!-- Доп. опции (чекбоксы) -->
+                      <div class="flex flex-wrap items-center gap-3">
+                          <label class="font-semibold min-w-[100px] text-gray-700">🆕 Дополнительно:</label>
+                          <div class="flex flex-wrap gap-5 flex-1">
+                              <label class="flex items-center gap-2 text-gray-700"><input type="checkbox" id="newFirst" class="rounded accent-brand"> Сначала новинки</label>
+                              <label class="flex items-center gap-2 text-gray-700"><input type="checkbox" id="saleOnly" class="rounded accent-brand"> Только со скидкой</label>
+                          </div>
+                      </div>
+
+                      <!-- Кнопки действий -->
+                      <div class="flex justify-end gap-3 mt-2 pt-2 border-t border-dashed border-gray-200">
+                          <button type="button" id="resetFiltersBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-6 rounded-md transition">Сбросить</button>
+                          <button type="submit" class="bg-[#2c7da0] hover:bg-[#1f5e7a] text-white font-semibold py-2 px-7 rounded-md transition shadow-sm">Применить фильтр</button>
+                      </div>
+                </form>
+              </div>
+            </Transition>
+
+          </div>
+        
+          <!-- Кнопка выбора столбцов -->
+          <div class="relative">
+            <button
+              @click.stop.prevent="columnSelectorButtonClick"
+              class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+            >
+              <span>📋</span> Выбрать столбцы
+              <span>{{ showColumnSelector ? '▲' : '▼' }}</span>
+            </button>
+            
+            <!-- Панель выбора столбцов -->
+            <div
+              v-if="showColumnSelector"
+              class="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-96 overflow-y-auto"
+            >
+              <div class="p-3 border-b bg-gray-50 font-medium">Выберите столбцы для отображения</div>
+              <div class="p-2">
+                <label class="flex items-center gap-2 p-2 hover:bg-gray-50 cursor-pointer">
+                  <input type="checkbox" v-model="selectAll" @change="toggleAllColumns"  class="w-4 h-4">
+                  <span class="font-medium">Выбрать все</span>
+                </label>
+                <hr class="my-1">
+                <label
+                  v-for="header in headers"
+                  :key="header"
+                  class="flex items-center gap-2 p-2 hover:bg-gray-50 cursor-pointer"
+                  @click.stop
+                >
+                  <input
+                    type="checkbox"
+                    v-model="visibleColumns"
+                    :value="header"
+                    class="w-4 h-4"
+                  >
+                  <span>{{ getColumnLabel(header) }}</span>
+                </label>
+              </div>
             </div>
           </div>
-        </div>
         
-        <!-- Информация -->
-        <div class="text-sm text-gray-500">
-          Всего записей: {{ filteredData.length }} из {{ originalData.length }}
-        </div>
+          <!-- Информация -->
+          <div class="text-sm text-gray-500">
+            Всего записей: {{ filteredData.length }} из {{ originalData.length }}
+          </div>
+        <!-- ========================================================================================================================== -->
+        <!-- ========================================================================================================================== -->
       </div>
       <!-- Таблица данных -->
     <div v-if="loading" class="text-center py-12">
@@ -78,7 +150,7 @@
               v-for="header in visibleHeaders"
               :key="header"
               @click="sortBy(header)"
-              class="px-4 
+              class="px-2
                     py-3 
                     text-left 
                     text-xs 
@@ -110,11 +182,12 @@
             <td
               v-for="header in visibleHeaders"
               :key="header"
-              class="px-4 py-3 text-gray-700 align-top"
+              class="px-2 py-1 text-gray-700 align-top"
               :class="{
                 'font-medium text-red-600': header === 'Результат испытаний' && row[header] === 'Не соответствует',
                 'font-medium text-green-600': header === 'Результат испытаний' && row[header] === 'Соответствует'
               }"
+              :title="formatCellValue(row[header], header, 'title')"
             >
               {{ formatCellValue(row[header], header) }}
             </td>
@@ -169,6 +242,7 @@
 </template>
 
 <script setup lang="ts">
+  import { onClickOutside } from '@vueuse/core'
   const rowSelectedId = ref<number | null>(null);
 
   // Функция для проверки, выбрана ли строка
@@ -185,6 +259,17 @@
       rowSelectedId.value = index;
     }
   };
+
+const isFilterActive = ref(false)
+const panelRef = ref<HTMLElement | null>(null) // 2. Создаем ref для DOM-элемента
+
+// 3. Следим за кликами вне этого элемента
+onClickOutside(panelRef, () => {
+  // Закрываем фильтр при клике вне панели, если он активен
+  // if (isFilterActive.value) {
+  //   isFilterActive.value = false
+  // }
+})
 
 const loading = ref(true);
 const originalData = ref<Record<string, string>[]>([]);
@@ -277,12 +362,12 @@ function getColumnLabel(header: string): string {
   return columnLabels[header] || header;
 }
 
-function formatCellValue(value: string | undefined, header: string): string {
+function formatCellValue(value: string | undefined, header: string, contekst = ''): string {
   if (!value) return '—';
   
   // Обрезаем длинные значения
-  if (value.length > 100 && header !== 'Примечание') {
-    return value.substring(0, 100) + '…';
+  if (value.length > 15 && contekst != 'title') {
+    return value.substring(0, 10) + '…';
   }
   return value;
 }
@@ -364,19 +449,13 @@ function nextPage() { // Переход на следующую страницу
 
 //
 function toggleAllColumns() {
-    console.log('колонки================')
+    // console.log('колонки================')
   if (selectAll.value) {
     visibleColumns.value = [...headers.value];
   } else {
     visibleColumns.value = [];
   }
-}
-
-watch(showColumnSelector, (newVal, oldVal) => {
-    // console.log('showColumnSelector изменился:', newVal);
-    // console.log('Было:', oldVal);
-    // console.log('Стало:', newVal);
-});
+};
 
 // Следим за изменениями visibleColumns для обновления selectAll
 watch(visibleColumns, (newVal) => {
@@ -391,6 +470,41 @@ watch([searchQuery, sortKey, sortDirection, itemsPerPage], () => {
 </script>
 
 <style scoped>
+  .panel-wrapper {
+  position: absolute;
+  z-index: 20;
+  right: -30px;
+  width: max-content;
+  background-color: white;
+  border-radius: 15px;
+  /* border: 1px solid lightgray; */
+  top: 38px;
+  box-shadow: 0px 2px 10px 5px rgba(163, 163, 163, 0.31); 
+  /* Добавили мягкую тень для красоты */
+}
+
+/* ─── СТИЛИ АНИМАЦИИ ВЫПАДЕНИЯ (Vue Transition) ─── */
+
+/* Классы active задают скорость и тип анимации при появлении и исчезновении */
+.fade-slide-enter-active {
+  transition: all 1s cubic-bezier(0.16, 1, 0.3, 1); /* Эффект "плавного торможения" (ease-out) */
+}
+
+.fade-slide-leave-active {
+  transition: all 0.3s cubic-bezier(0.7, 0, 0.84, 0); /* Более быстрое исчезновение (ease-in) */
+}
+
+/* Стартовое состояние при появлении и конечное состояние при скрытии */
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-15px); /* Панель плавно вылетает сверху вниз на 8 пикселей */
+}
+
+
+
+
+
   .row_selected{
     background: #000;
   }
