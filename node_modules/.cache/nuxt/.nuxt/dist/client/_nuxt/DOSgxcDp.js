@@ -1,0 +1,1 @@
+import{ap as e,o,c as r,a}from"./B9bketaR.js";import{_ as t}from"./DlAUqK2U.js";const c=e("/loader.svg"),n={},_={class:"wrapper"};function l(d,s){return o(),r("div",_,[...s[0]||(s[0]=[a("img",{src:c,alt:"loader"},null,-1)])])}const m=t(n,[["render",l],["__scopeId","data-v-2c272638"]]);export{m as default};

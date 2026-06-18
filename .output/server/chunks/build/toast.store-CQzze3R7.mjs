@@ -1,0 +1,19 @@
+import { defineStore } from 'pinia';
+
+const useToastStore = defineStore("toast", {
+  state: () => ({
+    toasts: []
+  }),
+  actions: {
+    addToast(toast) {
+      if (!toast.id) toast.id = Math.random().toString();
+      this.toasts.unshift(toast);
+    },
+    removeToast(id) {
+      this.toasts = this.toasts.filter((t) => t.id !== id);
+    }
+  }
+});
+
+export { useToastStore as u };
+//# sourceMappingURL=toast.store-CQzze3R7.mjs.map
