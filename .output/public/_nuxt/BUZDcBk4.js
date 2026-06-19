@@ -1,1 +1,0 @@
-import{ak as o,ah as t,p as r}from"./B9bketaR.js";const i=o((s,u)=>{const{data:e,error:a}=t("/api/auth/me","$o_1eWOeux6");if(e.value&&console.log("Данные пользователя на сервере:",e.value),a.value)return console.error("Ошибка на сервере:",a.value.statusMessage),r("/login")});export{i as default};

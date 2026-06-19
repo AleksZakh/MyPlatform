@@ -12,7 +12,7 @@ import ActiveDirectory from 'activedirectory2';
 export default defineEventHandler(async (event) => {
     
     // 1. Получаем логин и пароль из тела запроса
-    // const body = await readBody(event);
+    const body = await readBody(event);
     // console.log("Получен запрос на авторизацию:", body);
     // console.log('Полученные данные:', body);
     // console.log('Тип данных:', typeof body);

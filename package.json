@@ -11,7 +11,7 @@
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:ws\"",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall":"nuxt prepare"
+    "postinstall": "nuxt prepare"
   },
   "dependencies": {
     "@nuxt/image": "^2.0.0",
@@ -41,6 +41,7 @@
   "devDependencies": {
     "@iconify-json/line-md": "^1.2.16",
     "@iconify-json/lucide": "^1.2.102",
+    "@iconify-json/material-symbols": "^1.2.79",
     "@iconify-json/simple-icons": "^1.2.84",
     "@iconify-json/streamline-freehand-color": "^1.2.2",
     "@types/activedirectory2": "^1.2.6",

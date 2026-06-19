@@ -1,1 +1,0 @@
-import{ai as o}from"./B9bketaR.js";const i=o("toast",{state:()=>({toasts:[]}),actions:{addToast(t){t.id||(t.id=Math.random().toString()),this.toasts.unshift(t)},removeToast(t){this.toasts=this.toasts.filter(s=>s.id!==t)}}});export{i as u};

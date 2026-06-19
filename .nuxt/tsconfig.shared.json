@@ -122,7 +122,7 @@
         "./color-mode-options.mjs"
       ],
       "#app-manifest": [
-        "./manifest/meta/f2751149-d10d-4724-990d-bf814de0a3e1.json"
+        "./manifest/meta/dev.json"
       ],
       "#build": [
         "."
