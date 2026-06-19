@@ -3,11 +3,12 @@
 generator client {
   // provider = "prisma-client"
   provider = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
   provider = "postgresql"
-  url = "postgresql://postgres:%21QAZxsw2@195.133.144.77:5432/NuxtTest"
+  url = env("DATABASE_URL")
 }
 
 model sessions {
