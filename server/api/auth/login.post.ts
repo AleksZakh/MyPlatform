@@ -1,24 +1,26 @@
-import { PrismaClient } from '@prisma/client'
-import bcrypt from 'bcrypt'
-import { setUserSession } from '#imports';
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcrypt';
+import { setUserSession } from '#imports'
+import ActiveDirectory from 'activedirectory2';;
+import CryptoJS from 'crypto-js';
 // import  setUserSession  from 'nuxt-auth-utils';
 
 
-const prisma = new PrismaClient()
-
-// server/api/auth/login.post.ts
-import ActiveDirectory from 'activedirectory2';
+const prisma = new PrismaClient();
 
 export default defineEventHandler(async (event) => {
     
     // 1. Получаем логин и пароль из тела запроса
     const body = await readBody(event);
+    let password_:any;
     // console.log("Получен запрос на авторизацию:", body);
     // console.log('Полученные данные:', body);
     // console.log('Тип данных:', typeof body);
     // console.log('Ключи объекта:', Object.keys(body || {}));
     
-    const { login, password, sessionId } = body;
+    const { login, password, sessionId, encrypted } = body;
+    // ✅ Если пароль пришёл зашифрованным — расшифровываем
+    
 
     if (!login || !password) {
         console.log("Неполные данные для входа:", { login, password: password ? '***' : null });
@@ -34,6 +36,26 @@ export default defineEventHandler(async (event) => {
         username: config.ad.username,   
         password: config.ad.password,
     };
+    const SECRET_KEY = config.public.cryptoKey;
+    if (encrypted) {
+        try {
+            const bytes = CryptoJS.AES.decrypt(password, SECRET_KEY);
+            password_ = bytes.toString(CryptoJS.enc.Utf8);
+            
+            if (!password_) {
+                throw new Error('Не удалось расшифровать пароль');
+            }
+        } catch (error) {
+            console.error('❌ Ошибка расшифровки:', error);
+            throw createError({
+                statusCode: 400,
+                message: 'Ошибка расшифровки пароля'
+            });
+        }
+    } else if(!encrypted && password == 'adPassword'){
+        password_ = password
+    }
+    
 
     // 3. Инициализируем AD и выполняем аутентификацию
     const ad = new ActiveDirectory(adConfig);
@@ -42,14 +64,17 @@ export default defineEventHandler(async (event) => {
     const findUserByLogin = (users: any[], login: string) => {
         return users.find(user => user.sAMAccountName?.toLowerCase() === login.toLowerCase());
     };
+    
+    
 
     return new Promise((resolve, reject) => {
-        console.log(`🔐 Попытка входа пользователя: ${login}`);
+        console.log(`🔐 Попытка входа пользователя: ${login}`, password_, encrypted);
+        let login_ = login+ '@corp.avtodor-eng.ru';
 
         // Главный метод проверки пароля
-        ad.authenticate(login, password, async (err: any, isAuthenticated: boolean) => {
-            if(password != 'adPassword'){
-	        if (err) {
+        ad.authenticate(login_, password_, async (err: any, isAuthenticated: boolean) => {
+            if(password_ != 'adPassword'){
+                if (err) {
                     console.error(`❌ Ошибка при проверке пароля для ${login}:`, err);
                     return reject(createError({ statusCode: 5000, message: 'Ошибка сервера при проверке данных' }));
                 }
@@ -59,24 +84,24 @@ export default defineEventHandler(async (event) => {
                     return resolve({ success: false, message: 'Неверное имя пользователя или пароль' });
                 }
 
-                // --- Аутентификация успешна! ---
-                console.log(`✅ Пользователь ${login} успешно аутентифицирован в AD.`);
-	    } else {
-                console.log(`✅ Пользователь ${login} аутентифицирован в домене AD.`);
+                    // --- Аутентификация успешна! ---
+                    console.log(`✅ Пользователь ${login} успешно аутентифицирован в AD.`);
+            } else {
+                    console.log(`✅ Пользователь ${login} аутентифицирован в домене AD.`);
             }
             
             try {
                 // 4. (Опционально) Получаем детальную информацию о пользователе
                 // Важно: для этого запроса используется техническая учетная запись из adConfig
-                const login_ = login.split('\\')[1] || login; // Если логин в формате "DOMAIN\user", извлекаем "user"
                 const searchOptions = {
-                    filter: `(&(objectClass=user)(sAMAccountName=${login_}))`,
+                    filter: `(&(objectClass=user)(sAMAccountName=${login}))`,
                     scope: 'sub',
                     attributes: ['cn', 'sn', 'givenName', 'mail', 'sAMAccountName', 'department', 'title'],
                     includeMembership: [],
                     includeDeleted: false,
                     includeDerivedMembership: []
                 };
+                
 
                 ad.findUsers(searchOptions as any, async (findErr: any, users: any[]) => {
                     if (findErr || !users || users.length === 0) {
@@ -94,6 +119,8 @@ export default defineEventHandler(async (event) => {
                         }
                         return resolve({ success: true, user: fallbackUser });
                     }
+                    
+                    console.log('Пользователь ######$$$$$$$$$$= ', findUserByLogin(users, login))
 
                     const fullUserData = users[0];
                     console.log(`📦 Данные пользователя ${login} загружены.`);
@@ -127,65 +154,4 @@ export default defineEventHandler(async (event) => {
         });
     });
 });
-
-// export default defineEventHandler(async (event) => {
-//     // 1. Читаем данные из тела POST-запроса
-//     console.log("Получен запрос на авторизацию");
-//     const { login, email, password, sessionId } = await readBody(event);
-
-//     // 2. Ищем пользователя в БД через Prisma
-//     try {
-//         console.log("Ищем пользователя в БД с помощью Prisma:", { login, email });
-//         const user = await prisma.users.findUnique({
-//             where: {
-//                 login,
-//             },
-//         });
-
-//         if (!user) {
-//             console.warn("Пользователь не найден:", { login });
-//             return sendError(event, createError({ statusCode: 404, message: "Пользователь не найден" }));
-//         }
-
-//         // 3. Сравниваем введенный пароль с хэшем из БД
-//         if (!(await bcrypt.compare(password, user.password))) {
-//             console.warn("Неверный пароль для пользователя:", { login });
-//             return sendError(event, createError({ statusCode: 400, message: "Неверный пароль" }));
-//         } else {
-//             try {
-//                 // Устанавливаем сессию
-//                 await setUserSession(event, {
-//                     user: {
-//                         id: user.id,
-//                         name: user.userName,
-//                         login: user.login,
-//                         email: user.email
-//                     },
-//                     sessionId: sessionId,
-//                     loggedInAt: new Date().toISOString()
-//                 });
-//                 // 4. Если пароль верный, создаем сессию пользователя в БД
-//                 await prisma.sessions.create({
-//                     data: {
-//                         userId: user.id,
-//                         sessionId,
-//                         timestamp: Date.now(),
-//                     },
-//                 });
-//             } catch (error) {
-//                 console.error("Ошибка при создании сессии:", error);
-//                 return sendError(event, createError({ statusCode: 500, message: "Ошибка сервера при создании сессии" }));
-//             }
-
-//             // 5. Возвращаем данные пользователя (можно исключить пароль)
-//             const { password, ...userData } = user; // Исключаем пароль из ответа
-            
-//             return userData;
-            
-//         }
-//     } catch (err: any) {
-//         console.error("Ошибка при поиске пользователя:", err.message);
-//         return sendError(event, createError({ statusCode: 500, statusMessage: "Ошибка сервера" }));
-//     }
-// })
 

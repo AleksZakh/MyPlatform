@@ -13,7 +13,11 @@ export default defineNuxtConfig({
       username: process.env.AD_USERNAME || '',
       password: process.env.AD_PASSWORD || '',
       timeout: parseInt(process.env.AD_TIMEOUT || '5000')
+    },
+    public: {
+      cryptoKey: '',
     }
+    
   },
   app: {
     head: {
@@ -50,9 +54,10 @@ export default defineNuxtConfig({
       include: [
         '@vue/devtools-core',
         '@vue/devtools-kit',
-        'uuid',
-        'sweetalert2',
+        '@vueuse/core',
         'axios',
+        'sweetalert2',
+        'uuid',
       ]
     },
     resolve: {

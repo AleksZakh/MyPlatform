@@ -1,9 +1,6 @@
 {
   "compilerOptions": {
     "paths": {
-      "nuxt": [
-        "../node_modules/nuxt"
-      ],
       "@unhead/vue": [
         "../node_modules/@unhead/vue"
       ],
@@ -19,6 +16,9 @@
       "@nuxt/schema": [
         "../node_modules/@nuxt/schema"
       ],
+      "nuxt": [
+        "../node_modules/nuxt"
+      ],
       "@nuxt/icon": [
         "../node_modules/@nuxt/icon"
       ],
@@ -27,6 +27,9 @@
       ],
       "@nuxtjs/color-mode": [
         "../node_modules/@nuxtjs/color-mode"
+      ],
+      "nitropack": [
+        "../node_modules/nitropack"
       ],
       "defu": [
         "../node_modules/defu"
@@ -42,9 +45,6 @@
       ],
       "crossws": [
         "../node_modules/crossws"
-      ],
-      "nitropack": [
-        "../node_modules/nitropack"
       ],
       "vite/client": [
         "../node_modules/vite/client"

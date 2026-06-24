@@ -43,8 +43,8 @@ export const useAuthStore = defineStore("auth", {
     
     set(userData: IUserData) {
       this.$patch({ user: userData });
-      console.log(this.user);
-      console.log(`Информация о пользователе обновлена:`, this.getUserInfo);
+      // console.log(this.user);
+      // console.log(`Информация о пользователе обновлена:`, this.getUserInfo);
       
       // Опционально: сохранить в localStorage
       // if (process.client && userData.status) {

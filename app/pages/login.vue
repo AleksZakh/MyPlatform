@@ -18,7 +18,6 @@
                 <a @click="authUser" href="#" class="inline-block text-sm text-white px-3 py-2 bg-emerald-400 border border-emerald-700 rounded-sm hover:shadow-lg active:shadow-sm">Войти</a>
                 <a  href="#" class=" isDisabled inline-block text-sm text-gray-200 px-3 py-2 bg-sky-500 border border-emerald-700 rounded-sm">Зарегистрироваться</a>
             </div>
-            <h1 v-if="user">Привет, {{ adUserLogin }}!</h1>
         </div>
 
     </div>
@@ -30,14 +29,17 @@
     import Swal from 'sweetalert2';
     import { ref } from 'vue';
     import { useToastStore } from "../stores/toast.store";
+    import bcrypt from "bcryptjs";
     // import  showToast  from "../../utils/showToast";
     import axios, { AxiosError } from 'axios';
     import { el } from "zod/v4/locales";
 
+    const { encryptPassword } = securePW();
     const userName = ref('');
     const userLogin = ref('');
     const userEmail = ref('');
     const adUserLogin = ref('');
+    
 
 
     definePageMeta({
@@ -69,6 +71,9 @@
     const { login, register, isLoading, error: authError } = useAuth(); // ✅ Импортируем функцию login и register из композабла
     const { data: user, error } = await useFetch('/api/auth/me')
     adUserLogin.value = user.value?.username
+
+    let encrypted = false // Флаг, что пароль зашифрован. По умолчанию выключен.
+
     // const error = ref<string | null>(null);
     // const isLoading = isLoadingStore.isLoading;
     // const showRegistrationPrompt = ref(false);
@@ -89,7 +94,7 @@
     //================ 2. Следим за изменениями в полях ввода и проверяем, готовы ли мы к авторизации
     watch([userLogin, userEmail, passwordRef], () => {
         if (userLogin.value && passwordRef.value) {
-            console.log("Пользователь готов к авторизации");
+            // console.log("Пользователь готов к авторизации");
             // userData = useCookie('user_data', {
             //     default: () => ({}),
             //     maxAge: 60 * 60 * 24 * 7, // Кука будет жить 1 неделю
@@ -104,26 +109,37 @@
     // =================== 3. Функция для авторизации пользователя
     const authUser = async (adUserLogin: any = '') => {
         const sessionId = uuidv4(); // Генерируем уникальный sessionId для текущей сессии
+        // console.log('adUserLogin == ', adUserLogin.type, "; ", 'userLogin.value == ', userLogin.value)
+        
 
-        const loginValue = adUserLogin !='' ? adUserLogin.value :  userLogin.value.split('\\')[1] ?? ''; // Получаем часть до '@' для поиска в AD
-        console.log('Авторизация пользователя = ', loginValue)
+        const loginValue = adUserLogin.type !='click' ? adUserLogin.value :  loginNormal(userLogin.value); // Получаем часть до '@' для поиска в AD
+        // console.log('Авторизация пользователя = ', loginValue)
         
         const exists = isUserExists(adUsers.value, loginValue); // Проверяем, существует ли пользователь в списке сользователей, полученном из AD
 
         const user = findUser(adUsers.value, loginValue);// Ищем информацию о пользователе в списке пользователей, полученном из AD
 
-        console.log(`Пользователь ${user.user?.sAMAccountName || loginValue} ${exists ? 'найден' : 'не найден'}`, user.user?.cn);
+        // console.log(`Пользователь ${user.user?.sAMAccountName || loginValue} ${exists ? 'найден' : 'не найден'}`, user.user?.cn);
         if(exists && Object.keys(user).length) {
-            const passwordValue = passwordRef.value == '' ? 'adPassword' : passwordRef.value;
+
+            let passwordValue = ''
+            if(passwordRef.value == ''){
+                passwordValue = 'adPassword';
+            }  else {
+                passwordValue = encryptPassword(passwordRef.value);
+                encrypted = true
+            }
+
             let result:any =''
             try {
                 // if(!adUserLogin && passwordValue != 'adPassword'){
                     result = await login({
                         login: loginValue,
                         password: passwordValue,
-                        sessionId: sessionId
+                        sessionId: sessionId,
+                        encrypted: encrypted
                     });
-                    console.log('---result : ',result)
+                    // console.log('---result : ',result)
                 // }
                 
                 if(result.success || adUserLogin) {
@@ -168,7 +184,7 @@
                 // Здесь можно обработать ошибку, например, показать уведомление пользователю
             }
         } else {
-            console.log('Пользователь не найден в AD, предлагаем зарегистрироваться...');
+            console.log('Пользователь не авторизован, необходимо авторизоваться.');
         }
     }
 
@@ -216,7 +232,7 @@
             
         };
         adUsers.value = data.users; // Сохраняем пользователей в реактивной переменной
-        console.log('Загружено:', adUsers.value)
+        // console.log('Загружено:', adUsers.value)
     });
 </script>
 

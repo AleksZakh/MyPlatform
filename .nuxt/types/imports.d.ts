@@ -52,6 +52,7 @@ declare global {
   const isVue2: typeof import('../../node_modules/nuxt/dist/app/compat/vue-demi').isVue2
   const isVue3: typeof import('../../node_modules/nuxt/dist/app/compat/vue-demi').isVue3
   const loadPayload: typeof import('../../node_modules/nuxt/dist/app/composables/payload').loadPayload
+  const loginNormal: typeof import('../../app/composables/loginNormal').loginNormal
   const markRaw: typeof import('vue').markRaw
   const navigateTo: typeof import('../../node_modules/nuxt/dist/app/composables/router').navigateTo
   const nextTick: typeof import('vue').nextTick
@@ -89,6 +90,7 @@ declare global {
   const reloadNuxtApp: typeof import('../../node_modules/nuxt/dist/app/composables/chunk').reloadNuxtApp
   const requestIdleCallback: typeof import('../../node_modules/nuxt/dist/app/compat/idle-callback').requestIdleCallback
   const resolveComponent: typeof import('vue').resolveComponent
+  const securePW: typeof import('../../app/composables/securePW').securePW
   const setInterval: typeof import('../../node_modules/nuxt/dist/app/compat/interval').setInterval
   const setPageLayout: typeof import('../../node_modules/nuxt/dist/app/composables/router').setPageLayout
   const setResponseStatus: typeof import('../../node_modules/nuxt/dist/app/composables/ssr').setResponseStatus
@@ -284,6 +286,7 @@ declare module 'vue' {
     readonly isVue2: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/compat/vue-demi')['isVue2']>
     readonly isVue3: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/compat/vue-demi')['isVue3']>
     readonly loadPayload: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/payload')['loadPayload']>
+    readonly loginNormal: UnwrapRef<typeof import('../../app/composables/loginNormal')['loginNormal']>
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
     readonly navigateTo: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/router')['navigateTo']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
@@ -321,6 +324,7 @@ declare module 'vue' {
     readonly reloadNuxtApp: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/chunk')['reloadNuxtApp']>
     readonly requestIdleCallback: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/compat/idle-callback')['requestIdleCallback']>
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
+    readonly securePW: UnwrapRef<typeof import('../../app/composables/securePW')['securePW']>
     readonly setInterval: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/compat/interval')['setInterval']>
     readonly setPageLayout: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/router')['setPageLayout']>
     readonly setResponseStatus: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/ssr')['setResponseStatus']>

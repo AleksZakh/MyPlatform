@@ -551,6 +551,8 @@ import { RuntimeConfig as UserRuntimeConfig, PublicRuntimeConfig as UserPublicRu
    },
   }
   interface SharedPublicRuntimeConfig {
+   cryptoKey: string,
+
    piniaPluginPersistedstate: any,
 
    auth: {

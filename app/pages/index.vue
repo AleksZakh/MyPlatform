@@ -42,6 +42,9 @@
 </style>
 
 <script setup lang="ts">
+  useHead({
+      title: 'Автодор-Инжиниринг'
+  })
 
   import { useAuthStore, useIsLoadingStore } from "../stores/auth.store"
   import { useWebSocketStore } from "@/stores/websocket.store";

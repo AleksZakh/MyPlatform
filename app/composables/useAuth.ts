@@ -12,14 +12,15 @@ export const useAuth = () => {
         login: string;
         password: string;
         sessionId: string;
+        encrypted: boolean;
     }) => {
         isLoading.value = true;
         error.value = null;
         
         try {
-            console.log('Попытка входа с данными:', credentials.login);
+            // console.log('Попытка входа с данными:', credentials.login);
             const response = await axios.post('/api/auth/login', credentials);
-            console.log('response: ', response)
+            // console.log('response: ', response)
             return { success: true, data: response.data };
         } catch (err) {
             if (isAxiosError(err) && err.response?.status === 404) {
