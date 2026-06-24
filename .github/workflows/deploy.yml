@@ -1,0 +1,25 @@
+name: Deploy Website
+
+# Сценарий запускается только при push в ветку deploy
+on:
+  push:
+    branches:
+      - deploy
+
+jobs:
+  deploy:
+    runs-rate: ubuntu-latest
+    steps:
+      - name: Deploy to Server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 22
+          script: |
+            cd /var/www/html/MyPlatform
+            git checkout -- .output/
+            git pull origin deploy
+            # Если нужно, здесь можно добавить перезапуск вашего Nuxt-приложения:
+            # pm2 restart MyPlatform
