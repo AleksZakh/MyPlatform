@@ -1,6 +1,6 @@
+/// <reference types="@nuxt/ui" />
 /// <reference types="@pinia/nuxt" />
 /// <reference types="@nuxt/image" />
-/// <reference types="@nuxt/ui" />
 /// <reference types="nuxt-auth-utils" />
 /// <reference types="@nuxt/telemetry" />
 /// <reference types="pinia-plugin-persistedstate" />

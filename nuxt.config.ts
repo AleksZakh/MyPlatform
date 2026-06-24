@@ -56,6 +56,7 @@ export default defineNuxtConfig({
         '@vue/devtools-kit',
         '@vueuse/core',
         'axios',
+        'crypto-js', // CJS
         'sweetalert2',
         'uuid',
       ]

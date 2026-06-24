@@ -14,6 +14,7 @@ type HydrationStrategies = {
 type LazyComponent<T> = DefineComponent<HydrationStrategies, {}, {}, {}, {}, {}, {}, { hydrated: () => void }> & T
 
 interface _GlobalComponents {
+  DepartmentCard: typeof import("../../app/components/DepartmentCard.vue")['default']
   Footer: typeof import("../../app/components/Footer.vue")['default']
   Toast: typeof import("../../app/components/Toast.vue")['default']
   LabHandbook: typeof import("../../app/components/lab/handbook.vue")['default']
@@ -179,6 +180,7 @@ interface _GlobalComponents {
   Icon: typeof import("../../node_modules/@nuxt/icon/dist/runtime/components/index")['default']
   ColorScheme: typeof import("../../node_modules/@nuxtjs/color-mode/dist/runtime/component.vue3.vue")['default']
   NuxtIsland: typeof import("../../node_modules/nuxt/dist/app/components/nuxt-island")['default']
+  LazyDepartmentCard: LazyComponent<typeof import("../../app/components/DepartmentCard.vue")['default']>
   LazyFooter: LazyComponent<typeof import("../../app/components/Footer.vue")['default']>
   LazyToast: LazyComponent<typeof import("../../app/components/Toast.vue")['default']>
   LazyLabHandbook: LazyComponent<typeof import("../../app/components/lab/handbook.vue")['default']>
