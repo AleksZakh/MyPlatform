@@ -12,7 +12,7 @@
 </template> -->
 
 <template>
-  <div class="max-w-7xl mx-auto px-4 py-8">
+  <div class="max-w-7xl mx-full p-8">
     <!-- Секция отделов -->
     <section class="space-y-6">
       <!-- Заголовок секции -->
@@ -24,8 +24,8 @@
       </div>
 
       <!-- Состояние загрузки (скелетоны Nuxt UI) -->
-      <div v-if="pending" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <UCard v-for="n in 3" :key="n" class="h-48 flex flex-col justify-between">
+      <div v-if="pending" class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+        <UCard v-for="n in 4" :key="n" class="h-40 flex flex-col justify-between">
           <USkeleton class="h-6 w-[60%]" />
           <USkeleton class="h-12 w-full" />
           <USkeleton class="h-4 w-[40%]" />
@@ -33,7 +33,7 @@
       </div>
 
       <!-- Сетка с готовыми карточками -->
-      <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div v-else class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-6">
         <DepartmentCard 
           v-for="dept in departments" 
           :key="dept.id" 

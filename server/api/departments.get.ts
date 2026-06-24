@@ -5,8 +5,8 @@ export default defineEventHandler(() => {
       id: 'hr',
       name: 'Отдел кадров (HR)',
       slug: '/departments/hr',
-      icon: 'i-heroicons-user-group', // Иконка из коллекции Heroicons (встроена в Nuxt UI)
-      manager: { name: 'Анна Иванова', avatar: 'https://unsplash.com' },
+      icon: 'streamline-freehand-color:job-choose-candidate', // Иконка из коллекции Heroicons (встроена в Nuxt UI)
+      manager: { name: 'Татьяна Колозина', avatar: 'https://unsplash.com' },
       employeeCount: 12,
       quickLinks: [
         { label: 'Заказать справку', url: '/departments/hr/documents' },
@@ -17,13 +17,39 @@ export default defineEventHandler(() => {
       id: 'it',
       name: 'IT и Разработка',
       slug: '/departments/it',
-      icon: 'i-heroicons-cpu-chip',
-      manager: { name: 'Сергей Петров', avatar: 'https://unsplash.com' },
+      icon: 'streamline-freehand-color:desktop-computer-pc',
+      manager: { name: 'Михаил Руденко', avatar: 'https://unsplash.com' },
       employeeCount: 45,
       quickLinks: [
         { label: 'Техподдержка', url: '/departments/it/ticket' },
         { label: 'База знаний', url: '/departments/it/wiki' }
       ]
-    }
+    },
+    {
+      id: 'diagnostic',
+      name: 'Диагностика',
+      slug: '/departments/diagnostic',
+      icon: 'streamline-freehand-color:analytics-graph-bar-horizontal',
+      manager: { name: 'Леонид Шамраев', avatar: 'https://unsplash.com' },
+      employeeCount: 50,
+      quickLinks: [
+        { label: 'ГИС', url: '/departments/diagnostic/gis' },
+        { label: 'АИС ИССО', url: '/departments/diagnostic/aisisso' }
+      ]
+    },
+    {
+      id: 'labcontrol',
+      name: 'Лабораторный контроль',
+      slug: '/departments/lab',
+      icon: 'streamline-freehand-color:amusement-park-strength-meter',
+      manager: { name: 'Кирилл Голюбин', avatar: 'https://unsplash.com' },
+      employeeCount: 20,
+      quickLinks: [
+        { label: 'Реестр вх.контроля', url: '/departments/labcontrol/reestr' },
+        { label: 'Протокол испытаний', url: '/departments/labcontrol/testprotocol' },
+        { label: 'Отбор проб', url: '/departments/labcontrol/sampling' }
+      ]
+    },
+    //streamline-freehand-color:amusement-park-strength-meter
   ]
 })

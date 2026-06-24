@@ -17,11 +17,11 @@
                     <Icon name="line-md:edit" /> Изменить
                 </NuxtLink>
             </div>
-            <div>
+            <!-- <div>
                 <NuxtLink to="/lab">                    
                     <Icon name="material-symbols:precision-manufacturing-outline-sharp" size="18px" /> Лаборатория
                 </NuxtLink>
-            </div>
+            </div> -->
         </div>
         <div class="flex ml-auto items-center">
             <!-- <a @click="logout" class="flex items-center px-2 transition-colors hover:text-red-500" href="#">

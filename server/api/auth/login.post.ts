@@ -120,7 +120,7 @@ export default defineEventHandler(async (event) => {
                         return resolve({ success: true, user: fallbackUser });
                     }
                     
-                    console.log('Пользователь ######$$$$$$$$$$= ', findUserByLogin(users, login))
+                    // console.log('Пользователь ######$$$$$$$$$$= ', findUserByLogin(users, login))
 
                     const fullUserData = users[0];
                     console.log(`📦 Данные пользователя ${login} загружены.`);
