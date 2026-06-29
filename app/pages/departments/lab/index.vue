@@ -8,7 +8,7 @@
                 :ui="{trigger: 'border border-gray-300 rounded-md', list: 'p-1 gap-4',}"
             >
                 <template #incomingInspection>
-                    <LabIncominginspection />
+                    <LabIncominginspection/>
                 </template>
                 <template #research>
                     <LabResearch />

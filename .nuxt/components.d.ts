@@ -19,6 +19,7 @@ export const Footer: typeof import("../app/components/Footer.vue")['default']
 export const Toast: typeof import("../app/components/Toast.vue")['default']
 export const LabHandbook: typeof import("../app/components/lab/handbook.vue")['default']
 export const LabIncominginspection: typeof import("../app/components/lab/incominginspection.vue")['default']
+export const LabModal: typeof import("../app/components/lab/labModal.vue")['default']
 export const LabResearch: typeof import("../app/components/lab/research.vue")['default']
 export const NavigateTopnav: typeof import("../app/components/navigate/topnav.vue")['default']
 export const SidebarMenuData: typeof import("../app/components/sidebar/menu.data")['default']
@@ -185,6 +186,7 @@ export const LazyFooter: LazyComponent<typeof import("../app/components/Footer.v
 export const LazyToast: LazyComponent<typeof import("../app/components/Toast.vue")['default']>
 export const LazyLabHandbook: LazyComponent<typeof import("../app/components/lab/handbook.vue")['default']>
 export const LazyLabIncominginspection: LazyComponent<typeof import("../app/components/lab/incominginspection.vue")['default']>
+export const LazyLabModal: LazyComponent<typeof import("../app/components/lab/labModal.vue")['default']>
 export const LazyLabResearch: LazyComponent<typeof import("../app/components/lab/research.vue")['default']>
 export const LazyNavigateTopnav: LazyComponent<typeof import("../app/components/navigate/topnav.vue")['default']>
 export const LazySidebarMenuData: LazyComponent<typeof import("../app/components/sidebar/menu.data")['default']>

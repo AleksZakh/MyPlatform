@@ -16,19 +16,6 @@
                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
           </div>
-
-          <!-- _____ добавление новой записи _______-->
-          <div>
-            <UButton
-              @click.stop.prevent=""
-              class="px-4 py-2 bg-white border text-black font-normal border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
-              title="Создать новую запись"
-            >
-            <Icon :name="'streamline-freehand-color:edit-pen-write-paper'" size="24"/>
-            Создать запись
-            </UButton>
-          </div>
-
           <!-- _____ фильтр ______ -->
           <div class="flex align-baseline relative p-1 rounded-md" title="фильтр строк">
             <button type="button" class="flex"  @click.prevent.stop="isFilterActive = !isFilterActive" >
@@ -102,7 +89,7 @@
           <div class="relative">
             <UButton
               @click.stop.prevent="columnSelectorButtonClick"
-              class="px-4 py-2 bg-white border text-black font-normal border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+              class="px-4 py-2 bg-white border text-black font-normal border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
               title="Выбор отображаемых столбцов"
             >
               <Icon :name="'streamline-freehand-color:form-validation-check-square-1'" size="24" />
@@ -139,7 +126,19 @@
               </div>
             </div>
           </div>
-        
+
+          <!-- _____ добавление новой записи _______-->
+          <div>
+            <UButton
+              @click="open"
+              class="px-4 py-2 bg-white border text-black font-normal border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+              title="Создать новую запись"
+            >
+            <Icon :name="'streamline-freehand-color:edit-pen-write-paper'" size="24"/>
+            Создать запись
+            </UButton>
+          </div>
+          
           <!-- Информация -->
           <div class="text-sm text-gray-500">
             Всего записей: {{ filteredData.length }} из {{ originalData.length }}
@@ -191,8 +190,9 @@
               'bg-green-50': isRowSelected(index),
               'hover:bg-gray-50': !isRowSelected(index)
             }"
+            
             @click="selectRow(index)"
-            @dblclick="rowDblClick"
+            @dblclick="open"
           >
             <td
               v-for="header in visibleHeaders"
@@ -245,8 +245,8 @@
         </button>
       </div>
     </div>
-
-    </div>
+    <!-- <RecordModal v-model="isModalOpen" :record-data="selectedRecord" class="hover:bg-gray-50 transition-colors"/> -->
+  </div>
     <!-- <UFormGroup label="Имя" name="name" class="mb-4">
     <UInput v-model="formData.name" placeholder="Введите имя" />
     </UFormGroup>
@@ -258,10 +258,19 @@
 
 <script setup lang="ts">
 
-  const { items,  fetchItems, createItem } = useIncomingControl()
   import sortData from '../../../utils/dataSort'
+  import  labModal  from '~/components/lab/labModal.vue'
+  
 
   import { onClickOutside } from '@vueuse/core'
+  const count = ref(0)
+
+  const toast = useToast()
+  const overlay = useOverlay()
+  // Регистрируем наше окно в фабрике оверлеев
+  // const modal = overlay.create(() => import('~/components/RecordModal.vue'))
+  const modal = overlay.create(labModal)
+
   const rowSelectedId = ref<number | null>(null);
 
   // Функция для проверки, выбрана ли строка
@@ -274,13 +283,46 @@
     // Если кликнули на ту же строку - снимаем выделение
     if (rowSelectedId.value === index) {
       rowSelectedId.value = null;
+      selectedRecord.value = null
     } else {
       rowSelectedId.value = index;
+      selectedRecord.value = index;
     }
   };
 
 const isFilterActive = ref(false)
 const panelRef = ref<HTMLElement | null>(null) // 2. Создаем ref для DOM-элемента
+
+// Функция, которая будет вызываться кнопкой "Создать" или двойным кликом по таблице
+async function open() {
+  const instance = modal.open({
+    count: count.value
+  })
+
+  const shouldIncrement = await instance.result
+
+  if (shouldIncrement) {
+    count.value++
+
+    toast.add({
+      title: `Success: ${shouldIncrement}`,
+      color: 'success',
+      id: 'modal-success'
+    })
+
+    // Update the count
+    modal.patch({
+      count: count.value
+    })
+    return
+  }
+
+  toast.add({
+    title: `Dismissed: ${shouldIncrement}`,
+    color: 'error',
+    id: 'modal-dismiss'
+  })
+}
 
 // 3. Следим за кликами вне этого элемента
 onClickOutside(panelRef, () => {
@@ -303,6 +345,8 @@ const itemsPerPage = ref(25);
 const showColumnSelector = ref(false);
 const visibleColumns = ref<string[]>([]);
 const selectAll = ref(false);
+const isModalOpen = ref(false)
+const selectedRecord = ref<any>(null)
 
 // Человеко-читаемые названия столбцов
 const columnLabels: Record<string, string> = {
@@ -327,9 +371,9 @@ onMounted(async () => {
   await loadData();
 });
 
-const rowDblClick = () => {
-  console.log('Двойной клик по строке');
-}
+// const rowDblClick = () => {
+//   console.log('Двойной клик по строке');
+// }
 
 // Закрытие селектора при клике вне (простой способ через document)
 onMounted(() => {
@@ -347,6 +391,7 @@ onMounted(() => {
 
 function columnSelectorButtonClick() { // изменение статуса отображения окна выбора столбцов
     showColumnSelector.value = !showColumnSelector.value;
+    
     // console.log('Клик по кнопке выбора столбцов', showColumnSelector.value);
 }
 
