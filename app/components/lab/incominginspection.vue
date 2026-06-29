@@ -17,7 +17,20 @@
               />
           </div>
 
-          <div class="flex align-baseline relative p-1 rounded-md">
+          <!-- _____ добавление новой записи _______-->
+          <div>
+            <UButton
+              @click.stop.prevent=""
+              class="px-4 py-2 bg-white border text-black font-normal border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+              title="Создать новую запись"
+            >
+            <Icon :name="'streamline-freehand-color:edit-pen-write-paper'" size="24"/>
+            Создать запись
+            </UButton>
+          </div>
+
+          <!-- _____ фильтр ______ -->
+          <div class="flex align-baseline relative p-1 rounded-md" title="фильтр строк">
             <button type="button" class="flex"  @click.prevent.stop="isFilterActive = !isFilterActive" >
               <Icon :name="'streamline-freehand-color:filter'" size="24" />
             </button>
@@ -29,13 +42,13 @@
                 >
                       <!-- Поле "Категория" -->
                       <div class="flex flex-wrap items-center gap-3">
-                          <label class="font-semibold min-w-[100px] text-gray-700">📁 Категория:</label>
+                          <label class="font-semibold min-w-25 text-gray-700">📁 Категория:</label>
                           <input type="text" id="category" placeholder="Например: Электроника, Книги" value="Все" class="flex-1 px-4 py-2.5 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none transition">
                       </div>
 
                       <!-- Поле "Цена от/до" -->
                       <div class="flex flex-wrap items-center gap-3">
-                          <label class="font-semibold min-w-[100px] text-gray-700">💰 Цена:</label>
+                          <label class="font-semibold min-w-25 text-gray-700">💰 Цена:</label>
                           <div class="flex flex-1 flex-wrap items-center gap-3">
                               <input type="number" id="priceMin" placeholder="от" value="0" step="100" class="w-28 px-4 py-2.5 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none">
                               <span class="text-gray-500">—</span>
@@ -46,7 +59,7 @@
 
                       <!-- Рейтинг (select) -->
                       <div class="flex flex-wrap items-center gap-3">
-                          <label class="font-semibold min-w-[100px] text-gray-700">⭐ Рейтинг:</label>
+                          <label class="font-semibold min-w-25 text-gray-700">⭐ Рейтинг:</label>
                           <select id="rating" class="flex-1 px-4 py-2.5 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none">
                               <option value="any">Любой</option>
                               <option value="4.5">4.5+ (отлично)</option>
@@ -57,7 +70,7 @@
 
                       <!-- Доступность (radio) -->
                       <div class="flex flex-wrap items-center gap-3">
-                          <label class="font-semibold min-w-[100px] text-gray-700">📦 Доступность:</label>
+                          <label class="font-semibold min-w-25 text-gray-700">📦 Доступность:</label>
                           <div class="flex flex-wrap gap-5 flex-1">
                               <label class="flex items-center gap-2 text-gray-700"><input type="radio" name="availability" value="all" checked class="accent-brand"> Все товары</label>
                               <label class="flex items-center gap-2 text-gray-700"><input type="radio" name="availability" value="inStock" class="accent-brand"> Только в наличии</label>
@@ -67,7 +80,7 @@
 
                       <!-- Доп. опции (чекбоксы) -->
                       <div class="flex flex-wrap items-center gap-3">
-                          <label class="font-semibold min-w-[100px] text-gray-700">🆕 Дополнительно:</label>
+                          <label class="font-semibold min-w-25 text-gray-700">🆕 Дополнительно:</label>
                           <div class="flex flex-wrap gap-5 flex-1">
                               <label class="flex items-center gap-2 text-gray-700"><input type="checkbox" id="newFirst" class="rounded accent-brand"> Сначала новинки</label>
                               <label class="flex items-center gap-2 text-gray-700"><input type="checkbox" id="saleOnly" class="rounded accent-brand"> Только со скидкой</label>
@@ -87,18 +100,20 @@
         
           <!-- Кнопка выбора столбцов -->
           <div class="relative">
-            <button
+            <UButton
               @click.stop.prevent="columnSelectorButtonClick"
-              class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+              class="px-4 py-2 bg-white border text-black font-normal border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+              title="Выбор отображаемых столбцов"
             >
-              <span>📋</span> Выбрать столбцы
+              <Icon :name="'streamline-freehand-color:form-validation-check-square-1'" size="24" />
+              Выбрать столбцы
               <span>{{ showColumnSelector ? '▲' : '▼' }}</span>
-            </button>
+            </UButton>
             
             <!-- Панель выбора столбцов -->
             <div
               v-if="showColumnSelector"
-              class="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-96 overflow-y-auto"
+              class="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-96 overflow-y-auto custom-scrollbar"
             >
               <div class="p-3 border-b bg-gray-50 font-medium">Выберите столбцы для отображения</div>
               <div class="p-2">
@@ -142,7 +157,7 @@
       <p>Нет данных, соответствующих критериям поиска</p>
     </div>
 
-    <div v-else class="overflow-x-auto shadow-md rounded-lg overflow-y-auto" style="max-height: 70vh;">
+    <div v-else class="overflow-x-auto custom-scrollbar shadow-md rounded-lg overflow-y-auto" style="max-height: 70vh;">
       <table class="min-w-full bg-white border border-gray-200 text-sm">
         <thead class="bg-gray-100 sticky top-0">
           <tr>
@@ -242,6 +257,10 @@
 </template>
 
 <script setup lang="ts">
+
+  const { items,  fetchItems, createItem } = useIncomingControl()
+  import sortData from '../../../utils/dataSort'
+
   import { onClickOutside } from '@vueuse/core'
   const rowSelectedId = ref<number | null>(null);
 
@@ -388,35 +407,10 @@ const filteredData = computed(() => {
 
 // Сортировка
 const sortedData = computed(() => {
-const data = [...filteredData.value];
-const key = sortKey.value;
-const direction = sortDirection.value;
-  
-  data.sort((a, b) => {
-    let aVal = a[key] || '';
-    let bVal = b[key] || '';
-    
-    // Специальная обработка для дат
-    if (key.includes('Дата') && aVal && bVal) {
-        const dateA = new Date(aVal.split('.').reverse().join('-'));
-        const dateB = new Date(bVal.split('.').reverse().join('-'));
-        if (!isNaN(dateA.getTime()) && !isNaN(dateB.getTime())) {
-            return direction === 'asc' 
-            ? dateA.getTime() - dateB.getTime()
-            : dateB.getTime() - dateA.getTime();
-        }
-    }
-    
-    // Обычное строковое сравнение
-    aVal = String(aVal).toLowerCase();
-    bVal = String(bVal).toLowerCase();
-    
-    if (aVal < bVal) return direction === 'asc' ? -1 : 1;
-    if (aVal > bVal) return direction === 'asc' ? 1 : -1;
-    return 0;
+  return sortData(filteredData.value, {
+    key: sortKey.value,
+    direction: sortDirection.value
   });
-  
-  return data;
 });
 
 // Видимые столбцы
@@ -501,10 +495,6 @@ watch([searchQuery, sortKey, sortDirection, itemsPerPage], () => {
   transform: translateY(-15px); /* Панель плавно вылетает сверху вниз на 8 пикселей */
 }
 
-
-
-
-
   .row_selected{
     background: #000;
   }
@@ -514,22 +504,5 @@ watch([searchQuery, sortKey, sortDirection, itemsPerPage], () => {
       z-index: 10;
   }
 
-  /* Стили для полос прокрутки */
-  .overflow-x-auto::-webkit-scrollbar {
-    height: 8px;
-  }
-
-  .overflow-x-auto::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-  }
-
-  .overflow-x-auto::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 4px;
-  }
-
-  .overflow-x-auto::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
-  }
+  
 </style>

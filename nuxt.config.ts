@@ -67,7 +67,9 @@ export default defineNuxtConfig({
       },
     },
   },
-  css: ['~/assets/css/main.css'],
+  css: [
+    '~/assets/css/main.css',
+    '~/assets/css/scrollbar.css'],
   modules: [
     '@nuxt/ui',
     '@pinia/nuxt',

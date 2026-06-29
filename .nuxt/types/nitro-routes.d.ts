@@ -33,6 +33,15 @@ declare module "nitropack/types" {
     '/api/departments': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/departments.get').default>>>>
     }
+    '/api/incoming-control/:id': {
+      'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/[id].delete').default>>>>
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/[id].get').default>>>>
+      'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/[id].put').default>>>>
+    }
+    '/api/incoming-control': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/index.get').default>>>>
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/index.post').default>>>>
+    }
     '/api/lab-tests': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab-tests.get').default>>>>
     }

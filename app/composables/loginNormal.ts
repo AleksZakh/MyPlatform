@@ -11,7 +11,7 @@ export const loginNormal = (insertLigin:string):string => {
         return insertLigin.toUpperCase();    }
     
     const first = insertLigin.charAt(0).toUpperCase();
-    const middle = insertLigin.slice(1, -2);
+    const middle = insertLigin.slice(1, -2).toLowerCase();
     const lastTwo = insertLigin.slice(-2).toUpperCase();
     
     return first + middle + lastTwo;

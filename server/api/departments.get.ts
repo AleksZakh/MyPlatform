@@ -45,7 +45,7 @@ export default defineEventHandler(() => {
       manager: { name: 'Кирилл Голюбин', avatar: 'https://unsplash.com' },
       employeeCount: 20,
       quickLinks: [
-        { label: 'Реестр вх.контроля', url: '/departments/labcontrol/reestr' },
+        { label: 'Реестр вх.контроля', url: '/departments/lab/' },
         { label: 'Протокол испытаний', url: '/departments/labcontrol/testprotocol' },
         { label: 'Отбор проб', url: '/departments/labcontrol/sampling' }
       ]

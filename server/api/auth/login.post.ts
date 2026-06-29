@@ -68,7 +68,7 @@ export default defineEventHandler(async (event) => {
     
 
     return new Promise((resolve, reject) => {
-        console.log(`🔐 Попытка входа пользователя: ${login}`, password_, encrypted);
+        console.log(`🔐 Попытка входа пользователя: ${login}`, encrypted);
         let login_ = login+ '@corp.avtodor-eng.ru';
 
         // Главный метод проверки пароля

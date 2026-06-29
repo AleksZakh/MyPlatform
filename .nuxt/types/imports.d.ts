@@ -128,6 +128,7 @@ declare global {
   const useHydration: typeof import('../../node_modules/nuxt/dist/app/composables/hydrate').useHydration
   const useId: typeof import('vue').useId
   const useImage: typeof import('../../node_modules/@nuxt/image/dist/runtime/composables').useImage
+  const useIncomingControl: typeof import('../../app/composables/useIncomingControl').useIncomingControl
   const useIsLoadingStore: typeof import('../../app/stores/auth.store').useIsLoadingStore
   const useKbd: typeof import('../../node_modules/@nuxt/ui/dist/runtime/composables/useKbd').useKbd
   const useLazyAsyncData: typeof import('../../node_modules/nuxt/dist/app/composables/asyncData').useLazyAsyncData
@@ -362,6 +363,7 @@ declare module 'vue' {
     readonly useHydration: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/hydrate')['useHydration']>
     readonly useId: UnwrapRef<typeof import('vue')['useId']>
     readonly useImage: UnwrapRef<typeof import('../../node_modules/@nuxt/image/dist/runtime/composables')['useImage']>
+    readonly useIncomingControl: UnwrapRef<typeof import('../../app/composables/useIncomingControl')['useIncomingControl']>
     readonly useIsLoadingStore: UnwrapRef<typeof import('../../app/stores/auth.store')['useIsLoadingStore']>
     readonly useKbd: UnwrapRef<typeof import('../../node_modules/@nuxt/ui/dist/runtime/composables/useKbd')['useKbd']>
     readonly useLazyAsyncData: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/asyncData')['useLazyAsyncData']>

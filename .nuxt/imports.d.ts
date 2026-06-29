@@ -35,6 +35,7 @@ export { loginNormal } from '../app/composables/loginNormal';
 export { securePW } from '../app/composables/securePW';
 export { useADUsers } from '../app/composables/useADUsers';
 export { useAuth } from '../app/composables/useAuth';
+export { useIncomingControl } from '../app/composables/useIncomingControl';
 export { useAuthStore, actions, useIsLoadingStore } from '../app/stores/auth.store';
 export { useToastStore } from '../app/stores/toast.store';
 export { useUserStore } from '../app/stores/user';

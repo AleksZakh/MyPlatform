@@ -30,7 +30,7 @@
     const tabs = [
         {
             label: 'Реестр входного контроля',
-            icon: 'solar:clipboard-list-broken',
+            icon: 'streamline-freehand-color:disability-blind-read',
             slot: 'incomingInspection',   // этот слот будет отображаться для вкладки
             value: 'incomingInspection'   // значение для v-model
         },
