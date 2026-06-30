@@ -17,10 +17,16 @@
               />
           </div>
           <!-- _____ фильтр ______ -->
-          <div class="flex align-baseline relative p-1 rounded-md" title="фильтр строк">
-            <button type="button" class="flex"  @click.prevent.stop="isFilterActive = !isFilterActive" >
-              <Icon :name="'streamline-freehand-color:filter'" size="24" />
-            </button>
+          <div class="flex align-baseline relative p-1 rounded-md" >
+            <UTooltip text="Фильтр записей" :kbds="['meta', 'Shift', 'F']">
+              <UButton
+                icon="streamline-freehand-color:filter"
+                color="neutral"
+                variant="outline"
+                :ui="{ leadingIcon: 'text-primary' }"
+                type="button" class="flex bg-transparent hover:bg-gray-100 p-3"  @click.prevent.stop="isFilterActive = !isFilterActive" >
+              </UButton>
+            </UTooltip>
             <Transition name="fade-slide">
               <div v-if="isFilterActive" class="panel-wrapper w-full shadow-md" ref="panelRef">
                 <form 
@@ -129,14 +135,15 @@
 
           <!-- _____ добавление новой записи _______-->
           <div>
-            <UButton
-              @click="open"
-              class="px-4 py-2 bg-white border text-black font-normal border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
-              title="Создать новую запись"
-            >
-            <Icon :name="'streamline-freehand-color:edit-pen-write-paper'" size="24"/>
-            Создать запись
-            </UButton>
+            <UTooltip text="Создать новую запись" :kbds="['Alt','Shift', 'N']">
+              <UButton
+                @click="open"
+                class="px-4 py-2 bg-white border text-black font-normal border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+              >
+              <Icon :name="'streamline-freehand-color:edit-pen-write-paper'" size="24"/>
+              Создать запись
+              </UButton>
+            </UTooltip>
           </div>
           
           <!-- Информация -->
@@ -181,33 +188,34 @@
             </th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-200">
-          <tr
-            v-for="(row, index) in paginatedData"
-            :key="index"
-            class="hover:bg-gray-50 transition"
-            :class="{ 'bg-red-50': row['Результат испытаний'] === 'Не соответствует',
-              'bg-green-50': isRowSelected(index),
-              'hover:bg-gray-50': !isRowSelected(index)
-            }"
-            
-            @click="selectRow(index)"
-            @dblclick="open"
-          >
-            <td
-              v-for="header in visibleHeaders"
-              :key="header"
-              class="px-2 py-1 text-gray-700 align-top"
-              :class="{
-                'font-medium text-red-600': header === 'Результат испытаний' && row[header] === 'Не соответствует',
-                'font-medium text-green-600': header === 'Результат испытаний' && row[header] === 'Соответствует'
-              }"
-              :title="formatCellValue(row[header], header, 'title')"
+        <UContextMenu :items="items" :ui="{ content: 'w-48' }">
+          <tbody class="divide-y divide-gray-200">
+            <tr
+              v-for="(row, index) in paginatedData"
+              :key="index"
+              class="hover:bg-gray-50 transition"
+              :class="{ 'bg-red-50': row['Результат испытаний'] === 'Не соответствует',
+                'bg-green-50': isRowSelected(index),
+                'hover:bg-gray-50': !isRowSelected(index)
+              }"            
+              @click="selectRow(index)"
+              @dblclick.stop.prevent="handleDblClick(index, row)"
             >
-              {{ formatCellValue(row[header], header) }}
-            </td>
-          </tr>
-        </tbody>
+              <td
+                v-for="header in visibleHeaders"
+                :key="header"
+                class="px-2 py-1 text-gray-700 align-top"
+                :class="{
+                  'font-medium text-red-600': header === 'Результат испытаний' && row[header] === 'Не соответствует',
+                  'font-medium text-green-600': header === 'Результат испытаний' && row[header] === 'Соответствует'
+                }"
+                :title="formatCellValue(row[header], header, 'title')"
+              >
+                {{ formatCellValue(row[header], header) }}
+              </td>
+            </tr>
+          </tbody>
+        </UContextMenu>
       </table>
     </div>
 
@@ -258,20 +266,42 @@
 
 <script setup lang="ts">
 
-  import sortData from '../../../utils/dataSort'
-  import  labModal  from '~/components/lab/labModal.vue'
+  import sortData from '../../../utils/dataSort';
+  import  labModal  from '~/components/lab/labModal.vue';
+  import type { ContextMenuItem } from '@nuxt/ui';
   
 
   import { onClickOutside } from '@vueuse/core'
-  const count = ref(0)
 
-  const toast = useToast()
-  const overlay = useOverlay()
-  // Регистрируем наше окно в фабрике оверлеев
-  // const modal = overlay.create(() => import('~/components/RecordModal.vue'))
-  const modal = overlay.create(labModal)
-
+  const count = ref(0);
+  const toast = useToast();
+  const overlay = useOverlay();
+  const modal = overlay.create(labModal);
   const rowSelectedId = ref<number | null>(null);
+
+  const items: ContextMenuItem[][] = [
+    [
+      {
+        label: 'Открыть',
+        icon: 'streamline-freehand-color:kindle-read-document-hold'
+      },
+      {
+        label: 'Копировать',
+        icon: 'streamline-freehand-color:layers-bring-backward'
+      },
+      {
+        label: 'Изменить',
+        icon: 'streamline-freehand-color:edit-pencil'
+      }
+    ],
+    [
+      {
+        label: 'Удалить',
+        color: 'error' as const,
+        icon: 'streamline-freehand-color:delete-bin-2'
+      }
+    ]
+  ]
 
   // Функция для проверки, выбрана ли строка
   const isRowSelected = (index: number): boolean => {
@@ -288,40 +318,37 @@
       rowSelectedId.value = index;
       selectedRecord.value = index;
     }
+    console.log('selectedRecord === ', selectedRecord)
   };
 
 const isFilterActive = ref(false)
 const panelRef = ref<HTMLElement | null>(null) // 2. Создаем ref для DOM-элемента
 
 // Функция, которая будет вызываться кнопкой "Создать" или двойным кликом по таблице
+// Функция для двойного клика
+function handleDblClick(index:any, row:any) {
+  // Сохраняем строку перед открытием
+  selectedRecord.value = {
+    ...row, // копируем все поля строки
+    action: 'edit' // добавляем признак
+  }
+  
+  // Небольшая задержка для гарантии
+  setTimeout(() => {
+    open()
+  }, 50)
+}
+
 async function open() {
   const instance = modal.open({
-    count: count.value
+    count: count.value,
+    selectedRecord: selectedRecord.value // Теперь точно не null
   })
 
   const shouldIncrement = await instance.result
-
   if (shouldIncrement) {
-    count.value++
-
-    toast.add({
-      title: `Success: ${shouldIncrement}`,
-      color: 'success',
-      id: 'modal-success'
-    })
-
-    // Update the count
-    modal.patch({
-      count: count.value
-    })
-    return
+    // ...
   }
-
-  toast.add({
-    title: `Dismissed: ${shouldIncrement}`,
-    color: 'error',
-    id: 'modal-dismiss'
-  })
 }
 
 // 3. Следим за кликами вне этого элемента

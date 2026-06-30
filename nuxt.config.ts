@@ -59,6 +59,7 @@ export default defineNuxtConfig({
         'crypto-js', // CJS
         'sweetalert2',
         'uuid',
+        'valibot',
       ]
     },
     resolve: {

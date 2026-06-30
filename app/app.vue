@@ -1,5 +1,5 @@
 <template>
-  <UApp>
+  <UApp :locale="ru">
     <NuxtLayout >
       <div class="bg-gray-50 h-full">
         <NuxtPage />
@@ -9,6 +9,8 @@
 </template>
 
 <script setup lang="ts">
+  import { ru } from '@nuxt/ui/locale'
+
   // Здесь можно добавить глобальную логику для всего приложения, если нужно
   const { loggedIn, user, session } = useUserSession();
 
