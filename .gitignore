@@ -10,6 +10,9 @@ dist
 # Node dependencies
 node_modules
 
+#temporary files folder
+temp
+
 # Logs
 logs
 *.log

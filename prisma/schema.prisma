@@ -33,15 +33,15 @@ model users {
   @@index([userName], map: "idx_users_userName")
 }
 
-model IncomControl {
+model AEng {
   id                      Int      @id @default(autoincrement())
   plp                     String   @db.VarChar(50)    // ПЛП
   objectName              String   @db.Text           // Наименование объект
   samplingActNumber       String   @db.VarChar(100)   // Номер акта отбора проб
   samplingDate            DateTime @db.Date           // Дата отбора проб
-  samplingLocation        String   @db.Text           // Место отбора проб
-  providerPerson          String   @db.VarChar(255)   // Лицо, предоставившее пробу
-  receivedDate            DateTime @db.Date           // Дата поступления материала
+  samplingPlace           String   @db.Text           // Место отбора проб
+  personProvidedSample    String   @db.VarChar(255)   // Лицо, предоставившее пробу
+  materialReceiptDate     DateTime @db.Date           // Дата поступления материала
   materialName            String   @db.VarChar(255)   // Наименование материала
   qualityDocument         String   @db.VarChar(100)   // Документ о качестве
   manufacturer            String?  @db.VarChar(255)   // Предприятие-изготовитель (может быть пустым)
@@ -51,7 +51,7 @@ model IncomControl {
   note                    String?  @db.Text           // Примечание (может быть пустым)
   createdAt               DateTime @default(now())
 
-  @@map("incoming_control") // Название таблицы в PostgreSQL в нижнем регистре
+  @@map("aeng") // Название таблицы в PostgreSQL в нижнем регистре
 
   // Добавление одиночных индексов для ускорения поиска по каждому полю отдельно
   @@index([samplingActNumber])

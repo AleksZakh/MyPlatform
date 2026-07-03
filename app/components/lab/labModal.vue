@@ -8,7 +8,7 @@
     :ui="{ content: 'sm:max-w-none w-max' }"
   >
     <template #body>
-      <UForm :state="state" class="space-y-4 relative " @submit="onSubmit">
+      <UForm :schema="schema" :state="state" class="space-y-4 relative " @submit="handleSubmit">
         
         <!-- Контейнер для полей ввода (чтобы они не прижимались к линии) USelectMenu  -->
         <div class="space-y-4 space-x-2  px-2 -my-6 -mx-6 bg-gray-50 parent">
@@ -16,35 +16,35 @@
           <fieldset class="border-2 border-gray-200 px-2 py-1 rounded-md">
             <legend class="text-xl font-normal px-2">Отбор проб</legend>
             <div class="flex flex-col gap-3" >
-              <UFormField label="ПЛП" required><USelectMenu class="min-w-70" v-model="state.plp" /></UFormField>
-              <UFormField label="Наименование объекта" required><USelectMenu class="min-w-70" v-model="state.objName" /></UFormField>
-              <UFormField label="Номер акта отборапроб" required><UInput class="min-w-70" v-model="state.actNumber" /></UFormField>
-              <UFormField label="Документ отбора проб" ><UInput type="file" class="min-w-50" v-model="state.sDoc" /></UFormField>
-              <UFormField label="Дата отбора проб" required><CustomDateInput v-model="state.sDate" :required="true" :min-value="minDate" :max-value="maxDate"/></UFormField>
-              <UFormField label="Место отбора проб" ><USelectMenu class="min-w-70 max-w-70" v-model="state.sPlace" /></UFormField>
-              <UFormField label="Лицо, предоставившее пробу" required><USelectMenu class="min-w-70" v-model="state.sPerson" /></UFormField>
-              <UFormField label="Примечание" ><UTextarea class="min-w-70 max-h-40 overflow-auto" v-model="state.sNote" autoresize  /></UFormField>
+              <UFormField name="plp" label="ПЛП" required><USelectMenu class="min-w-70" v-model="state.plp" /></UFormField>
+              <UFormField name="objName" label="Наименование объекта" required><USelectMenu class="min-w-70" v-model="state.objName" /></UFormField>
+              <UFormField name="actNumber" label="Номер акта отборапроб" required><UInput class="min-w-70" v-model="state.actNumber" /></UFormField>
+              <UFormField name="sDoc" label="Документ отбора проб" ><UInput type="file" class="min-w-50" v-model="state.sDoc" /></UFormField>
+              <UFormField name="sDate" label="Дата отбора проб" required><CustomDateInput v-model="state.sDate" :required="true" :min-value="minDate" :max-value="maxDate"/></UFormField>
+              <UFormField name="sPlace" label="Место отбора проб" ><USelectMenu class="min-w-70 max-w-70" v-model="state.sPlace" /></UFormField>
+              <UFormField name="sPerson" label="Лицо, предоставившее пробу" required><USelectMenu class="min-w-70" v-model="state.sPerson" /></UFormField>
+              <UFormField name="sNote" label="Примечание" ><UTextarea class="min-w-70 max-h-40 overflow-auto" v-model="state.sNote" autoresize  /></UFormField>
             </div>
           </fieldset>
 
           <fieldset class="border-2 border-gray-200 px-2 py-1 rounded-md">
             <legend class="text-xl font-normal px-2">Поступление материала</legend>
             <div class="flex flex-col gap-2" >
-              <UFormField label="Материал" required><USelectMenu class="min-w-70" v-model="state.material" /></UFormField>              
-              <UFormField label="Дата поступления" required><CustomDateInput v-model="state.receiptDate" :required="true" :min-value="minDate" :max-value="maxDate"/></UFormField>              
-              <UFormField label="Дата документа о качестве" ><CustomDateInput v-model="state.qualDocDate" :required="false" :min-value="minDate" :max-value="maxDate"/></UFormField>              
-              <UFormField label="Документ о качестве" ><UInput type="file" class="min-w-50" v-model="state.qualDoc" /></UFormField>
-              <UFormField label="Номер документа о качестве" ><UInput class="min-w-70" v-model="state.qualDocNumber" /></UFormField>
-              <UFormField label="Предприятие изготовитель" ><UInput class="min-w-70" v-model="state.manufacturer" /></UFormField>
+              <UFormField name="material" label="Материал" required><USelectMenu class="min-w-70" v-model="state.material" /></UFormField>              
+              <UFormField name="receiptDate" label="Дата поступления" required><CustomDateInput v-model="state.receiptDate" :required="true" :min-value="minDate" :max-value="maxDate"/></UFormField>              
+              <UFormField name="qualDocDate" label="Дата документа о качестве" ><CustomDateInput v-model="state.qualDocDate" :required="false" :min-value="minDate" :max-value="maxDate"/></UFormField>              
+              <UFormField name="qualDoc" label="Документ о качестве" ><UInput type="file" class="min-w-50" v-model="state.qualDoc" /></UFormField>
+              <UFormField name="qualDocNumber" label="Номер документа о качестве" ><UInput class="min-w-70" v-model="state.qualDocNumber" /></UFormField>
+              <UFormField name="manufacturer" label="Предприятие изготовитель" ><UInput class="min-w-70" v-model="state.manufacturer" /></UFormField>
             </div>
           </fieldset>
           <fieldset class="border-2 border-gray-200 px-2 py-1 rounded-md">
             <legend class="text-xl font-normal px-2">Протокол испытаний</legend>
             <div class="flex flex-col gap-2" >
-              <UFormField label="Дата" required><CustomDateInput v-model="state.testProtocolData" :required="true" :min-value="minDate" :max-value="maxDate"/></UFormField>
-              <UFormField label="Документ" ><UInput type="file" class="min-w-50" v-model="state.protocolDoc" /></UFormField>
-              <UFormField label="Результат испытаний" required><USelectMenu class="min-w-70" v-model="state.testResult" /></UFormField>
-              <UFormField label="Номер" required><UInput class="min-w-70" v-model="state.testProtocolNumber" /></UFormField>
+              <UFormField name="testProtocolData" label="Дата" required><CustomDateInput v-model="state.testProtocolData" :required="true" :min-value="minDate" :max-value="maxDate"/></UFormField>
+              <UFormField name="protocolDoc" label="Документ" ><UInput type="file" class="min-w-50" v-model="state.protocolDoc" /></UFormField>
+              <UFormField name="testResult" label="Результат испытаний" required><USelectMenu class="min-w-70" v-model="state.testResult" /></UFormField>
+              <UFormField name="testProtocolNumber" label="Номер" required><UInput class="min-w-70" v-model="state.testProtocolNumber" /></UFormField>
             </div>
           </fieldset>
         </div>
@@ -66,7 +66,7 @@
               variant="outline"
               color="primary" 
               label="Сохранить"
-              @click="emit('close', true)"
+              
             />
           </div>
         </div>
@@ -76,7 +76,7 @@
 </template>
 
 <script setup lang="ts">
-  import * as v from 'valibot'
+  import * as z from 'zod';
   import type { FormSubmitEvent } from '@nuxt/ui';
   import { CalendarDate } from '@internationalized/date';
   import { parseDate, getToday } from '../../../utils/dateUtils' // или '@/utils/dateUtils'
@@ -110,64 +110,98 @@
   const minDate = new CalendarDate(2023, 9, 1)
   const maxDate = getToday()
 
-  const schema = v.object({
-    // email: v.pipe(v.string(), v.email('Invalid email')),
-    // password: v.pipe(v.string(), v.minLength(8, 'Must be at least 8 characters'))
-  })
+  const schema = z.object({
+  plp: z.string().min(1, 'Пожалуйста, введите логин'),    
+  objName: z.string().min(1, 'Пожалуйста, введите пароль'),
+  actNumber: z.string().min(1, 'Пожалуйста, введите номер акта'),
+  sDoc: z.string().default(''),
+  sDate: z.any().refine(val => val !== null && val !== undefined, 'Пожалуйста, выберите дату'),
+  sPlace: z.string().default(''),
+  sPerson: z.string().default(''),
+  sNote: z.string().default(''),
+  material: z.string().default(''),
+  receiptDate: z.any().refine(val => val !== null && val !== undefined, 'Пожалуйста, выберите дату'),
+  qualDocDate: z.any().refine(val => val !== null && val !== undefined, 'Пожалуйста, выберите дату'),
+  qualDoc: z.string().default(''),
+  qualDocNumber: z.string().default(''),
+  manufacturer: z.string().default(''),
+  testProtocolData: z.any().refine(val => val !== null && val !== undefined, 'Пожалуйста, выберите дату'),
+  protocolDoc: z.string().default(''),
+  testResult: z.string().default(''),
+  testProtocolNumber: z.string().default(''),
+})
 
-  type Schema = v.InferOutput<typeof schema>
+type Schema = z.output<typeof schema>
 
-  const state = reactive({
-    plp: '',
-    objName: '',
-    actNumber: '',
-    sDoc: '',
-    sDate: shallowRef(new CalendarDate(2023, 9, 10)),
-    sPlace: '',
-    sPerson: '',
-    sNote: '',
-    material: '',
-    receiptDate: shallowRef(new CalendarDate(2023, 9, 10)),
-    qualDocDate: shallowRef(new CalendarDate(2023, 9, 10)),
-    qualDoc: '',
-    qualDocNumber: '',
-    manufacturer: '',
-    testProtocolData: shallowRef(new CalendarDate(2023, 9, 10)),
-    protocolDoc: '',
-    testResult: '',
-    testProtocolNumber: ''
-  });
+// 2. ЕДИНСТВЕННЫЙ источник правды для структуры полей
+// sDate и другие даты оборачиваем в shallowRef прямо здесь, чтобы типы во всем коде совпадали
+const getInitialState = (): Schema => ({
+  plp: '',
+  objName: '',
+  actNumber: '',
+  sDoc: '',
+  sDate: shallowRef(new CalendarDate(2023, 9, 10)),
+  sPlace: '',
+  sPerson: '',
+  sNote: '',
+  material: '',
+  receiptDate: shallowRef(new CalendarDate(2023, 9, 10)),
+  qualDocDate: shallowRef(new CalendarDate(2023, 9, 10)),
+  qualDoc: '',
+  qualDocNumber: '',
+  manufacturer: '',
+  testProtocolData: shallowRef(new CalendarDate(2023, 9, 10)),
+  protocolDoc: '',
+  testResult: '',
+  testProtocolNumber: ''
+})
 
-  // Заполнение формы данными из пропсов
-  function fillFormWithData(data: any) {
-    if (!data) return
+// 3. Создаем state на основе фабрики дефолтных значений
+const state = reactive<Schema>(getInitialState())
 
-    state.plp = data['ПЛП'] || ''
-    state.objName = data['Наименование объект'] || ''
-    state.actNumber = data['Номер акта отбора проб'] || ''
-    state.sDate = parseDate(data['Дата отбора проб']) || new CalendarDate(2023, 9, 10)
-    state.sPlace = data['Место отбора проб'] || ''
-    state.sPerson = data['Лицо, предоставившее пробу'] || ''
-    state.sNote = data['Примечание'] || ''
-    state.material = data['Наименование материала'] || ''
-    state.receiptDate = parseDate(data['Дата поступления материала']) || new CalendarDate(2023, 9, 10)
-    state.qualDocDate = parseDate(data['Дата протокола']) || new CalendarDate(2023, 9, 10)
-    // state.qualDoc = data['Документ о качестве'] || ''
-    state.qualDocNumber = data['Номер протокола'] || ''
-    state.manufacturer = data['Предприятие-изготовитель'] || ''
-    state.testProtocolData = parseDate(data['Дата протокола']) || new CalendarDate(2023, 9, 10)
-    state.testResult = data['Результат испытаний'] || ''
-    state.testProtocolNumber = data['Номер протокола'] || ''
+// 4. Оптимизированный сброс формы — одной строкой!
+function resetForm() {
+  Object.assign(state, getInitialState())
+}
+
+// 5. Заполнение формы данными из таблицы
+function fillFormWithData(data: any) {
+  if (!data) return
+
+  state.plp = data['ПЛП'] || ''
+  state.objName = data['Наименование объект'] || ''
+  state.actNumber = data['Номер акта отбора проб'] || ''
+  state.sDate = parseDate(data['Дата отбора проб']) || shallowRef(new CalendarDate(2023, 9, 10))
+  state.sPlace = data['Место отбора проб'] || ''
+  state.sPerson = data['Лицо, предоставившее пробу'] || ''
+  state.sNote = data['Примечание'] || ''
+  state.material = data['Наименование материала'] || ''
+  state.receiptDate = parseDate(data['Дата поступления материала']) || shallowRef(new CalendarDate(2023, 9, 10))
+  state.qualDocDate = parseDate(data['Дата протокола']) || shallowRef(new CalendarDate(2023, 9, 10))
+  // state.qualDoc = data['Документ о качестве'] || ''
+  state.qualDocNumber = data['Номер протокола'] || ''
+  state.manufacturer = data['Предприятие-изготовитель'] || ''
+  state.testProtocolData = parseDate(data['Дата протокола']) || shallowRef(new CalendarDate(2023, 9, 10))
+  // state.protocolDoc = data['Документ протокола'] || ''
+  state.testResult = data['Результат испытаний'] || ''
+  state.testProtocolNumber = data['Номер протокола'] || ''
+}
+
+// 6. Наблюдатель за открытием/закрытием/редактированием
+watch(() => props.selectedRecord, (newVal) => {
+  console.log('selectedRecord changed:', newVal)
+  if (newVal?.action === 'edit' || newVal?.action === 'view') {
+    fillFormWithData(newVal)
+  } else if (newVal?.action === 'create' || !newVal) {
+    resetForm()
   }
+}, { immediate: true })
 
-  watch(() => props.selectedRecord, (newVal) => {
-    if (newVal?.action === 'edit') {
-      fillFormWithData(newVal)
-    }
-  }, { immediate: true })
-
-  async function onSubmit(event: FormSubmitEvent<Schema>) {
+  async function handleSubmit(event: FormSubmitEvent<Schema>) {
+    // Сработает только тогда, когда форма УСПЕШНО пройдет валидацию.
+    emit('close', true)
     toast.add({ title: 'Успех!', description: 'Данные новой записи успешно сохранены.', color: 'success' })
+
     console.log(event.data)
   }
 

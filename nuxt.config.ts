@@ -52,6 +52,7 @@ export default defineNuxtConfig({
   vite: {
     optimizeDeps: {
       include: [
+        '@internationalized/date',
         '@vue/devtools-core',
         '@vue/devtools-kit',
         '@vueuse/core',
@@ -59,7 +60,7 @@ export default defineNuxtConfig({
         'crypto-js', // CJS
         'sweetalert2',
         'uuid',
-        'valibot',
+        'zod',
       ]
     },
     resolve: {

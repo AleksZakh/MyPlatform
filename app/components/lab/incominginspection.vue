@@ -3,7 +3,7 @@
     <!-- 
      class="max-w-[1440px] "
     Родителю этого блока ОБЯЗАТЕЛЬНО задайте overflow-hidden и h-full (или max-h-screen) -->
-    <div class="w-full max-h-[79vh] flex flex-col overflow-hidden mx-auto bg-white p-3 rounded-lg shadow-[0_0_10px_rgba(0,0,0,0.1)]">
+    <div class="w-full max-h-[82vh] min-h-[50vh] flex flex-col overflow-hidden mx-auto bg-white p-3 rounded-lg shadow-[0_0_10px_rgba(0,0,0,0.1)]">
         <div class="flex flex-wrap gap-4 items-center justify-between py-1">
           <!-- ========================================================================================================================== -->
           <!-- ========================================================================================================================== -->
@@ -137,7 +137,7 @@
           <div>
             <UTooltip text="Создать новую запись" :kbds="['Alt','Shift', 'N']">
               <UButton
-                @click="open"
+                @click="open('create')"
                 class="px-4 py-2 bg-white border text-black font-normal border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
               >
               <Icon :name="'streamline-freehand-color:edit-pen-write-paper'" size="24"/>
@@ -318,7 +318,7 @@
       rowSelectedId.value = index;
       selectedRecord.value = index;
     }
-    console.log('selectedRecord === ', selectedRecord)
+    // console.log('selectedRecord === ', selectedRecord)
   };
 
 const isFilterActive = ref(false)
@@ -330,6 +330,7 @@ function handleDblClick(index:any, row:any) {
   // Сохраняем строку перед открытием
   selectedRecord.value = {
     ...row, // копируем все поля строки
+    index, // добавляем индекс строки
     action: 'edit' // добавляем признак
   }
   
@@ -339,10 +340,16 @@ function handleDblClick(index:any, row:any) {
   }, 50)
 }
 
-async function open() {
+async function open(action: 'create' | 'edit' = 'edit') {
+  const record = {
+    ...(selectedRecord.value || {}),
+    action
+  }
+  selectedRecord.value = record
+
   const instance = modal.open({
     count: count.value,
-    selectedRecord: selectedRecord.value // Теперь точно не null
+    selectedRecord: record
   })
 
   const shouldIncrement = await instance.result
@@ -428,7 +435,7 @@ async function loadData() {
     const response = await fetch('/api/lab-tests');
     // const response = [{}];
     const result = await response.json();
-    // console.log('Ответ от сервера:', result);
+    console.log('Ответ от сервера:', result);
     
     if (result.success) {
       originalData.value = result.data; // Сохраняем данные таблицы в реактивной переменной
