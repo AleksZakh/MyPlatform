@@ -16,13 +16,13 @@
           <fieldset class="border-2 border-gray-200 px-2 py-1 rounded-md">
             <legend class="text-xl font-normal px-2">Отбор проб</legend>
             <div class="flex flex-col gap-3" >
-              <UFormField name="plp" label="ПЛП" required><USelectMenu class="min-w-70" v-model="state.plp" /></UFormField>
-              <UFormField name="objName" label="Наименование объекта" required><USelectMenu class="min-w-70" v-model="state.objName" /></UFormField>
+              <UFormField name="plp" label="ПЛП" required><USelectMenu :items="items" @create="onCreate"  create-item class="min-w-70" v-model="state.plp" /></UFormField>
+              <UFormField name="objName" label="Наименование объекта" required><USelectMenu :items="items" @create="onCreate"  create-item class="min-w-70" v-model="state.objName" /></UFormField>
               <UFormField name="actNumber" label="Номер акта отборапроб" required><UInput class="min-w-70" v-model="state.actNumber" /></UFormField>
               <UFormField name="sDoc" label="Документ отбора проб" ><UInput type="file" class="min-w-50" v-model="state.sDoc" /></UFormField>
               <UFormField name="sDate" label="Дата отбора проб" required><CustomDateInput v-model="state.sDate" :required="true" :min-value="minDate" :max-value="maxDate"/></UFormField>
-              <UFormField name="sPlace" label="Место отбора проб" ><USelectMenu class="min-w-70 max-w-70" v-model="state.sPlace" /></UFormField>
-              <UFormField name="sPerson" label="Лицо, предоставившее пробу" required><USelectMenu class="min-w-70" v-model="state.sPerson" /></UFormField>
+              <UFormField name="sPlace" label="Место отбора проб" ><USelectMenu :items="items" @create="onCreate"  create-item class="min-w-70 max-w-70" v-model="state.sPlace" /></UFormField>
+              <UFormField name="sPerson" label="Лицо, предоставившее пробу" required><USelectMenu :items="items" @create="onCreate"  create-item class="min-w-70" v-model="state.sPerson" /></UFormField>
               <UFormField name="sNote" label="Примечание" ><UTextarea class="min-w-70 max-h-40 overflow-auto" v-model="state.sNote" autoresize  /></UFormField>
             </div>
           </fieldset>
@@ -30,7 +30,7 @@
           <fieldset class="border-2 border-gray-200 px-2 py-1 rounded-md">
             <legend class="text-xl font-normal px-2">Поступление материала</legend>
             <div class="flex flex-col gap-2" >
-              <UFormField name="material" label="Материал" required><USelectMenu class="min-w-70" v-model="state.material" /></UFormField>              
+              <UFormField name="material" label="Материал" required><USelectMenu :items="items" @create="onCreate"  create-item class="min-w-70" v-model="state.material" /></UFormField>              
               <UFormField name="receiptDate" label="Дата поступления" required><CustomDateInput v-model="state.receiptDate" :required="true" :min-value="minDate" :max-value="maxDate"/></UFormField>              
               <UFormField name="qualDocDate" label="Дата документа о качестве" ><CustomDateInput v-model="state.qualDocDate" :required="false" :min-value="minDate" :max-value="maxDate"/></UFormField>              
               <UFormField name="qualDoc" label="Документ о качестве" ><UInput type="file" class="min-w-50" v-model="state.qualDoc" /></UFormField>
@@ -43,7 +43,7 @@
             <div class="flex flex-col gap-2" >
               <UFormField name="testProtocolData" label="Дата" required><CustomDateInput v-model="state.testProtocolData" :required="true" :min-value="minDate" :max-value="maxDate"/></UFormField>
               <UFormField name="protocolDoc" label="Документ" ><UInput type="file" class="min-w-50" v-model="state.protocolDoc" /></UFormField>
-              <UFormField name="testResult" label="Результат испытаний" required><USelectMenu class="min-w-70" v-model="state.testResult" /></UFormField>
+              <UFormField name="testResult" label="Результат испытаний" required><USelectMenu :items="items" @create="onCreate"  create-item class="min-w-70" v-model="state.testResult" /></UFormField>
               <UFormField name="testProtocolNumber" label="Номер" required><UInput class="min-w-70" v-model="state.testProtocolNumber" /></UFormField>
             </div>
           </fieldset>
@@ -104,8 +104,13 @@
   }>()  
   const emit = defineEmits<{ close: [boolean] }>();
   const toast = useToast();
+  const items = ref(['Backlog', 'Todo', 'In Progress', 'Done'])
+  const value = ref('Backlog')
 
-
+  function onCreate(newItem: string) {
+    items.value.push(newItem)
+    value.value = newItem
+  }
   const inputDate = useTemplateRef('inputDate');
   const minDate = new CalendarDate(2023, 9, 1)
   const maxDate = getToday()
@@ -199,10 +204,24 @@ watch(() => props.selectedRecord, (newVal) => {
 
   async function handleSubmit(event: FormSubmitEvent<Schema>) {
     // Сработает только тогда, когда форма УСПЕШНО пройдет валидацию.
-    emit('close', true)
-    toast.add({ title: 'Успех!', description: 'Данные новой записи успешно сохранены.', color: 'success' })
-
     console.log(event.data)
+    try {
+      // Отправляем POST запрос с данными формы на наш эндпоинт
+      const response = await $fetch('/api/incoming-control', {
+        method: 'POST',
+        body: event.data
+      })
+      
+      if (response.success) {
+        toast.add({ title: 'Успех!', description: `Данные новой записи о${event.data.objName} успешно сохранены.`, color: 'success' })
+      } else {
+        toast.add({ title: 'Ошибка!', description: `Не удалось сохранить данные о${event.data.objName}.`, color: 'error' })
+      }
+    } catch (error) {
+      console.error('Ошибка отправки:', error)
+      toast.add({ title: 'Ошибка!', description: 'Не удалось сохранить данные.', color: 'error' })
+    }
+    emit('close', true)
   }
 
 </script>
