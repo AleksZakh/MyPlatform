@@ -18,6 +18,7 @@ export const CustomDateInput: typeof import("../app/components/CustomDateInput.v
 export const DepartmentCard: typeof import("../app/components/DepartmentCard.vue")['default']
 export const Footer: typeof import("../app/components/Footer.vue")['default']
 export const Toast: typeof import("../app/components/Toast.vue")['default']
+export const LabFilterPanel: typeof import("../app/components/lab/FilterPanel.vue")['default']
 export const LabHandbook: typeof import("../app/components/lab/handbook.vue")['default']
 export const LabIncominginspection: typeof import("../app/components/lab/incominginspection.vue")['default']
 export const LabModal: typeof import("../app/components/lab/labModal.vue")['default']
@@ -186,6 +187,7 @@ export const LazyCustomDateInput: LazyComponent<typeof import("../app/components
 export const LazyDepartmentCard: LazyComponent<typeof import("../app/components/DepartmentCard.vue")['default']>
 export const LazyFooter: LazyComponent<typeof import("../app/components/Footer.vue")['default']>
 export const LazyToast: LazyComponent<typeof import("../app/components/Toast.vue")['default']>
+export const LazyLabFilterPanel: LazyComponent<typeof import("../app/components/lab/FilterPanel.vue")['default']>
 export const LazyLabHandbook: LazyComponent<typeof import("../app/components/lab/handbook.vue")['default']>
 export const LazyLabIncominginspection: LazyComponent<typeof import("../app/components/lab/incominginspection.vue")['default']>
 export const LazyLabModal: LazyComponent<typeof import("../app/components/lab/labModal.vue")['default']>

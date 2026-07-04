@@ -18,6 +18,7 @@ interface _GlobalComponents {
   DepartmentCard: typeof import("../../app/components/DepartmentCard.vue")['default']
   Footer: typeof import("../../app/components/Footer.vue")['default']
   Toast: typeof import("../../app/components/Toast.vue")['default']
+  LabFilterPanel: typeof import("../../app/components/lab/FilterPanel.vue")['default']
   LabHandbook: typeof import("../../app/components/lab/handbook.vue")['default']
   LabIncominginspection: typeof import("../../app/components/lab/incominginspection.vue")['default']
   LabModal: typeof import("../../app/components/lab/labModal.vue")['default']
@@ -186,6 +187,7 @@ interface _GlobalComponents {
   LazyDepartmentCard: LazyComponent<typeof import("../../app/components/DepartmentCard.vue")['default']>
   LazyFooter: LazyComponent<typeof import("../../app/components/Footer.vue")['default']>
   LazyToast: LazyComponent<typeof import("../../app/components/Toast.vue")['default']>
+  LazyLabFilterPanel: LazyComponent<typeof import("../../app/components/lab/FilterPanel.vue")['default']>
   LazyLabHandbook: LazyComponent<typeof import("../../app/components/lab/handbook.vue")['default']>
   LazyLabIncominginspection: LazyComponent<typeof import("../../app/components/lab/incominginspection.vue")['default']>
   LazyLabModal: LazyComponent<typeof import("../../app/components/lab/labModal.vue")['default']>

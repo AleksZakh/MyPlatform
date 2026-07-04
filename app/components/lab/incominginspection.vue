@@ -17,78 +17,28 @@
               />
           </div>
           <!-- _____ фильтр ______ -->
-          <div class="flex align-baseline relative p-1 rounded-md" >
+          <!-- Фильтр (ТЕПЕРЬ ЭТО КОМПОНЕНТ) -->
+          <div class="flex align-baseline relative p-1 rounded-md">
             <UTooltip text="Фильтр записей" :kbds="['meta', 'Shift', 'F']">
               <UButton
                 icon="streamline-freehand-color:filter"
                 color="neutral"
                 variant="outline"
                 :ui="{ leadingIcon: 'text-primary' }"
-                type="button" class="flex bg-transparent hover:bg-gray-100 p-3"  @click.prevent.stop="isFilterActive = !isFilterActive" >
-              </UButton>
+                type="button" 
+                class="flex bg-transparent hover:bg-gray-100 p-3"  
+                @click.prevent.stop="toggleFilter"
+              />
             </UTooltip>
+            
             <Transition name="fade-slide">
-              <div v-if="isFilterActive" class="panel-wrapper w-full shadow-md" ref="panelRef">
-                <form 
-                  id="filterForm "
-                  class="flex bg-gray-50 rounded-md flex-col gap-5 p-6 md:p-7"
-                >
-                      <!-- Поле "Категория" -->
-                      <div class="flex flex-wrap items-center gap-3">
-                          <label class="font-semibold min-w-25 text-gray-700">📁 Категория:</label>
-                          <input type="text" id="category" placeholder="Например: Электроника, Книги" value="Все" class="flex-1 px-4 py-2.5 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none transition">
-                      </div>
-
-                      <!-- Поле "Цена от/до" -->
-                      <div class="flex flex-wrap items-center gap-3">
-                          <label class="font-semibold min-w-25 text-gray-700">💰 Цена:</label>
-                          <div class="flex flex-1 flex-wrap items-center gap-3">
-                              <input type="number" id="priceMin" placeholder="от" value="0" step="100" class="w-28 px-4 py-2.5 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none">
-                              <span class="text-gray-500">—</span>
-                              <input type="number" id="priceMax" placeholder="до" value="10000" step="100" class="w-28 px-4 py-2.5 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none">
-                              <span class="text-gray-500 text-sm">₽</span>
-                          </div>
-                      </div>
-
-                      <!-- Рейтинг (select) -->
-                      <div class="flex flex-wrap items-center gap-3">
-                          <label class="font-semibold min-w-25 text-gray-700">⭐ Рейтинг:</label>
-                          <select id="rating" class="flex-1 px-4 py-2.5 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none">
-                              <option value="any">Любой</option>
-                              <option value="4.5">4.5+ (отлично)</option>
-                              <option value="4">4.0+ (хорошо)</option>
-                              <option value="3">3.0+ (средний)</option>
-                          </select>
-                      </div>
-
-                      <!-- Доступность (radio) -->
-                      <div class="flex flex-wrap items-center gap-3">
-                          <label class="font-semibold min-w-25 text-gray-700">📦 Доступность:</label>
-                          <div class="flex flex-wrap gap-5 flex-1">
-                              <label class="flex items-center gap-2 text-gray-700"><input type="radio" name="availability" value="all" checked class="accent-brand"> Все товары</label>
-                              <label class="flex items-center gap-2 text-gray-700"><input type="radio" name="availability" value="inStock" class="accent-brand"> Только в наличии</label>
-                              <label class="flex items-center gap-2 text-gray-700"><input type="radio" name="availability" value="preorder" class="accent-brand"> Предзаказ</label>
-                          </div>
-                      </div>
-
-                      <!-- Доп. опции (чекбоксы) -->
-                      <div class="flex flex-wrap items-center gap-3">
-                          <label class="font-semibold min-w-25 text-gray-700">🆕 Дополнительно:</label>
-                          <div class="flex flex-wrap gap-5 flex-1">
-                              <label class="flex items-center gap-2 text-gray-700"><input type="checkbox" id="newFirst" class="rounded accent-brand"> Сначала новинки</label>
-                              <label class="flex items-center gap-2 text-gray-700"><input type="checkbox" id="saleOnly" class="rounded accent-brand"> Только со скидкой</label>
-                          </div>
-                      </div>
-
-                      <!-- Кнопки действий -->
-                      <div class="flex justify-end gap-3 mt-2 pt-2 border-t border-dashed border-gray-200">
-                          <button type="button" id="resetFiltersBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-6 rounded-md transition">Сбросить</button>
-                          <button type="submit" class="bg-[#2c7da0] hover:bg-[#1f5e7a] text-white font-semibold py-2 px-7 rounded-md transition shadow-sm">Применить фильтр</button>
-                      </div>
-                </form>
-              </div>
+              <FilterPanel 
+                v-if="isFilterActive"
+                v-model="filters"
+                @apply="applyFilters"
+                @reset="resetFilters"
+              />
             </Transition>
-
           </div>
         
           <!-- Кнопка выбора столбцов -->
@@ -148,7 +98,7 @@
           
           <!-- Информация -->
           <div class="text-sm text-gray-500">
-            Всего записей: {{ filteredData.length }} из {{ originalData.length }}
+            Всего записей: {{ totalCount }}
           </div>
         <!-- ========================================================================================================================== -->
         <!-- ========================================================================================================================== -->
@@ -191,7 +141,7 @@
         <UContextMenu :items="items" :ui="{ content: 'w-48' }">
           <tbody class="divide-y divide-gray-200">
             <tr
-              v-for="(row, index) in paginatedData"
+              v-for="(row, index) in filteredData"
               :key="index"
               class="hover:bg-gray-50 transition"
               :class="{ 'bg-red-50': row['Результат испытаний'] === 'Не соответствует',
@@ -222,7 +172,7 @@
     <!-- Пагинация -->
     <div v-if="filteredData.length > 0" class="flex justify-between items-center mt-4">
       <div class="text-sm text-gray-600">
-        Показано {{ startIndex + 1 }} - {{ endIndex }} из {{ filteredData.length }}
+        Показано {{ startIndex }} - {{ endIndex }} из {{ totalCount }}
       </div>
       <div class="flex gap-2">
         <button
@@ -253,14 +203,7 @@
         </button>
       </div>
     </div>
-    <!-- <RecordModal v-model="isModalOpen" :record-data="selectedRecord" class="hover:bg-gray-50 transition-colors"/> -->
   </div>
-    <!-- <UFormGroup label="Имя" name="name" class="mb-4">
-    <UInput v-model="formData.name" placeholder="Введите имя" />
-    </UFormGroup>
-    <UFormGroup label="Email" name="email" class="mb-4">
-    <UInput v-model="formData.email" placeholder="Введите email" />
-    </UFormGroup> -->
     
 </template>
 
@@ -269,15 +212,31 @@
   import sortData from '../../../utils/dataSort';
   import  labModal  from '~/components/lab/labModal.vue';
   import type { ContextMenuItem } from '@nuxt/ui';
-  
+  import FilterPanel from '~/components/lab/FilterPanel.vue';
+  import { onClickOutside } from '@vueuse/core';
 
-  import { onClickOutside } from '@vueuse/core'
+  // ======= СОСТОЯНИЯ ФИЛЬТРА =======
+  const isFilterActive = ref(false)
+  const panelRef = ref<HTMLElement | null>(null)
+
+  // Объект с настройками фильтров
+  const filters = ref({
+    category: '',
+    priceMin: null as number | null,
+    priceMax: null as number | null,
+    rating: 'any',
+    availability: 'all',
+    isNewFirst: false,
+    isSaleOnly: false
+  })
 
   const count = ref(0);
   const toast = useToast();
   const overlay = useOverlay();
   const modal = overlay.create(labModal);
   const rowSelectedId = ref<number | null>(null);
+  const totalCount = ref(0)      // Всего записей в БД
+const totalPages = ref(0)      // Всего страниц
 
   const items: ContextMenuItem[][] = [
     [
@@ -301,7 +260,25 @@
         icon: 'streamline-freehand-color:delete-bin-2'
       }
     ]
-  ]
+  ];
+
+  // ======= МЕТОДЫ ФИЛЬТРА =======
+function applyFilters(appliedFilters: any) {
+  console.log('✅ Применены фильтры:', appliedFilters)
+  // Здесь будет логика применения фильтров к данным
+  // Пока просто закрываем панель
+  isFilterActive.value = false
+}
+
+function resetFilters() {
+  console.log('🔄 Фильтры сброшены')
+  // Здесь будет логика сброса фильтров
+  isFilterActive.value = false
+}
+
+function toggleFilter() {
+  isFilterActive.value = !isFilterActive.value
+}
 
   // Функция для проверки, выбрана ли строка
   const isRowSelected = (index: number): boolean => {
@@ -321,8 +298,6 @@
     // console.log('selectedRecord === ', selectedRecord)
   };
 
-const isFilterActive = ref(false)
-const panelRef = ref<HTMLElement | null>(null) // 2. Создаем ref для DOM-элемента
 
 // Функция, которая будет вызываться кнопкой "Создать" или двойным кликом по таблице
 // Функция для двойного клика
@@ -429,29 +404,43 @@ function columnSelectorButtonClick() { // изменение статуса от
     // console.log('Клик по кнопке выбора столбцов', showColumnSelector.value);
 }
 
+// ======= НОВАЯ ФУНКЦИЯ ЗАГРУЗКИ (минимальные изменения) =======
 async function loadData() {
-  loading.value = true;
+  loading.value = true
+  // console.log('🔍 Текущий sortKey:', sortKey.value)
+  // console.log('🔍 Текущий sortDirection:', sortDirection.value)
+  
   try {
-    const response = await fetch('/api/lab-tests');
-    // const response = [{}];
-    const result = await response.json();
-    console.log('Ответ от сервера:', result);
+    // Формируем URL с параметрами
+    const params = new URLSearchParams({
+      page: String(currentPage.value),
+      pageSize: String(itemsPerPage.value),
+      sortBy: sortKey.value,        // 👈 Добавляем поле сортировки
+      sortOrder: sortDirection.value // 👈 Добавляем направление
+    })
+
+    // console.log('Загрузка данных с параметрами:', params.toString())
+    
+    const response = await fetch(`/api/incoming-control/?${params}`)
+    const result = await response.json()
     
     if (result.success) {
-      originalData.value = result.data; // Сохраняем данные таблицы в реактивной переменной
-      headers.value = result.headers; // Сохраняем заголовки столбцов в реактивной переменной
+      // Сохраняем данные (как и раньше)
+      originalData.value = result.data
       
-      // По умолчанию показываем все столбцы
-      visibleColumns.value = [...headers.value];
-      
-      console.log(`Загружено ${originalData.value.length} записей`);
+      // Сохраняем информацию о пагинации
+      if (result.pagination) {
+        totalCount.value = result.pagination.totalCount
+        totalPages.value = result.pagination.totalPages
+      }
+      visibleColumns.value = headers.value = Object.keys(originalData.value[0] || {})
     } else {
-      console.error('Ошибка загрузки:', result.error);
+      console.error('Ошибка загрузки:', result.error)
     }
   } catch (error) {
-    console.error('Ошибка:', error);
+    console.error('Ошибка:', error)
   } finally {
-    loading.value = false;
+    loading.value = false
   }
 }
 
@@ -498,27 +487,46 @@ const visibleHeaders = computed(() => {
 });
 
 // Пагинация
-const totalPages = computed(() => Math.ceil(sortedData.value.length / itemsPerPage.value));
-const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage.value);
-const endIndex = computed(() => Math.min(startIndex.value + itemsPerPage.value, sortedData.value.length));
-const paginatedData = computed(() => sortedData.value.slice(startIndex.value, endIndex.value));
+// ======= ЗАМЕНИТЬ на это =======
+// Теперь данные уже готовы к показу
+const displayData = computed(() => originalData.value)
+
+// Информация для пагинации
+const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage.value + 1)
+const endIndex = computed(() => Math.min(startIndex.value + originalData.value.length - 1, totalCount.value))
 
 function sortBy(header: string) {
   if (sortKey.value === header) {
-    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc';
+    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
   } else {
-    sortKey.value = header;
-    sortDirection.value = 'asc';
+    sortKey.value = header
+    sortDirection.value = 'asc'
+  }
+  loadData() // 👈 Перезагружаем с новой сортировкой
+}
+
+// ======= МЕТОДЫ ПАГИНАЦИИ (минимальные изменения) =======
+function prevPage() {
+  if (currentPage.value > 1) {
+    currentPage.value--
+    loadData()  // 👈 Загружаем новую страницу
   }
 }
 
-function prevPage() { // Переход на предыдущую страницу
-  if (currentPage.value > 1) currentPage.value--;
+function nextPage() {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++
+    loadData()  // 👈 Загружаем новую страницу
+  }
 }
 
-function nextPage() { // Переход на следующую страницу
-  if (currentPage.value < totalPages.value) currentPage.value++;
-}
+watch(itemsPerPage, (newSize, oldSize) => {
+  // Проверяем, что значение действительно изменилось
+  if (newSize !== oldSize && oldSize !== undefined) {
+    currentPage.value = 1
+    loadData()
+  }
+})
 
 //
 function toggleAllColumns() {

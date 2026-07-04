@@ -72,6 +72,7 @@ testResult: "In Progress"
         createdAt: new Date()
       }
     })
+    console.log('New record created:', newRecord)
 
     // 4. Возвращаем успешный ответ и созданную запись на клиент
     return {
