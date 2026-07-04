@@ -3,7 +3,7 @@
     <!-- 
      class="max-w-[1440px] "
     Родителю этого блока ОБЯЗАТЕЛЬНО задайте overflow-hidden и h-full (или max-h-screen) -->
-    <div class="w-full max-h-[82vh] min-h-[50vh] flex flex-col overflow-hidden mx-auto bg-white p-3 rounded-lg shadow-[0_0_10px_rgba(0,0,0,0.1)]">
+    <div class="w-full max-h-[82vh] min-h-[80vh] flex flex-col overflow-hidden mx-auto bg-white p-3 rounded-lg shadow-[0_0_10px_rgba(0,0,0,0.1)]">
         <div class="flex flex-wrap gap-4 items-center justify-between py-1">
           <!-- ========================================================================================================================== -->
           <!-- ========================================================================================================================== -->
@@ -97,8 +97,15 @@
           </div>
           
           <!-- Информация -->
-          <div class="text-sm text-gray-500">
-            Всего записей: {{ totalCount }}
+          <!-- Информация о записях -->
+          <div class="text-sm text-gray-500 flex items-center gap-4">
+            <span>📊 Всего записей в БД: <strong>{{ totalCount }}</strong></span>
+            <span v-if="isFilterActive || hasActiveFilters" class="text-blue-600">
+              🔍 Отфильтровано: <strong>{{ originalData.length }}</strong>
+            </span>
+            <span v-if="hasActiveFilters" class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+              Фильтр активен
+            </span>
           </div>
         <!-- ========================================================================================================================== -->
         <!-- ========================================================================================================================== -->
@@ -218,16 +225,28 @@
   // ======= СОСТОЯНИЯ ФИЛЬТРА =======
   const isFilterActive = ref(false)
   const panelRef = ref<HTMLElement | null>(null)
-
-  // Объект с настройками фильтров
+  // 👇 НОВЫЙ ОБЪЕКТ ФИЛЬТРОВ (соответствует полям БД)
   const filters = ref({
-    category: '',
-    priceMin: null as number | null,
-    priceMax: null as number | null,
-    rating: 'any',
-    availability: 'all',
-    isNewFirst: false,
-    isSaleOnly: false
+    // Текстовые поля
+    plp: '',
+    objectName: '',
+    samplingActNumber: '',
+    samplingPlace: '',
+    personProvidedSample: '',
+    materialName: '',
+    qualityDocument: '',
+    manufacturer: '',
+    protocolNumber: '',
+    note: '',
+    // Даты
+    samplingDateFrom: '',
+    samplingDateTo: '',
+    materialReceiptDateFrom: '',
+    materialReceiptDateTo: '',
+    protocolDateFrom: '',
+    protocolDateTo: '',
+    // Выпадающий список
+    testResult: ''
   })
 
   const count = ref(0);
@@ -236,7 +255,8 @@
   const modal = overlay.create(labModal);
   const rowSelectedId = ref<number | null>(null);
   const totalCount = ref(0)      // Всего записей в БД
-const totalPages = ref(0)      // Всего страниц
+  const totalPages = ref(0)      // Всего страниц
+  const loadingToastId = ref<string | number | null>(null)
 
   const items: ContextMenuItem[][] = [
     [
@@ -263,22 +283,45 @@ const totalPages = ref(0)      // Всего страниц
   ];
 
   // ======= МЕТОДЫ ФИЛЬТРА =======
-function applyFilters(appliedFilters: any) {
-  console.log('✅ Применены фильтры:', appliedFilters)
-  // Здесь будет логика применения фильтров к данным
-  // Пока просто закрываем панель
-  isFilterActive.value = false
-}
+  function applyFilters(appliedFilters: any) {
+    console.log('✅ Применены фильтры:', appliedFilters)
+    
+    // Подсчитываем количество активных фильтров
+    const activeFiltersCount = Object.values(appliedFilters).filter(v => v !== '' && v !== null && v !== undefined).length
+    
+    // Показываем toast с информацией
+    toast.add({
+      title: '🔍 Фильтры применены',
+      description: `Найдено ${originalData.value.length} записей из ${totalCount.value} (активных фильтров: ${activeFiltersCount})`,
+      color: 'success',
+      icon: 'i-heroicons-check-circle',
+      duration: 3000
+    })
+    
+    currentPage.value = 1
+    loadData()
+    isFilterActive.value = false
+  }
 
-function resetFilters() {
-  console.log('🔄 Фильтры сброшены')
-  // Здесь будет логика сброса фильтров
-  isFilterActive.value = false
-}
-
-function toggleFilter() {
-  isFilterActive.value = !isFilterActive.value
-}
+  // ======= СБРОС ФИЛЬТРОВ =======
+  function resetFilters() {
+    console.log('🔄 Фильтры сброшены')
+    
+    toast.add({
+      title: '🔄 Фильтры сброшены',
+      description: `Показаны все ${totalCount.value} записей`,
+      color: 'info',
+      icon: 'i-heroicons-arrow-path',
+      duration: 3000
+    })
+    
+    currentPage.value = 1
+    loadData()
+    isFilterActive.value = false
+  }
+  function toggleFilter() {
+    isFilterActive.value = !isFilterActive.value
+  }
 
   // Функция для проверки, выбрана ли строка
   const isRowSelected = (index: number): boolean => {
@@ -406,43 +449,132 @@ function columnSelectorButtonClick() { // изменение статуса от
 
 // ======= НОВАЯ ФУНКЦИЯ ЗАГРУЗКИ (минимальные изменения) =======
 async function loadData() {
+  const toastId = toast.add({
+    title: '⏳ Загрузка данных...',
+    description: 'Пожалуйста, подождите',
+    color: 'info',
+    icon: 'i-heroicons-arrow-path',
+    duration: 0, // Не закрывается автоматически
+  })
+  
   loading.value = true
-  // console.log('🔍 Текущий sortKey:', sortKey.value)
-  // console.log('🔍 Текущий sortDirection:', sortDirection.value)
+  loadingToastId.value = toastId.id
   
   try {
-    // Формируем URL с параметрами
     const params = new URLSearchParams({
       page: String(currentPage.value),
       pageSize: String(itemsPerPage.value),
-      sortBy: sortKey.value,        // 👈 Добавляем поле сортировки
-      sortOrder: sortDirection.value // 👈 Добавляем направление
+      sortBy: sortKey.value,
+      sortOrder: sortDirection.value
     })
-
-    // console.log('Загрузка данных с параметрами:', params.toString())
     
+    // Добавляем фильтры
+    const f = filters.value
+    if (f.plp) params.append('plp', f.plp)
+    if (f.objectName) params.append('objectName', f.objectName)
+    if (f.samplingActNumber) params.append('samplingActNumber', f.samplingActNumber)
+    if (f.samplingPlace) params.append('samplingPlace', f.samplingPlace)
+    if (f.personProvidedSample) params.append('personProvidedSample', f.personProvidedSample)
+    if (f.materialName) params.append('materialName', f.materialName)
+    if (f.qualityDocument) params.append('qualityDocument', f.qualityDocument)
+    if (f.manufacturer) params.append('manufacturer', f.manufacturer)
+    if (f.protocolNumber) params.append('protocolNumber', f.protocolNumber)
+    if (f.note) params.append('note', f.note)
+    if (f.samplingDateFrom) params.append('samplingDateFrom', f.samplingDateFrom)
+    if (f.samplingDateTo) params.append('samplingDateTo', f.samplingDateTo)
+    if (f.materialReceiptDateFrom) params.append('materialReceiptDateFrom', f.materialReceiptDateFrom)
+    if (f.materialReceiptDateTo) params.append('materialReceiptDateTo', f.materialReceiptDateTo)
+    if (f.protocolDateFrom) params.append('protocolDateFrom', f.protocolDateFrom)
+    if (f.protocolDateTo) params.append('protocolDateTo', f.protocolDateTo)
+    if (f.testResult) params.append('testResult', f.testResult)
+
     const response = await fetch(`/api/incoming-control/?${params}`)
     const result = await response.json()
     
     if (result.success) {
-      // Сохраняем данные (как и раньше)
+      // Сохраняем данные
+      toast.remove(loadingToastId.value)
       originalData.value = result.data
       
-      // Сохраняем информацию о пагинации
+      if (originalData.value.length > 0 && originalData.value[0]) {
+        headers.value = Object.keys(originalData.value[0])
+        if (visibleColumns.value.length === 0) {
+          visibleColumns.value = [...headers.value]
+        }
+      } else {
+        headers.value = []
+        visibleColumns.value = []
+      }
+      
       if (result.pagination) {
         totalCount.value = result.pagination.totalCount
         totalPages.value = result.pagination.totalPages
       }
-      visibleColumns.value = headers.value = Object.keys(originalData.value[0] || {})
+      
+      // ✅ ПОКАЗЫВАЕМ TOAST ПРИ ЗАГРУЗКЕ (если есть фильтры)
+      if (hasActiveFilters.value) {
+        const activeFiltersCount = Object.values(filters.value).filter(v => v !== '' && v !== null && v !== undefined).length
+        toast.add({
+          title: '📊 Результаты фильтрации',
+          description: `Найдено ${originalData.value.length} записей из ${totalCount.value} (фильтров: ${activeFiltersCount})`,
+          color: 'success',
+          icon: 'i-heroicons-funnel',
+          duration: 5000
+        })
+      }
+      
+      console.log(`✅ Загружено ${originalData.value.length} записей из ${totalCount.value}`)
     } else {
-      console.error('Ошибка загрузки:', result.error)
+      console.error('❌ Ошибка загрузки:', result.error)
+      toast.remove(loadingToastId.value)
+      
+      toast.add({
+        title: '❌ Ошибка загрузки',
+        description: result.error || 'Не удалось загрузить данные',
+        color: 'error',
+        icon: 'i-heroicons-exclamation-triangle',
+        duration: 5000
+      })
     }
   } catch (error) {
-    console.error('Ошибка:', error)
+    console.error('❌ Ошибка:', error)
+    
+    toast.add({
+      title: '❌ Ошибка',
+      description: error instanceof Error ? error.message : 'Неизвестная ошибка',
+      color: 'error',
+      icon: 'i-heroicons-exclamation-triangle',
+      duration: 5000
+    })
   } finally {
     loading.value = false
   }
 }
+
+
+
+const hasActiveFilters = computed(() => {
+  const f = filters.value
+  return !!(
+    f.plp ||
+    f.objectName ||
+    f.samplingActNumber ||
+    f.samplingPlace ||
+    f.personProvidedSample ||
+    f.materialName ||
+    f.qualityDocument ||
+    f.manufacturer ||
+    f.protocolNumber ||
+    f.note ||
+    f.samplingDateFrom ||
+    f.samplingDateTo ||
+    f.materialReceiptDateFrom ||
+    f.materialReceiptDateTo ||
+    f.protocolDateFrom ||
+    f.protocolDateTo ||
+    f.testResult
+  )
+})
 
 function getColumnLabel(header: string): string {
     // console.log('getColumnLabel:', header);

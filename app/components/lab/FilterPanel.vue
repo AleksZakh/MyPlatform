@@ -3,182 +3,308 @@
   <div class="panel-wrapper w-full shadow-md" ref="panelRef">
     <form 
       @submit.prevent="applyFilters"
-      class="flex bg-gray-50 rounded-md flex-col gap-5 p-6 md:p-7"
+      class="flex bg-gray-50 rounded-md flex-col gap-4 p-5 md:p-6"
     >
-      <!-- Поле "Категория" -->
+      <!-- ПЛП -->
       <div class="flex flex-wrap items-center gap-3">
-        <label class="font-semibold min-w-25 text-gray-700">📁 Категория:</label>
+        <label class="font-semibold min-w-32 text-gray-700 text-sm">📋 ПЛП:</label>
         <input 
-          v-model="localFilters.category"
+          v-model="localFilters.plp"
           type="text" 
-          placeholder="Например: Электроника, Книги" 
-          class="flex-1 px-4 py-2.5 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none transition"
+          placeholder="Поиск по ПЛП..." 
+          class="flex-1 px-4 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none transition text-sm"
         >
       </div>
 
-      <!-- Поле "Цена от/до" -->
+      <!-- Наименование объекта -->
       <div class="flex flex-wrap items-center gap-3">
-        <label class="font-semibold min-w-25 text-gray-700">💰 Цена:</label>
-        <div class="flex flex-1 flex-wrap items-center gap-3">
+        <label class="font-semibold min-w-32 text-gray-700 text-sm">🏷️ Наименование объекта:</label>
+        <input 
+          v-model="localFilters.objectName"
+          type="text" 
+          placeholder="Поиск по наименованию..." 
+          class="flex-1 px-4 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none transition text-sm"
+        >
+      </div>
+
+      <!-- Номер акта отбора проб -->
+      <div class="flex flex-wrap items-center gap-3">
+        <label class="font-semibold min-w-32 text-gray-700 text-sm">📄 Номер акта:</label>
+        <input 
+          v-model="localFilters.samplingActNumber"
+          type="text" 
+          placeholder="Поиск по номеру акта..." 
+          class="flex-1 px-4 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none transition text-sm"
+        >
+      </div>
+
+      <!-- Дата отбора проб (диапазон) -->
+      <div class="flex flex-wrap items-center gap-3">
+        <label class="font-semibold min-w-32 text-gray-700 text-sm">📅 Дата отбора:</label>
+        <div class="flex flex-1 flex-wrap items-center gap-2">
           <input 
-            v-model.number="localFilters.priceMin"
-            type="number" 
-            placeholder="от" 
-            step="100"
-            class="w-28 px-4 py-2.5 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none"
+            v-model="localFilters.samplingDateFrom"
+            type="date" 
+            class="flex-1 min-w-30 px-3 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none text-sm"
           >
-          <span class="text-gray-500">—</span>
+          <span class="text-gray-400">—</span>
           <input 
-            v-model.number="localFilters.priceMax"
-            type="number" 
-            placeholder="до" 
-            step="100"
-            class="w-28 px-4 py-2.5 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none"
+            v-model="localFilters.samplingDateTo"
+            type="date" 
+            class="flex-1 min-w-30 px-3 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none text-sm"
           >
-          <span class="text-gray-500 text-sm">₽</span>
         </div>
       </div>
 
-      <!-- Рейтинг (select) -->
+      <!-- Место отбора проб -->
       <div class="flex flex-wrap items-center gap-3">
-        <label class="font-semibold min-w-25 text-gray-700">⭐ Рейтинг:</label>
-        <select 
-          v-model="localFilters.rating"
-          class="flex-1 px-4 py-2.5 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none"
+        <label class="font-semibold min-w-32 text-gray-700 text-sm">📍 Место отбора:</label>
+        <input 
+          v-model="localFilters.samplingPlace"
+          type="text" 
+          placeholder="Поиск по месту отбора..." 
+          class="flex-1 px-4 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none transition text-sm"
         >
-          <option value="any">Любой</option>
-          <option value="4.5">4.5+ (отлично)</option>
-          <option value="4">4.0+ (хорошо)</option>
-          <option value="3">3.0+ (средний)</option>
+      </div>
+
+      <!-- Лицо, предоставившее пробу -->
+      <div class="flex flex-wrap items-center gap-3">
+        <label class="font-semibold min-w-32 text-gray-700 text-sm">👤 Кто предоставил:</label>
+        <input 
+          v-model="localFilters.personProvidedSample"
+          type="text" 
+          placeholder="Поиск по лицу..." 
+          class="flex-1 px-4 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none transition text-sm"
+        >
+      </div>
+
+      <!-- Дата поступления материала (диапазон) -->
+      <div class="flex flex-wrap items-center gap-3">
+        <label class="font-semibold min-w-32 text-gray-700 text-sm">📥 Дата поступления:</label>
+        <div class="flex flex-1 flex-wrap items-center gap-2">
+          <input 
+            v-model="localFilters.materialReceiptDateFrom"
+            type="date" 
+            class="flex-1 min-w-30 px-3 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none text-sm"
+          >
+          <span class="text-gray-400">—</span>
+          <input 
+            v-model="localFilters.materialReceiptDateTo"
+            type="date" 
+            class="flex-1 min-w-30 px-3 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none text-sm"
+          >
+        </div>
+      </div>
+
+      <!-- Наименование материала -->
+      <div class="flex flex-wrap items-center gap-3">
+        <label class="font-semibold min-w-32 text-gray-700 text-sm">🧪 Материал:</label>
+        <input 
+          v-model="localFilters.materialName"
+          type="text" 
+          placeholder="Поиск по материалу..." 
+          class="flex-1 px-4 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none transition text-sm"
+        >
+      </div>
+
+      <!-- Документ о качестве -->
+      <div class="flex flex-wrap items-center gap-3">
+        <label class="font-semibold min-w-32 text-gray-700 text-sm">📑 Документ о качестве:</label>
+        <input 
+          v-model="localFilters.qualityDocument"
+          type="text" 
+          placeholder="Поиск по документу..." 
+          class="flex-1 px-4 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none transition text-sm"
+        >
+      </div>
+
+      <!-- Предприятие-изготовитель -->
+      <div class="flex flex-wrap items-center gap-3">
+        <label class="font-semibold min-w-32 text-gray-700 text-sm">🏭 Изготовитель:</label>
+        <input 
+          v-model="localFilters.manufacturer"
+          type="text" 
+          placeholder="Поиск по изготовителю..." 
+          class="flex-1 px-4 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none transition text-sm"
+        >
+      </div>
+
+      <!-- Номер протокола -->
+      <div class="flex flex-wrap items-center gap-3">
+        <label class="font-semibold min-w-32 text-gray-700 text-sm">📋 Номер протокола:</label>
+        <input 
+          v-model="localFilters.protocolNumber"
+          type="text" 
+          placeholder="Поиск по номеру протокола..." 
+          class="flex-1 px-4 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none transition text-sm"
+        >
+      </div>
+
+      <!-- Дата протокола (диапазон) -->
+      <div class="flex flex-wrap items-center gap-3">
+        <label class="font-semibold min-w-32 text-gray-700 text-sm">📅 Дата протокола:</label>
+        <div class="flex flex-1 flex-wrap items-center gap-2">
+          <input 
+            v-model="localFilters.protocolDateFrom"
+            type="date" 
+            class="flex-1 min-w-30 px-3 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none text-sm"
+          >
+          <span class="text-gray-400">—</span>
+          <input 
+            v-model="localFilters.protocolDateTo"
+            type="date" 
+            class="flex-1 min-w-30 px-3 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none text-sm"
+          >
+        </div>
+      </div>
+
+      <!-- Результат испытаний (выпадающий список) -->
+      <div class="flex flex-wrap items-center gap-3">
+        <label class="font-semibold min-w-32 text-gray-700 text-sm">✅ Результат:</label>
+        <select 
+          v-model="localFilters.testResult"
+          class="flex-1 px-4 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none text-sm"
+        >
+          <option value="">Все</option>
+          <option value="Соответствует">Соответствует</option>
+          <option value="Не соответствует">Не соответствует</option>
         </select>
       </div>
 
-      <!-- Доступность (radio) -->
+      <!-- Примечание -->
       <div class="flex flex-wrap items-center gap-3">
-        <label class="font-semibold min-w-25 text-gray-700">📦 Доступность:</label>
-        <div class="flex flex-wrap gap-5 flex-1">
-          <label class="flex items-center gap-2 text-gray-700">
-            <input 
-              v-model="localFilters.availability" 
-              type="radio" 
-              value="all" 
-              class="accent-brand"
-            > 
-            Все товары
-          </label>
-          <label class="flex items-center gap-2 text-gray-700">
-            <input 
-              v-model="localFilters.availability" 
-              type="radio" 
-              value="inStock" 
-              class="accent-brand"
-            > 
-            Только в наличии
-          </label>
-          <label class="flex items-center gap-2 text-gray-700">
-            <input 
-              v-model="localFilters.availability" 
-              type="radio" 
-              value="preorder" 
-              class="accent-brand"
-            > 
-            Предзаказ
-          </label>
-        </div>
-      </div>
-
-      <!-- Доп. опции (чекбоксы) -->
-      <div class="flex flex-wrap items-center gap-3">
-        <label class="font-semibold min-w-25 text-gray-700">🆕 Дополнительно:</label>
-        <div class="flex flex-wrap gap-5 flex-1">
-          <label class="flex items-center gap-2 text-gray-700">
-            <input 
-              v-model="localFilters.isNewFirst" 
-              type="checkbox" 
-              class="rounded accent-brand"
-            > 
-            Сначала новинки
-          </label>
-          <label class="flex items-center gap-2 text-gray-700">
-            <input 
-              v-model="localFilters.isSaleOnly" 
-              type="checkbox" 
-              class="rounded accent-brand"
-            > 
-            Только со скидкой
-          </label>
-        </div>
+        <label class="font-semibold min-w-32 text-gray-700 text-sm">📝 Примечание:</label>
+        <input 
+          v-model="localFilters.note"
+          type="text" 
+          placeholder="Поиск по примечанию..." 
+          class="flex-1 px-4 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none transition text-sm"
+        >
       </div>
 
       <!-- Кнопки действий -->
-      <div class="flex justify-end gap-3 mt-2 pt-2 border-t border-dashed border-gray-200">
+      <div class="flex justify-end gap-3 mt-3 pt-3 border-t border-dashed border-gray-200">
         <button 
           type="button" 
           @click="resetFilters"
-          class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-6 rounded-md transition"
+          class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-6 rounded-md transition text-sm"
         >
-          Сбросить
+          Сбросить всё
         </button>
         <button 
           type="submit" 
-          class="bg-[#2c7da0] hover:bg-[#1f5e7a] text-white font-semibold py-2 px-7 rounded-md transition shadow-sm"
+          class="bg-[#2c7da0] hover:bg-[#1f5e7a] text-white font-semibold py-2 px-7 rounded-md transition shadow-sm text-sm"
         >
-          Применить фильтр
+          🔍 Применить фильтр
         </button>
+      </div>
+
+      <!-- Индикатор активных фильтров -->
+      <div v-if="hasActiveFilters" class="text-xs text-blue-600 mt-1">
+        ✅ Фильтры активны
       </div>
     </form>
   </div>
 </template>
 
 <script setup lang="ts">
-// Интерфейс для фильтров
+// ======= ИНТЕРФЕЙС ФИЛЬТРОВ =======
 interface Filters {
-  category: string
-  priceMin: number | null
-  priceMax: number | null
-  rating: string
-  availability: string
-  isNewFirst: boolean
-  isSaleOnly: boolean
+  // Текстовые поля (поиск по частичному совпадению)
+  plp: string
+  objectName: string
+  samplingActNumber: string
+  samplingPlace: string
+  personProvidedSample: string
+  materialName: string
+  qualityDocument: string
+  manufacturer: string
+  protocolNumber: string
+  note: string
+  
+  // Даты (диапазоны)
+  samplingDateFrom: string
+  samplingDateTo: string
+  materialReceiptDateFrom: string
+  materialReceiptDateTo: string
+  protocolDateFrom: string
+  protocolDateTo: string
+  
+  // Выпадающие списки (точное совпадение)
+  testResult: string  // '' | 'Соответствует' | 'Не соответствует'
 }
 
-// Пропсы компонента
+// ======= ПРОПСЫ =======
 const props = defineProps<{
   modelValue: Filters
 }>()
 
-// События компонента
+// ======= СОБЫТИЯ =======
 const emit = defineEmits<{
   (e: 'update:modelValue', value: Filters): void
   (e: 'apply', filters: Filters): void
   (e: 'reset'): void
 }>()
 
-// Локальная копия фильтров (чтобы изменения применялись только после нажатия кнопки)
+// ======= ЛОКАЛЬНАЯ КОПИЯ ФИЛЬТРОВ =======
 const localFilters = ref<Filters>({ ...props.modelValue })
 
-// Применение фильтров
+// ======= ПРОВЕРКА НАЛИЧИЯ АКТИВНЫХ ФИЛЬТРОВ =======
+const hasActiveFilters = computed(() => {
+  const f = localFilters.value
+  return !!(
+    f.plp ||
+    f.objectName ||
+    f.samplingActNumber ||
+    f.samplingPlace ||
+    f.personProvidedSample ||
+    f.materialName ||
+    f.qualityDocument ||
+    f.manufacturer ||
+    f.protocolNumber ||
+    f.note ||
+    f.samplingDateFrom ||
+    f.samplingDateTo ||
+    f.materialReceiptDateFrom ||
+    f.materialReceiptDateTo ||
+    f.protocolDateFrom ||
+    f.protocolDateTo ||
+    f.testResult
+  )
+})
+
+// ======= ПРИМЕНЕНИЕ ФИЛЬТРОВ =======
 function applyFilters() {
   emit('update:modelValue', { ...localFilters.value })
   emit('apply', { ...localFilters.value })
 }
 
-// Сброс фильтров
+// ======= СБРОС ФИЛЬТРОВ =======
 function resetFilters() {
   localFilters.value = {
-    category: '',
-    priceMin: null,
-    priceMax: null,
-    rating: 'any',
-    availability: 'all',
-    isNewFirst: false,
-    isSaleOnly: false
+    plp: '',
+    objectName: '',
+    samplingActNumber: '',
+    samplingPlace: '',
+    personProvidedSample: '',
+    materialName: '',
+    qualityDocument: '',
+    manufacturer: '',
+    protocolNumber: '',
+    note: '',
+    samplingDateFrom: '',
+    samplingDateTo: '',
+    materialReceiptDateFrom: '',
+    materialReceiptDateTo: '',
+    protocolDateFrom: '',
+    protocolDateTo: '',
+    testResult: ''
   }
   emit('update:modelValue', { ...localFilters.value })
   emit('reset')
 }
 
-// Синхронизация с пропсом при его изменении снаружи
+// ======= СИНХРОНИЗАЦИЯ С ПРОПСОМ =======
 watch(() => props.modelValue, (newValue) => {
   localFilters.value = { ...newValue }
 }, { deep: true })
@@ -190,9 +316,32 @@ watch(() => props.modelValue, (newValue) => {
   z-index: 20;
   right: -30px;
   width: max-content;
+  min-width: 420px;
+  max-width: 520px;
   background-color: white;
   border-radius: 15px;
   top: 38px;
   box-shadow: 0px 2px 10px 5px rgba(163, 163, 163, 0.31);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+/* Кастомный скролл */
+.panel-wrapper::-webkit-scrollbar {
+  width: 4px;
+}
+
+.panel-wrapper::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 2px;
+}
+
+.panel-wrapper::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 2px;
+}
+
+.panel-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 </style>
