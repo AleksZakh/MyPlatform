@@ -35,6 +35,7 @@
               <FilterPanel 
                 v-if="isFilterActive"
                 v-model="filters"
+                :reload-data="applyFilters"
                 @apply="applyFilters"
                 @reset="resetFilters"
               />
@@ -96,17 +97,6 @@
             </UTooltip>
           </div>
           
-          <!-- Информация -->
-          <!-- Информация о записях -->
-          <div class="text-sm text-gray-500 flex items-center gap-4">
-            <span>📊 Всего записей в БД: <strong>{{ totalCount }}</strong></span>
-            <span v-if="isFilterActive || hasActiveFilters" class="text-blue-600">
-              🔍 Отфильтровано: <strong>{{ originalData.length }}</strong>
-            </span>
-            <span v-if="hasActiveFilters" class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
-              Фильтр активен
-            </span>
-          </div>
         <!-- ========================================================================================================================== -->
         <!-- ========================================================================================================================== -->
       </div>
@@ -149,14 +139,14 @@
           <tbody class="divide-y divide-gray-200">
             <tr
               v-for="(row, index) in filteredData"
-              :key="index"
+              :key="row.ID"
               class="hover:bg-gray-50 transition"
               :class="{ 'bg-red-50': row['Результат испытаний'] === 'Не соответствует',
-                'bg-green-50': isRowSelected(index),
-                'hover:bg-gray-50': !isRowSelected(index)
+                'bg-green-50': isRowSelected(row.ID),
+                'hover:bg-gray-50': !isRowSelected(row.ID)
               }"            
-              @click="selectRow(index)"
-              @dblclick.stop.prevent="handleDblClick(index, row)"
+              @click="selectRow(row)"
+              @dblclick.stop.prevent="handleDblClick(row.ID, row)"
             >
               <td
                 v-for="header in visibleHeaders"
@@ -178,8 +168,39 @@
 
     <!-- Пагинация -->
     <div v-if="filteredData.length > 0" class="flex justify-between items-center mt-4">
-      <div class="text-sm text-gray-600">
-        Показано {{ startIndex }} - {{ endIndex }} из {{ totalCount }}
+      <div class="text-lg text-gray-600 flex items-center gap-6">        
+        <!-- Информация о записях -->
+        <div>
+          <span class="flex items-center gap-0.5">
+            <Icon :name="'streamline-freehand-color:database'" size="24" /> Всего записей в БД: <strong>{{ totalCount }}</strong>
+          </span>          
+        </div>
+        <div >
+          <span class="flex items-center gap-0.5">
+            <Icon :name="'streamline-freehand-color:app-window-user'" size="24" />Показано {{ startIndex }} - {{ endIndex }} из {{ totalCount }}
+          </span>          
+        </div>
+        <div>
+          <span v-if="isFilterActive || hasActiveFilters" class="text-blue-600 flex items-center gap-0.5">
+            <Icon :name="'streamline-freehand-color:app-window-search-text'" size="24" /> Отфильтровано: <strong>{{ originalData.length }}</strong>
+          </span>
+        </div>
+        <div>
+          <UButton
+            v-if="hasActiveFilters"
+            @click="resetFilters"
+            icon="streamline-freehand-color:view-binocular"
+            color="info"
+            variant="outline"
+            :ui="{
+              leadingIcon: 'text-primary'
+            }"
+          >
+          <span v-if="hasActiveFilters" >
+            Фильтр активен
+          </span>
+          </UButton>
+        </div>
       </div>
       <div class="flex gap-2">
         <button
@@ -221,10 +242,14 @@
   import type { ContextMenuItem } from '@nuxt/ui';
   import FilterPanel from '~/components/lab/FilterPanel.vue';
   import { onClickOutside } from '@vueuse/core';
+  import { useRecordDelete } from '~/composables/useRecordDelete';
 
   // ======= СОСТОЯНИЯ ФИЛЬТРА =======
   const isFilterActive = ref(false)
   const panelRef = ref<HTMLElement | null>(null)
+    //deleteRecord, deleteRecordSimple,
+  const {  deleteRecordWithRefresh, loading: deleteLoading } = useRecordDelete()
+  const selectedRecord = ref<any>(null)
   // 👇 НОВЫЙ ОБЪЕКТ ФИЛЬТРОВ (соответствует полям БД)
   const filters = ref({
     // Текстовые поля
@@ -258,6 +283,21 @@
   const totalPages = ref(0)      // Всего страниц
   const loadingToastId = ref<string | number | null>(null)
 
+  const loading = ref(true);
+  const originalData = ref<Record<string, string>[]>([]);
+  const headers = ref<string[]>([]);
+
+  // Состояние таблицы
+  const searchQuery = ref('');
+  const sortKey = ref('Дата отбора проб');
+  const sortDirection = ref<'asc' | 'desc'>('desc');
+  const currentPage = ref(1);
+  const itemsPerPage = ref(25);
+  const showColumnSelector = ref(false);
+  const visibleColumns = ref<string[]>([]);
+  const selectAll = ref(false);
+  const isModalOpen = ref(false)
+
   const items: ContextMenuItem[][] = [
     [
       {
@@ -277,10 +317,39 @@
       {
         label: 'Удалить',
         color: 'error' as const,
-        icon: 'streamline-freehand-color:delete-bin-2'
+        icon: 'streamline-freehand-color:delete-bin-2',
+        onClick: () => handleDelete(selectedRecord.value)
       }
     ]
   ];
+
+  function handleContextMenu(row: any, index: any) {
+    selectedRecord.value = { ...row, index }
+  }
+
+  // ======= УДАЛЕНИЕ ЗАПИСИ =======
+  async function handleDelete(record: any) {
+    console.log('Удаление записи:', record)
+    if (!record) return
+
+    
+    // Получаем ID записи (если есть)
+    const id = record.ID || record.index
+    
+    // Получаем название для отображения
+    const recordName = record['Наименование объект'] || record.objectName || `запись #${id}`
+    
+    // Вызываем удаление с обновлением таблицы
+    await deleteRecordWithRefresh(
+      id,
+      recordName,
+      async () => {
+        // Callback после успешного удаления
+        await loadData()  // Обновляем данные
+        selectedRecord.value = null  // Сбрасываем выделение
+      }
+    )
+  }
 
   // ======= МЕТОДЫ ФИЛЬТРА =======
   function applyFilters(appliedFilters: any) {
@@ -302,6 +371,7 @@
     loadData()
     isFilterActive.value = false
   }
+  
 
   // ======= СБРОС ФИЛЬТРОВ =======
   function resetFilters() {
@@ -324,12 +394,12 @@
   }
 
   // Функция для проверки, выбрана ли строка
-  const isRowSelected = (index: number): boolean => {
+  const isRowSelected = (index: any): boolean => {
     return rowSelectedId.value === index;
   };
 
   // Функция для выбора/снятия выбора строки
-  const selectRow = (index: number): void => {
+  const selectRow = (index: any): void => {
     // Если кликнули на ту же строку - снимаем выделение
     if (rowSelectedId.value === index) {
       rowSelectedId.value = null;
@@ -338,7 +408,7 @@
       rowSelectedId.value = index;
       selectedRecord.value = index;
     }
-    // console.log('selectedRecord === ', selectedRecord)
+    console.log('selectedRecord === ', selectedRecord)
   };
 
 
@@ -367,7 +437,8 @@ async function open(action: 'create' | 'edit' = 'edit') {
 
   const instance = modal.open({
     count: count.value,
-    selectedRecord: record
+    selectedRecord: record,
+    reloadData: loadData
   })
 
   const shouldIncrement = await instance.result
@@ -384,21 +455,7 @@ onClickOutside(panelRef, () => {
   // }
 })
 
-const loading = ref(true);
-const originalData = ref<Record<string, string>[]>([]);
-const headers = ref<string[]>([]);
 
-// Состояние таблицы
-const searchQuery = ref('');
-const sortKey = ref('Дата отбора проб');
-const sortDirection = ref<'asc' | 'desc'>('desc');
-const currentPage = ref(1);
-const itemsPerPage = ref(25);
-const showColumnSelector = ref(false);
-const visibleColumns = ref<string[]>([]);
-const selectAll = ref(false);
-const isModalOpen = ref(false)
-const selectedRecord = ref<any>(null)
 
 // Человеко-читаемые названия столбцов
 const columnLabels: Record<string, string> = {
@@ -443,11 +500,9 @@ onMounted(() => {
 
 function columnSelectorButtonClick() { // изменение статуса отображения окна выбора столбцов
     showColumnSelector.value = !showColumnSelector.value;
-    
-    // console.log('Клик по кнопке выбора столбцов', showColumnSelector.value);
 }
 
-// ======= НОВАЯ ФУНКЦИЯ ЗАГРУЗКИ (минимальные изменения) =======
+// ======= ФУНКЦИЯ ЗАГРУЗКИ  =======
 async function loadData() {
   const toastId = toast.add({
     title: '⏳ Загрузка данных...',
@@ -495,6 +550,7 @@ async function loadData() {
       // Сохраняем данные
       toast.remove(loadingToastId.value)
       originalData.value = result.data
+      console.log('✅ Данные успешно загружены:', originalData.value)
       
       if (originalData.value.length > 0 && originalData.value[0]) {
         headers.value = Object.keys(originalData.value[0])

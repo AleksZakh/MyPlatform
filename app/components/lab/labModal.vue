@@ -79,7 +79,7 @@
   import * as z from 'zod';
   import type { FormSubmitEvent } from '@nuxt/ui';
   import { CalendarDate } from '@internationalized/date';
-  import { parseDate, getToday } from '../../../utils/dateUtils' // или '@/utils/dateUtils'
+  import { parseDate, getToday, dateToISOString } from '../../../utils/dateUtils' // или '@/utils/dateUtils'
 
   const props = defineProps<{
     count: number
@@ -101,8 +101,10 @@
       'Результат испытаний'?: string
       [key: string]: any
     }
+    reloadData: Function
   }>()  
   const emit = defineEmits<{ close: [boolean] }>();
+  
   const toast = useToast();
   const items = ref(['Backlog', 'Todo', 'In Progress', 'Done'])
   const value = ref('Backlog')
@@ -204,6 +206,10 @@ watch(() => props.selectedRecord, (newVal) => {
 
   async function handleSubmit(event: FormSubmitEvent<Schema>) {
     // Сработает только тогда, когда форма УСПЕШНО пройдет валидацию.
+    event.data.sDate= dateToISOString(event.data.sDate)
+    event.data.receiptDate = dateToISOString(event.data.receiptDate)
+    event.data.qualDocDate = dateToISOString(event.data.qualDocDate)
+    event.data.testProtocolData = dateToISOString(event.data.testProtocolData)
     console.log(event.data)
     try {
       // Отправляем POST запрос с данными формы на наш эндпоинт
@@ -213,6 +219,7 @@ watch(() => props.selectedRecord, (newVal) => {
       })
       
       if (response.success) {
+        props.reloadData() // Обновляем данные в таблице после успешного сохранения
         toast.add({ title: 'Успех!', description: `Данные новой записи о${event.data.objName} успешно сохранены.`, color: 'success' })
       } else {
         toast.add({ title: 'Ошибка!', description: `Не удалось сохранить данные о${event.data.objName}.`, color: 'error' })

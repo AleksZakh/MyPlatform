@@ -8,6 +8,7 @@ export default defineEventHandler(async (event) => {
   try {
     // 1. Читаем данные, отправленные из формы на клиенте
     const body = await readBody(event)
+    console.log('Received data:', body)
 
     // 2. Базовая валидация обязательных полей
     // if (!body.title || !body.status) {
@@ -17,37 +18,7 @@ export default defineEventHandler(async (event) => {
     //   })
     // }
 
-    /**
-     * actNumber: "цауцвцсу"
-manufacturer: "йсййцс"
-material: "Backlog"
-objName: "Todo"
-plp: "Backlog"
-protocolDoc: ""
-qualDoc: ""
-
-qualDocDate: 
-_$2aaf608024c21ca1$export$99faa760c7908e4f {calendar: $93635573935797de$export$80ee6245ec4f29ec, era: 'AD', year: 2023, month: 9, #type: undefined, …}
-
-qualDocNumber: "йцсйцс111"
-
-receiptDate: 
-_$2aaf608024c21ca1$export$99faa760c7908e4f {calendar: $93635573935797de$export$80ee6245ec4f29ec, era: 'AD', year: 2023, month: 9, #type: undefined, …}
-sDate: 
-_$2aaf608024c21ca1$export$99faa760c7908e4f {calendar: $93635573935797de$export$80ee6245ec4f29ec, era: 'AD', year: 2023, month: 9, #type: undefined, …}
-
-sDoc: ""
-sNote: "йсйцсйцсй"
-sPerson: "Todo"
-sPlace: "Backlog"
-
-testProtocolData: 
-_$2aaf608024c21ca1$export$99faa760c7908e4f {calendar: $93635573935797de$export$80ee6245ec4f29ec, era: 'AD', year: 2023, month: 9, #type: undefined, …}
-
-testProtocolNumber: "йус1с121"
-testResult: "In Progress"
-     */
-
+    
     // 3. Сохраняем данные в базу через Prisma
     // Предположим, что в вашей схеме Prisma модель называется "IncomingControl"
     const newRecord = await prisma.aEng.create({
@@ -58,15 +29,15 @@ testResult: "In Progress"
         plp: body.plp || '',
         objectName: body.objName || '',
         samplingActNumber: body.actNumber || '',
-        samplingDate: '2026-07-03T08:42:00.000Z',
+        samplingDate: body.sDate || '',
         samplingPlace: body.sPlace || '',
         personProvidedSample: body.sPerson || '',
-        materialReceiptDate: '2026-07-03T08:42:00.000Z',
+        materialReceiptDate: body.receiptDate || '',
         materialName: body.material || '',
         qualityDocument: body.qualDoc || '',
         manufacturer: body.manufacturer || '',
         protocolNumber: body.qualDocNumber || '',
-        protocolDate: '2026-07-03T08:42:00.000Z',
+        protocolDate: body.testProtocolData || '',
         testResult: body.testResult || '',
         note: body.sNote || '',
         createdAt: new Date()

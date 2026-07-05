@@ -20,6 +20,8 @@ import { RuntimeConfig as UserRuntimeConfig, PublicRuntimeConfig as UserPublicRu
       password: string,
 
       timeout: number,
+
+      databaseUrl: string,
    },
 
    nitro: {

@@ -155,6 +155,7 @@ export default defineEventHandler(async (event) => {
 
     // ======= ТРАНСФОРМАЦИЯ ДАННЫХ =======
     const transformedData = data.map(item => ({
+      'ID': item.id || '',
       'ПЛП': item.plp || '',
       'Наименование объект': item.objectName || '',
       'Номер акта отбора проб': item.samplingActNumber || '',
