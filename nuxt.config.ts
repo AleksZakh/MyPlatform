@@ -12,7 +12,8 @@ export default defineNuxtConfig({
       baseDN: process.env.AD_DOMAIN_USERS || 'DC=local,DC=com',
       username: process.env.AD_USERNAME || '',
       password: process.env.AD_PASSWORD || '',
-      timeout: parseInt(process.env.AD_TIMEOUT || '5000')
+      timeout: parseInt(process.env.AD_TIMEOUT || '5000'),
+      databaseUrl: process.env.DATABASE_URL 
     },
     public: {
       cryptoKey: '',
