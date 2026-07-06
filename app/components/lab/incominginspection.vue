@@ -142,7 +142,7 @@
               :key="row.ID"
               class="hover:bg-gray-50 transition"
               :class="{ 'bg-red-50': row['Результат испытаний'] === 'Не соответствует',
-                'bg-green-50': isRowSelected(row.ID),
+                'bg-green-50': isRowSelected(row),
                 'hover:bg-gray-50': !isRowSelected(row.ID)
               }"            
               @click="selectRow(row)"
@@ -171,12 +171,12 @@
       <div class="text-lg text-gray-600 flex items-center gap-6">        
         <!-- Информация о записях -->
         <div>
-          <span class="flex items-center gap-0.5">
+          <span class="flex items-center gap-2">
             <Icon :name="'streamline-freehand-color:database'" size="24" /> Всего записей в БД: <strong>{{ totalCount }}</strong>
           </span>          
         </div>
         <div >
-          <span class="flex items-center gap-0.5">
+          <span class="flex items-center gap-1">
             <Icon :name="'streamline-freehand-color:app-window-user'" size="24" />Показано {{ startIndex }} - {{ endIndex }} из {{ totalCount }}
           </span>          
         </div>

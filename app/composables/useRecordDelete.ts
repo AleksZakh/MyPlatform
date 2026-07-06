@@ -23,7 +23,7 @@ export const useRecordDelete = () => {
             const modalInstance = overlay.create(ConfirmDialog, {
                 // В Nuxt UI v3 все аргументы и коллбеки событий идут строго в секцию props!
                 props: {
-                    title: '🗑️ Подтверждение удаления',
+                    title: ' Подтверждение удаления',
                     description: `Вы уверены, что хотите удалить запись ${options.recordName ? `"${options.recordName}"` : ''}?`,
                     content: options.additionalInfo || 'Это действие нельзя будет отменить.',
                     confirmText: 'Удалить',
