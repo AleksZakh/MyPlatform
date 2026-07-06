@@ -79,7 +79,7 @@
   import * as z from 'zod';
   import type { FormSubmitEvent } from '@nuxt/ui';
   import { CalendarDate } from '@internationalized/date';
-  import { parseDate, getToday, dateToISOString } from '../../../utils/dateUtils' // или '@/utils/dateUtils'
+  import { parseDate, getToday, dateToISOString } from '../../../utils/dateUtils'; // или '@/utils/dateUtils'
 
   const props = defineProps<{
     count: number
@@ -166,7 +166,7 @@ const getInitialState = (): Schema => ({
 // 3. Создаем state на основе фабрики дефолтных значений
 const state = reactive<Schema>(getInitialState())
 
-// 4. Оптимизированный сброс формы — одной строкой!
+// 4. Сброс формы 
 function resetForm() {
   Object.assign(state, getInitialState())
 }
@@ -204,29 +204,50 @@ watch(() => props.selectedRecord, (newVal) => {
   }
 }, { immediate: true })
 
+  // Обработчик нажатия кнопки "Сохранить"
   async function handleSubmit(event: FormSubmitEvent<Schema>) {
     // Сработает только тогда, когда форма УСПЕШНО пройдет валидацию.
     event.data.sDate= dateToISOString(event.data.sDate)
     event.data.receiptDate = dateToISOString(event.data.receiptDate)
     event.data.qualDocDate = dateToISOString(event.data.qualDocDate)
     event.data.testProtocolData = dateToISOString(event.data.testProtocolData)
-    console.log(event.data)
-    try {
-      // Отправляем POST запрос с данными формы на наш эндпоинт
-      const response = await $fetch('/api/incoming-control', {
-        method: 'POST',
-        body: event.data
-      })
-      
-      if (response.success) {
-        props.reloadData() // Обновляем данные в таблице после успешного сохранения
-        toast.add({ title: 'Успех!', description: `Данные новой записи о${event.data.objName} успешно сохранены.`, color: 'success' })
-      } else {
-        toast.add({ title: 'Ошибка!', description: `Не удалось сохранить данные о${event.data.objName}.`, color: 'error' })
+    // console.log(event.data)
+    if(props.selectedRecord?.action === 'edit'){
+      console.log('Редактирование записи, добавляем id:', props.selectedRecord.ID)
+      try{
+        const response = await $fetch<{ success: boolean }>(`/api/incoming-control/${props.selectedRecord.ID}`, {
+          method: 'PUT',
+          body: event.data
+        })
+        
+        if (response.success) {
+          props.reloadData() // Обновляем данные в таблице после успешного сохранения
+          toast.add({ title: 'Успех!', description: `Данные записи о${event.data.objName} успешно обновлены.`, color: 'success' })
+        } else {
+          toast.add({ title: 'Ошибка!', description: `Не удалось обновить данные о${event.data.objName}.`, color: 'error' })
+        }
+      } catch (error) {
+
       }
-    } catch (error) {
-      console.error('Ошибка отправки:', error)
-      toast.add({ title: 'Ошибка!', description: 'Не удалось сохранить данные.', color: 'error' })
+    } else if(props.selectedRecord?.action === 'create'){
+      console.log('Создание новой записи')
+      try {
+        // Отправляем POST запрос с данными формы на наш эндпоинт
+        const response = await $fetch<{ success: boolean }>('/api/incoming-control', {
+          method: 'POST',
+          body: event.data
+        })
+        
+        if (response.success) {
+          props.reloadData() // Обновляем данные в таблице после успешного сохранения
+          toast.add({ title: 'Успех!', description: `Данные новой записи о${event.data.objName} успешно сохранены.`, color: 'success' })
+        } else {
+          toast.add({ title: 'Ошибка!', description: `Не удалось сохранить данные о${event.data.objName}.`, color: 'error' })
+        }
+      } catch (error) {
+        console.error('Ошибка отправки:', error)
+        toast.add({ title: 'Ошибка!', description: 'Не удалось сохранить данные.', color: 'error' })
+      }
     }
     emit('close', true)
   }

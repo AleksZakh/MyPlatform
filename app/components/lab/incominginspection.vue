@@ -298,11 +298,29 @@
   const selectAll = ref(false);
   const isModalOpen = ref(false)
 
+  // Функция для выбора/снятия выбора строки
+  const selectRow = (index: any): void => {
+    // Если кликнули на ту же строку - снимаем выделение
+    if (rowSelectedId.value === index) {
+      rowSelectedId.value = null;
+      selectedRecord.value = null
+    } else {
+      rowSelectedId.value = index;
+      selectedRecord.value = index;
+    }
+    console.log('selectedRecord === ', selectedRecord)
+  };
+
   const items: ContextMenuItem[][] = [
     [
       {
         label: 'Открыть',
-        icon: 'streamline-freehand-color:kindle-read-document-hold'
+        icon: 'streamline-freehand-color:kindle-read-document-hold',
+        onClick: () => {
+          if (selectedRecord.value) {
+            handleDblClick(selectedRecord.value.ID, selectedRecord.value)
+          }
+        }
       },
       {
         label: 'Копировать',
@@ -310,7 +328,12 @@
       },
       {
         label: 'Изменить',
-        icon: 'streamline-freehand-color:edit-pencil'
+        icon: 'streamline-freehand-color:edit-pencil',
+        onClick: () => {
+          if (selectedRecord.value) {
+            handleDblClick(selectedRecord.value.ID, selectedRecord.value)
+          }
+        }
       }
     ],
     [
@@ -398,18 +421,7 @@
     return rowSelectedId.value === index;
   };
 
-  // Функция для выбора/снятия выбора строки
-  const selectRow = (index: any): void => {
-    // Если кликнули на ту же строку - снимаем выделение
-    if (rowSelectedId.value === index) {
-      rowSelectedId.value = null;
-      selectedRecord.value = null
-    } else {
-      rowSelectedId.value = index;
-      selectedRecord.value = index;
-    }
-    console.log('selectedRecord === ', selectedRecord)
-  };
+  
 
 
 // Функция, которая будет вызываться кнопкой "Создать" или двойным кликом по таблице
@@ -550,7 +562,7 @@ async function loadData() {
       // Сохраняем данные
       toast.remove(loadingToastId.value)
       originalData.value = result.data
-      console.log('✅ Данные успешно загружены:', originalData.value)
+      // console.log('✅ Данные успешно загружены:', originalData.value)
       
       if (originalData.value.length > 0 && originalData.value[0]) {
         headers.value = Object.keys(originalData.value[0])

@@ -143,6 +143,7 @@ declare global {
   const usePinia: typeof import('../../node_modules/@pinia/nuxt/dist/runtime/composables').usePinia
   const usePreviewMode: typeof import('../../node_modules/nuxt/dist/app/composables/preview').usePreviewMode
   const useRecordDelete: typeof import('../../app/composables/useRecordDelete').useRecordDelete
+  const useRecordUpdate: typeof import('../../app/composables/useRecordUpdate').useRecordUpdate
   const useRequestEvent: typeof import('../../node_modules/nuxt/dist/app/composables/ssr').useRequestEvent
   const useRequestFetch: typeof import('../../node_modules/nuxt/dist/app/composables/ssr').useRequestFetch
   const useRequestHeader: typeof import('../../node_modules/nuxt/dist/app/composables/ssr').useRequestHeader
@@ -239,6 +240,9 @@ declare global {
   // @ts-ignore
   export type { DeleteOptions } from '../../app/composables/useRecordDelete'
   import('../../app/composables/useRecordDelete')
+  // @ts-ignore
+  export type { UpdateOptions } from '../../app/composables/useRecordUpdate'
+  import('../../app/composables/useRecordUpdate')
 }
 // for vue template auto import
 import { UnwrapRef } from 'vue'
@@ -386,6 +390,7 @@ declare module 'vue' {
     readonly usePinia: UnwrapRef<typeof import('../../node_modules/@pinia/nuxt/dist/runtime/composables')['usePinia']>
     readonly usePreviewMode: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/preview')['usePreviewMode']>
     readonly useRecordDelete: UnwrapRef<typeof import('../../app/composables/useRecordDelete')['useRecordDelete']>
+    readonly useRecordUpdate: UnwrapRef<typeof import('../../app/composables/useRecordUpdate')['useRecordUpdate']>
     readonly useRequestEvent: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/ssr')['useRequestEvent']>
     readonly useRequestFetch: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/ssr')['useRequestFetch']>
     readonly useRequestHeader: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/ssr')['useRequestHeader']>
