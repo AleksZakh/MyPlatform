@@ -6,7 +6,7 @@ export default defineEventHandler(() => {
       name: 'Отдел кадров (HR)',
       slug: '/departments/hr',
       icon: 'streamline-freehand-color:job-choose-candidate', // Иконка из коллекции Heroicons (встроена в Nuxt UI)
-      manager: { name: 'Татьяна Колозина', avatar: 'https://unsplash.com' },
+      manager: { name: 'Татьяна Колозина', avatar: '' },
       employeeCount: 12,
       quickLinks: [
         { label: 'Заказать справку', url: '/departments/hr/documents' },
@@ -18,7 +18,7 @@ export default defineEventHandler(() => {
       name: 'IT и Разработка',
       slug: '/departments/it',
       icon: 'streamline-freehand-color:desktop-computer-pc',
-      manager: { name: 'Михаил Руденко', avatar: 'https://unsplash.com' },
+      manager: { name: 'Михаил Руденко', avatar: '' },
       employeeCount: 45,
       quickLinks: [
         { label: 'Техподдержка', url: '/departments/it/ticket' },
@@ -30,7 +30,7 @@ export default defineEventHandler(() => {
       name: 'Диагностика',
       slug: '/departments/diagnostic',
       icon: 'streamline-freehand-color:analytics-graph-bar-horizontal',
-      manager: { name: 'Леонид Шамраев', avatar: 'https://unsplash.com' },
+      manager: { name: 'Леонид Шамраев', avatar: '' },
       employeeCount: 50,
       quickLinks: [
         { label: 'ГИС', url: '/departments/diagnostic/gis' },
@@ -42,7 +42,7 @@ export default defineEventHandler(() => {
       name: 'Лабораторный контроль',
       slug: '/departments/lab',
       icon: 'streamline-freehand-color:amusement-park-strength-meter',
-      manager: { name: 'Кирилл Голюбин', avatar: 'https://unsplash.com' },
+      manager: { name: 'Кирилл Голюбин', avatar: '' },
       employeeCount: 20,
       quickLinks: [
         { label: 'Реестр вх.контроля', url: '/departments/lab/' },

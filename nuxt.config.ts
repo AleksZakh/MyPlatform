@@ -5,6 +5,15 @@ export default defineNuxtConfig({
   experimental: {
     serverAppConfig: false
   },
+  colorMode: {
+    preference: 'light', // Всегда устанавливает светлую тему по умолчанию
+    fallback: 'light',   // Если произойдет сбой, вернет светлую тем
+    globalName: '__NUXT_COLOR_MODE__',
+    componentName: 'ColorScheme',
+    classPrefix: '',     // Префикс класса для тега <html> (например, 'light-mode')
+    classSuffix: '-mode',
+    storage: 'localStorage' // Оставляем стандартный тип, ошибки TS больше нет
+  },
   runtimeConfig: {
     // Серверные переменные (доступны только на сервере)
     ad: {
@@ -79,6 +88,7 @@ export default defineNuxtConfig({
     'pinia-plugin-persistedstate/nuxt',
     '@nuxt/image',
     'nuxt-auth-utils',
+    '@nuxtjs/color-mode'
   ],
   // Опциональная настройка auth-utils
   auth: {

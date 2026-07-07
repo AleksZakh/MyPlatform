@@ -25,9 +25,6 @@
       "@nuxt/fonts": [
         "../node_modules/@nuxt/fonts"
       ],
-      "@nuxtjs/color-mode": [
-        "../node_modules/@nuxtjs/color-mode"
-      ],
       "defu": [
         "../node_modules/defu"
       ],
@@ -118,9 +115,6 @@
       "#imports": [
         "./imports"
       ],
-      "#color-mode-options": [
-        "./color-mode-options.mjs"
-      ],
       "#app-manifest": [
         "./manifest/meta/dev.json"
       ],
@@ -197,10 +191,10 @@
     "../node_modules/pinia-plugin-persistedstate/node_modules",
     "../node_modules/@nuxt/image/node_modules",
     "../node_modules/nuxt-auth-utils/node_modules",
+    "../node_modules/@nuxtjs/color-mode/node_modules",
     "../node_modules/@nuxt/telemetry/node_modules",
     "../node_modules/@nuxt/icon/node_modules",
     "../node_modules/@nuxt/fonts/node_modules",
-    "../node_modules/@nuxtjs/color-mode/node_modules",
     "../dist",
     "../.data",
     "../modules/*/runtime/server/**/*",

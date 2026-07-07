@@ -41,7 +41,7 @@
           <fieldset class="border-2 border-gray-200 px-2 py-1 rounded-md">
             <legend class="text-xl font-normal px-2">Протокол испытаний</legend>
             <div class="flex flex-col gap-2" >
-              <UFormField name="testProtocolData" label="Дата" required><CustomDateInput v-model="state.testProtocolData" :required="true" :min-value="minDate" :max-value="maxDate"/></UFormField>
+              <UFormField name="testProtocolDate" label="Дата" required><CustomDateInput v-model="state.testProtocolDate" :required="true" :min-value="minDate" :max-value="maxDate"/></UFormField>
               <UFormField name="protocolDoc" label="Документ" ><UInput type="file" class="min-w-50" v-model="state.protocolDoc" /></UFormField>
               <UFormField name="testResult" label="Результат испытаний" required><USelectMenu :items="items" @create="onCreate"  create-item class="min-w-70" v-model="state.testResult" /></UFormField>
               <UFormField name="testProtocolNumber" label="Номер" required><UInput class="min-w-70" v-model="state.testProtocolNumber" /></UFormField>
@@ -114,7 +114,7 @@
     value.value = newItem
   }
   const inputDate = useTemplateRef('inputDate');
-  const minDate = new CalendarDate(2023, 9, 1)
+  const minDate = new CalendarDate(2000, 1, 1)
   const maxDate = getToday()
 
   const schema = z.object({
@@ -132,7 +132,7 @@
   qualDoc: z.string().default(''),
   qualDocNumber: z.string().default(''),
   manufacturer: z.string().default(''),
-  testProtocolData: z.any().refine(val => val !== null && val !== undefined, 'Пожалуйста, выберите дату'),
+  testProtocolDate: z.any().refine(val => val !== null && val !== undefined, 'Пожалуйста, выберите дату'),
   protocolDoc: z.string().default(''),
   testResult: z.string().default(''),
   testProtocolNumber: z.string().default(''),
@@ -147,17 +147,17 @@ const getInitialState = (): Schema => ({
   objName: '',
   actNumber: '',
   sDoc: '',
-  sDate: shallowRef(new CalendarDate(2023, 9, 10)),
+  sDate: shallowRef(getToday()),
   sPlace: '',
   sPerson: '',
   sNote: '',
   material: '',
-  receiptDate: shallowRef(new CalendarDate(2023, 9, 10)),
-  qualDocDate: shallowRef(new CalendarDate(2023, 9, 10)),
+  receiptDate: shallowRef(getToday()),
+  qualDocDate: shallowRef(getToday()),
   qualDoc: '',
   qualDocNumber: '',
   manufacturer: '',
-  testProtocolData: shallowRef(new CalendarDate(2023, 9, 10)),
+  testProtocolDate: shallowRef(getToday()),
   protocolDoc: '',
   testResult: '',
   testProtocolNumber: ''
@@ -178,17 +178,17 @@ function fillFormWithData(data: any) {
   state.plp = data['ПЛП'] || ''
   state.objName = data['Наименование объект'] || ''
   state.actNumber = data['Номер акта отбора проб'] || ''
-  state.sDate = parseDate(data['Дата отбора проб']) || shallowRef(new CalendarDate(2023, 9, 10))
+  state.sDate = parseDate(data['Дата отбора проб']) || shallowRef(getToday())
   state.sPlace = data['Место отбора проб'] || ''
   state.sPerson = data['Лицо, предоставившее пробу'] || ''
   state.sNote = data['Примечание'] || ''
   state.material = data['Наименование материала'] || ''
-  state.receiptDate = parseDate(data['Дата поступления материала']) || shallowRef(new CalendarDate(2023, 9, 10))
-  state.qualDocDate = parseDate(data['Дата протокола']) || shallowRef(new CalendarDate(2023, 9, 10))
+  state.receiptDate = parseDate(data['Дата поступления материала']) || shallowRef(getToday())
+  state.qualDocDate = parseDate(data['Дата протокола']) || shallowRef(getToday())
   // state.qualDoc = data['Документ о качестве'] || ''
   state.qualDocNumber = data['Номер протокола'] || ''
   state.manufacturer = data['Предприятие-изготовитель'] || ''
-  state.testProtocolData = parseDate(data['Дата протокола']) || shallowRef(new CalendarDate(2023, 9, 10))
+  state.testProtocolDate = parseDate(data['Дата протокола']) || shallowRef(getToday())
   // state.protocolDoc = data['Документ протокола'] || ''
   state.testResult = data['Результат испытаний'] || ''
   state.testProtocolNumber = data['Номер протокола'] || ''
@@ -210,7 +210,7 @@ watch(() => props.selectedRecord, (newVal) => {
     event.data.sDate= dateToISOString(event.data.sDate)
     event.data.receiptDate = dateToISOString(event.data.receiptDate)
     event.data.qualDocDate = dateToISOString(event.data.qualDocDate)
-    event.data.testProtocolData = dateToISOString(event.data.testProtocolData)
+    event.data.testProtocolDate = dateToISOString(event.data.testProtocolDate)
     // console.log(event.data)
     if(props.selectedRecord?.action === 'edit'){
       console.log('Редактирование записи, добавляем id:', props.selectedRecord.ID)

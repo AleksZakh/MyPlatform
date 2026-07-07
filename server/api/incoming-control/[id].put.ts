@@ -61,8 +61,8 @@ export default defineEventHandler(async (event) => {
         if (body.receiptDate) {
             updateData.materialReceiptDate = body.receiptDate
         }
-        if (body.testProtocolData) {
-            updateData.protocolDate = body.testProtocolData
+        if (body.testProtocolDate) {
+            updateData.protocolDate = body.testProtocolDate
         }
         
         // Выпадающие списки

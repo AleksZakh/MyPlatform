@@ -25,9 +25,6 @@
       "@nuxt/fonts": [
         "../node_modules/@nuxt/fonts"
       ],
-      "@nuxtjs/color-mode": [
-        "../node_modules/@nuxtjs/color-mode"
-      ],
       "defu": [
         "../node_modules/defu"
       ],
@@ -117,9 +114,6 @@
       ],
       "#imports": [
         "./imports"
-      ],
-      "#color-mode-options": [
-        "./color-mode-options.mjs"
       ],
       "#app-manifest": [
         "./manifest/meta/dev.json"

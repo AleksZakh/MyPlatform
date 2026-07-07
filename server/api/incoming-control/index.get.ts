@@ -25,7 +25,7 @@ const sortFieldMap: Record<string, string> = {
 export default defineEventHandler(async (event) => {
   try {
     const query = getQuery(event)
-    console.log('📥 Получены параметры:', JSON.stringify(query, null, 2))
+    // console.log('📥 Получены параметры:', JSON.stringify(query, null, 2))
     
     // ======= ОСНОВНЫЕ ПАРАМЕТРЫ =======
     const page = parseInt(query.page as string) || 1
@@ -129,7 +129,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    console.log('🔍 WHERE условие:', JSON.stringify(where, null, 2))
+    // console.log('🔍 WHERE условие:', JSON.stringify(where, null, 2))
 
     // ======= СОРТИРОВКА =======
     const dbField = sortFieldMap[sortKey] || 'id'

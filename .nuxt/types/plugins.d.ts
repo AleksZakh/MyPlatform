@@ -19,11 +19,11 @@ type NuxtAppInjections =
   InjectionType<typeof import("../../node_modules/nuxt/dist/app/plugins/revive-payload.server.js")> &
   InjectionType<typeof import("../../node_modules/nuxt/dist/app/plugins/chunk-reload.client.js")> &
   InjectionType<typeof import("../../node_modules/@pinia/nuxt/dist/runtime/plugin.vue3.js")> &
-  InjectionType<typeof import("../../node_modules/@nuxtjs/color-mode/dist/runtime/plugin.server.js")> &
-  InjectionType<typeof import("../../node_modules/@nuxtjs/color-mode/dist/runtime/plugin.client.js")> &
   InjectionType<typeof import("../../node_modules/@nuxt/icon/dist/runtime/plugin.js")> &
   InjectionType<typeof import("../../node_modules/nuxt/dist/pages/runtime/plugins/prefetch.client.js")> &
   InjectionType<typeof import("../../node_modules/nuxt/dist/pages/runtime/plugins/check-if-page-unused.js")> &
+  InjectionType<typeof import("../../node_modules/@nuxtjs/color-mode/dist/runtime/plugin.server.js")> &
+  InjectionType<typeof import("../../node_modules/@nuxtjs/color-mode/dist/runtime/plugin.client.js")> &
   InjectionType<typeof import("../../node_modules/nuxt-auth-utils/dist/runtime/app/plugins/session.client.js")> &
   InjectionType<typeof import("../../node_modules/pinia-plugin-persistedstate/dist/nuxt/runtime/plugin.js")> &
   InjectionType<typeof import("../../node_modules/@nuxt/ui/dist/runtime/plugins/colors.js")> &

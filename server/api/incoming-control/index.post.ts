@@ -37,7 +37,7 @@ export default defineEventHandler(async (event) => {
         qualityDocument: body.qualDoc || '',
         manufacturer: body.manufacturer || '',
         protocolNumber: body.qualDocNumber || '',
-        protocolDate: body.testProtocolData || '',
+        protocolDate: body.testProtocolDate || '',
         testResult: body.testResult || '',
         note: body.sNote || '',
         createdAt: new Date()
