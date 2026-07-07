@@ -24,8 +24,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, statusMessage: 'Bad Request: Данные не найдены' })
     }
 
-    // ИСПРАВЛЕНИЕ ОШИБКИ ПУТИ: process.cwd() надежно возвращает корень проекта в Ubuntu/Linux
-    const rootDir = process.cwd()
+    // Изолированный безопасный путь на сервере Ubuntu вне зоны видимости Git
     const baseUploadDir = '/var/www/uploads-storage/files'
 
     // Генерируем подкаталог (например: 2025-11-30_17-45)
@@ -38,39 +37,47 @@ export default defineEventHandler(async (event) => {
     }
 
     const body: Record<string, string> = {}
+    
+    // Сюда будем собирать пути для записи в БД
     const fileDbPaths: Record<string, string> = {
       sDoc: '',
       qualDoc: '',
       protocolDoc: ''
     }
 
-    // Обрабатываем элементы из multipartData
+    // 1. Сначала считываем все текстовые поля (чтобы иметь к ним доступ, если понадобятся)
     for (const item of multipartData) {
-      if (!item.name) continue
-
-      if (item.filename) {
-        const fieldName = item.name
-        
-        // Исправление для Linux/Ubuntu: декодируем имя файла в utf-8, 
-        // чтобы избежать кракозябр при загрузке файлов с русскими буквами
-        const rawFilename = Buffer.from(item.filename, 'latin1').toString('utf-8')
-        const safeFilename = path.basename(rawFilename)
-        
-        // Полный путь для сохранения файла на сервере
-        const fullPath = path.join(targetDir, safeFilename)
-
-        // Записываем буфер файла на диск
-        fs.writeFileSync(fullPath, item.data)
-        
-        // Сохраняем относительный путь для БД (например: "2025-11-30_17-45/test.docx")
-        fileDbPaths[fieldName] = path.join(folderName, safeFilename)
-      } else {
-        // Декодируем текстовые поля в UTF-8
+      if (item.name && !item.filename) {
         body[item.name] = item.data.toString('utf-8')
       }
     }
 
-    // Сохраняем данные в PostgreSQL через Prisma
+    // 2. Обрабатываем и сохраняем файлы с безопасными именами
+    for (const item of multipartData) {
+      if (!item.name || !item.filename) continue
+
+      const fieldName = item.name // Имя поля на клиенте ('sDoc', 'qualDoc' или 'protocolDoc')
+      
+      // Извлекаем только расширение оригинального файла (например, '.docx' или '.pdf')
+      // Используем latin1 -> utf-8 только для корректного извлечения расширения, если оно вдруг на русском
+      const rawFilename = Buffer.from(item.filename, 'latin1').toString('utf-8')
+      const fileExt = path.extname(rawFilename).toLowerCase() // Получим например '.pdf'
+
+      // Формируем новое имя файла: имя_поля.расширение (например: sDoc.docx, qualDoc.docx)
+      // Кириллица здесь полностью отсутствует, что исключает ошибки файловой системы Ubuntu
+      const newFilename = `${fieldName}${fileExt}`
+      
+      // Полный физический путь для записи на диск Ubuntu
+      const fullPath = path.join(targetDir, newFilename)
+
+      // Записываем бинарный буфер файла на диск
+      fs.writeFileSync(fullPath, item.data)
+      
+      // Формируем относительный путь для БД (например: "2025-11-30_17-45/sDoc.docx")
+      fileDbPaths[fieldName] = path.join(folderName, newFilename)
+    }
+
+    // 3. Сохраняем очищенные данные в PostgreSQL через Prisma
     const newRecord = await prisma.aEng.create({
       data: {
         plp: body.plp || '',
@@ -90,13 +97,13 @@ export default defineEventHandler(async (event) => {
         testResult: body.testResult || '',
         note: body.sNote || null,
 
-        // Новые поля для путей к трем документам
+        // Сохраняем английские пути к файлам в новые поля схемы
         sDocPath: fileDbPaths.sDoc || null,
         qualDocPath: fileDbPaths.qualDoc || null,
         protocolDocPath: fileDbPaths.protocolDoc || null,
         qualDocNumber: body.qualDocNumber || '',
         
-        // Старое поле (сохраняем для совместимости путь ко второму документу)
+        // Старое поле для совместимости
         qualityDocument: fileDbPaths.qualDoc || '', 
         createdAt: new Date(),
       }
