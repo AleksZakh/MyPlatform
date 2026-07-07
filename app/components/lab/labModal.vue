@@ -19,7 +19,11 @@
               <UFormField name="plp" label="ПЛП" required><USelectMenu :items="items" @create="onCreate"  create-item class="min-w-70" v-model="state.plp" /></UFormField>
               <UFormField name="objName" label="Наименование объекта" required><USelectMenu :items="items" @create="onCreate"  create-item class="min-w-70" v-model="state.objName" /></UFormField>
               <UFormField name="actNumber" label="Номер акта отборапроб" required><UInput class="min-w-70" v-model="state.actNumber" /></UFormField>
-              <UFormField name="sDoc" label="Документ отбора проб" ><UInput type="file" class="min-w-50" v-model="state.sDoc" /></UFormField>
+              <UFormField name="sDoc" label="Документ отбора проб" >
+                <UInput
+                  @change="(e: Event) => sDocChange((e.target as HTMLInputElement).files!)"
+                  type="file" class="min-w-50" />
+                </UFormField>
               <UFormField name="sDate" label="Дата отбора проб" required><CustomDateInput v-model="state.sDate" :required="true" :min-value="minDate" :max-value="maxDate"/></UFormField>
               <UFormField name="sPlace" label="Место отбора проб" ><USelectMenu :items="items" @create="onCreate"  create-item class="min-w-70 max-w-70" v-model="state.sPlace" /></UFormField>
               <UFormField name="sPerson" label="Лицо, предоставившее пробу" required><USelectMenu :items="items" @create="onCreate"  create-item class="min-w-70" v-model="state.sPerson" /></UFormField>
@@ -33,7 +37,11 @@
               <UFormField name="material" label="Материал" required><USelectMenu :items="items" @create="onCreate"  create-item class="min-w-70" v-model="state.material" /></UFormField>              
               <UFormField name="receiptDate" label="Дата поступления" required><CustomDateInput v-model="state.receiptDate" :required="true" :min-value="minDate" :max-value="maxDate"/></UFormField>              
               <UFormField name="qualDocDate" label="Дата документа о качестве" ><CustomDateInput v-model="state.qualDocDate" :required="false" :min-value="minDate" :max-value="maxDate"/></UFormField>              
-              <UFormField name="qualDoc" label="Документ о качестве" ><UInput type="file" class="min-w-50" v-model="state.qualDoc" /></UFormField>
+              <UFormField name="qualDoc" label="Документ о качестве" >
+                <UInput
+                  @change="(e: Event) => qualDocChange((e.target as HTMLInputElement).files!)" 
+                  type="file" class="min-w-50"  />
+                </UFormField>
               <UFormField name="qualDocNumber" label="Номер документа о качестве" ><UInput class="min-w-70" v-model="state.qualDocNumber" /></UFormField>
               <UFormField name="manufacturer" label="Предприятие изготовитель" ><UInput class="min-w-70" v-model="state.manufacturer" /></UFormField>
             </div>
@@ -42,7 +50,10 @@
             <legend class="text-xl font-normal px-2">Протокол испытаний</legend>
             <div class="flex flex-col gap-2" >
               <UFormField name="testProtocolDate" label="Дата" required><CustomDateInput v-model="state.testProtocolDate" :required="true" :min-value="minDate" :max-value="maxDate"/></UFormField>
-              <UFormField name="protocolDoc" label="Документ" ><UInput type="file" class="min-w-50" v-model="state.protocolDoc" /></UFormField>
+              <UFormField name="protocolDoc" label="Документ" >
+                <UInput
+                  @change="(e: Event) => protocolDocChange((e.target as HTMLInputElement).files!)" 
+                  type="file" class="min-w-50"  /></UFormField>
               <UFormField name="testResult" label="Результат испытаний" required><USelectMenu :items="items" @create="onCreate"  create-item class="min-w-70" v-model="state.testResult" /></UFormField>
               <UFormField name="testProtocolNumber" label="Номер" required><UInput class="min-w-70" v-model="state.testProtocolNumber" /></UFormField>
             </div>
@@ -115,38 +126,60 @@
   }
   const inputDate = useTemplateRef('inputDate');
   const minDate = new CalendarDate(2000, 1, 1)
-  const maxDate = getToday()
+  const maxDate = getToday();
+
+  // Настройки ограничений 
+  const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5 Мегабайт
+  const ACCEPTED_FILE_TYPES = [
+    'image/jpeg', 
+    'image/png', 
+    'application/pdf', 
+    'application/msword', 
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ]
+
+  // Вынесем переиспользуемый валидатор файла
+  const fileValidator = z
+    .instanceof(File, { message: 'Пожалуйста, выберите корректный файл' })
+    .refine((file) => file.size <= MAX_FILE_SIZE, `Максимальный размер файла — 5 МБ.`)
+    .refine(
+      (file) => ACCEPTED_FILE_TYPES.includes(file.type),
+      'Допустимые форматы: .jpg, .png, .pdf, .doc, .docx, .txt'
+    )
+    .nullable() // Позволяет полю быть null, если файл не выбран
+    .optional() // Позволяет полю отсутствовать в объекте
 
   const schema = z.object({
-  plp: z.string().min(1, 'Пожалуйста, введите логин'),    
-  objName: z.string().min(1, 'Пожалуйста, введите пароль'),
-  actNumber: z.string().min(1, 'Пожалуйста, введите номер акта'),
-  sDoc: z.string().default(''),
-  sDate: z.any().refine(val => val !== null && val !== undefined, 'Пожалуйста, выберите дату'),
-  sPlace: z.string().default(''),
-  sPerson: z.string().default(''),
-  sNote: z.string().default(''),
-  material: z.string().default(''),
-  receiptDate: z.any().refine(val => val !== null && val !== undefined, 'Пожалуйста, выберите дату'),
-  qualDocDate: z.any().refine(val => val !== null && val !== undefined, 'Пожалуйста, выберите дату'),
-  qualDoc: z.string().default(''),
-  qualDocNumber: z.string().default(''),
-  manufacturer: z.string().default(''),
-  testProtocolDate: z.any().refine(val => val !== null && val !== undefined, 'Пожалуйста, выберите дату'),
-  protocolDoc: z.string().default(''),
-  testResult: z.string().default(''),
-  testProtocolNumber: z.string().default(''),
-})
+    plp: z.string().min(1, 'Пожалуйста, введите логин'),    
+    objName: z.string().min(1, 'Пожалуйста, введите пароль'),
+    actNumber: z.string().min(1, 'Пожалуйста, введите номер акта'),
+    sDoc: fileValidator.default(null),
+    sDate: z.any().refine(val => val !== null && val !== undefined, 'Пожалуйста, выберите дату'),
+    sPlace: z.string().default(''),
+    sPerson: z.string().default(''),
+    sNote: z.string().default(''),
+    material: z.string().default(''),
+    receiptDate: z.any().refine(val => val !== null && val !== undefined, 'Пожалуйста, выберите дату'),
+    qualDocDate: z.any().refine(val => val !== null && val !== undefined, 'Пожалуйста, выберите дату'),
+    qualDoc: fileValidator.default(null),
+    qualDocNumber: z.string().default(''),
+    manufacturer: z.string().default(''),
+    testProtocolDate: z.any().refine(val => val !== null && val !== undefined, 'Пожалуйста, выберите дату'),
+    protocolDoc: fileValidator.default(null),
+    testResult: z.string().default(''),
+    testProtocolNumber: z.string().default(''),
+  })
 
-type Schema = z.output<typeof schema>
+  type Schema = z.output<typeof schema>
+  // Выводим тип схемы для TypeScript
+  export type IncomingControlSchema = z.infer<typeof schema>
 
 // 2. ЕДИНСТВЕННЫЙ источник правды для структуры полей
-// sDate и другие даты оборачиваем в shallowRef прямо здесь, чтобы типы во всем коде совпадали
 const getInitialState = (): Schema => ({
   plp: '',
   objName: '',
   actNumber: '',
-  sDoc: '',
+  sDoc: null as File | null,
   sDate: shallowRef(getToday()),
   sPlace: '',
   sPerson: '',
@@ -154,17 +187,30 @@ const getInitialState = (): Schema => ({
   material: '',
   receiptDate: shallowRef(getToday()),
   qualDocDate: shallowRef(getToday()),
-  qualDoc: '',
+  qualDoc: null as File | null,
   qualDocNumber: '',
   manufacturer: '',
   testProtocolDate: shallowRef(getToday()),
-  protocolDoc: '',
+  protocolDoc: null as File | null,
   testResult: '',
   testProtocolNumber: ''
 })
 
 // 3. Создаем state на основе фабрики дефолтных значений
-const state = reactive<Schema>(getInitialState())
+const state = reactive<Schema>(getInitialState());
+
+// Функции-обработчики для каждого поля файла
+const sDocChange = (files: FileList) => { 
+  if (files && files.length) state.sDoc = files[0] ?? null
+}
+
+const qualDocChange = (files: FileList) => { 
+  if (files && files.length) state.qualDoc = files[0] ?? null
+}
+
+const protocolDocChange = (files: FileList) => { 
+  if (files && files.length) state.protocolDoc = files[0] ?? null
+}
 
 // 4. Сброс формы 
 function resetForm() {
@@ -205,52 +251,82 @@ watch(() => props.selectedRecord, (newVal) => {
 }, { immediate: true })
 
   // Обработчик нажатия кнопки "Сохранить"
-  async function handleSubmit(event: FormSubmitEvent<Schema>) {
-    // Сработает только тогда, когда форма УСПЕШНО пройдет валидацию.
-    event.data.sDate= dateToISOString(event.data.sDate)
-    event.data.receiptDate = dateToISOString(event.data.receiptDate)
-    event.data.qualDocDate = dateToISOString(event.data.qualDocDate)
-    event.data.testProtocolDate = dateToISOString(event.data.testProtocolDate)
-    // console.log(event.data)
-    if(props.selectedRecord?.action === 'edit'){
-      console.log('Редактирование записи, добавляем id:', props.selectedRecord.ID)
-      try{
-        const response = await $fetch<{ success: boolean }>(`/api/incoming-control/${props.selectedRecord.ID}`, {
-          method: 'PUT',
-          body: event.data
-        })
-        
-        if (response.success) {
-          props.reloadData() // Обновляем данные в таблице после успешного сохранения
-          toast.add({ title: 'Успех!', description: `Данные записи о${event.data.objName} успешно обновлены.`, color: 'success' })
-        } else {
-          toast.add({ title: 'Ошибка!', description: `Не удалось обновить данные о${event.data.objName}.`, color: 'error' })
-        }
-      } catch (error) {
+async function handleSubmit(event: FormSubmitEvent<Schema>) {
+  // 1. Преобразуем даты в формат ISO строки перед упаковкой
+  const sDateStr = dateToISOString(event.data.sDate)
+  const receiptDateStr = dateToISOString(event.data.receiptDate)
+  const qualDocDateStr = dateToISOString(event.data.qualDocDate)
+  const testProtocolDateStr = dateToISOString(event.data.testProtocolDate)
 
-      }
-    } else if(props.selectedRecord?.action === 'create'){
-      console.log('Создание новой записи')
-      try {
-        // Отправляем POST запрос с данными формы на наш эндпоинт
-        const response = await $fetch<{ success: boolean }>('/api/incoming-control', {
-          method: 'POST',
-          body: event.data
-        })
-        
-        if (response.success) {
-          props.reloadData() // Обновляем данные в таблице после успешного сохранения
-          toast.add({ title: 'Успех!', description: `Данные новой записи о${event.data.objName} успешно сохранены.`, color: 'success' })
-        } else {
-          toast.add({ title: 'Ошибка!', description: `Не удалось сохранить данные о${event.data.objName}.`, color: 'error' })
-        }
-      } catch (error) {
-        console.error('Ошибка отправки:', error)
-        toast.add({ title: 'Ошибка!', description: 'Не удалось сохранить данные.', color: 'error' })
-      }
+  // 2. Создаем объект FormData для multipart-отправки (текст + файлы)
+  const formData = new FormData()
+
+  // 3. Заполняем FormData всеми полями из event.data
+  Object.keys(event.data).forEach((key) => {
+    const value = event.data[key as keyof Schema]
+
+    // Заменяем оригинальные объекты дат на подготовленные ISO строки
+    if (key === 'sDate') {
+      formData.append(key, sDateStr)
+    } else if (key === 'receiptDate') {
+      formData.append(key, receiptDateStr)
+    } else if (key === 'qualDocDate') {
+      formData.append(key, qualDocDateStr)
+    } else if (key === 'testProtocolDate') {
+      formData.append(key, testProtocolDateStr)
+    } 
+    // Если это файл (даже если null, multer/nitro пропустит или обработает корректно)
+    else if (value instanceof File) {
+      formData.append(key, value)
+    } 
+    // Все остальные текстовые/строковые поля (проверяем, чтобы не отправить undefined строкой)
+    else if (value !== undefined && value !== null) {
+      formData.append(key, String(value))
     }
-    emit('close', true)
+  })
+
+  // Логика отправки данных в зависимости от экшена
+  if (props.selectedRecord?.action === 'edit') {
+    console.log('Редактирование записи, добавляем id:', props.selectedRecord.ID)
+    try {
+      const response = await $fetch<{ success: boolean }>(`/api/incoming-control/${props.selectedRecord.ID}`, {
+        method: 'PUT',
+        body: formData // Передаем FormData вместо event.data
+      })
+      
+      if (response.success) {
+        props.reloadData()
+        toast.add({ title: 'Успех!', description: `Данные записи о ${event.data.objName} успешно обновлены.`, color: 'success' })
+      } else {
+        toast.add({ title: 'Ошибка!', description: `Не удалось обновить данные о ${event.data.objName}.`, color: 'error' })
+      }
+    } catch (error) {
+      console.error('Ошибка обновления:', error)
+      toast.add({ title: 'Ошибка!', description: 'Не удалось обновить данные.', color: 'error' })
+    }
+  } else if (props.selectedRecord?.action === 'create') {
+    console.log('Создание новой записи')
+    try {
+      const response = await $fetch<{ success: boolean }>('/api/incoming-control', {
+        method: 'POST',
+        body: formData // Передаем FormData вместо event.data
+      })
+      
+      if (response.success) {
+        props.reloadData()
+        toast.add({ title: 'Успех!', description: `Данные новой записи о ${event.data.objName} успешно сохранены.`, color: 'success' })
+      } else {
+        toast.add({ title: 'Ошибка!', description: `Не удалось сохранить данные о ${event.data.objName}.`, color: 'error' })
+      }
+    } catch (error) {
+      console.error('Ошибка отправки:', error)
+      toast.add({ title: 'Ошибка!', description: 'Не удалось сохранить данные.', color: 'error' })
+    }
   }
+  
+  emit('close', true)
+}
+
 
 </script>
 

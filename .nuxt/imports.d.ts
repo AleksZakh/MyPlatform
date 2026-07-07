@@ -43,6 +43,7 @@ export { useAuthStore, actions, useIsLoadingStore } from '../app/stores/auth.sto
 export { useToastStore } from '../app/stores/toast.store';
 export { useUserStore } from '../app/stores/user';
 export { useWebSocketStore } from '../app/stores/websocket.store';
+export { default as useFileStorage } from '../node_modules/nuxt-file-storage/dist/runtime/composables/useFileStorage';
 export { defineLocale, extendLocale } from '../node_modules/@nuxt/ui/dist/runtime/composables/defineLocale';
 export { defineShortcuts, extractShortcuts } from '../node_modules/@nuxt/ui/dist/runtime/composables/defineShortcuts';
 export { useContentSearch } from '../node_modules/@nuxt/ui/dist/runtime/composables/useContentSearch';

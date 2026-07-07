@@ -1,16 +1,19 @@
 import { PrismaClient } from '@prisma/client';
 import { defineEventHandler, getRouterParams, readBody } from 'h3';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const prisma = new PrismaClient();
 
 export default defineEventHandler(async (event) => {
+
     try {
         // 1. Получаем ID из параметров маршрута
         const { id } = getRouterParams(event);
         // 2. Получаем данные для обновления из тела запроса
         const body = await readBody(event);
 
-        // console.log('PUT request received for ID:', id, 'with body:', body);
+        console.log('PUT request received for ID:', id, 'with body:', body);
 
         // Проверяем, что ID корректен (getRouterParams возвращает строку или undefined)
         if (typeof id === 'undefined') {

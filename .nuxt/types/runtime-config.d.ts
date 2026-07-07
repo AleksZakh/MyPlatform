@@ -560,6 +560,10 @@ import { RuntimeConfig as UserRuntimeConfig, PublicRuntimeConfig as UserPublicRu
    auth: {
       loadStrategy: string,
    },
+
+   fileStorage: {
+      mount: string,
+   },
   }
 declare module '@nuxt/schema' {
   interface RuntimeConfig extends UserRuntimeConfig {}

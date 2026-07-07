@@ -38,7 +38,7 @@ export default defineEventHandler(async (event) => {
       where: { id: id }
     })
 
-    console.log(`✅ Удалена запись с ID: ${id}`, deletedRecord)
+    console.log(`✅ Удалена запись с ID: ${id}`)
 
     return {
       success: true,

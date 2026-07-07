@@ -88,8 +88,17 @@ export default defineNuxtConfig({
     'pinia-plugin-persistedstate/nuxt',
     '@nuxt/image',
     'nuxt-auth-utils',
-    '@nuxtjs/color-mode'
+    '@nuxtjs/color-mode',
+    'nuxt-file-storage'
   ],
+  
+  // @ts-ignore: fileStorage is added by nuxt-file-storage module typings at runtime
+  fileStorage: {
+    // use environment variables (recommended)
+    mount: process.env.FILE_STORAGE_PATH
+    // you need to set the mount in your .env file at the root of your project
+  },
+  
   // Опциональная настройка auth-utils
   auth: {
       // Меняем название куки (опционально)

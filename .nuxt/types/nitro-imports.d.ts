@@ -17,6 +17,7 @@ declare global {
   const clearResponseHeaders: typeof import('../../node_modules/h3').clearResponseHeaders
   const clearSession: typeof import('../../node_modules/h3').clearSession
   const clearUserSession: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/session').clearUserSession
+  const containsPathTraversal: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/path-safety').containsPathTraversal
   const createApp: typeof import('../../node_modules/h3').createApp
   const createAppEventHandler: typeof import('../../node_modules/h3').createAppEventHandler
   const createError: typeof import('../../node_modules/h3').createError
@@ -89,7 +90,9 @@ declare global {
   const defineWebSocket: typeof import('../../node_modules/h3').defineWebSocket
   const defineWebSocketHandler: typeof import('../../node_modules/h3').defineWebSocketHandler
   const deleteCookie: typeof import('../../node_modules/h3').deleteCookie
+  const deleteFile: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/storage').deleteFile
   const dynamicEventHandler: typeof import('../../node_modules/h3').dynamicEventHandler
+  const ensureSafeBasename: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/path-safety').ensureSafeBasename
   const eventHandler: typeof import('../../node_modules/h3').eventHandler
   const fetchWithEvent: typeof import('../../node_modules/h3').fetchWithEvent
   const fromNodeMiddleware: typeof import('../../node_modules/h3').fromNodeMiddleware
@@ -97,6 +100,8 @@ declare global {
   const fromWebHandler: typeof import('../../node_modules/h3').fromWebHandler
   const getAtprotoClientMetadata: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/atproto').getAtprotoClientMetadata
   const getCookie: typeof import('../../node_modules/h3').getCookie
+  const getFileLocally: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/storage').getFileLocally
+  const getFilesLocally: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/storage').getFilesLocally
   const getHeader: typeof import('../../node_modules/h3').getHeader
   const getHeaders: typeof import('../../node_modules/h3').getHeaders
   const getMethod: typeof import('../../node_modules/h3').getMethod
@@ -132,11 +137,14 @@ declare global {
   const isEventHandler: typeof import('../../node_modules/h3').isEventHandler
   const isMethod: typeof import('../../node_modules/h3').isMethod
   const isPreflightRequest: typeof import('../../node_modules/h3').isPreflightRequest
+  const isSafeBasename: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/path-safety').isSafeBasename
   const isStream: typeof import('../../node_modules/h3').isStream
   const isWebResponse: typeof import('../../node_modules/h3').isWebResponse
   const lazyEventHandler: typeof import('../../node_modules/h3').lazyEventHandler
   const nitroPlugin: typeof import('../../node_modules/nitropack/dist/runtime/internal/plugin').nitroPlugin
+  const normalizeRelative: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/path-safety').normalizeRelative
   const parseCookies: typeof import('../../node_modules/h3').parseCookies
+  const parseDataUrl: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/storage').parseDataUrl
   const passwordNeedsReHash: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/password').passwordNeedsReHash
   const promisifyNodeListener: typeof import('../../node_modules/h3').promisifyNodeListener
   const proxyRequest: typeof import('../../node_modules/h3').proxyRequest
@@ -148,6 +156,8 @@ declare global {
   const removeResponseHeader: typeof import('../../node_modules/h3').removeResponseHeader
   const replaceUserSession: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/session').replaceUserSession
   const requireUserSession: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/session').requireUserSession
+  const resolveAndEnsureInside: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/path-safety').resolveAndEnsureInside
+  const retrieveFileLocally: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/storage').retrieveFileLocally
   const runTask: typeof import('../../node_modules/nitropack/dist/runtime/internal/task').runTask
   const sanitizeStatusCode: typeof import('../../node_modules/h3').sanitizeStatusCode
   const sanitizeStatusMessage: typeof import('../../node_modules/h3').sanitizeStatusMessage
@@ -170,6 +180,7 @@ declare global {
   const setResponseStatus: typeof import('../../node_modules/h3').setResponseStatus
   const setUserSession: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/session').setUserSession
   const splitCookiesString: typeof import('../../node_modules/h3').splitCookiesString
+  const storeFileLocally: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/storage').storeFileLocally
   const toEventHandler: typeof import('../../node_modules/h3').toEventHandler
   const toNodeListener: typeof import('../../node_modules/h3').toNodeListener
   const toPlainHandler: typeof import('../../node_modules/h3').toPlainHandler
@@ -409,3 +420,5 @@ export { hashPassword, verifyPassword, passwordNeedsReHash } from '/home/local_a
 export { sessionHooks, getUserSession, setUserSession, replaceUserSession, clearUserSession, requireUserSession } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-auth-utils/dist/runtime/server/utils/session';
 export { getUserGroups } from '/home/local_adm/Projects/MyPlatform/server/utils/ad';
 export { adCache } from '/home/local_adm/Projects/MyPlatform/server/utils/adCache';
+export { normalizeRelative, isSafeBasename, ensureSafeBasename, containsPathTraversal, resolveAndEnsureInside } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-file-storage/dist/runtime/server/utils/path-safety';
+export { storeFileLocally, getFileLocally, getFilesLocally, deleteFile, parseDataUrl, retrieveFileLocally } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-file-storage/dist/runtime/server/utils/storage';

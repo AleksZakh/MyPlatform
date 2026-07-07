@@ -13,6 +13,10 @@ node_modules
 #temporary files folder
 temp
 
+#upload files
+public/files
+!public/files/.gitkeep
+
 # Logs
 logs
 *.log
