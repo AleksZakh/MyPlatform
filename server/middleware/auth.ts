@@ -1,21 +1,37 @@
 export default defineEventHandler((event) => {
   const url = getRequestURL(event)
+  // 1. БЕЛОЙ СПИСОК: Пропускаем технические запросы, иконки и статику без проверок
+  const isInternal = url.pathname.startsWith('/api/_nuxt_icon/') || url.pathname.startsWith('/_nuxt/') || url.pathname.includes('favicon.ico')
+
+  if (isInternal) {
+    // Выставляем системный флаг аутентификации, чтобы эндпоинт иконки отдал её успешно
+    event.context.user = {
+      username: 'system_internal',
+      domain: 'local',
+      authenticated: true
+    }
+    return // Выходим из middleware, не мучая запрос проверками Kerberos
+  }
+
+   // 2. ИГНОРИРУЕМ ЗАПРОСЫ К СТРАНИЦАМ (SSR): Проверяем только реальное API данных
+  // (Опционально, если авторизация нужна только на уровне /api/data/...)
+  // if (!url.pathname.startsWith('/api/')) return
 
   // Отлавливаем только самый первый запрос к главной странице (или страницам SSR)
   // Игнорируем запросы к API, чтобы не засорять консоль
-  if (url.pathname === '/' || !url.pathname.startsWith('/api/')) {
+  // if (url.pathname === '/' || !url.pathname.startsWith('/api/')) {
     
-    // Получаем объект со всеми заголовками в формате { имя: значение }
-    const allHeaders = getHeaders(event)
+  //   // Получаем объект со всеми заголовками в формате { имя: значение }
+  //   const allHeaders = getHeaders(event)
     
-    console.log('===================================================')
-    console.log(`[DEBUG LOG] САМЫЙ ПЕРВЫЙ ЗАПРОС К СТРАНИЦЕ: ${url.pathname}`)
-    console.log('===================================================')
-    console.dir(allHeaders, { depth: null, colors: true })
-    console.log('===================================================')
+  //   console.log('===================================================')
+  //   console.log(`[DEBUG LOG] САМЫЙ ПЕРВЫЙ ЗАПРОС К СТРАНИЦЕ: ${url.pathname}`)
+  //   console.log('===================================================')
+  //   console.dir(allHeaders, { depth: null, colors: true })
+  //   console.log('===================================================')
     
-  }
-  
+  // }
+
   const authHeader = getHeader(event, 'authorization')
   
   // Объект пользователя по умолчанию
@@ -29,7 +45,18 @@ export default defineEventHandler((event) => {
   let remoteUser = getHeader(event, 'x-remote-user') || getHeader(event, 'remote-user')
 
   if (remoteUser && typeof remoteUser === 'string') {
-    event.context.user.username = remoteUser.split('@')[0]
+    // remoteUser имеет вид "Zakharov_AV@CORP.AVTODOR-ENG.RU"
+    if (remoteUser.includes('@')) {
+      const parts = remoteUser.split('@')
+      
+      event.context.user.username = parts[0]          // 'Zakharov_AV'
+      event.context.user.domain   = parts[1]          // 'CORP.AVTODOR-ENG.RU'
+    } else {
+      // На случай, если Nginx передал только логин без домена
+      event.context.user.username = remoteUser
+      event.context.user.domain   = 'corp.avtodor-eng.ru' // Дефолтный домен компании
+    }
+    
     event.context.user.authenticated = true
   } 
   // 2. Если X-Remote-User пуст, достаем имя из встроенного фиктивного заголовка Nginx!

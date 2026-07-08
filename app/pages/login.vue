@@ -144,7 +144,10 @@
                 
                 if(result.success || adUserLogin) {
                     await refreshSession();
+                    console.log('Успешный вход:', user);//result.data.user.name
                     authStore.set({
+                        fName: user.user?.name || '',
+                        dep: user.user?.department || '',
                         email: user.user?.mail || '',
                         name: loginValue,
                         sessionId: sessionId,
@@ -154,7 +157,7 @@
                     setTimeout(async () => {
                         await nextTick();
                         await router.push('/'); // Используйте router.push вместо navigateTo
-                        console.log('Успешный вход:', result);//result.data.user.name
+                        
                         showToast(`Пользователь ${user.user?.cn} - авторизован`, "success");
                     }, 300);
                     // await refreshSession();
@@ -201,12 +204,12 @@
             if(result.success) {
                 console.log('Успешная регистрация:', result);
                 await refreshSession();
-                authStore.set({
-                    email: userEmail.value,
-                    name: userName.value,
-                    sessionId: sessionId,
-                    status: true // Устанавливаем статус в true, чтобы isAuth стал истиной
-                });
+                // authStore.set({
+                //     email: userEmail.value,
+                //     name: userName.value,
+                //     sessionId: sessionId,
+                //     status: true // Устанавливаем статус в true, чтобы isAuth стал истиной
+                // });
                 await nextTick();
                 await router.push('/');
                 showToast(`Пользователь ${userName.value} - зарегистрирован`, "success");

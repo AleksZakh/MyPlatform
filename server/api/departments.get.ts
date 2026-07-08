@@ -46,8 +46,8 @@ export default defineEventHandler(() => {
       employeeCount: 20,
       quickLinks: [
         { label: 'Реестр вх.контроля', url: '/departments/lab/' },
-        { label: 'Протокол испытаний', url: '/departments/labcontrol/testprotocol' },
-        { label: 'Отбор проб', url: '/departments/labcontrol/sampling' }
+        { label: 'Протокол испытаний', url: '/departments/lab/testprotocol' },
+        { label: 'Отбор проб', url: '/departments/lab/sampling' }
       ]
     },
     //streamline-freehand-color:amusement-park-strength-meter

@@ -2,6 +2,8 @@
 import { defineStore } from "pinia";
 
 interface IUserData {
+  fName: string;
+  dep: string;
   email: string;
   name: string;
   sessionId: string;
@@ -14,6 +16,8 @@ interface IAuthState {
 
 const getDefaultState = (): IAuthState => ({
   user: {
+    fName:"",
+    dep: "",
     email: "",
     name: "",
     sessionId: "",
@@ -27,8 +31,9 @@ export const useAuthStore = defineStore("auth", {
   getters: {
     getUserInfo: (state): IUserData => state.user,
     isAuth: (state): boolean => state.user.status,
-    getMyName: (state): string => state.user.name,
+    getMyName: (state): string => state.user.fName,
     getMyEmail: (state): string => state.user.email,
+    getMyDep: (state): string => state.user.dep,
     getSessionId: (state): string => state.user.sessionId,
   },
   

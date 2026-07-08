@@ -1,7 +1,7 @@
 <!-- pages/ad/browser.vue -->
 <template>
   <div class="p-6">
-    <h1 class="text-2xl font-bold mb-1">Просмотр Active Directory</h1>
+    <h1 class="text-2xl font-bold mb-1">Сотрудники</h1>
     
     <div class="flex gap-2 p-4 bg-gray-100 rounded-lg mb-1">
       <button 
