@@ -8,7 +8,7 @@
     <div class="bg-gray-50 rounded-lg p-4 mb-6">
       <div class="flex flex-wrap gap-4 items-center justify-between">
         <!-- Поиск -->
-        <div class="flex-1 min-w-[200px]">
+        <div class="flex-1 min-w-50">
           <input
             v-model="searchQuery"
             type="text"

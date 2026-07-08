@@ -1,4 +1,21 @@
 export default defineEventHandler((event) => {
+  const url = getRequestURL(event)
+
+  // Отлавливаем только самый первый запрос к главной странице (или страницам SSR)
+  // Игнорируем запросы к API, чтобы не засорять консоль
+  if (url.pathname === '/' || !url.pathname.startsWith('/api/')) {
+    
+    // Получаем объект со всеми заголовками в формате { имя: значение }
+    const allHeaders = getHeaders(event)
+    
+    console.log('===================================================')
+    console.log(`[DEBUG LOG] САМЫЙ ПЕРВЫЙ ЗАПРОС К СТРАНИЦЕ: ${url.pathname}`)
+    console.log('===================================================')
+    console.dir(allHeaders, { depth: null, colors: true })
+    console.log('===================================================')
+    
+  }
+  
   const authHeader = getHeader(event, 'authorization')
   
   // Объект пользователя по умолчанию

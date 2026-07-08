@@ -109,7 +109,7 @@
     // =================== 3. Функция для авторизации пользователя
     const authUser = async (adUserLogin: any = '') => {
         const sessionId = uuidv4(); // Генерируем уникальный sessionId для текущей сессии
-        // console.log('adUserLogin == ', adUserLogin.type, "; ", 'userLogin.value == ', userLogin.value)
+        console.log('adUserLogin == ', adUserLogin.type, "; ", 'userLogin.value == ', userLogin.value)
         
 
         const loginValue = adUserLogin.type !='click' ? adUserLogin.value :  loginNormal(userLogin.value); // Получаем часть до '@' для поиска в AD
@@ -222,6 +222,7 @@
     }
     onMounted(async () => {
         const response = await fetch('/api/ad/get-users-shared');
+        console.log('###---> response ===== ', response)
         const data = await response.json();
         
         if(user.value != null){        
