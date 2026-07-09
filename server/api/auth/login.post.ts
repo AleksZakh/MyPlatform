@@ -3,7 +3,9 @@ import bcrypt from 'bcrypt';
 import { setUserSession } from '#imports';
 import ActiveDirectory from 'activedirectory2';
 import CryptoJS from 'crypto-js';
+import { securePW } from '@@/app/composables/securePW';
 // import  setUserSession  from 'nuxt-auth-utils';
+const { encryptPassword, decryptPassword } = securePW();
 
 const prisma = new PrismaClient();
 
@@ -42,9 +44,11 @@ export default defineEventHandler(async (event) => {
   const SECRET_KEY = config.public.cryptoKey;
   if (encrypted) {
     try {
-      console.log('ПОЛУЧАЕМ ---> :', password);
+      console.log('ПОЛУЧАЕМ_1 ---> :', decryptPassword(password));
       const bytes = CryptoJS.AES.decrypt(password, SECRET_KEY);
+
       password_ = bytes.toString(CryptoJS.enc.Utf8);
+      console.log('ПОЛУЧАЕМ_2 ---> :', password_);
 
       if (!password_) {
         throw new Error('Не удалось расшифровать пароль');
