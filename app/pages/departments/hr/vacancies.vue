@@ -1,14 +1,7 @@
-
 <template>
-    <div>
-        
-    </div>
+  <div></div>
 </template>
 
-<script setup lang="ts">
+<script setup lang="ts"></script>
 
-</script>
-
-<style lang="stylus" scoped>
-
-</style>
+<style lang="stylus" scoped></style>

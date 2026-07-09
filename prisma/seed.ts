@@ -14,7 +14,7 @@ const __dirname = path.dirname(__filename);
 function parseRussianDate(dateStr: string): Date {
   const cleanStr = dateStr.replace(/г\.?$/i, '').trim(); // убираем "г" или "г."
   const parts = cleanStr.split('.');
-  
+
   if (parts.length !== 3) {
     throw new Error(`Неверный формат даты: ${dateStr}`);
   }
@@ -41,7 +41,7 @@ async function main() {
     delimiter: ';',
     columns: true, // Использовать первую строчку как заголовки
     skip_empty_lines: true,
-    trim: true
+    trim: true,
   }) as CsvRecord[];
 
   console.log(`Найдено ${records.length} записей для импорта...`);

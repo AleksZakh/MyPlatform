@@ -10,8 +10,8 @@ export default defineEventHandler(() => {
       employeeCount: 12,
       quickLinks: [
         { label: 'Заказать справку', url: '/departments/hr/documents' },
-        { label: 'Вакансии', url: '/departments/hr/vacancies' }
-      ]
+        { label: 'Вакансии', url: '/departments/hr/vacancies' },
+      ],
     },
     {
       id: 'it',
@@ -22,8 +22,8 @@ export default defineEventHandler(() => {
       employeeCount: 45,
       quickLinks: [
         { label: 'Техподдержка', url: '/departments/it/ticket' },
-        { label: 'База знаний', url: '/departments/it/wiki' }
-      ]
+        { label: 'База знаний', url: '/departments/it/wiki' },
+      ],
     },
     {
       id: 'diagnostic',
@@ -34,8 +34,8 @@ export default defineEventHandler(() => {
       employeeCount: 50,
       quickLinks: [
         { label: 'ГИС', url: '/departments/diagnostic/gis' },
-        { label: 'АИС ИССО', url: '/departments/diagnostic/aisisso' }
-      ]
+        { label: 'АИС ИССО', url: '/departments/diagnostic/aisisso' },
+      ],
     },
     {
       id: 'labcontrol',
@@ -47,9 +47,9 @@ export default defineEventHandler(() => {
       quickLinks: [
         { label: 'Реестр вх.контроля', url: '/departments/lab/' },
         { label: 'Протокол испытаний', url: '/departments/lab/testprotocol' },
-        { label: 'Отбор проб', url: '/departments/lab/sampling' }
-      ]
+        { label: 'Отбор проб', url: '/departments/lab/sampling' },
+      ],
     },
     //streamline-freehand-color:amusement-park-strength-meter
-  ]
-})
+  ];
+});

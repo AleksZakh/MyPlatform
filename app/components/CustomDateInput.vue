@@ -1,14 +1,14 @@
 <!-- components/CustomDateInput.vue -->
 <script setup lang="ts">
-import { CalendarDate } from '@internationalized/date'
+import { CalendarDate } from '@internationalized/date';
 
 interface Props {
-  modelValue?: CalendarDate | null
-  minValue?: CalendarDate
-  maxValue?: CalendarDate
-  placeholder?: string
-  required?: boolean
-  label?: string
+  modelValue?: CalendarDate | null;
+  minValue?: CalendarDate;
+  maxValue?: CalendarDate;
+  placeholder?: string;
+  required?: boolean;
+  label?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -16,25 +16,25 @@ const props = withDefaults(defineProps<Props>(), {
   minValue: undefined,
   maxValue: undefined,
   required: false,
-  label: ''
-})
+  label: '',
+});
 
 const emit = defineEmits<{
-  'update:modelValue': [value: CalendarDate | null]
-}>()
+  'update:modelValue': [value: CalendarDate | null];
+}>();
 
-const inputDate = useTemplateRef('inputDate')
+const inputDate = useTemplateRef('inputDate');
 
 // Локальное состояние для v-model
 const localValue = computed({
   get: () => props.modelValue,
-  set: (value) => emit('update:modelValue', value)
-})
+  set: (value) => emit('update:modelValue', value),
+});
 
 // Обработчик для очистки даты
 const clearDate = () => {
-  emit('update:modelValue', null)
-}
+  emit('update:modelValue', null);
+};
 </script>
 
 <template>
@@ -58,7 +58,7 @@ const clearDate = () => {
             class="px-0"
             @click="clearDate"
           /> -->
-          
+
           <!-- Кнопка календаря -->
           <UPopover :reference="inputDate?.inputsRef?.[3]?.$el">
             <UButton

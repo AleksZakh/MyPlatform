@@ -1,19 +1,17 @@
+export const loginNormal = (insertLigin: string): string => {
+  if (!insertLigin) return insertLigin;
 
-export const loginNormal = (insertLigin:string):string => {
+  const cleanLogin = insertLigin.includes('\\')
+    ? insertLigin.split('\\')[1]
+    : insertLigin.split('@')[0];
 
-    if (!insertLigin) return insertLigin;
+  if (insertLigin.length <= 2) {
+    return insertLigin.toUpperCase();
+  }
 
-    const cleanLogin = insertLigin.includes('\\') ? insertLigin.split('\\')[1] : insertLigin.split('@')[0];
+  const first = insertLigin.charAt(0).toUpperCase();
+  const middle = insertLigin.slice(1, -2).toLowerCase();
+  const lastTwo = insertLigin.slice(-2).toUpperCase();
 
-    
-    
-    if (insertLigin.length <= 2) {
-        return insertLigin.toUpperCase();    }
-    
-    const first = insertLigin.charAt(0).toUpperCase();
-    const middle = insertLigin.slice(1, -2).toLowerCase();
-    const lastTwo = insertLigin.slice(-2).toUpperCase();
-    
-    return first + middle + lastTwo;
-}
-
+  return first + middle + lastTwo;
+};

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
-import { useToastStore } from "../stores/toast.store";
+import { ref, computed } from 'vue';
+import { useToastStore } from '../stores/toast.store';
 
 const store = useToastStore();
 
@@ -27,7 +27,12 @@ const handleRemove = (id: number | string) => {
 </script>
 
 <template>
-  <transition-group tag="div" name="fade" appear class="fixed top-16 left-1/2 transform translate-x-[-50%] z-50">
+  <transition-group
+    tag="div"
+    name="fade"
+    appear
+    class="fixed top-16 left-1/2 transform translate-x-[-50%] z-50"
+  >
     <div
       v-for="toast in activeToasts"
       :key="toast.id"

@@ -1,80 +1,85 @@
-import { PrismaClient } from '@prisma/client'
-import fs from 'node:fs'
-import path from 'node:path'
+import { PrismaClient } from '@prisma/client';
+import fs from 'node:fs';
+import path from 'node:path';
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient();
 
 // Функция для генерации имени подкаталога: 2025-11-30_17-45
 function generateFolderName(): string {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-  const hours = String(now.getHours()).padStart(2, '0')
-  const minutes = String(now.getMinutes()).padStart(2, '0')
-  
-  return `${year}-${month}-${day}_${hours}-${minutes}`
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+
+  return `${year}-${month}-${day}_${hours}-${minutes}`;
 }
 
 export default defineEventHandler(async (event) => {
   try {
-    const multipartData = await readMultipartFormData(event)
-    
+    const multipartData = await readMultipartFormData(event);
+
     if (!multipartData) {
-      throw createError({ statusCode: 400, statusMessage: 'Bad Request: Данные не найдены' })
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Bad Request: Данные не найдены',
+      });
     }
 
     // Изолированный безопасный путь на сервере Ubuntu вне зоны видимости Git
-    const baseUploadDir = '/var/www/uploads-storage/files'
+    const baseUploadDir = '/var/www/uploads-storage/files';
 
     // Генерируем подкаталог (например: 2025-11-30_17-45)
-    const folderName = generateFolderName()
-    const targetDir = path.join(baseUploadDir, folderName)
+    const folderName = generateFolderName();
+    const targetDir = path.join(baseUploadDir, folderName);
 
     // Создаем директории, если их нет
     if (!fs.existsSync(targetDir)) {
-      fs.mkdirSync(targetDir, { recursive: true })
+      fs.mkdirSync(targetDir, { recursive: true });
     }
 
-    const body: Record<string, string> = {}
-    
+    const body: Record<string, string> = {};
+
     // Сюда будем собирать пути для записи в БД
     const fileDbPaths: Record<string, string> = {
       sDoc: '',
       qualDoc: '',
-      protocolDoc: ''
-    }
+      protocolDoc: '',
+    };
 
     // 1. Сначала считываем все текстовые поля (чтобы иметь к ним доступ, если понадобятся)
     for (const item of multipartData) {
       if (item.name && !item.filename) {
-        body[item.name] = item.data.toString('utf-8')
+        body[item.name] = item.data.toString('utf-8');
       }
     }
 
     // 2. Обрабатываем и сохраняем файлы с безопасными именами
     for (const item of multipartData) {
-      if (!item.name || !item.filename) continue
+      if (!item.name || !item.filename) continue;
 
-      const fieldName = item.name // Имя поля на клиенте ('sDoc', 'qualDoc' или 'protocolDoc')
-      
+      const fieldName = item.name; // Имя поля на клиенте ('sDoc', 'qualDoc' или 'protocolDoc')
+
       // Извлекаем только расширение оригинального файла (например, '.docx' или '.pdf')
       // Используем latin1 -> utf-8 только для корректного извлечения расширения, если оно вдруг на русском
-      const rawFilename = Buffer.from(item.filename, 'latin1').toString('utf-8')
-      const fileExt = path.extname(rawFilename).toLowerCase() // Получим например '.pdf'
+      const rawFilename = Buffer.from(item.filename, 'latin1').toString(
+        'utf-8'
+      );
+      const fileExt = path.extname(rawFilename).toLowerCase(); // Получим например '.pdf'
 
       // Формируем новое имя файла: имя_поля.расширение (например: sDoc.docx, qualDoc.docx)
       // Кириллица здесь полностью отсутствует, что исключает ошибки файловой системы Ubuntu
-      const newFilename = `${fieldName}${fileExt}`
-      
+      const newFilename = `${fieldName}${fileExt}`;
+
       // Полный физический путь для записи на диск Ubuntu
-      const fullPath = path.join(targetDir, newFilename)
+      const fullPath = path.join(targetDir, newFilename);
 
       // Записываем бинарный буфер файла на диск
-      fs.writeFileSync(fullPath, item.data)
-      
+      fs.writeFileSync(fullPath, item.data);
+
       // Формируем относительный путь для БД (например: "2025-11-30_17-45/sDoc.docx")
-      fileDbPaths[fieldName] = path.join(folderName, newFilename)
+      fileDbPaths[fieldName] = path.join(folderName, newFilename);
     }
 
     // 3. Сохраняем очищенные данные в PostgreSQL через Prisma
@@ -83,17 +88,21 @@ export default defineEventHandler(async (event) => {
         plp: body.plp || '',
         objectName: body.objName || '',
         samplingActNumber: body.actNumber || '',
-        
+
         // Конвертируем строки дат в объекты Date для PostgreSQL
         samplingDate: body.sDate ? new Date(body.sDate) : new Date(),
         samplingPlace: body.sPlace || '',
         personProvidedSample: body.sPerson || '',
-        materialReceiptDate: body.receiptDate ? new Date(body.receiptDate) : new Date(),
+        materialReceiptDate: body.receiptDate
+          ? new Date(body.receiptDate)
+          : new Date(),
         materialName: body.material || '',
         manufacturer: body.manufacturer || null,
-        
-        protocolNumber: body.testProtocolNumber || '', 
-        protocolDate: body.testProtocolDate ? new Date(body.testProtocolDate) : new Date(),
+
+        protocolNumber: body.testProtocolNumber || '',
+        protocolDate: body.testProtocolDate
+          ? new Date(body.testProtocolDate)
+          : new Date(),
         testResult: body.testResult || '',
         note: body.sNote || null,
 
@@ -102,25 +111,24 @@ export default defineEventHandler(async (event) => {
         qualDocPath: fileDbPaths.qualDoc || null,
         protocolDocPath: fileDbPaths.protocolDoc || null,
         qualDocNumber: body.qualDocNumber || '',
-        
+
         // Старое поле для совместимости
-        qualityDocument: fileDbPaths.qualDoc || '', 
+        qualityDocument: fileDbPaths.qualDoc || '',
         createdAt: new Date(),
-      }
-    })
+      },
+    });
 
     return {
       success: true,
-      data: newRecord
-    }
-
+      data: newRecord,
+    };
   } catch (error: any) {
-    console.error('Server Error:', error)
-    if (error.statusCode) throw error
-    
+    console.error('Server Error:', error);
+    if (error.statusCode) throw error;
+
     throw createError({
       statusCode: 500,
       statusMessage: `Internal Server Error: ${error.message || 'Ошибка сервера'}`,
-    })
+    });
   }
-})
+});

@@ -1,4 +1,4 @@
-import { defineStore } from "pinia"; // Или используемый вами менеджер состояний
+import { defineStore } from 'pinia'; // Или используемый вами менеджер состояний
 
 interface Toast {
   id: number | string;
@@ -7,7 +7,7 @@ interface Toast {
   type: string;
 }
 
-export const useToastStore = defineStore("toast", {
+export const useToastStore = defineStore('toast', {
   state: () => ({
     toasts: [] as Toast[],
   }),

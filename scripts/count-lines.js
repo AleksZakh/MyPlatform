@@ -12,7 +12,9 @@ const filePath = path.join(__dirname, '..', 'server', 'assets', 'Reestr.csv');
 const content = fs.readFileSync(filePath, 'utf-8');
 const lines = content.split('\n');
 console.log(`📝 Всего строк (через split): ${lines.length}`);
-console.log(`📝 Непустых строк: ${lines.filter(l => l.trim() !== '').length}`);
+console.log(
+  `📝 Непустых строк: ${lines.filter((l) => l.trim() !== '').length}`
+);
 
 // Способ 2: Через readline
 import readline from 'readline';
@@ -20,7 +22,7 @@ import readline from 'readline';
 let lineCount = 0;
 const rl = readline.createInterface({
   input: fs.createReadStream(filePath),
-  crlfDelay: Infinity
+  crlfDelay: Infinity,
 });
 
 rl.on('line', (line) => {

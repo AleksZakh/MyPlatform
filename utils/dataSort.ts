@@ -3,7 +3,10 @@ export interface SortOptions {
   direction: 'asc' | 'desc';
 }
 
-export default function sortData<T extends Record<string, any>>(data: T[], options: SortOptions): T[] {
+export default function sortData<T extends Record<string, any>>(
+  data: T[],
+  options: SortOptions
+): T[] {
   const { key, direction } = options;
   const isAsc = direction === 'asc';
 
@@ -15,10 +18,10 @@ export default function sortData<T extends Record<string, any>>(data: T[], optio
     if (key.includes('Дата') && aVal && bVal) {
       const dateA = new Date(String(aVal).split('.').reverse().join('-'));
       const dateB = new Date(String(bVal).split('.').reverse().join('-'));
-      
+
       if (!isNaN(dateA.getTime()) && !isNaN(dateB.getTime())) {
-        return isAsc 
-          ? dateA.getTime() - dateB.getTime() 
+        return isAsc
+          ? dateA.getTime() - dateB.getTime()
           : dateB.getTime() - dateA.getTime();
       }
     }

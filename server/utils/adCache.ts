@@ -25,14 +25,14 @@ interface ADCache {
 class ADUserCache {
   private static instance: ADUserCache;
   private cacheKey = 'ad:users:global';
-  
+
   static getInstance() {
     if (!ADUserCache.instance) {
       ADUserCache.instance = new ADUserCache();
     }
     return ADUserCache.instance;
   }
-  
+
   async get(): Promise<ADCache | null> {
     try {
       const cached = await useStorage().getItem<ADCache>(this.cacheKey);
@@ -42,10 +42,10 @@ class ADUserCache {
       return null;
     }
   }
-  
+
   async set(users: any[]): Promise<void> {
     // Приводим данные к нужному типу
-    const typedUsers: ADUser[] = users.map(user => ({
+    const typedUsers: ADUser[] = users.map((user) => ({
       sAMAccountName: user.sAMAccountName || user.cn || 'unknown',
       cn: user.cn,
       mail: user.mail,
@@ -55,29 +55,32 @@ class ADUserCache {
       title: user.title,
       telephoneNumber: user.telephoneNumber,
       dn: user.dn,
-      ...user // сохраняем все оригинальные поля
+      ...user, // сохраняем все оригинальные поля
     }));
-    
+
     const cache: ADCache = {
       users: typedUsers,
       lastUpdated: new Date().toISOString(),
       totalCount: typedUsers.length,
-      version: 1
+      version: 1,
     };
-    
+
     await useStorage().setItem(this.cacheKey, cache);
-    console.log(`[КЭШ] Сохранено ${typedUsers.length} пользователей в общее хранилище`);
+    console.log(
+      `[КЭШ] Сохранено ${typedUsers.length} пользователей в общее хранилище`
+    );
   }
-  
+
   async isExpired(): Promise<boolean> {
     const cache = await this.get();
     if (!cache) return true;
-    
+
     const lastUpdate = new Date(cache.lastUpdated);
-    const hoursSinceUpdate = (Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60);
+    const hoursSinceUpdate =
+      (Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60);
     return hoursSinceUpdate > 1; // устаревает через 1 час
   }
-  
+
   async invalidate(): Promise<void> {
     await useStorage().removeItem(this.cacheKey);
     console.log('[КЭШ] Кэш AD очищен');

@@ -2,7 +2,11 @@
 <template>
   <div class="p-4">
     <h1>Тест подключения к домену (activedirectory2)</h1>
-    <button class="bg-blue-500 text-white px-4 py-2 rounded" @click="checkConnection" :disabled="loading">
+    <button
+      class="bg-blue-500 text-white px-4 py-2 rounded"
+      @click="checkConnection"
+      :disabled="loading"
+    >
       {{ loading ? 'Проверка...' : 'Проверить подключение' }}
     </button>
     <pre v-if="result">{{ JSON.stringify(result, null, 2) }}</pre>
@@ -18,7 +22,7 @@ async function checkConnection() {
   try {
     const response = await fetch('/api/test/domain-connection');
     result.value = await response.json();
-    
+
     console.log('=== РЕЗУЛЬТАТ ТЕСТА ===');
     if (result.value.success) {
       console.log('✅ УСПЕХ: Веб-приложение подключено к домену');

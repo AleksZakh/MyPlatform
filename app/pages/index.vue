@@ -18,14 +18,27 @@
       <!-- Заголовок секции -->
       <div class="flex items-center justify-between">
         <div>
-          <h2 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Отделы компании</h2>
-          <p class="text-sm text-gray-500 dark:text-gray-400">Быстрый доступ к информации и сервисам подразделений</p>
+          <h2
+            class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white"
+          >
+            Отделы компании
+          </h2>
+          <p class="text-sm text-gray-500 dark:text-gray-400">
+            Быстрый доступ к информации и сервисам подразделений
+          </p>
         </div>
       </div>
 
       <!-- Состояние загрузки (скелетоны Nuxt UI) -->
-      <div v-if="pending" class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-6">
-        <UCard v-for="n in 4" :key="n" class="h-40 flex flex-col justify-between">
+      <div
+        v-if="pending"
+        class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-6"
+      >
+        <UCard
+          v-for="n in 4"
+          :key="n"
+          class="h-40 flex flex-col justify-between"
+        >
           <USkeleton class="h-6 w-[60%]" />
           <USkeleton class="h-12 w-full" />
           <USkeleton class="h-4 w-[40%]" />
@@ -34,10 +47,10 @@
 
       <!-- Сетка с готовыми карточками -->
       <div v-else class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-6">
-        <DepartmentCard 
-          v-for="dept in departments" 
-          :key="dept.id" 
-          :department="dept" 
+        <DepartmentCard
+          v-for="dept in departments"
+          :key="dept.id"
+          :department="dept"
         />
       </div>
     </section>
@@ -45,38 +58,36 @@
 </template>
 
 <style scoped>
-  .main-area {
-    background-color: aliceblue;
-    position: absolute;
-    left: 255px;
-    top: 65px;
-    right: 0%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    bottom: 50px;
-  }
+.main-area {
+  background-color: aliceblue;
+  position: absolute;
+  left: 255px;
+  top: 65px;
+  right: 0%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  bottom: 50px;
+}
 </style>
 
 <script setup lang="ts">
-  useHead({
-      title: 'Автодор-Инжиниринг'
-  })
+useHead({
+  title: 'Автодор-Инжиниринг',
+});
 
-  import { useAuthStore, useIsLoadingStore } from "../stores/auth.store"
-  import { useWebSocketStore } from "@/stores/websocket.store";
+import { useAuthStore, useIsLoadingStore } from '../stores/auth.store';
+import { useWebSocketStore } from '@/stores/websocket.store';
 
-  const authStorage = useAuthStore();
-  const isLoadingStore = useIsLoadingStore();
-  const wsStore = useWebSocketStore();
-  const router = useRouter();
+const authStorage = useAuthStore();
+const isLoadingStore = useIsLoadingStore();
+const wsStore = useWebSocketStore();
+const router = useRouter();
 
-  
-  const userStore = useUserStore();
-  const name = computed(() => userStore.name);
-  const email = computed(() => userStore.email);
+const userStore = useUserStore();
+const name = computed(() => userStore.name);
+const email = computed(() => userStore.email);
 
-  // Асинхронно запрашиваем данные с нашего локального API
-const { data: departments, pending } = await useFetch('/api/departments')
-  
+// Асинхронно запрашиваем данные с нашего локального API
+const { data: departments, pending } = await useFetch('/api/departments');
 </script>

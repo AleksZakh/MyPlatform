@@ -3,17 +3,17 @@
     <div class="access-denied-card">
       <!-- Иконка замка -->
       <div class="icon-wrapper">
-        <svg 
-          class="lock-icon" 
-          fill="none" 
-          stroke="currentColor" 
-          viewBox="0 0 24 24" 
+        <svg
+          class="lock-icon"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <path 
-            stroke-linecap="round" 
-            stroke-linejoin="round" 
-            stroke-width="2" 
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
             d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
           />
         </svg>
@@ -37,20 +37,20 @@
         <button @click="goBack" class="btn btn-secondary">
           ← Вернуться назад
         </button>
-        
-        <button @click="goHome" class="btn btn-primary">
-          На главную
-        </button>
 
-        <button @click="requestAccess" class="btn btn-outline" v-if="showRequestAccess">
+        <button @click="goHome" class="btn btn-primary">На главную</button>
+
+        <button
+          @click="requestAccess"
+          class="btn btn-outline"
+          v-if="showRequestAccess"
+        >
           Запросить доступ
         </button>
       </div>
 
       <!-- Код ошибки -->
-      <div class="error-code" v-if="errorCode">
-        Код ошибки: {{ errorCode }}
-      </div>
+      <div class="error-code" v-if="errorCode">Код ошибки: {{ errorCode }}</div>
     </div>
   </div>
 </template>
@@ -60,34 +60,34 @@
 const props = defineProps({
   errorDetails: {
     type: String,
-    default: ''
+    default: '',
   },
   errorCode: {
     type: String,
-    default: '403'
+    default: '403',
   },
   showRequestAccess: {
     type: Boolean,
-    default: true
-  }
-})
+    default: true,
+  },
+});
 
 definePageMeta({
-    public: true // ✅ Указываем, что страница публичная
+  public: true, // ✅ Указываем, что страница публичная
 });
 
 // Использование Nuxt composables
-const router = useRouter()
+const router = useRouter();
 
 // Функция возврата на предыдущую страницу
 const goBack = () => {
-  router.back()
-}
+  router.back();
+};
 
 // Функция перехода на главную страницу
 const goHome = () => {
-  navigateTo('/')
-}
+  navigateTo('/');
+};
 
 // Функция запроса доступа с использованием Nuxt $fetch
 const requestAccess = async () => {
@@ -97,30 +97,37 @@ const requestAccess = async () => {
       method: 'POST',
       body: {
         path: useRoute().fullPath,
-        timestamp: new Date().toISOString()
-      }
-    })
-    
+        timestamp: new Date().toISOString(),
+      },
+    });
+
     // Использование Nuxt toast или уведомлений
-    const { toast } = useToast() // если используется модуль уведомлений
-    toast?.success('Запрос на доступ отправлен администратору')
-    
+    const { toast } = useToast(); // если используется модуль уведомлений
+    toast?.success('Запрос на доступ отправлен администратору');
+
     // Или просто alert для демонстрации
-    alert('Запрос на доступ отправлен. Администратор рассмотрит его в ближайшее время.')
+    alert(
+      'Запрос на доступ отправлен. Администратор рассмотрит его в ближайшее время.'
+    );
   } catch (error) {
-    console.error('Ошибка при отправке запроса:', error)
-    alert('Произошла ошибка при отправке запроса. Пожалуйста, попробуйте позже.')
+    console.error('Ошибка при отправке запроса:', error);
+    alert(
+      'Произошла ошибка при отправке запроса. Пожалуйста, попробуйте позже.'
+    );
   }
-}
+};
 
 // SEO метатеги для Nuxt
 useHead({
   title: 'Доступ запрещён',
   meta: [
     { name: 'robots', content: 'noindex, nofollow' },
-    { name: 'description', content: 'У вас недостаточно прав для доступа к этой странице' }
-  ]
-})
+    {
+      name: 'description',
+      content: 'У вас недостаточно прав для доступа к этой странице',
+    },
+  ],
+});
 </script>
 
 <style scoped>
@@ -160,7 +167,8 @@ useHead({
   font-weight: 700;
   color: #1f2937;
   margin-bottom: 16px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .message {
@@ -254,7 +262,8 @@ useHead({
 }
 
 @keyframes shake {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateX(0);
   }
   25% {
@@ -270,16 +279,16 @@ useHead({
   .access-denied-card {
     padding: 30px 20px;
   }
-  
+
   .title {
     font-size: 24px;
   }
-  
+
   .lock-icon {
     width: 60px;
     height: 60px;
   }
-  
+
   .btn {
     padding: 8px 16px;
     font-size: 13px;
@@ -291,15 +300,15 @@ useHead({
   .access-denied-card {
     background: #1f2937;
   }
-  
+
   .title {
     color: #f3f4f6;
   }
-  
+
   .message {
     color: #9ca3af;
   }
-  
+
   .error-code {
     border-top-color: #374151;
   }

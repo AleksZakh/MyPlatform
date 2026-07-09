@@ -14,7 +14,8 @@ const buffer = fs.readFileSync(filePath);
 // Ищем разделители строк
 let count = 0;
 for (let i = 0; i < buffer.length; i++) {
-  if (buffer[i] === 10) { // \n
+  if (buffer[i] === 10) {
+    // \n
     count++;
   }
 }
@@ -24,7 +25,8 @@ console.log(`Количество символов \\n: ${count}`);
 // Проверяем, есть ли \r\n
 let countCRLF = 0;
 for (let i = 0; i < buffer.length - 1; i++) {
-  if (buffer[i] === 13 && buffer[i + 1] === 10) { // \r\n
+  if (buffer[i] === 13 && buffer[i + 1] === 10) {
+    // \r\n
     countCRLF++;
   }
 }
