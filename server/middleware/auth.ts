@@ -1,6 +1,6 @@
 import { getDateTime } from '@@/utils/dateUtils';
 
-export default defineEventHandler((event) => {
+export default defineEventHandler(async (event) => {
   const url = getRequestURL(event);
   // 1. БЕЛОЙ СПИСОК: Пропускаем технические запросы, иконки и статику без проверок
   const isInternal =
@@ -51,20 +51,42 @@ export default defineEventHandler((event) => {
     getHeader(event, 'x-remote-user') || getHeader(event, 'remote-user');
 
   if (remoteUser && typeof remoteUser === 'string') {
-    // remoteUser имеет вид "Zakharov_AV@CORP.AVTODOR-ENG.RU"
+    const session = await getUserSession(event);
+
     if (remoteUser.includes('@')) {
       const parts = remoteUser.split('@');
 
-      event.context.user.user_ = parts[0]; // 'Zakharov_AV'
-      event.context.user.domain = parts[1]; // 'CORP.AVTODOR-ENG.RU'
+      event.context.user.user_ = parts[0]; //
+      event.context.user.domain = parts[1]; //
     } else {
       // На случай, если Nginx передал только логин без домена
       event.context.user.user_ = remoteUser;
       event.context.user.domain = 'corp.avtodor-eng.ru'; // Дефолтный домен компании
     }
-
     event.context.user.auth_ = true;
     event.context.dateTime = getDateTime();
+    if (!session || !session.user) {
+      if (authHeader && authHeader.startsWith('Basic ')) {
+        const token = authHeader.slice(6);
+
+        try {
+          // Создаем сессию из токена
+          const parts = event.context.user.user_.split('_');
+          const userEmail = `${parts[1].charAt(0).toLowerCase()}.${parts[2].toLowerCase()}${event.context.user.domain.replace('corp', '@')}`;
+          await setUserSession(event, {
+            user: {
+              sessionId: token,
+              login: event.context.user.user_,
+              email: userEmail,
+              role: 'adUser',
+              dateTime: event.context.dateTime,
+            },
+          });
+        } catch (error) {
+          // Токен невалидный - ничего не делаем
+        }
+      }
+    }
   }
   // 2. Если X-Remote-User пуст, достаем имя из встроенного фиктивного заголовка Nginx!
   else if (authHeader && authHeader.startsWith('Basic ')) {
