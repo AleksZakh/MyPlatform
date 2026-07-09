@@ -154,6 +154,7 @@ const authUser = async (adUserLogin: any = '') => {
 
     let result: any = '';
     try {
+      console.log('Отправляем = ', passwordValue);
       // if(!adUserLogin && passwordValue != 'adPassword'){
       result = await login({
         login: loginValue,
