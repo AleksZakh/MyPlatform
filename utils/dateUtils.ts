@@ -54,6 +54,24 @@ export function formatDate(date: CalendarDate | null): string {
 }
 
 /**
+ * Генерирует текущую дату и время для логов
+ * @returns строка в формате "ДД.ММ.ГГГГ_ЧЧ:ММ:СС"
+ */
+export function getDateTime(): string {
+  const now = new Date()
+  
+  const day = String(now.getDate()).padStart(2, '0')
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const year = now.getFullYear()
+  const hours = String(now.getHours()).padStart(2, '0')
+  const minutes = String(now.getMinutes()).padStart(2, '0')
+  const seconds = String(now.getSeconds()).padStart(2, '0')
+  
+  return `${day}.${month}.${year}_${hours}:${minutes}:${seconds}`
+}
+
+
+/**
  * Создает CalendarDate из объекта Date
  * @param date - объект Date
  * @returns CalendarDate

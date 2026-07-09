@@ -139,7 +139,7 @@
                         sessionId: sessionId,
                         encrypted: encrypted
                     });
-                    // console.log('---result : ',result)
+                    console.log('---result : ',result)
                 // }
                 
                 if(result.success || adUserLogin) {
@@ -151,7 +151,8 @@
                         email: user.user?.mail || '',
                         name: loginValue,
                         sessionId: sessionId,
-                        status: true // Устанавливаем статус в true, чтобы isAuth стал истиной
+                        status: true, // Устанавливаем статус в true, чтобы isAuth стал истиной
+                        authMetod: ''
                     });
                     // Добавьте небольшую задержку для обновления состояния
                     setTimeout(async () => {

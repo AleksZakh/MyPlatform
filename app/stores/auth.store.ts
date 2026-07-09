@@ -8,6 +8,7 @@ interface IUserData {
   name: string;
   sessionId: string;
   status: boolean;
+  authMetod: ''
 }
 
 interface IAuthState {
@@ -22,6 +23,7 @@ const getDefaultState = (): IAuthState => ({
     name: "",
     sessionId: "",
     status: false,
+    authMetod: ''
   },
 });
 
@@ -35,6 +37,7 @@ export const useAuthStore = defineStore("auth", {
     getMyEmail: (state): string => state.user.email,
     getMyDep: (state): string => state.user.dep,
     getSessionId: (state): string => state.user.sessionId,
+    getAuthMetod: (state): string => state.user.authMetod
   },
   
   actions: {

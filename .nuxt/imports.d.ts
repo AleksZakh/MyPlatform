@@ -39,7 +39,7 @@ export { useFilters, Filters } from '../app/composables/useFilters';
 export { useIncomingControl } from '../app/composables/useIncomingControl';
 export { useRecordDelete, DeleteOptions } from '../app/composables/useRecordDelete';
 export { useRecordUpdate, UpdateOptions } from '../app/composables/useRecordUpdate';
-export { useAuthStore, actions, useIsLoadingStore } from '../app/stores/auth.store';
+export { useAuthStore, getAuthMetod, useIsLoadingStore } from '../app/stores/auth.store';
 export { useToastStore } from '../app/stores/toast.store';
 export { useUserStore } from '../app/stores/user';
 export { useWebSocketStore } from '../app/stores/websocket.store';

@@ -1,3 +1,5 @@
+import {getDateTime} from '@@/utils/dateUtils'
+
 export default defineEventHandler((event) => {
   const url = getRequestURL(event)
   // 1. БЕЛОЙ СПИСОК: Пропускаем технические запросы, иконки и статику без проверок
@@ -6,39 +8,41 @@ export default defineEventHandler((event) => {
   if (isInternal) {
     // Выставляем системный флаг аутентификации, чтобы эндпоинт иконки отдал её успешно
     event.context.user = {
-      username: 'system_internal',
+      user_: 'system_internal',
       domain: 'local',
-      authenticated: true
+      auth_: true,
+      dateTime: getDateTime()
     }
     return // Выходим из middleware, не мучая запрос проверками Kerberos
   }
 
-   // 2. ИГНОРИРУЕМ ЗАПРОСЫ К СТРАНИЦАМ (SSR): Проверяем только реальное API данных
+  //  2. ИГНОРИРУЕМ ЗАПРОСЫ К СТРАНИЦАМ (SSR): Проверяем только реальное API данных
   // (Опционально, если авторизация нужна только на уровне /api/data/...)
-  // if (!url.pathname.startsWith('/api/')) return
+  if (!url.pathname.startsWith('/api/')) return
 
   // Отлавливаем только самый первый запрос к главной странице (или страницам SSR)
   // Игнорируем запросы к API, чтобы не засорять консоль
-  // if (url.pathname === '/' || !url.pathname.startsWith('/api/')) {
+  if (url.pathname === '/' || !url.pathname.startsWith('/api/')) {
     
-  //   // Получаем объект со всеми заголовками в формате { имя: значение }
-  //   const allHeaders = getHeaders(event)
+    // Получаем объект со всеми заголовками в формате { имя: значение }
+    const allHeaders = getHeaders(event)
     
-  //   console.log('===================================================')
-  //   console.log(`[DEBUG LOG] САМЫЙ ПЕРВЫЙ ЗАПРОС К СТРАНИЦЕ: ${url.pathname}`)
-  //   console.log('===================================================')
-  //   console.dir(allHeaders, { depth: null, colors: true })
-  //   console.log('===================================================')
+    console.log('===================================================')
+    console.log(`[DEBUG LOG] САМЫЙ ПЕРВЫЙ ЗАПРОС К СТРАНИЦЕ: ${url.pathname}`)
+    console.log('===================================================')
+    console.dir(allHeaders, { depth: null, colors: true })
+    console.log('===================================================')
     
-  // }
+  }
 
   const authHeader = getHeader(event, 'authorization')
   
   // Объект пользователя по умолчанию
   event.context.user = {
-    username: null,
+    user_: null,
     domain: null,
-    authenticated: false
+    auth_: false,
+    dateTime: getDateTime()
   }
 
   // 1. Проверяем, передал ли Nginx данные через X-Remote-User
@@ -49,15 +53,16 @@ export default defineEventHandler((event) => {
     if (remoteUser.includes('@')) {
       const parts = remoteUser.split('@')
       
-      event.context.user.username = parts[0]          // 'Zakharov_AV'
+      event.context.user.user_ = parts[0]          // 'Zakharov_AV'
       event.context.user.domain   = parts[1]          // 'CORP.AVTODOR-ENG.RU'
     } else {
       // На случай, если Nginx передал только логин без домена
-      event.context.user.username = remoteUser
+      event.context.user.user_ = remoteUser
       event.context.user.domain   = 'corp.avtodor-eng.ru' // Дефолтный домен компании
     }
     
-    event.context.user.authenticated = true
+    event.context.user.auth_ = true;
+    event.context.dateTime = getDateTime();
   } 
   // 2. Если X-Remote-User пуст, достаем имя из встроенного фиктивного заголовка Nginx!
   else if (authHeader && authHeader.startsWith('Basic ')) {
@@ -67,11 +72,11 @@ export default defineEventHandler((event) => {
       const credentials = Buffer.from(base64Credentials, 'base64').toString('utf-8')
       
       // Разделяем по двоеточию логин и фейковый пароль (login:bogus_auth_gss_passwd)
-      const [username, password] = credentials.split(':')
+      const [user_, password] = credentials.split(':')
 
-      if (username && password === 'bogus_auth_gss_passwd') {
-        event.context.user.username = username
-        event.context.user.authenticated = true
+      if (user_ && password === 'bogus_auth_gss_passwd') {
+        event.context.user.user_ = user_
+        event.context.user.auth_ = true
       }
     } catch (err) {
       console.error('Ошибка декодирования заголовка Kerberos:', err)

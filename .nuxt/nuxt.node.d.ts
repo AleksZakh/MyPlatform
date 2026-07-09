@@ -1,5 +1,5 @@
-/// <reference types="@pinia/nuxt" />
 /// <reference types="@nuxt/ui" />
+/// <reference types="@pinia/nuxt" />
 /// <reference types="@nuxt/image" />
 /// <reference types="nuxt-auth-utils" />
 /// <reference types="@nuxtjs/color-mode" />
