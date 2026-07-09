@@ -42,30 +42,21 @@ export default defineEventHandler(async (event) => {
   const SECRET_KEY = config.public.cryptoKey;
   if (encrypted) {
     try {
-      // 1. Декодируем безопасную сетевую строку обратно в формат CryptoJS
-      const rawCiphertext = Buffer.from(password, 'base64').toString('utf-8');
-      console.log('КПОЛУЧАЕ:  ', rawCiphertext);
-      // 2. Расшифровываем, передавая чистую строку шифротекста
-      const bytes = CryptoJS.AES.decrypt(rawCiphertext, SECRET_KEY);
-
-      // 3. ОБЯЗАТЕЛЬНО явно указываем CryptoJS.enc.Utf8 для вывода текста
+      console.log('ПОЛУЧАЕМ ---> :', password);
+      const bytes = CryptoJS.AES.decrypt(password, SECRET_KEY);
       password_ = bytes.toString(CryptoJS.enc.Utf8);
 
-      if (!password_ || password_ === '') {
-        throw new Error(
-          'Получена пустая строка. Неверный ключ или битые данные.'
-        );
+      if (!password_) {
+        throw new Error('Не удалось расшифровать пароль');
       }
-
-      console.log('✅ Пароль успешно расшифрован на сервере');
     } catch (error) {
-      console.error('❌ Ошибка расшифровки пароля на сервере:', error);
+      console.error('❌ Ошибка расшифровки:', error);
       throw createError({
         statusCode: 400,
-        message: 'Критическая ошибка дешифрации данных сессии',
+        message: 'Ошибка расшифровки пароля',
       });
     }
-  } else if (!encrypted && password === 'adPassword') {
+  } else if (!encrypted && password == 'adPassword') {
     password_ = password;
   }
 
