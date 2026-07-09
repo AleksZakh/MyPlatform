@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
   // 1. Получаем логин и пароль из тела запроса
   const body = await readBody(event);
   let password_: any;
-  // console.log("Получен запрос на авторизацию:", body);
+  console.log("Получен запрос на авторизацию:", body);
   // console.log('Полученные данные:', body);
   // console.log('Тип данных:', typeof body);
   // console.log('Ключи объекта:', Object.keys(body || {}));
@@ -41,15 +41,10 @@ export default defineEventHandler(async (event) => {
     username: config.ad.username,
     password: config.ad.password,
   };
-  const SECRET_KEY = config.public.cryptoKey;
+  
   if (encrypted) {
     try {
-      console.log('ПОЛУЧАЕМ_1 ---> :', decryptPassword(password));
-      const bytes = CryptoJS.AES.decrypt(password, SECRET_KEY);
-
-      password_ = bytes.toString(CryptoJS.enc.Utf8);
-      console.log('ПОЛУЧАЕМ_2 ---> :', password_);
-
+      password_ = decryptPassword(password);
       if (!password_) {
         throw new Error('Не удалось расшифровать пароль');
       }
@@ -75,14 +70,7 @@ export default defineEventHandler(async (event) => {
   };
 
   return new Promise(async (resolve, reject) => {
-    let user;
-    try {
-      user = await requireUserSession(event);
-    } catch (error) {
-      user = 'NoUser';
-    }
-
-    console.log(`🔐 Попытка входа пользователя: ${login}`, encrypted, user);
+    console.log(`🔐 Попытка входа пользователя: ${login}`, encrypted);
     let login_ = login + '@corp.avtodor-eng.ru';
 
     // Главный метод проверки пароля
@@ -175,6 +163,7 @@ export default defineEventHandler(async (event) => {
                 await setUserSession(event, {
                   user: userInfo,
                   sessionId: sessionId,
+                  password: password,
                   loggedInAt: new Date().toISOString(),
                 });
               } catch (e) {

@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
       user_: 'system_internal',
       domain: 'local',
       auth_: true,
-      dateTime: getDateTime(),
+      loggedInAt: getDateTime(),
     };
     return; // Выходим из middleware, не мучая запрос проверками Kerberos
   }
