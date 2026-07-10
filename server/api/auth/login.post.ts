@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
   // 1. Получаем логин и пароль из тела запроса
   const body = await readBody(event);
   let password_: any;
-  console.log("Получен запрос на авторизацию:", body);
+  // console.log("Получен запрос на авторизацию:", body);
   // console.log('Полученные данные:', body);
   // console.log('Тип данных:', typeof body);
   // console.log('Ключи объекта:', Object.keys(body || {}));
@@ -163,7 +163,6 @@ export default defineEventHandler(async (event) => {
                 await setUserSession(event, {
                   user: userInfo,
                   sessionId: sessionId,
-                  password: password,
                   loggedInAt: new Date().toISOString(),
                 });
               } catch (e) {
