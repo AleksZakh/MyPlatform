@@ -13,7 +13,7 @@ export const securePW = () => {
    */
   const encryptPassword = (password: string): string => {
     console.log('Проль введённый пользователем = ', password);
-    console.log('Секреи, которым будем зашифровывать = ', SECRET_KEY);
+    console.log('Секрет, которым будем зашифровывать = ', SECRET_KEY);
     // Используем AES-256 шифрование
     const encrypted = CryptoJS.AES.encrypt(password, SECRET_KEY).toString();
     return encrypted;
@@ -23,8 +23,8 @@ export const securePW = () => {
    * Расшифровывает пароль на сервере
    */
   const decryptPassword = (encryptedPassword: string): string => {
-    console.log('Проль пришедший на расшифровку = ', encryptPassword);
-    console.log('Секреи, которым будем расшифровывать = ', SECRET_KEY);
+    console.log('Проль пришедший на расшифровку = ', encryptedPassword);
+    console.log('Секрет, которым будем расшифровывать = ', SECRET_KEY);
     const bytes = CryptoJS.AES.decrypt(encryptedPassword, SECRET_KEY);
     const decrypted = bytes.toString(CryptoJS.enc.Utf8);
     return decrypted;
