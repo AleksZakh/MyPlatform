@@ -1,7 +1,7 @@
 <template>
   <UModal
     :close="{ onClick: () => emit('close', false) }"
-    :title="`Новая запись реестра`"
+    :title="modalTitle"
     description="Заполните все поля"
     class="custom-modal"
     :ui="{ content: 'sm:max-w-none w-max' }"
@@ -226,6 +226,7 @@ const emit = defineEmits<{ close: [boolean] }>();
 const toast = useToast();
 const items = ref(['Backlog', 'Todo', 'In Progress', 'Done']);
 const value = ref('Backlog');
+const modalTitle = ref('');
 
 function onCreate(newItem: string) {
   items.value.push(newItem);
@@ -380,6 +381,10 @@ watch(
     console.log('selectedRecord changed:', newVal);
     if (newVal?.action === 'edit' || newVal?.action === 'view') {
       fillFormWithData(newVal);
+      modalTitle.value =
+        newVal?.action === 'edit'
+          ? 'Редактирование записи'
+          : newVal?.['Наименование объект'] || 'Просмотр записи';
     } else if (newVal?.action === 'create' || !newVal) {
       resetForm();
     }

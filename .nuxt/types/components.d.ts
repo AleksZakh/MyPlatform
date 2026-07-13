@@ -17,13 +17,15 @@ interface _GlobalComponents {
   ConfirmDialog: typeof import("../../app/components/ConfirmDialog.vue")['default']
   CustomDateInput: typeof import("../../app/components/CustomDateInput.vue")['default']
   DepartmentCard: typeof import("../../app/components/DepartmentCard.vue")['default']
+  FileViewerModal: typeof import("../../app/components/FileViewerModal.vue")['default']
   Footer: typeof import("../../app/components/Footer.vue")['default']
   Toast: typeof import("../../app/components/Toast.vue")['default']
   LabFilterPanel: typeof import("../../app/components/lab/FilterPanel.vue")['default']
+  LabCreateModal: typeof import("../../app/components/lab/createModal.vue")['default']
   LabHandbook: typeof import("../../app/components/lab/handbook.vue")['default']
   LabIncominginspection: typeof import("../../app/components/lab/incominginspection.vue")['default']
-  LabModal: typeof import("../../app/components/lab/labModal.vue")['default']
   LabResearch: typeof import("../../app/components/lab/research.vue")['default']
+  LabViewModal: typeof import("../../app/components/lab/viewModal.vue")['default']
   NavigateTopnav: typeof import("../../app/components/navigate/topnav.vue")['default']
   SidebarMenuData: typeof import("../../app/components/sidebar/menu.data")['default']
   SidebarMenu: typeof import("../../app/components/sidebar/menu.vue")['default']
@@ -187,13 +189,15 @@ interface _GlobalComponents {
   LazyConfirmDialog: LazyComponent<typeof import("../../app/components/ConfirmDialog.vue")['default']>
   LazyCustomDateInput: LazyComponent<typeof import("../../app/components/CustomDateInput.vue")['default']>
   LazyDepartmentCard: LazyComponent<typeof import("../../app/components/DepartmentCard.vue")['default']>
+  LazyFileViewerModal: LazyComponent<typeof import("../../app/components/FileViewerModal.vue")['default']>
   LazyFooter: LazyComponent<typeof import("../../app/components/Footer.vue")['default']>
   LazyToast: LazyComponent<typeof import("../../app/components/Toast.vue")['default']>
   LazyLabFilterPanel: LazyComponent<typeof import("../../app/components/lab/FilterPanel.vue")['default']>
+  LazyLabCreateModal: LazyComponent<typeof import("../../app/components/lab/createModal.vue")['default']>
   LazyLabHandbook: LazyComponent<typeof import("../../app/components/lab/handbook.vue")['default']>
   LazyLabIncominginspection: LazyComponent<typeof import("../../app/components/lab/incominginspection.vue")['default']>
-  LazyLabModal: LazyComponent<typeof import("../../app/components/lab/labModal.vue")['default']>
   LazyLabResearch: LazyComponent<typeof import("../../app/components/lab/research.vue")['default']>
+  LazyLabViewModal: LazyComponent<typeof import("../../app/components/lab/viewModal.vue")['default']>
   LazyNavigateTopnav: LazyComponent<typeof import("../../app/components/navigate/topnav.vue")['default']>
   LazySidebarMenuData: LazyComponent<typeof import("../../app/components/sidebar/menu.data")['default']>
   LazySidebarMenu: LazyComponent<typeof import("../../app/components/sidebar/menu.vue")['default']>

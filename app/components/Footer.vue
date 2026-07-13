@@ -1,9 +1,19 @@
 <template>
   <UFooter class="bg-sky-100">
     <template #left>
+      <div>
+        <UColorModeButton class="mr-10" />
+      </div>
       <p class="text-muted text-sm">
         Copyright © {{ new Date().getFullYear() }}
       </p>
+      <div>
+        <!-- <UColorModeSelect /> -->
+      </div>
+    </template>
+
+    <template #default>
+      <!-- <UColorModeSelect /> -->
     </template>
 
     <!-- <UNavigationMenu :items="items" variant="link" /> -->

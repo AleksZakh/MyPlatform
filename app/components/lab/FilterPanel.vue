@@ -7,8 +7,13 @@
     >
       <!-- ПЛП -->
       <div class="flex flex-wrap items-center gap-3">
-        <label class="font-semibold min-w-32 text-gray-700 text-sm"
-          >📋 ПЛП:</label
+        <label
+          class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm"
+          ><Icon
+            name="streamline-freehand-color:content-paper-edit"
+            size="24"
+          />
+          ПЛП:</label
         >
         <input
           v-model="localFilters.plp"
@@ -20,8 +25,10 @@
 
       <!-- Наименование объекта -->
       <div class="flex flex-wrap items-center gap-3">
-        <label class="font-semibold min-w-32 text-gray-700 text-sm"
-          >🏷️ Наименование объекта:</label
+        <label
+          class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm"
+          ><Icon name="streamline-freehand-color:tags-double" size="24" />
+          Наименование объекта:</label
         >
         <input
           v-model="localFilters.objectName"
@@ -33,8 +40,13 @@
 
       <!-- Номер акта отбора проб -->
       <div class="flex flex-wrap items-center gap-3">
-        <label class="font-semibold min-w-32 text-gray-700 text-sm"
-          >📄 Номер акта:</label
+        <label
+          class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm"
+          ><Icon
+            name="streamline-freehand-color:text-formating-hash"
+            size="22"
+          />
+          Номер акта:</label
         >
         <input
           v-model="localFilters.samplingActNumber"
@@ -46,8 +58,10 @@
 
       <!-- Дата отбора проб (диапазон) -->
       <div class="flex flex-wrap items-center gap-3">
-        <label class="font-semibold min-w-32 text-gray-700 text-sm"
-          >📅 Дата отбора:</label
+        <label
+          class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm"
+          ><Icon name="streamline-freehand-color:calendar-grid" size="24" />
+          Дата отбора:</label
         >
         <div class="flex flex-1 flex-wrap items-center gap-2">
           <input
@@ -66,8 +80,13 @@
 
       <!-- Место отбора проб -->
       <div class="flex flex-wrap items-center gap-3">
-        <label class="font-semibold min-w-32 text-gray-700 text-sm"
-          >📍 Место отбора:</label
+        <label
+          class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm"
+          ><Icon
+            name="streamline-freehand-color:gps-location-rectangle"
+            size="24"
+          />
+          Место отбора:</label
         >
         <input
           v-model="localFilters.samplingPlace"
@@ -79,7 +98,8 @@
 
       <!-- Лицо, предоставившее пробу -->
       <div class="flex flex-wrap items-center gap-3">
-        <label class="font-semibold min-w-32 text-gray-700 text-sm"
+        <label
+          class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm"
           >👤 Кто предоставил:</label
         >
         <input
@@ -92,7 +112,8 @@
 
       <!-- Дата поступления материала (диапазон) -->
       <div class="flex flex-wrap items-center gap-3">
-        <label class="font-semibold min-w-32 text-gray-700 text-sm"
+        <label
+          class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm"
           >📥 Дата поступления:</label
         >
         <div class="flex flex-1 flex-wrap items-center gap-2">
@@ -112,7 +133,8 @@
 
       <!-- Наименование материала -->
       <div class="flex flex-wrap items-center gap-3">
-        <label class="font-semibold min-w-32 text-gray-700 text-sm"
+        <label
+          class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm"
           >🧪 Материал:</label
         >
         <input
@@ -125,7 +147,8 @@
 
       <!-- Документ о качестве -->
       <div class="flex flex-wrap items-center gap-3">
-        <label class="font-semibold min-w-32 text-gray-700 text-sm"
+        <label
+          class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm"
           >📑 Документ о качестве:</label
         >
         <input
@@ -138,7 +161,8 @@
 
       <!-- Предприятие-изготовитель -->
       <div class="flex flex-wrap items-center gap-3">
-        <label class="font-semibold min-w-32 text-gray-700 text-sm"
+        <label
+          class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm"
           >🏭 Изготовитель:</label
         >
         <input
@@ -151,7 +175,8 @@
 
       <!-- Номер протокола -->
       <div class="flex flex-wrap items-center gap-3">
-        <label class="font-semibold min-w-32 text-gray-700 text-sm"
+        <label
+          class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm"
           >📋 Номер протокола:</label
         >
         <input
@@ -164,7 +189,8 @@
 
       <!-- Дата протокола (диапазон) -->
       <div class="flex flex-wrap items-center gap-3">
-        <label class="font-semibold min-w-32 text-gray-700 text-sm"
+        <label
+          class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm"
           >📅 Дата протокола:</label
         >
         <div class="flex flex-1 flex-wrap items-center gap-2">
@@ -184,8 +210,9 @@
 
       <!-- Результат испытаний (выпадающий список) -->
       <div class="flex flex-wrap items-center gap-3">
-        <label class="font-semibold min-w-32 text-gray-700 text-sm"
-          >✅ Результат:</label
+        <label
+          class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm"
+          >✅ Результат испытания:</label
         >
         <select
           v-model="localFilters.testResult"
@@ -199,7 +226,8 @@
 
       <!-- Примечание -->
       <div class="flex flex-wrap items-center gap-3">
-        <label class="font-semibold min-w-32 text-gray-700 text-sm"
+        <label
+          class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm"
           >📝 Примечание:</label
         >
         <input

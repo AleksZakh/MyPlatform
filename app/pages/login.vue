@@ -124,13 +124,13 @@ watch([userLogin, userEmail, passwordRef], () => {
 // =================== 3. Функция для авторизации пользователя на странице авторизации /login =======
 const authUser = async (adUserLogin: any = '') => {
   const sessionId = uuidv4(); // Генерируем уникальный sessionId для текущей сессии
-  console.log(
-    'adUserLogin == ',
-    adUserLogin.type,
-    '; ',
-    'userLogin.value == ',
-    userLogin.value
-  );
+  // console.log(
+  //   'adUserLogin == ',
+  //   adUserLogin.type,
+  //   '; ',
+  //   'userLogin.value == ',
+  //   userLogin.value
+  // );
 
   const loginValue =
     adUserLogin.type != 'click'
@@ -161,12 +161,12 @@ const authUser = async (adUserLogin: any = '') => {
         sessionId: sessionId,
         encrypted: encrypted,
       });
-      console.log('---result : ', result);
+      // console.log('---result : ', result);
       // }
 
       if (result.success || adUserLogin) {
         await refreshSession();
-        console.log('Успешный вход:', user); //result.data.user.name
+        // console.log('Успешный вход:', user); //result.data.user.name
         authStore.set({
           fName: user.user?.name || '',
           dep: user.user?.department || '',
@@ -208,7 +208,7 @@ const authUser = async (adUserLogin: any = '') => {
       // Здесь можно обработать ошибку, например, показать уведомление пользователю
     }
   } else {
-    console.log('Пользователь не авторизован, необходимо авторизоваться.');
+    // console.log('Пользователь не авторизован, необходимо авторизоваться.');
   }
 };
 
@@ -245,7 +245,7 @@ const newUser = async () => {
 };
 onMounted(async () => {
   const response = await fetch('/api/ad/get-users-shared');
-  console.log('###---> response ===== ', response);
+  // console.log('###---> response ===== ', response);
   const data = await response.json();
 
   if (user.value != null) {

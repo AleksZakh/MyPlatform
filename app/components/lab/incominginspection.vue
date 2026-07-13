@@ -205,7 +205,7 @@
         <div>
           <span class="flex items-center gap-2">
             <Icon :name="'streamline-freehand-color:database'" size="24" />
-            Всего записей в БД: <strong>{{ totalCount }}</strong>
+            Всего записей в БД: <span>{{ totalCount }}</span>
           </span>
         </div>
         <div>
@@ -277,7 +277,8 @@
 
 <script setup lang="ts">
 import sortData from '../../../utils/dataSort';
-import labModal from '~/components/lab/labModal.vue';
+import createModal from '~/components/lab/createModal.vue';
+import viewModal from '~/components/lab/viewModal.vue';
 import type { ContextMenuItem } from '@nuxt/ui';
 import FilterPanel from '~/components/lab/FilterPanel.vue';
 import { onClickOutside } from '@vueuse/core';
@@ -316,7 +317,8 @@ const filters = ref({
 const count = ref(0);
 const toast = useToast();
 const overlay = useOverlay();
-const modal = overlay.create(labModal);
+const modalCreate = overlay.create(createModal);
+const modalView = overlay.create(viewModal);
 const rowSelectedId = ref<number | null>(null);
 const totalCount = ref(0); // Всего записей в БД
 const totalPages = ref(0); // Всего страниц
@@ -353,11 +355,11 @@ const selectRow = (index: any): void => {
 const items: ContextMenuItem[][] = [
   [
     {
-      label: 'Открыть',
+      label: '"просто посмотреть"',
       icon: 'streamline-freehand-color:kindle-read-document-hold',
       onClick: () => {
         if (selectedRecord.value) {
-          handleDblClick(selectedRecord.value.ID, selectedRecord.value);
+          handleDblClick(selectedRecord.value.ID, selectedRecord.value, 'view');
         }
       },
     },
@@ -370,7 +372,7 @@ const items: ContextMenuItem[][] = [
       icon: 'streamline-freehand-color:edit-pencil',
       onClick: () => {
         if (selectedRecord.value) {
-          handleDblClick(selectedRecord.value.ID, selectedRecord.value);
+          handleDblClick(selectedRecord.value.ID, selectedRecord.value, 'edit');
         }
       },
     },
@@ -459,36 +461,38 @@ const isRowSelected = (index: any): boolean => {
 
 // Функция, которая будет вызываться кнопкой "Создать" или двойным кликом по таблице
 // Функция для двойного клика
-function handleDblClick(index: any, row: any) {
+function handleDblClick(index: any, row: any, action: string = 'view') {
   // Сохраняем строку перед открытием
   selectedRecord.value = {
     ...row, // копируем все поля строки
     index, // добавляем индекс строки
-    action: 'edit', // добавляем признак
+    action: action, // добавляем признак
   };
 
   // Небольшая задержка для гарантии
   setTimeout(() => {
-    open();
+    open(action);
   }, 50);
 }
 
-async function open(action: 'create' | 'edit' = 'edit') {
+async function open(action: string) {
   const record = {
     ...(selectedRecord.value || {}),
     action,
   };
   selectedRecord.value = record;
 
-  const instance = modal.open({
-    count: count.value,
-    selectedRecord: record,
-    reloadData: loadData,
-  });
-
-  const shouldIncrement = await instance.result;
-  if (shouldIncrement) {
-    // ...
+  console.log('action =====> ', action);
+  if (action == 'view') {
+    const instance = modalView.open({
+      record: record,
+    });
+  } else if (action == 'create' || action == 'edit') {
+    const instance = modalCreate.open({
+      count: count.value,
+      selectedRecord: record,
+      reloadData: loadData,
+    });
   }
 }
 
@@ -527,7 +531,7 @@ onMounted(async () => {
 //   console.log('Двойной клик по строке');
 // }
 
-// Закрытие селектора при клике вне (простой способ через document)
+// Закрытие селектора при клике вне
 onMounted(() => {
   const handleClickOutside = (event: MouseEvent) => {
     const target = event.target as HTMLElement;
