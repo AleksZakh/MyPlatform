@@ -44,7 +44,8 @@ export default defineEventHandler(async (event) => {
   
   if (encrypted) {
     try {
-      password_ = decryptPassword(password);
+      // password_ = decryptPassword(password);
+      password_ = password;
       if (!password_) {
         throw new Error('Не удалось расшифровать пароль');
       }

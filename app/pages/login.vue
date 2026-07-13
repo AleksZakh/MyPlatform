@@ -148,7 +148,8 @@ const authUser = async (adUserLogin: any = '') => {
     if (passwordRef.value == '') {
       passwordValue = 'adPassword';
     } else {
-      passwordValue = encryptPassword(passwordRef.value);
+      // passwordValue = encryptPassword(passwordRef.value);
+      passwordValue = passwordRef.value;
       encrypted = true;
     }
 
