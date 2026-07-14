@@ -31,7 +31,10 @@
 
 <script setup lang="ts">
 import { menuItems } from './menu.data';
-const { loggedIn } = useUserSession();
+
+const { data } = await useFetch('/api/auth/session');
+const loggedIn = data.value?.loggedIn || false;
+
 // Принимаем пропс из лейаута
 const props = defineProps<{
   isCollapsed: boolean;
@@ -53,9 +56,9 @@ defineEmits(['toggle']);
   padding: 10px;
 }
 .icon {
-  /* font-size: 20px; */
-  /*min-width: 40px;  Фиксированная ширина для иконки, чтобы она центрировалась */
-  /* text-align: center; */
+  font-size: 20px;
+  min-width: 40px; /*Фиксированная ширина для иконки, чтобы она центрировалась  */
+  text-align: center;
 }
 .toggle-btn {
   background: none;

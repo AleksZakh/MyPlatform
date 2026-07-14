@@ -49,10 +49,13 @@
 </template>
 
 <script setup lang="ts">
-const { loggedIn, user, clear } = useUserSession();
+
+const { data } = await useFetch('/api/auth/session');
+const loggedIn = data.value?.loggedIn || false;
 const currentUser = ref('');
 const userEmail = ref('');
 const userDep = ref('');
+// console.log('cookie data ===> ', data);
 // const { data: user, error } = await useFetch('/api/auth/me');
 import { useAuthStore, useIsLoadingStore } from '@/stores/auth.store';
 const authStore = useAuthStore();
@@ -63,11 +66,11 @@ watch(
       currentUser.value = authStore.getUserInfo.fName;
       userEmail.value = authStore.getMyEmail;
       userDep.value = authStore.getMyDep;
-    } else if (loggedIn && user.value) {
+    } else if (loggedIn && data.value) {
       // console.log('cookie ===> ', user)
-      currentUser.value = user.value.name;
-      userEmail.value = user.value.email;
-      userDep.value = user.value.department;
+      currentUser.value = data.value?.user?.name;
+      userEmail.value = data.value?.user?.email;
+      userDep.value = data.value?.user?.department;
     }
   },
   { immediate: true }
@@ -75,10 +78,10 @@ watch(
 
 const shortName = computed(() => {
   // Проверяем наличие user и его свойств
-  if (!user.value || !user.value.name) return '';
+  if (!data.value || !data.value.user?.name) return '';
 
   // Делаем первую букву фамилии заглавной для красоты
-  const parts = user.value.name.trim().split(/\s+/);
+  const parts = data.value.user?.name.trim().split(/\s+/);
   const lastName =
     parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
 
