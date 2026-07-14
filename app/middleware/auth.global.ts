@@ -4,7 +4,7 @@ export default defineNuxtRouteMiddleware((to, from) => {
   // Используем встроенный модуль
   const { loggedIn } = useUserSession();
 
-  //  console.log('loggedIn:', loggedIn.value);
+   console.log('loggedIn:', loggedIn.value);
   // console.log('authStore.isAuth:', authStore.isAuth);
   // Следим за изменением переменной loggedIn
   watch(

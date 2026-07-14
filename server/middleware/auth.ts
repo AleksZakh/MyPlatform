@@ -1,4 +1,5 @@
 import { getDateTime } from '@@/utils/dateUtils';
+import type { SessionUser, UserSession } from '@@/server/types/session'; // 👈 ИМПОРТ ТИПОВ
 
 export default defineEventHandler(async (event) => {
   const url = getRequestURL(event);
@@ -45,6 +46,8 @@ export default defineEventHandler(async (event) => {
     auth_: false,
     dateTime: getDateTime(),
   };
+   // Сохраняем оригинальный URL для редиректа
+  const originalUrl = url.pathname + url.search;
 
   // 1. Проверяем, передал ли Nginx данные через X-Remote-User
   let remoteUser =
@@ -73,15 +76,38 @@ export default defineEventHandler(async (event) => {
           // Создаем сессию из токена
           const parts = event.context.user.user_.split('_');
           const userEmail = `${parts[1].charAt(0).toLowerCase()}.${parts[2].toLowerCase()}${event.context.user.domain.replace('corp', '@')}`;
+          // ✅ СОЗДАЕМ СЕССИЮ С ПРАВИЛЬНЫМ ТИПОМ
+          const userData: SessionUser = {
+            sessionId: token,
+            login: event.context.user.user_,
+            email: userEmail,
+            role: 'adUser',
+            dateTime: event.context.dateTime,
+            loggedIn: true, // 👈 ДОБАВЛЯЕМ
+          };
           await setUserSession(event, {
-            user: {
-              sessionId: token,
-              login: event.context.user.user_,
-              email: userEmail,
-              role: 'adUser',
-              dateTime: event.context.dateTime,
-            },
+            user: userData,
           });
+          // ✅ ПОЛУЧАЕМ СЕССИЮ С ПРАВИЛЬНОЙ ТИПИЗАЦИЕЙ
+          const newSession = await getUserSession(event) as unknown as UserSession;
+          const loggedIn = newSession?.user?.loggedIn || false;
+          
+          console.log(`✅ Сессия создана для: ${event.context.user.user_}`);
+          console.log(`🔑 Статус авторизации: ${loggedIn ? '✅ Вход выполнен' : '❌ Не авторизован'}`);
+          
+          // ✅ ПЕРЕНАПРАВЛЕНИЕ
+          const query = getQuery(event);
+          let redirectUrl = (query.redirect as string) || originalUrl || '/';
+          
+          if (redirectUrl.startsWith('http') && !redirectUrl.startsWith('http://localhost')) {
+            redirectUrl = '/';
+          }
+          
+          console.log(`🔄 Перенаправление пользователя ${event.context.user.user_} на: ${redirectUrl}`);
+          
+          if (!url.pathname.startsWith('/api/')) {
+            return sendRedirect(event, redirectUrl, 302);
+          }
         } catch (error) {
           // Токен невалидный - ничего не делаем
         }

@@ -16,12 +16,14 @@
         :key="menuItems.indexOf(item)"
         :to="item.url"
       >
-        <span class="icon flex items-center">
-          <Icon :name="item.icon" class="mr-3" size="22" />
-        </span>
-        <span v-if="!isCollapsed" class="text flex items-center">
-          {{ item.title }}
-        </span>
+        <UTooltip :text="item.tooltip">
+          <span class="icon flex items-center">
+            <Icon :name="item.icon" class="mr-3" size="22" />
+          </span>
+          <span v-if="!isCollapsed" class="text flex items-center">
+            {{ item.title }}
+          </span>
+        </UTooltip>
       </nuxt-link>
     </nav>
   </aside>
