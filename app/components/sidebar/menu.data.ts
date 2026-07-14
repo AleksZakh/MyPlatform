@@ -5,7 +5,7 @@ export interface MenuItem {
 }
 
 export const menuItems: MenuItem[] = [
-  { title: 'Главная', url: '/', icon: 'line-md:home' },
-  { title: 'Профиль', url: '/profile', icon: 'line-md:account' },
-  { title: 'Настройки', url: '/settings', icon: 'line-md:cog' },
+  { title: 'Главная', url: '/', icon: 'streamline-freehand-color:home-chimney-2' },
+  { title: 'Профиль', url: '/profile', icon: 'streamline-freehand-color:composition-man' },
+  { title: 'Настройки', url: '/settings', icon: 'streamline-freehand-color:settings-cog' },
 ];
