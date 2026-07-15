@@ -57,6 +57,7 @@ const userEmail = ref('');
 const userDep = ref('');
 // console.log('cookie data ===> ', data);
 // const { data: user, error } = await useFetch('/api/auth/me');
+const { user, clear } = useUserSession();
 import { useAuthStore, useIsLoadingStore } from '@/stores/auth.store';
 const authStore = useAuthStore();
 watch(
@@ -66,11 +67,11 @@ watch(
       currentUser.value = authStore.getUserInfo.fName;
       userEmail.value = authStore.getMyEmail;
       userDep.value = authStore.getMyDep;
-    } else if (loggedIn && data.value) {
+    } else if (loggedIn && user.value) {
       // console.log('cookie ===> ', user)
-      currentUser.value = data.value?.user?.name;
-      userEmail.value = data.value?.user?.email;
-      userDep.value = data.value?.user?.department;
+      currentUser.value = user.value.name;
+      userEmail.value = user.value.email;
+      userDep.value = user.value.department;
     }
   },
   { immediate: true }
@@ -78,10 +79,10 @@ watch(
 
 const shortName = computed(() => {
   // Проверяем наличие user и его свойств
-  if (!data.value || !data.value.user?.name) return '';
+  if (!user.value || !user.value.name) return '';
 
   // Делаем первую букву фамилии заглавной для красоты
-  const parts = data.value.user?.name.trim().split(/\s+/);
+  const parts = user.value.name.trim().split(/\s+/);
   const lastName =
     parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
 
