@@ -714,11 +714,17 @@ const filteredData = computed(() => {
   }
 
   const query = searchQuery.value.toLowerCase();
+
   return originalData.value.filter((row) => {
-    return Object.values(row).some((value) =>
-      value?.toLowerCase().includes(query)
-    );
+    return Object.values(row).some((value) => {
+      // 1. Проверяем, что значение не null и не undefined
+      if (value === null || value === undefined) return false;
+      
+      // 2. Приводим значение к строке и проверяем вхождение
+      return String(value).toLowerCase().includes(query);
+    });
   });
+  //------------
 });
 
 // Сортировка
