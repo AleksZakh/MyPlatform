@@ -53,8 +53,13 @@ export default defineEventHandler(async (event) => {
   let remoteUser =
     getHeader(event, 'x-remote-user') || getHeader(event, 'remote-user');
 
-  if (remoteUser && typeof remoteUser === 'string') {
+  if (remoteUser && typeof remoteUser === 'string' && authHeader) {
     const session = await getUserSession(event);
+    const base64Credentials = authHeader.substring(6);
+    const credentials = Buffer.from(base64Credentials, 'base64').toString(
+      'utf-8'
+    );
+    console.log('credentials=== ',credentials);
 
     if (remoteUser.includes('@')) {
       const parts = remoteUser.split('@');
