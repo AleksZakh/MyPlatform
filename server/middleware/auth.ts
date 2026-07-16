@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
 
   // Отлавливаем только самый первый запрос к главной странице (или страницам SSR)
   // Игнорируем запросы к API, чтобы не засорять консоль
-  if (url.pathname === '/' || !url.pathname.startsWith('/api/')) {
+  if (url.pathname === '/') {
     // Получаем объект со всеми заголовками в формате { имя: значение }
     const allHeaders = getHeaders(event);
 
@@ -46,7 +46,7 @@ export default defineEventHandler(async (event) => {
     auth_: false,
     dateTime: getDateTime(),
   };
-   // Сохраняем оригинальный URL для редиректа
+  // Сохраняем оригинальный URL для редиректа
   const originalUrl = url.pathname + url.search;
 
   // 1. Проверяем, передал ли Nginx данные через X-Remote-User
@@ -68,7 +68,6 @@ export default defineEventHandler(async (event) => {
     }
     event.context.user.auth_ = true;
     event.context.dateTime = getDateTime();
-    
   }
   // 2. Если X-Remote-User пуст, достаем имя из встроенного фиктивного заголовка Nginx!
   else if (authHeader && authHeader.startsWith('Basic ')) {
