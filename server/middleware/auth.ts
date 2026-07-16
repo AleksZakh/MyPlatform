@@ -90,6 +90,10 @@ export default defineEventHandler(async (event) => {
 
   // 3. Сессии нет. Проверяем заголовок от Nginx (доменный ПК)
   const xUser = getHeader(event, 'x-user')
+
+  // ЛОГ 1: Проверяем, видит ли вообще Nuxt заголовок от Nginx
+  console.log('--- БЭКЕНД: Входящий заголовок X-User ===', xUser)
+
   if (!xUser) {
     // Нет ни сессии, ни заголовка — значит это недоменный ПК (гость)
     event.context.user = null
@@ -109,6 +113,8 @@ export default defineEventHandler(async (event) => {
 
   // 4. Запрашиваем данные из AD через нашу функцию на activedirectory2
   const adUser = await getUserFromAD(username, adConfig)
+  // ЛОГ 2: Проверяем, вернула ли библиотека activedirectory2 данные из домена
+  console.log('--- БЭКЕНД: Данные из Active Directory ===', adData)
 
   let finalUser: any = null
 
@@ -121,6 +127,7 @@ export default defineEventHandler(async (event) => {
       email: adUser.email || xUser,
       title: adUser.title
     }
+    
   } else {
     // Fallback: В AD произошел сбой, но Nginx пользователя пустил
     finalUser = { username: username, fallback: true }
@@ -135,4 +142,7 @@ export default defineEventHandler(async (event) => {
 
   // Также дублируем в контекст текущего запроса
   event.context.user = finalUser
+   // ЛОГ 3: Проверяем, что объект сформирован
+  console.log('--- БЭКЕНД: Записываем пользователя в контекст ===', event.context.user)
+    
 })
