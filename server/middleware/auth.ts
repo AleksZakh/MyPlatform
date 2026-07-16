@@ -1,101 +1,110 @@
-import { getDateTime } from '@@/utils/dateUtils';
-import type { SessionUser, UserSession } from '@@/server/types/session'; // 👈 ИМПОРТ ТИПОВ
+import ldap from 'ldapjs';
 
+// 1. Интерфейс для типизации настроек (чтобы TS не ругался)
+interface ADConfig {
+  url: string;
+  baseDN: string;
+  username: string;
+  password: string;
+}
+
+// 2. Переписанная функция: теперь она принимает конфиг вторым аргументом
+function getUserFromAD(sAMAccountName: string, config: ADConfig): Promise<any> {
+  return new Promise((resolve, reject) => {
+    // Используем URL из переменных окружения
+    const client = ldap.createClient({ url: config.url });
+
+    // Аутентификация под технической учетной записью из .env
+    client.bind(config.username, config.password, (err) => {
+      if (err) return reject(err);
+
+      const opts = {
+        filter: `(sAMAccountName=${sAMAccountName})`,
+        scope: 'sub' as const,
+        attributes: ['cn', 'department', 'memberOf', 'mail'],
+      };
+
+      // Используем Base DN из переменных окружения
+      client.search(config.baseDN, opts, (err, res) => {
+        if (err) return reject(err);
+
+        let userData: any = null;
+
+        res.on('searchEntry', (entry) => {
+          const pojo = entry.pojo;
+          const attrs: Record<string, any> = {};
+
+          for (const attr of pojo.attributes) {
+            attrs[attr.type] =
+              attr.values.length === 1 ? attr.values[0] : attr.values;
+          }
+
+          userData = {
+            dn: pojo.objectName,
+            ...attrs,
+          };
+        });
+
+        res.on('error', (searchErr) => reject(searchErr));
+
+        res.on('end', () => {
+          client.unbind();
+          resolve(userData);
+        });
+      });
+    });
+  });
+}
+
+// 3. Основной серверный middleware
 export default defineEventHandler(async (event) => {
-  const url = getRequestURL(event);
-  // 1. БЕЛОЙ СПИСОК: Пропускаем технические запросы, иконки и статику без проверок
-  const isInternal =
-    url.pathname.startsWith('/api/_nuxt_icon/') ||
-    url.pathname.startsWith('/_nuxt/') ||
-    url.pathname.includes('favicon.ico');
-
-  if (isInternal) {
-    // Выставляем системный флаг аутентификации, чтобы эндпоинт иконки отдал её успешно
-    event.context.user = {
-      user_: 'system_internal',
-      domain: 'local',
-      auth_: true,
-      loggedInAt: getDateTime(),
-    };
-    return; // Выходим из middleware, не мучая запрос проверками Kerberos
+  if (event.path.startsWith('/login') || event.path.startsWith('/api/auth/login')) {
+    return
   }
 
-  //  2. ИГНОРИРУЕМ ЗАПРОСЫ К СТРАНИЦАМ (SSR): Проверяем только реальное API данных
-  // (Опционально, если авторизация нужна только на уровне /api/data/...)
-  // if (!url.pathname.startsWith('/api/')) return;
+  const allHeaders = getHeaders(event);
+  // console.log('allHeaders === ', allHeaders);
+  const xUser = getHeader(event, 'x-remote-user') || getHeader(event, 'remote-user');
 
-  // Отлавливаем только самый первый запрос к главной странице (или страницам SSR)
-  // Игнорируем запросы к API, чтобы не засорять консоль
-  if (url.pathname === '/') {
-    // Получаем объект со всеми заголовками в формате { имя: значение }
-    const allHeaders = getHeaders(event);
-
-    console.log('===================================================');
-    console.log(`[DEBUG LOG] САМЫЙ ПЕРВЫЙ ЗАПРОС К СТРАНИЦЕ: ${url.pathname}`);
-    console.log('===================================================');
-    console.dir(allHeaders, { depth: null, colors: true });
-    console.log('===================================================');
+  if (!xUser) {
+    event.context.user = null
+    return
   }
 
-  const authHeader = getHeader(event, 'authorization');
+  const username = xUser.split('@')[0] as string;
+  if (!username) return
 
-  // Объект пользователя по умолчанию
-  event.context.user = {
-    user_: null,
-    domain: null,
-    auth_: false,
-    dateTime: getDateTime(),
+  // Получаем конфигурацию из Nuxt Runtime Config
+  const config = useRuntimeConfig(event);
+  const adConfig: ADConfig = {
+    url: config.ad.url,
+    baseDN: config.ad.baseDN,
+    username: config.ad.username,
+    password: config.ad.password,
   };
-  // Сохраняем оригинальный URL для редиректа
-  const originalUrl = url.pathname + url.search;
 
-  // 1. Проверяем, передал ли Nginx данные через X-Remote-User
-  let remoteUser =
-    getHeader(event, 'x-remote-user') || getHeader(event, 'remote-user');
+  try {
+    // Передаем username и adConfig в функцию поиска
+    const adData = await getUserFromAD(username, adConfig);
 
-  if (remoteUser && typeof remoteUser === 'string' && authHeader) {
-    const session = await getUserSession(event);
-    const base64Credentials = authHeader.substring(6);
-    const credentials = Buffer.from(base64Credentials, 'base64').toString(
-      'utf-8'
-    );
-    console.log('credentials=== ',credentials);
-
-    if (remoteUser.includes('@')) {
-      const parts = remoteUser.split('@');
-
-      event.context.user.user_ = parts[0]; //
-      event.context.user.domain = parts[1]; //
-    } else {
-      // На случай, если Nginx передал только логин без домена
-      event.context.user.user_ = remoteUser;
-      event.context.user.domain = 'corp.avtodor-eng.ru'; // Дефолтный домен компании
+    if (!adData) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'User not found in AD',
+      });
     }
-    event.context.user.auth_ = true;
-    event.context.dateTime = getDateTime();
+
+    // Записываем данные в контекст сервера
+    event.context.user = {
+      username: username,
+      name: adData.cn,
+      department: adData.department,
+      groups: Array.isArray(adData.memberOf)
+        ? adData.memberOf
+        : [adData.memberOf].filter(Boolean),
+      email: adData.mail || xUser,
+    };
+  } catch (error) {
+    console.error('AD Fetch Error:', error);
   }
-  // 2. Если X-Remote-User пуст, достаем имя из встроенного фиктивного заголовка Nginx!
-  else if (authHeader && authHeader.startsWith('Basic ')) {
-    console.log('Basic ', authHeader);
-    try {
-      // Декодируем строку "emFraGFyb3ZfYXY6Ym9ndXNfYXV0aF9nc3NfcGFzc3dk"
-      const base64Credentials = authHeader.substring(6);
-      const credentials = Buffer.from(base64Credentials, 'base64').toString(
-        'utf-8'
-      );
-
-      // Разделяем по двоеточию логин и фейковый пароль (login:bogus_auth_gss_passwd)
-      const [user_, password] = credentials.split(':');
-
-      if (user_ && password === 'bogus_auth_gss_passwd') {
-        event.context.user.user_ = user_;
-        event.context.user.auth_ = true;
-      }
-    } catch (err) {
-      console.error('Ошибка декодирования заголовка Kerberos:', err);
-    }
-  }
-
-  // Вывод в консоль для финальной проверки разработчиком
-  console.log('РЕЗУЛЬТАТ SSO В NUXT ===>', event.context.user);
 });

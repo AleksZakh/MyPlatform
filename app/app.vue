@@ -20,8 +20,8 @@ const userStore = useState<{ user: { id: number; name: string } } | null>(
 );
 
 // Запрашиваем роли на сервере при SSR и на клиенте при гидратации
-const { data } = await useFetch('/api/auth/me');
-if (data.value) {
-  userStore.value = data.value;
-}
+// const { data } = await useFetch('/api/auth/me');
+// if (data.value) {
+//   userStore.value = data.value;
+// }
 </script>
