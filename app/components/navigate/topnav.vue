@@ -30,6 +30,7 @@
       >
         <span class="font-semibold">{{ shortName }}</span>
         <span class="text-xs">{{ userDep }}</span>
+        <pre>{{ user ? user : 'Данные сессии еще загружаются или отсутствуют...' }}</pre>
       </div>
       <!-- <a @click="logout" class="flex items-center px-2 transition-colors hover:text-red-500" href="#">
                 <Icon name="line-md:logout" /> 
@@ -59,7 +60,16 @@ const userDep = ref('');
 // console.log('cookie data ===> ', data);
 // const { data: user, error } = await useFetch('/api/auth/me');
 const { user, clear } = useUserSession();
-console.log('user === ', user.value);
+
+onMounted(() => {
+  console.log('Данные пользователя на клиенте === ', user.value)
+})
+
+watch(user, (newUser) => {
+  if (newUser) {
+    console.log('Сессия успешно считана и обновилась:', newUser)
+  }
+}, { immediate: true }) // immediate проверит значение сразу при старте
 
 
 
