@@ -89,7 +89,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // 3. Сессии нет. Проверяем заголовок от Nginx (доменный ПК)
-  const xUser = getHeader(event, 'x-user')
+  const xUser = getHeader(event, 'x-remote-user') || getHeader(event, 'remote-user');
 
   // ЛОГ 1: Проверяем, видит ли вообще Nuxt заголовок от Nginx
   console.log('--- БЭКЕНД: Входящий заголовок X-User ===', xUser)
