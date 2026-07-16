@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
 
   //  2. ИГНОРИРУЕМ ЗАПРОСЫ К СТРАНИЦАМ (SSR): Проверяем только реальное API данных
   // (Опционально, если авторизация нужна только на уровне /api/data/...)
-  if (!url.pathname.startsWith('/api/')) return;
+  // if (!url.pathname.startsWith('/api/')) return;
 
   // Отлавливаем только самый первый запрос к главной странице (или страницам SSR)
   // Игнорируем запросы к API, чтобы не засорять консоль
