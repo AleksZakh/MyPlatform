@@ -30,7 +30,7 @@
       >
         <span class="font-semibold">{{ shortName }}</span>
         <span class="text-xs">{{ userDep }}</span>
-        <pre>{{ user ? user : 'Данные сессии еще загружаются или отсутствуют...' }}</pre>
+        <pre>{{ adUser ? adUser : 'Данные сессии еще загружаются или отсутствуют...' }}</pre>
       </div>
       <!-- <a @click="logout" class="flex items-center px-2 transition-colors hover:text-red-500" href="#">
                 <Icon name="line-md:logout" /> 
@@ -50,7 +50,9 @@
 </template>
 
 <script setup lang="ts">
+import { storeToRefs } from 'pinia';
 import { useAuthStore, useIsLoadingStore } from '@/stores/auth.store';
+import { useUserStore } from '~/stores/user';
 
 const { data } = await useFetch('/api/auth/session');
 const loggedIn = data.value?.loggedIn || false;
@@ -60,12 +62,16 @@ const userDep = ref('');
 // console.log('cookie data ===> ', data);
 // const { data: user, error } = await useFetch('/api/auth/me');
 const { user, clear } = useUserSession();
+const userStore = useUserStore()
+const adUser = userStore.user
+
+// const { adUser, isAuthenticated } = storeToRefs(userStore)
 
 onMounted(() => {
-  console.log('Данные пользователя на клиенте === ', user.value)
+  console.log('Данные пользователя на клиенте === ', adUser)
 })
 
-watch(user, (newUser) => {
+watch(adUser, (newUser) => {
   if (newUser) {
     console.log('Сессия успешно считана и обновилась:', newUser)
   }
