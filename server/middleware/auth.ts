@@ -114,7 +114,7 @@ export default defineEventHandler(async (event) => {
   // 4. Запрашиваем данные из AD через нашу функцию на activedirectory2
   const adUser = await getUserFromAD(username, adConfig)
   // ЛОГ 2: Проверяем, вернула ли библиотека activedirectory2 данные из домена
-  console.log('--- БЭКЕНД: Данные из Active Directory ===', adData)
+  console.log('--- БЭКЕНД: Данные из Active Directory ===', adUser)
 
   let finalUser: any = null
 
