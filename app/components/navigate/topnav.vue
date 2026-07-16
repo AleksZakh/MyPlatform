@@ -25,12 +25,11 @@
     </div>
     <div class="flex ml-auto items-center gap-4">
       <div
-        v-if="shortName"
+        v-if="adUser"
         class="user-info flex flex-col justify-center items-end"
       >
         <span class="font-semibold">{{ shortName }}</span>
         <span class="text-xs">{{ userDep }}</span>
-        <pre>{{ adUser ? adUser : 'Данные сессии еще загружаются или отсутствуют...' }}</pre>
       </div>
       <!-- <a @click="logout" class="flex items-center px-2 transition-colors hover:text-red-500" href="#">
                 <Icon name="line-md:logout" /> 
@@ -62,28 +61,34 @@ const userDep = ref('');
 // console.log('cookie data ===> ', data);
 // const { data: user, error } = await useFetch('/api/auth/me');
 const { user, clear } = useUserSession();
-const userStore = useUserStore()
-const adUser = userStore.user
+const userStore = useUserStore();
+const { user: adUser } = storeToRefs(userStore);
 
 // const { adUser, isAuthenticated } = storeToRefs(userStore)
 
 onMounted(() => {
-  console.log('Данные пользователя на клиенте === ', adUser)
-})
+  console.log('Данные пользователя на клиенте === ', adUser);
+  // @ts-ignore
+  userDep.value = adUser.department || '';
+});
 
-watch(adUser, (newUser) => {
-  if (newUser) {
-    console.log('Сессия успешно считана и обновилась:', newUser)
-  }
-}, { immediate: true }) // immediate проверит значение сразу при старте
-
-
+watch(
+  adUser,
+  (newUser) => {
+    if (newUser) {
+      console.log('Сессия успешно считана и обновилась:', newUser);
+    }
+  },
+  { immediate: true }
+); // immediate проверит значение сразу при старте
 
 const shortName = computed(() => {
   // Проверяем наличие user и его свойств
+  // @ts-ignore
   if (!user.value || !user.value.name) return '';
 
   // Делаем первую букву фамилии заглавной для красоты
+  // @ts-ignore
   const parts = user.value.name.trim().split(/\s+/);
   const lastName =
     parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();

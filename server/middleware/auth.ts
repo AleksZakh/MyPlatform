@@ -6,7 +6,6 @@ interface ADConfig {
   username: string
   password: string
 }
-
 /**
  * Получает расширенные данные пользователя из Active Directory
  * @param sAMAccountName Логин пользователя (без домена)
@@ -43,6 +42,7 @@ function getUserFromAD(sAMAccountName: string, config: ADConfig): Promise<any> {
     }
 
     // 3. Выполняем поиск пользователя
+    // @ts-ignore
     ad.findUsers(searchOptions, (findErr, users) => {
       // Если произошла ошибка или пользователь не найден в домене
       if (findErr || !users || users.length === 0) {
@@ -60,11 +60,17 @@ function getUserFromAD(sAMAccountName: string, config: ADConfig): Promise<any> {
       console.log(`📦 Данные пользователя ${sAMAccountName} успешно загружены из AD.`)
 
       // Формируем чистый объект с данными для приложения
+      
       const userInfo = {
+        // @ts-ignore
         login: fullUserData.sAMAccountName,
+        // @ts-ignore
         name: fullUserData.cn || `${fullUserData.givenName} ${fullUserData.sn}`.trim(),
+        // @ts-ignore
         email: fullUserData.mail || null,
+        // @ts-ignore
         department: fullUserData.department || null,
+        // @ts-ignore
         title: fullUserData.title || null // Добавили должность, так как она есть в вашем списке attributes
       }
 
@@ -91,9 +97,6 @@ export default defineEventHandler(async (event) => {
   // 3. Сессии нет. Проверяем заголовок от Nginx (доменный ПК)
   const xUser = getHeader(event, 'x-remote-user') || getHeader(event, 'remote-user');
 
-  // ЛОГ 1: Проверяем, видит ли вообще Nuxt заголовок от Nginx
-  console.log('--- БЭКЕНД: Входящий заголовок X-User ===', xUser)
-
   if (!xUser) {
     // Нет ни сессии, ни заголовка — значит это недоменный ПК (гость)
     event.context.user = null
@@ -113,9 +116,6 @@ export default defineEventHandler(async (event) => {
 
   // 4. Запрашиваем данные из AD через нашу функцию на activedirectory2
   const adUser = await getUserFromAD(username, adConfig)
-  // ЛОГ 2: Проверяем, вернула ли библиотека activedirectory2 данные из домена
-  console.log('--- БЭКЕНД: Данные из Active Directory ===', adUser)
-
   let finalUser: any = null
 
   if (adUser) {
@@ -139,10 +139,6 @@ export default defineEventHandler(async (event) => {
     user: finalUser,
     loggedInAt: new Date().toISOString()
   })
-
   // Также дублируем в контекст текущего запроса
   event.context.user = finalUser
-   // ЛОГ 3: Проверяем, что объект сформирован
-  console.log('--- БЭКЕНД: Записываем пользователя в контекст ===', event.context.user)
-    
 })
