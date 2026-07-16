@@ -72,14 +72,26 @@ function getUserFromAD(sAMAccountName: string, config: ADConfig): Promise<any> {
     })
   })
 }
+
 export default defineEventHandler(async (event) => {
-  // Пропускаем роуты авторизации
+  // 1. Пропускаем эндпоинты авторизации (если они есть)
   if (event.path.startsWith('/login') || event.path.startsWith('/api/auth/login')) {
     return
   }
 
+  // 2. Проверяем, существует ли уже валидная сессия куки
+  const session = await getUserSession(event)
+  
+  if (session.user) {
+    // Сессия есть! Перекладываем данные в контекст запроса, чтобы они были доступны в приложении
+    event.context.user = session.user
+    return 
+  }
+
+  // 3. Сессии нет. Проверяем заголовок от Nginx (доменный ПК)
   const xUser = getHeader(event, 'x-user')
   if (!xUser) {
+    // Нет ни сессии, ни заголовка — значит это недоменный ПК (гость)
     event.context.user = null
     return
   }
@@ -88,35 +100,39 @@ export default defineEventHandler(async (event) => {
   if (!username) return
 
   const config = useRuntimeConfig(event)
-  const adConfig: ADConfig = {
+  const adConfig = {
     url: config.ad.url,
     baseDN: config.ad.baseDN,
     username: config.ad.username,
     password: config.ad.password,
   }
 
-  // Вызываем обновленную функцию
+  // 4. Запрашиваем данные из AD через нашу функцию на activedirectory2
   const adUser = await getUserFromAD(username, adConfig)
 
-  if (!adUser) {
-    // Сценарий FALLBACK: В AD данных нет, но Nginx пользователя пустил.
-    // Создаем сессию с минимальными данными.
-    const fallbackUser = { username: username }
-    
-    event.context.user = fallbackUser
-    
-    // Если вы используетеnuxt-auth-utils или сессии, можно вызвать запись сессии здесь:
-    // await setUserSession(event, { user: fallbackUser, loggedInAt: new Date().toISOString() })
-    return
+  let finalUser: any = null
+
+  if (adUser) {
+    // Данные успешно получены
+    finalUser = {
+      username: adUser.login,
+      name: adUser.name,
+      department: adUser.department,
+      email: adUser.email || xUser,
+      title: adUser.title
+    }
+  } else {
+    // Fallback: В AD произошел сбой, но Nginx пользователя пустил
+    finalUser = { username: username, fallback: true }
   }
 
-  // Сценарий УСПЕХ: Записываем в контекст Nuxt полностью обогащенный объект
-  event.context.user = {
-    username: adUser.login,
-    name: adUser.name,
-    department: adUser.department,
-    email: adUser.email || xUser,
-    title: adUser.title
-    // Если позже понадобятся группы, достаточно будет добавить 'memberOf' в attributes схемы поиска
-  }
+  // 5.Записываем данные в зашифрованную сессию nuxt-auth-utils
+  // и автоматически создаём защищенную Cookie у пользователя в браузере
+  await setUserSession(event, {
+    user: finalUser,
+    loggedInAt: new Date().toISOString()
+  })
+
+  // Также дублируем в контекст текущего запроса
+  event.context.user = finalUser
 })

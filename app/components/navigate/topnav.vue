@@ -49,6 +49,7 @@
 </template>
 
 <script setup lang="ts">
+import { useAuthStore, useIsLoadingStore } from '@/stores/auth.store';
 
 const { data } = await useFetch('/api/auth/session');
 const loggedIn = data.value?.loggedIn || false;
@@ -58,24 +59,9 @@ const userDep = ref('');
 // console.log('cookie data ===> ', data);
 // const { data: user, error } = await useFetch('/api/auth/me');
 const { user, clear } = useUserSession();
-import { useAuthStore, useIsLoadingStore } from '@/stores/auth.store';
-const authStore = useAuthStore();
-watch(
-  () => authStore.getMyName,
-  (newProfile, oldProfile) => {
-    if (newProfile) {
-      currentUser.value = authStore.getUserInfo.fName;
-      userEmail.value = authStore.getMyEmail;
-      userDep.value = authStore.getMyDep;
-    } else if (loggedIn && user.value) {
-      // console.log('cookie ===> ', user)
-      currentUser.value = user.value.name;
-      userEmail.value = user.value.email;
-      userDep.value = user.value.department;
-    }
-  },
-  { immediate: true }
-);
+console.log('user === ', user.value);
+
+
 
 const shortName = computed(() => {
   // Проверяем наличие user и его свойств
