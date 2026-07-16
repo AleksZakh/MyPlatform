@@ -41,6 +41,7 @@
     "vue-pdf-embed": "^2.1.5",
     "vue-router": "^5.0.4",
     "vuedraggable": "^4.1.0",
+    "winston": "^3.19.0",
     "ws": "^8.20.0",
     "zod": "^4.4.3"
   },
@@ -58,6 +59,7 @@
     "@types/bcrypt": "^6.0.0",
     "@types/crypto-js": "^4.2.2",
     "@types/node": "^25.9.1",
+    "@types/winston": "^2.4.4",
     "bcrypt": "^6.0.0",
     "concurrently": "^10.0.3",
     "cross-env": "^10.1.0",

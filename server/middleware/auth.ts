@@ -1,4 +1,5 @@
-import ActiveDirectory from 'activedirectory2'
+import ActiveDirectory from 'activedirectory2';
+import { logger } from '../utils/logger';
 
 interface ADConfig {
   url: string
@@ -99,6 +100,7 @@ export default defineEventHandler(async (event) => {
 
   if (!xUser) {
     // Нет ни сессии, ни заголовка — значит это недоменный ПК (гость)
+    logger.info('Входящий запрос без заголовка x-remote-user. Перенаправление на гостя.')
     event.context.user = null
     return
   }
@@ -115,11 +117,13 @@ export default defineEventHandler(async (event) => {
   }
 
   // 4. Запрашиваем данные из AD через нашу функцию на activedirectory2
-  const adUser = await getUserFromAD(username, adConfig)
+  logger.debug(`Попытка обогатить данные для пользователя: ${username}`);
+  const adUser = await getUserFromAD(username, adConfig);
   let finalUser: any = null
 
   if (adUser) {
     // Данные успешно получены
+    logger.info(`Пользователь ${username} успешно авторизован. Отдел: ${adUser.department}`);
     finalUser = {
       username: adUser.login,
       name: adUser.name,
