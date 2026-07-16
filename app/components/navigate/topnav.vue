@@ -67,16 +67,18 @@ const { user: adUser } = storeToRefs(userStore);
 // const { adUser, isAuthenticated } = storeToRefs(userStore)
 
 onMounted(() => {
-  console.log('Данные пользователя на клиенте === ', adUser);
+  // console.log('Данные пользователя на клиенте === ', adUser);
   // @ts-ignore
-  userDep.value = adUser.department || '';
+  // userDep.value = adUser.department || '';
 });
 
 watch(
   adUser,
   (newUser) => {
     if (newUser) {
-      console.log('Сессия успешно считана и обновилась:', newUser);
+      // console.log('Сессия успешно считана и обновилась:', newUser);
+      // @ts-ignore
+      userDep.value = newUser.department || '';
     }
   },
   { immediate: true }
