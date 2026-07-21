@@ -26,7 +26,7 @@
     <div class="flex ml-auto items-center gap-4">
       <div
         v-if="adUser"
-        class="user-info flex flex-col justify-center items-end"
+        class="user-info flex flex-col justify-center items-end mr-3"
       >
         <span class="font-semibold">{{ shortName }}</span>
         <span class="text-xs">{{ userDep }}</span>

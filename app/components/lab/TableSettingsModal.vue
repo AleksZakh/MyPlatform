@@ -42,6 +42,7 @@
                 <UButton
                   size="sm"
                   variant="outline"
+                  color="neutral"
                   @click="selectAllColumns"
                   class="text-sm"
                 >
@@ -50,6 +51,7 @@
                 <UButton
                   size="sm"
                   variant="outline"
+                  color="neutral"
                   @click="deselectAllColumns"
                   class="text-sm"
                 >
@@ -113,12 +115,14 @@
         />
         <UButton
           type="button"
-          variant="solid"
-          color="primary"
-          label="💾 Сохранить"
+          variant="outline"
+          color="neutral"
           @click="handleSave"
           :loading="saving"
-        />
+        >
+          <Icon name="streamline-freehand-color:floppy-disk" />
+          <span>Сохранить</span>
+        </UButton>
       </div>
     </template>
   </UModal>

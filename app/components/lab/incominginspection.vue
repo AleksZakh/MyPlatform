@@ -4,6 +4,9 @@
     class="w-full max-h-[82vh] min-h-[82vh] flex flex-col overflow-hidden mx-auto bg-white py-1 px-3 rounded-lg shadow-[0_0_10px_rgba(0,0,0,0.1)]"
   >
     <div class="flex flex-wrap gap-4 items-center justify-between py-1">
+      <div class="flex p-0  text-lg">
+        <UInput v-model="globalFilter" class=" min-w-80 text-lg" placeholder="фильтр..." />
+      </div>
       <div class="flex gap-2">
         <!-- Добавление новой записи -->
         <div>
@@ -210,6 +213,7 @@ const modalCreate = overlay.create(createModal);
 const modalView = overlay.create(viewModal);
 const rowSelectedId = ref<number | null>(null);
 const showSettingsModal = ref(false);
+const globalFilter = ref('');
 
 // Вычисляем видимые заголовки (на основе настроек)
 const visibleHeaders = computed(() => {
