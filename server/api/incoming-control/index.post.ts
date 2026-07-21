@@ -1,20 +1,9 @@
 import { PrismaClient } from '@prisma/client';
 import fs from 'node:fs';
 import path from 'node:path';
+import { folderNameGenerator } from '~~/server/utils/folderNameGenerator';
 
 const prisma = new PrismaClient();
-
-// Функция для генерации имени подкаталога: 2025-11-30_17-45
-function generateFolderName(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-
-  return `${year}-${month}-${day}_${hours}-${minutes}`;
-}
 
 export default defineEventHandler(async (event) => {
   try {
@@ -31,7 +20,7 @@ export default defineEventHandler(async (event) => {
     const baseUploadDir = '/var/www/uploads-storage/files';
 
     // Генерируем подкаталог (например: 2025-11-30_17-45)
-    const folderName = generateFolderName();
+    const folderName = folderNameGenerator();
     const targetDir = path.join(baseUploadDir, folderName);
 
     // Создаем директории, если их нет

@@ -1,23 +1,31 @@
 <!-- components/lab/RecordViewModal.vue -->
 <template>
   <UModal
-    :close="{ onClick: () => emit('close') }"
     class="custom-modal"
     :ui="{ content: 'sm:max-w-none w-max' }"
   >
     <template #header>
-      <div class="flex items-center gap-3">
-        <div class="text-2xl text-blue-500">
-          <Icon name="streamline-freehand-color:book-bookmark" size="28" />
+      <div class="flex items-center justify-between w-full">
+        <div class="flex items-center gap-3">
+          <div class="text-2xl text-blue-500">
+            <Icon name="streamline-freehand-color:book-bookmark" size="28" />
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+              Просмотр записи #{{ record?.index || '' }}
+            </h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+              Просмотр данных записи
+            </p>
+          </div>
         </div>
-        <div>
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-            Просмотр записи #{{ record?.index || '' }}
-          </h3>
-          <p class="text-sm text-gray-500 dark:text-gray-400">
-            Просмотр данных записи
-          </p>
-        </div>
+        <UButton
+            variant="ghost"
+            color="neutral"
+            icon="i-heroicons-x-mark-20-solid"
+            class="rounded-full hover:bg-gray-100 transition-colors"
+            @click="emit('close')"
+        />
       </div>
     </template>
     <template #body>
@@ -286,18 +294,27 @@
     <template v-if="showFileViewer">
       <UModal v-model:open="showFileViewer" :ui="{ content: 'sm:max-w-4xl w-full' }">
         <template #header>
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-              <Icon name="i-heroicons-document-text" class="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <div class="flex items-center justify-between w-full">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                <Icon name="i-heroicons-document-text" class="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                  {{ viewerFileName }}
+                </h3>
+                <p class="text-md text-gray-400 dark:text-gray-400">
+                  Просмотр файла
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                {{ viewerFileName }}
-              </h3>
-              <p class="text-md text-gray-400 dark:text-gray-400">
-                Просмотр файла
-              </p>
-            </div>
+            <UButton
+                variant="ghost"
+                color="neutral"
+                icon="i-heroicons-x-mark-20-solid"
+                class="rounded-full hover:bg-gray-100 transition-colors"
+                @click="emit('close')"
+            />
           </div>
         </template>
 

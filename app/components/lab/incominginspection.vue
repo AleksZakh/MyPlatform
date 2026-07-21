@@ -1,122 +1,59 @@
 <!-- Контент для первой вкладки -->
 <template>
-  <!-- 
-     class="max-w-[1440px] "
-    Родителю этого блока ОБЯЗАТЕЛЬНО задайте overflow-hidden и h-full (или max-h-screen) -->
   <div
     class="w-full max-h-[82vh] min-h-[80vh] flex flex-col overflow-hidden mx-auto bg-white p-3 rounded-lg shadow-[0_0_10px_rgba(0,0,0,0.1)]"
   >
     <div class="flex flex-wrap gap-4 items-center justify-between py-1">
-      <!-- ========================================================================================================================== -->
-      <!-- ========================================================================================================================== -->
-      <!-- Поиск -->
-      <div class="flex-1 min-w-50">
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="Поиск по всем полям..."
-          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
-      <!-- _____ фильтр ______ -->
-      <!-- Фильтр (ТЕПЕРЬ ЭТО КОМПОНЕНТ) -->
-      <div class="flex align-baseline relative p-1 rounded-md">
-        <UTooltip text="Фильтр записей" :kbds="['meta', 'Shift', 'F']">
-          <UButton
-            icon="streamline-freehand-color:filter"
-            color="neutral"
-            variant="outline"
-            :ui="{ leadingIcon: 'text-primary' }"
-            type="button"
-            class="flex bg-transparent hover:bg-gray-100 p-3"
-            @click.prevent.stop="toggleFilter"
-          />
-        </UTooltip>
-
-        <Transition name="fade-slide">
-          <FilterPanel
-            v-if="isFilterActive"
-            v-model="filters"
-            :reload-data="applyFilters"
-            @apply="applyFilters"
-            @reset="resetFilters"
-          />
-        </Transition>
-      </div>
-
-      <!-- Кнопка выбора столбцов -->
-      <div class="relative">
-        <UButton
-          @click.stop.prevent="columnSelectorButtonClick"
-          class="px-4 py-2 bg-white border text-black font-normal border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
-          title="Выбор отображаемых столбцов"
-        >
-          <Icon
-            :name="'streamline-freehand-color:form-validation-check-square-1'"
-            size="24"
-          />
-          Выбрать столбцы
-          <span>{{ showColumnSelector ? '▲' : '▼' }}</span>
-        </UButton>
-
-        <!-- Панель выбора столбцов -->
-        <div
-          v-if="showColumnSelector"
-          class="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-96 overflow-y-auto custom-scrollbar"
-        >
-          <div class="p-3 border-b bg-gray-50 font-medium">
-            Выберите столбцы для отображения
-          </div>
-          <div class="p-2">
-            <label
-              class="flex items-center gap-2 p-2 hover:bg-gray-50 cursor-pointer"
+      <div class="flex gap-2">
+        <!-- Добавление новой записи -->
+        <div>
+          <UTooltip text="Создать новую запись" :kbds="['Alt', 'Shift', 'N']">
+            <UButton
+              @click="open('create')"
+              class="px-4 py-2 bg-white border text-black font-normal border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
             >
-              <input
-                type="checkbox"
-                v-model="selectAll"
-                @change="toggleAllColumns"
-                class="w-4 h-4"
+              <Icon
+                :name="'streamline-freehand-color:edit-pen-write-paper'"
+                size="24"
               />
-              <span class="font-medium">Выбрать все</span>
-            </label>
-            <hr class="my-1" />
-            <label
-              v-for="header in headers"
-              :key="header"
-              class="flex items-center gap-2 p-2 hover:bg-gray-50 cursor-pointer"
-              @click.stop
-            >
-              <input
-                type="checkbox"
-                v-model="visibleColumns"
-                :value="header"
-                class="w-4 h-4"
-              />
-              <span>{{ getColumnLabel(header) }}</span>
-            </label>
-          </div>
+              Создать запись
+            </UButton>
+          </UTooltip>
         </div>
-      </div>
+        <div>
+          <UTooltip text="Экспорт записей" :kbds="['Alt', 'Shift', 'E']">
+            <UButton
+              @click="exportRecordsOpen"
+              class="px-4 py-2 bg-white border text-black font-normal border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+            >
+              <Icon
+                :name="'streamline-freehand-color:database-hand'"
+                size="24"
+              />
+              <Icon name="material-symbols:line-end-arrow-notch" />
+              <Icon name="vscode-icons:file-type-excel2" size="24"/>
+            </UButton>
+          </UTooltip>
+        </div>
 
-      <!-- _____ добавление новой записи _______-->
-      <div>
-        <UTooltip text="Создать новую запись" :kbds="['Alt', 'Shift', 'N']">
-          <UButton
-            @click="open('create')"
-            class="px-4 py-2 bg-white border text-black font-normal border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
-          >
-            <Icon
-              :name="'streamline-freehand-color:edit-pen-write-paper'"
-              size="24"
-            />
-            Создать запись
-          </UButton>
-        </UTooltip>
+        <!-- Кнопка настройки таблицы -->
+        <!-- <div>
+          <UTooltip text="Настроить таблицу" :kbds="['Ctrl', 'Shift', 'T']">
+            <UButton
+              @click="openTableSettings"
+              class="px-4 py-2 bg-white border text-black font-normal border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+            >
+              <Icon
+                :name="'streamline-freehand-color:table-settings'"
+                size="24"
+              />
+              Настроить таблицу
+            </UButton>
+          </UTooltip>
+        </div> -->
       </div>
-
-      <!-- ========================================================================================================================== -->
-      <!-- ========================================================================================================================== -->
     </div>
+
     <!-- Таблица данных -->
     <div v-if="loading" class="text-center py-12">
       <div
@@ -126,43 +63,37 @@
     </div>
 
     <div
-      v-else-if="filteredData.length === 0"
+      v-else-if="originalData.length === 0"
       class="text-center py-12 text-gray-500"
     >
-      <p>Нет данных, соответствующих критериям поиска</p>
+      <p>Нет данных</p>
     </div>
 
     <div
       v-else
-      class="overflow-x-auto custom-scrollbar shadow-md rounded-lg overflow-y-auto"
+      class="overflow-x-auto custom-scrollbar shadow-md rounded-lg overflow-y-auto flex-1 min-h-0"
       style="max-height: 70vh"
     >
-      <table class="min-w-full bg-white border border-gray-200 text-sm">
-        <thead class="bg-gray-100 sticky top-0">
-          <tr>
-            <th
-              v-for="header in visibleHeaders"
-              :key="header"
-              @click="sortBy(header)"
-              class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition select-none"
-              :class="{ 'bg-blue-50': sortKey === header }"
-            >
-              <div class="flex items-center gap-2">
-                {{ getColumnLabel(header) }}
-                <span v-if="sortKey === header" class="text-lg">
-                  {{ sortDirection === 'asc' ? '↑' : '↓' }}
-                </span>
-                <span v-else class="text-gray-300 text-md"
-                  ><Icon :name="'marketeq:up-down-arrow-2'" size="16"
-                /></span>
-              </div>
-            </th>
-          </tr>
-        </thead>
+    <table class="min-w-full bg-white border border-gray-200 text-sm">
+        <UContextMenu :items="itemHead" :ui="{content: 'w-50'}">
+          <thead class="bg-gray-100 sticky top-0">
+            <tr>
+              <th
+                v-for="header in visibleHeaders"
+                :key="header"
+                class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                <div class="flex items-center gap-2">
+                  {{ getColumnLabel(header) }}
+                </div>
+              </th>
+            </tr>
+          </thead>
+        </UContextMenu>
         <UContextMenu :items="items" :ui="{ content: 'w-48' }">
           <tbody class="divide-y divide-gray-200">
             <tr
-              v-for="(row, index) in filteredData"
+              v-for="(row, index) in originalData"
               :key="row.ID"
               class="hover:bg-gray-50 transition"
               :class="{
@@ -195,153 +126,133 @@
       </table>
     </div>
 
-    <!-- Пагинация -->
-    <div
-      v-if="filteredData.length > 0"
-      class="flex justify-between items-center mt-4"
+    <!-- Информация о записях и пагинация -->
+    <div 
+      v-if="originalData.length > 0" 
+      class="flex justify-between items-center mt-4 text-md data-info shrink-0 pt-3 border-t border-gray-200"
     >
-      <div class="text-lg text-gray-600 flex items-center gap-6">
-        <!-- Информация о записях -->
+      <div class=" text-gray-600 flex items-center gap-6 data-count-info">
         <div>
-          <span class="flex items-center gap-2">
-            <Icon :name="'streamline-freehand-color:database'" size="24" />
-            Всего записей в БД: <span>{{ totalCount }}</span>
+          <span class="flex items-center gap-1">
+            <Icon :name="'streamline-freehand-color:database'" size="20" />
+            Всего: <span>{{ totalCount }}</span>
           </span>
         </div>
         <div>
           <span class="flex items-center gap-1">
             <Icon
               :name="'streamline-freehand-color:app-window-user'"
-              size="24"
-            />Показано {{ startIndex }} - {{ endIndex }} из {{ totalCount }}
+              size="20"
+            />На экране: {{ originalData.length }}
           </span>
         </div>
-        <div>
-          <span
-            v-if="isFilterActive || hasActiveFilters"
-            class="text-blue-600 flex items-center gap-0.5"
-          >
-            <Icon
-              :name="'streamline-freehand-color:app-window-search-text'"
-              size="24"
-            />
-            Отфильтровано: <strong>{{ originalData.length }}</strong>
-          </span>
-        </div>
-        <div>
-          <UButton
-            v-if="hasActiveFilters"
-            @click="resetFilters"
-            icon="streamline-freehand-color:view-binocular"
-            color="info"
-            variant="outline"
-            :ui="{
-              leadingIcon: 'text-primary',
-            }"
-          >
-            <span v-if="hasActiveFilters"> Фильтр активен </span>
-          </UButton>
-        </div>
+        
       </div>
-      <div class="flex gap-2">
-        <button
-          @click="prevPage"
-          :disabled="currentPage === 1"
-          class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          ← Назад
-        </button>
-        <select
-          v-model="itemsPerPage"
-          class="px-2 py-1 border border-gray-300 rounded"
-        >
-          <option :value="10">10</option>
-          <option :value="25">25</option>
-          <option :value="50">50</option>
-          <option :value="100">100</option>
-        </select>
-        <span class="px-3 py-1">
-          Страница {{ currentPage }} из {{ totalPages }}
-        </span>
-        <button
-          @click="nextPage"
-          :disabled="currentPage === totalPages"
-          class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Вперед →
-        </button>
+      
+      <!-- 👇 ПАГИНАЦИЯ -->
+      <div class="pagination-info flex items-center gap-3 ">
+        <div>
+          <span class="flex items-center gap-1 text-gray-500">
+            Страница {{ currentPage }} из {{ totalPages }}
+          </span>
+        </div>
+        <UPagination
+          v-model:page="currentPage"
+          :total="totalCount"
+          :items-per-page="pageSize"
+          :sibling-count="1"
+          active-color="neutral"
+          active-variant="subtle"
+          size="sm"
+          show-edges
+          @update:page="onPageChange"
+        />
       </div>
     </div>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import sortData from '../../../utils/dataSort';
 import createModal from '~/components/lab/createModal.vue';
 import viewModal from '~/components/lab/viewModal.vue';
+import ExportRecordsModal from './ExportRecordsModal.vue';
+import TableSettingsModal from '~/components/lab/TableSettingsModal.vue';
 import type { ContextMenuItem } from '@nuxt/ui';
-import FilterPanel from '~/components/lab/FilterPanel.vue';
-import { onClickOutside } from '@vueuse/core';
 import { useRecordDelete } from '~/composables/useRecordDelete';
+import { useLabDataLoader } from '~/composables/useLabDataLoader';
+import { useTableSettings } from '~/composables/useTableSettings';
 
-// ======= СОСТОЯНИЯ ФИЛЬТРА =======
-const isFilterActive = ref(false);
-const panelRef = ref<HTMLElement | null>(null);
-//deleteRecord, deleteRecordSimple,
-const { deleteRecordWithRefresh, loading: deleteLoading } = useRecordDelete();
+// Используем композаблы
+const { 
+  loading, 
+  originalData, 
+  headers, 
+  totalCount, 
+  totalPages,
+  currentPage,
+  pageSize,
+  loadData, 
+  changePage,
+  reloadCurrentPage
+} = useLabDataLoader();
+
+const { tableSettings, getVisibleColumns, getAllAvailableColumns } = useTableSettings();
+const { deleteRecordWithRefresh } = useRecordDelete();
+
 const selectedRecord = ref<any>(null);
-// 👇 НОВЫЙ ОБЪЕКТ ФИЛЬТРОВ (соответствует полям БД)
-const filters = ref({
-  // Текстовые поля
-  plp: '',
-  objectName: '',
-  samplingActNumber: '',
-  samplingPlace: '',
-  personProvidedSample: '',
-  materialName: '',
-  qualityDocument: '',
-  manufacturer: '',
-  protocolNumber: '',
-  note: '',
-  // Даты
-  samplingDateFrom: '',
-  samplingDateTo: '',
-  materialReceiptDateFrom: '',
-  materialReceiptDateTo: '',
-  protocolDateFrom: '',
-  protocolDateTo: '',
-  // Выпадающий список
-  testResult: '',
-});
-
 const count = ref(0);
 const toast = useToast();
 const overlay = useOverlay();
+const modalExportRecords = overlay.create(ExportRecordsModal);
+const modalTableSettings = overlay.create(TableSettingsModal);
 const modalCreate = overlay.create(createModal);
 const modalView = overlay.create(viewModal);
 const rowSelectedId = ref<number | null>(null);
-const totalCount = ref(0); // Всего записей в БД
-const totalPages = ref(0); // Всего страниц
-const loadingToastId = ref<string | number | null>(null);
+const showSettingsModal = ref(false);
 
-const loading = ref(true);
-const originalData = ref<Record<string, string>[]>([]);
-const headers = ref<string[]>([]);
+// Вычисляем видимые заголовки (на основе настроек)
+const visibleHeaders = computed(() => {
+  const visibleColumns = getVisibleColumns();
+  return headers.value.filter(header => 
+    visibleColumns.includes(header)
+  );
+});
 
-// Состояние таблицы
-const searchQuery = ref('');
-const sortKey = ref('Дата отбора проб');
-const sortDirection = ref<'asc' | 'desc'>('desc');
-const currentPage = ref(1);
-const itemsPerPage = ref(25);
-const showColumnSelector = ref(false);
-const visibleColumns = ref<string[]>([]);
-const selectAll = ref(false);
-const isModalOpen = ref(false);
+// 👇 ОБРАБОТЧИК СМЕНЫ СТРАНИЦЫ
+const onPageChange = async (page: number) => {
+  console.log(`📄 Переход на страницу ${page}`);
+  await changePage(page);
+  // Сбрасываем выделение строки
+  rowSelectedId.value = null;
+  selectedRecord.value = null;
+};
 
-// Функция для выбора/снятия выбора строки
+// Открытие настроек таблицы
+const openTableSettings = () => {
+  showSettingsModal.value = true;
+};
+
+// Обработчик сохранения настроек
+const handleSettingsSave = (columns: string[]) => {
+  console.log('обновление настроек таблицы');
+  // Обновляем отображение
+  // Дополнительная логика при сохранении
+};
+
+// 👇 ОБНОВЛЕНИЕ ТАБЛИЦЫ (с сохранением текущей страницы)
+const handleUpdateTable = async () => {  
+  await reloadCurrentPage();
+  toast.add({
+    title: '✅ Таблица обновлена',
+    description: `Отображается ${getVisibleColumns().length} колонок (страница ${currentPage.value} из ${totalPages.value})`,
+    color: 'success',
+    icon: 'i-heroicons-check-circle',
+    duration: 3000,
+  });
+};
+
 const selectRow = (index: any): void => {
-  // Если кликнули на ту же строку - снимаем выделение
   if (rowSelectedId.value === index) {
     rowSelectedId.value = null;
     selectedRecord.value = null;
@@ -349,8 +260,20 @@ const selectRow = (index: any): void => {
     rowSelectedId.value = index;
     selectedRecord.value = index;
   }
-  console.log('selectedRecord === ', selectedRecord);
 };
+
+const itemHead: ContextMenuItem[][] =[
+  [
+    {
+      label: 'Настройка таблицы',
+      icon: 'streamline-freehand-color:content-browser-edit',
+      onClick: () => {
+        openTableSettings();
+        tableSettingsOpen();
+      }
+    },
+  ]
+]
 
 const items: ContextMenuItem[][] = [
   [
@@ -387,92 +310,46 @@ const items: ContextMenuItem[][] = [
   ],
 ];
 
-function handleContextMenu(row: any, index: any) {
-  selectedRecord.value = { ...row, index };
-}
-
-// ======= УДАЛЕНИЕ ЗАПИСИ =======
 async function handleDelete(record: any) {
-  console.log('Удаление записи:', record);
   if (!record) return;
-
-  // Получаем ID записи (если есть)
   const id = record.ID || record.index;
-
-  // Получаем название для отображения
   const recordName =
     record['Наименование объект'] || record.objectName || `запись #${id}`;
 
-  // Вызываем удаление с обновлением таблицы
   await deleteRecordWithRefresh(id, recordName, async () => {
-    // Callback после успешного удаления
-    await loadData(); // Обновляем данные
-    selectedRecord.value = null; // Сбрасываем выделение
+    // После удаления перезагружаем текущую страницу
+    await reloadCurrentPage();
+    selectedRecord.value = null;
   });
 }
 
-// ======= МЕТОДЫ ФИЛЬТРА =======
-function applyFilters(appliedFilters: any) {
-  console.log('✅ Применены фильтры:', appliedFilters);
-
-  // Подсчитываем количество активных фильтров
-  const activeFiltersCount = Object.values(appliedFilters).filter(
-    (v) => v !== '' && v !== null && v !== undefined
-  ).length;
-
-  // Показываем toast с информацией
-  toast.add({
-    title: '🔍 Фильтры применены',
-    description: `Найдено ${originalData.value.length} записей из ${totalCount.value} (активных фильтров: ${activeFiltersCount})`,
-    color: 'success',
-    icon: 'i-heroicons-check-circle',
-    duration: 3000,
-  });
-
-  currentPage.value = 1;
-  loadData();
-  isFilterActive.value = false;
-}
-
-// ======= СБРОС ФИЛЬТРОВ =======
-function resetFilters() {
-  console.log('🔄 Фильтры сброшены');
-
-  toast.add({
-    title: '🔄 Фильтры сброшены',
-    description: `Показаны все ${totalCount.value} записей`,
-    color: 'info',
-    icon: 'i-heroicons-arrow-path',
-    duration: 3000,
-  });
-
-  currentPage.value = 1;
-  loadData();
-  isFilterActive.value = false;
-}
-function toggleFilter() {
-  isFilterActive.value = !isFilterActive.value;
-}
-
-// Функция для проверки, выбрана ли строка
 const isRowSelected = (index: any): boolean => {
   return rowSelectedId.value === index;
 };
 
-// Функция, которая будет вызываться кнопкой "Создать" или двойным кликом по таблице
-// Функция для двойного клика
 function handleDblClick(index: any, row: any, action: string = 'view') {
-  // Сохраняем строку перед открытием
   selectedRecord.value = {
-    ...row, // копируем все поля строки
-    index, // добавляем индекс строки
-    action: action, // добавляем признак
+    ...row,
+    index,
+    action: action,
   };
 
-  // Небольшая задержка для гарантии
   setTimeout(() => {
     open(action);
   }, 50);
+}
+
+async function exportRecordsOpen() {
+  modalExportRecords.open({})
+}
+
+async function tableSettingsOpen() {
+  console.log('настройка таблицы');
+  modalTableSettings.open({
+    onSave: handleSettingsSave,
+    reloadData: reloadCurrentPage,
+    visibleHeaders: visibleHeaders,
+  });
 }
 
 async function open(action: string) {
@@ -482,29 +359,19 @@ async function open(action: string) {
   };
   selectedRecord.value = record;
 
-  console.log('action =====> ', action);
   if (action == 'view') {
-    const instance = modalView.open({
+    modalView.open({
       record: record,
     });
   } else if (action == 'create' || action == 'edit') {
-    const instance = modalCreate.open({
+    modalCreate.open({
       count: count.value,
       selectedRecord: record,
-      reloadData: loadData,
+      reloadData: reloadCurrentPage,
     });
   }
 }
 
-// 3. Следим за кликами вне этого элемента
-onClickOutside(panelRef, () => {
-  // Закрываем фильтр при клике вне панели, если он активен
-  // if (isFilterActive.value) {
-  //   isFilterActive.value = false
-  // }
-});
-
-// Человеко-читаемые названия столбцов
 const columnLabels: Record<string, string> = {
   ПЛП: 'ПЛП',
   'Наименование объект': 'Объект',
@@ -522,174 +389,11 @@ const columnLabels: Record<string, string> = {
   Примечание: 'Примечание',
 };
 
-// Загрузка данных
 onMounted(async () => {
-  await loadData();
-});
-
-// const rowDblClick = () => {
-//   console.log('Двойной клик по строке');
-// }
-
-// Закрытие селектора при клике вне
-onMounted(() => {
-  const handleClickOutside = (event: MouseEvent) => {
-    const target = event.target as HTMLElement;
-    const selectorButton = document.querySelector('.relative');
-    if (selectorButton && !selectorButton.contains(target)) {
-      // console.log('Клик по документу:');
-      showColumnSelector.value = false;
-    }
-  };
-  document.addEventListener('click', handleClickOutside);
-});
-
-function columnSelectorButtonClick() {
-  // изменение статуса отображения окна выбора столбцов
-  showColumnSelector.value = !showColumnSelector.value;
-}
-
-// ======= ФУНКЦИЯ ЗАГРУЗКИ  =======
-async function loadData() {
-  const toastId = toast.add({
-    title: '⏳ Загрузка данных...',
-    description: 'Пожалуйста, подождите',
-    color: 'info',
-    icon: 'i-heroicons-arrow-path',
-    duration: 0, // Не закрывается автоматически
-  });
-
-  loading.value = true;
-  loadingToastId.value = toastId.id;
-
-  try {
-    const params = new URLSearchParams({
-      page: String(currentPage.value),
-      pageSize: String(itemsPerPage.value),
-      sortBy: sortKey.value,
-      sortOrder: sortDirection.value,
-    });
-
-    // Добавляем фильтры
-    const f = filters.value;
-    if (f.plp) params.append('plp', f.plp);
-    if (f.objectName) params.append('objectName', f.objectName);
-    if (f.samplingActNumber)
-      params.append('samplingActNumber', f.samplingActNumber);
-    if (f.samplingPlace) params.append('samplingPlace', f.samplingPlace);
-    if (f.personProvidedSample)
-      params.append('personProvidedSample', f.personProvidedSample);
-    if (f.materialName) params.append('materialName', f.materialName);
-    if (f.qualityDocument) params.append('qualityDocument', f.qualityDocument);
-    if (f.manufacturer) params.append('manufacturer', f.manufacturer);
-    if (f.protocolNumber) params.append('protocolNumber', f.protocolNumber);
-    if (f.note) params.append('note', f.note);
-    if (f.samplingDateFrom)
-      params.append('samplingDateFrom', f.samplingDateFrom);
-    if (f.samplingDateTo) params.append('samplingDateTo', f.samplingDateTo);
-    if (f.materialReceiptDateFrom)
-      params.append('materialReceiptDateFrom', f.materialReceiptDateFrom);
-    if (f.materialReceiptDateTo)
-      params.append('materialReceiptDateTo', f.materialReceiptDateTo);
-    if (f.protocolDateFrom)
-      params.append('protocolDateFrom', f.protocolDateFrom);
-    if (f.protocolDateTo) params.append('protocolDateTo', f.protocolDateTo);
-    if (f.testResult) params.append('testResult', f.testResult);
-
-    const response = await fetch(`/api/incoming-control/?${params}`);
-    const result = await response.json();
-
-    if (result.success) {
-      // Сохраняем данные
-      toast.remove(loadingToastId.value);
-      originalData.value = result.data;
-      // console.log('✅ Данные успешно загружены:', originalData.value)
-
-      if (originalData.value.length > 0 && originalData.value[0]) {
-        headers.value = Object.keys(originalData.value[0]);
-        if (visibleColumns.value.length === 0) {
-          visibleColumns.value = [...headers.value];
-        }
-      } else {
-        headers.value = [];
-        visibleColumns.value = [];
-      }
-
-      if (result.pagination) {
-        totalCount.value = result.pagination.totalCount;
-        totalPages.value = result.pagination.totalPages;
-      }
-
-      // ✅ ПОКАЗЫВАЕМ TOAST ПРИ ЗАГРУЗКЕ (если есть фильтры)
-      if (hasActiveFilters.value) {
-        const activeFiltersCount = Object.values(filters.value).filter(
-          (v) => v !== '' && v !== null && v !== undefined
-        ).length;
-        toast.add({
-          title: '📊 Результаты фильтрации',
-          description: `Найдено ${originalData.value.length} записей из ${totalCount.value} (фильтров: ${activeFiltersCount})`,
-          color: 'success',
-          icon: 'i-heroicons-funnel',
-          duration: 5000,
-        });
-      }
-
-      console.log(
-        `✅ Загружено ${originalData.value.length} записей из ${totalCount.value}`
-      );
-    } else {
-      console.error('❌ Ошибка загрузки:', result.error);
-      toast.remove(loadingToastId.value);
-
-      toast.add({
-        title: '❌ Ошибка загрузки',
-        description: result.error || 'Не удалось загрузить данные',
-        color: 'error',
-        icon: 'i-heroicons-exclamation-triangle',
-        duration: 5000,
-      });
-    }
-  } catch (error) {
-    console.error('❌ Ошибка:', error);
-
-    toast.add({
-      title: '❌ Ошибка',
-      description:
-        error instanceof Error ? error.message : 'Неизвестная ошибка',
-      color: 'error',
-      icon: 'i-heroicons-exclamation-triangle',
-      duration: 5000,
-    });
-  } finally {
-    loading.value = false;
-  }
-}
-
-const hasActiveFilters = computed(() => {
-  const f = filters.value;
-  return !!(
-    f.plp ||
-    f.objectName ||
-    f.samplingActNumber ||
-    f.samplingPlace ||
-    f.personProvidedSample ||
-    f.materialName ||
-    f.qualityDocument ||
-    f.manufacturer ||
-    f.protocolNumber ||
-    f.note ||
-    f.samplingDateFrom ||
-    f.samplingDateTo ||
-    f.materialReceiptDateFrom ||
-    f.materialReceiptDateTo ||
-    f.protocolDateFrom ||
-    f.protocolDateTo ||
-    f.testResult
-  );
+  await loadData(1, 25);
 });
 
 function getColumnLabel(header: string): string {
-  // console.log('getColumnLabel:', header);
   return columnLabels[header] || header;
 }
 
@@ -699,159 +403,23 @@ function formatCellValue(
   contekst = ''
 ): string {
   if (!value) return '—';
-
-  // Обрезаем длинные значения
   if (value.length > 15 && contekst != 'title') {
-    return value.substring(0, 10) + '…';
+    return value.substring(0, 25) + '…';
   }
   return value;
 }
-
-// Фильтрация данных
-const filteredData = computed(() => {
-  if (!searchQuery.value.trim()) {
-    return [...originalData.value];
-  }
-
-  const query = searchQuery.value.toLowerCase();
-
-  return originalData.value.filter((row) => {
-    return Object.values(row).some((value) => {
-      // 1. Проверяем, что значение не null и не undefined
-      if (value === null || value === undefined) return false;
-      
-      // 2. Приводим значение к строке и проверяем вхождение
-      return String(value).toLowerCase().includes(query);
-    });
-  });
-  //------------
-});
-
-// Сортировка
-const sortedData = computed(() => {
-  return sortData(filteredData.value, {
-    key: sortKey.value,
-    direction: sortDirection.value,
-  });
-});
-
-// Видимые столбцы
-const visibleHeaders = computed(() => {
-  return headers.value.filter((h) => visibleColumns.value.includes(h));
-});
-
-// Пагинация
-// ======= ЗАМЕНИТЬ на это =======
-// Теперь данные уже готовы к показу
-const displayData = computed(() => originalData.value);
-
-// Информация для пагинации
-const startIndex = computed(
-  () => (currentPage.value - 1) * itemsPerPage.value + 1
-);
-const endIndex = computed(() =>
-  Math.min(startIndex.value + originalData.value.length - 1, totalCount.value)
-);
-
-function sortBy(header: string) {
-  if (sortKey.value === header) {
-    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc';
-  } else {
-    sortKey.value = header;
-    sortDirection.value = 'asc';
-  }
-  loadData(); // 👈 Перезагружаем с новой сортировкой
-}
-
-// ======= МЕТОДЫ ПАГИНАЦИИ (минимальные изменения) =======
-function prevPage() {
-  if (currentPage.value > 1) {
-    currentPage.value--;
-    loadData(); // 👈 Загружаем новую страницу
-  }
-}
-
-function nextPage() {
-  if (currentPage.value < totalPages.value) {
-    currentPage.value++;
-    loadData(); // 👈 Загружаем новую страницу
-  }
-}
-
-watch(itemsPerPage, (newSize, oldSize) => {
-  // Проверяем, что значение действительно изменилось
-  if (newSize !== oldSize && oldSize !== undefined) {
-    currentPage.value = 1;
-    loadData();
-  }
-});
-
-//
-function toggleAllColumns() {
-  // console.log('колонки================')
-  if (selectAll.value) {
-    visibleColumns.value = [...headers.value];
-  } else {
-    visibleColumns.value = [];
-  }
-}
-
-// Следим за изменениями visibleColumns для обновления selectAll
-watch(
-  visibleColumns,
-  (newVal) => {
-    // console.log('visibleColumns изменились:', newVal);
-    selectAll.value = newVal.length === headers.value.length;
-  },
-  { deep: true }
-);
-
-// Сброс страницы при изменении фильтров
-watch([searchQuery, sortKey, sortDirection, itemsPerPage], () => {
-  currentPage.value = 1;
-});
 </script>
 
 <style scoped>
-.panel-wrapper {
-  position: absolute;
-  z-index: 20;
-  right: -30px;
-  width: max-content;
-  background-color: white;
-  border-radius: 15px;
-  /* border: 1px solid lightgray; */
-  top: 38px;
-  box-shadow: 0px 2px 10px 5px rgba(163, 163, 163, 0.31);
-  /* Добавили мягкую тень для красоты */
+.data-info {
+  margin-top: auto; /* Прижимаем к низу */
+  flex-shrink: 0; /* Запрещаем сжатие */
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
 }
 
-/* ─── СТИЛИ АНИМАЦИИ ВЫПАДЕНИЯ (Vue Transition) ─── */
-
-/* Классы active задают скорость и тип анимации при появлении и исчезновении */
-.fade-slide-enter-active {
-  transition: all 1s cubic-bezier(0.16, 1, 0.3, 1); /* Эффект "плавного торможения" (ease-out) */
-}
-
-.fade-slide-leave-active {
-  transition: all 0.3s cubic-bezier(0.7, 0, 0.84, 0); /* Более быстрое исчезновение (ease-in) */
-}
-
-/* Стартовое состояние при появлении и конечное состояние при скрытии */
-.fade-slide-enter-from,
-.fade-slide-leave-to {
-  opacity: 0;
-  transform: translateY(
-    -15px
-  ); /* Панель плавно вылетает сверху вниз на 8 пикселей */
-}
-
-.row_selected {
-  background: #000;
-}
-.sticky {
-  position: sticky;
-  top: 0;
-  z-index: 10;
+.custom-scrollbar {
+  flex: 1 1 auto; /* Растягиваем */
+  min-height: 0; /* Важно для flex */
 }
 </style>

@@ -95,6 +95,7 @@ declare global {
   const ensureSafeBasename: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/path-safety').ensureSafeBasename
   const eventHandler: typeof import('../../node_modules/h3').eventHandler
   const fetchWithEvent: typeof import('../../node_modules/h3').fetchWithEvent
+  const folderNameGenerator: typeof import('../../server/utils/folderNameGenerator').folderNameGenerator
   const fromNodeMiddleware: typeof import('../../node_modules/h3').fromNodeMiddleware
   const fromPlainHandler: typeof import('../../node_modules/h3').fromPlainHandler
   const fromWebHandler: typeof import('../../node_modules/h3').fromWebHandler
@@ -421,6 +422,7 @@ export { hashPassword, verifyPassword, passwordNeedsReHash } from '/home/local_a
 export { sessionHooks, getUserSession, setUserSession, replaceUserSession, clearUserSession, requireUserSession } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-auth-utils/dist/runtime/server/utils/session';
 export { getUserGroups } from '/home/local_adm/Projects/MyPlatform/server/utils/ad';
 export { adCache } from '/home/local_adm/Projects/MyPlatform/server/utils/adCache';
+export { folderNameGenerator } from '/home/local_adm/Projects/MyPlatform/server/utils/folderNameGenerator';
 export { logger } from '/home/local_adm/Projects/MyPlatform/server/utils/logger';
 export { normalizeRelative, isSafeBasename, ensureSafeBasename, containsPathTraversal, resolveAndEnsureInside } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-file-storage/dist/runtime/server/utils/path-safety';
 export { storeFileLocally, getFileLocally, getFilesLocally, deleteFile, parseDataUrl, retrieveFileLocally } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-file-storage/dist/runtime/server/utils/storage';

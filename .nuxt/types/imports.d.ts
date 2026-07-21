@@ -110,6 +110,7 @@ declare global {
   const useADUsers: typeof import('../../app/composables/useADUsers').useADUsers
   const useAnnouncer: typeof import('../../node_modules/nuxt/dist/app/composables/announcer').useAnnouncer
   const useAppConfig: typeof import('../../node_modules/nuxt/dist/app/config').useAppConfig
+  const useAppToasts: typeof import('../../app/composables/useAppToasts').useAppToasts
   const useAsyncData: typeof import('../../node_modules/nuxt/dist/app/composables/asyncData').useAsyncData
   const useAttrs: typeof import('vue').useAttrs
   const useAuth: typeof import('../../app/composables/useAuth').useAuth
@@ -133,6 +134,7 @@ declare global {
   const useIncomingControl: typeof import('../../app/composables/useIncomingControl').useIncomingControl
   const useIsLoadingStore: typeof import('../../app/stores/auth.store').useIsLoadingStore
   const useKbd: typeof import('../../node_modules/@nuxt/ui/dist/runtime/composables/useKbd').useKbd
+  const useLabDataLoader: typeof import('../../app/composables/useLabDataLoader').useLabDataLoader
   const useLazyAsyncData: typeof import('../../node_modules/nuxt/dist/app/composables/asyncData').useLazyAsyncData
   const useLazyFetch: typeof import('../../node_modules/nuxt/dist/app/composables/fetch').useLazyFetch
   const useLink: typeof import('vue-router').useLink
@@ -209,6 +211,7 @@ declare global {
   const useShadowRoot: typeof import('vue').useShadowRoot
   const useSlots: typeof import('vue').useSlots
   const useState: typeof import('../../node_modules/nuxt/dist/app/composables/state').useState
+  const useTableSettings: typeof import('../../app/composables/useTableSettings').useTableSettings
   const useTemplateRef: typeof import('vue').useTemplateRef
   const useToast: typeof import('../../node_modules/@nuxt/ui/dist/runtime/composables/useToast').useToast
   const useToastStore: typeof import('../../app/stores/toast.store').useToastStore
@@ -358,6 +361,7 @@ declare module 'vue' {
     readonly useADUsers: UnwrapRef<typeof import('../../app/composables/useADUsers')['useADUsers']>
     readonly useAnnouncer: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/announcer')['useAnnouncer']>
     readonly useAppConfig: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/config')['useAppConfig']>
+    readonly useAppToasts: UnwrapRef<typeof import('../../app/composables/useAppToasts')['useAppToasts']>
     readonly useAsyncData: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/asyncData')['useAsyncData']>
     readonly useAttrs: UnwrapRef<typeof import('vue')['useAttrs']>
     readonly useAuth: UnwrapRef<typeof import('../../app/composables/useAuth')['useAuth']>
@@ -381,6 +385,7 @@ declare module 'vue' {
     readonly useIncomingControl: UnwrapRef<typeof import('../../app/composables/useIncomingControl')['useIncomingControl']>
     readonly useIsLoadingStore: UnwrapRef<typeof import('../../app/stores/auth.store')['useIsLoadingStore']>
     readonly useKbd: UnwrapRef<typeof import('../../node_modules/@nuxt/ui/dist/runtime/composables/useKbd')['useKbd']>
+    readonly useLabDataLoader: UnwrapRef<typeof import('../../app/composables/useLabDataLoader')['useLabDataLoader']>
     readonly useLazyAsyncData: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/asyncData')['useLazyAsyncData']>
     readonly useLazyFetch: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/fetch')['useLazyFetch']>
     readonly useLink: UnwrapRef<typeof import('vue-router')['useLink']>
@@ -457,6 +462,7 @@ declare module 'vue' {
     readonly useShadowRoot: UnwrapRef<typeof import('vue')['useShadowRoot']>
     readonly useSlots: UnwrapRef<typeof import('vue')['useSlots']>
     readonly useState: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/state')['useState']>
+    readonly useTableSettings: UnwrapRef<typeof import('../../app/composables/useTableSettings')['useTableSettings']>
     readonly useTemplateRef: UnwrapRef<typeof import('vue')['useTemplateRef']>
     readonly useToast: UnwrapRef<typeof import('../../node_modules/@nuxt/ui/dist/runtime/composables/useToast')['useToast']>
     readonly useToastStore: UnwrapRef<typeof import('../../app/stores/toast.store')['useToastStore']>
