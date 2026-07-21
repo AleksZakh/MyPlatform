@@ -38,7 +38,7 @@
         <div
           class="flex items-center px-2 transition-colors hover:text-red-500"
         >
-          <button v-if="loggedIn" @click="logout">
+          <button v-if="loggedIn && !authType" @click="logout">
             <Icon name="line-md:logout" />
           </button>
           <NuxtLink v-else to="/login"><Icon name="line-md:login" /></NuxtLink>
@@ -58,6 +58,7 @@ const loggedIn = data.value?.loggedIn || false;
 const currentUser = ref('');
 const userEmail = ref('');
 const userDep = ref('');
+const authType =ref('');
 // console.log('cookie data ===> ', data);
 // const { data: user, error } = await useFetch('/api/auth/me');
 const { user, clear } = useUserSession();
@@ -79,6 +80,8 @@ watch(
       console.log('Сессия успешно считана и обновилась:', newUser);
       // @ts-ignore
       userDep.value = newUser.department || '';
+      // @ts-ignore
+      authType.value = newUser.authType || null;
     }
   },
   { immediate: true }
