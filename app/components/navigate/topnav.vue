@@ -77,7 +77,7 @@ watch(
   adUser,
   (newUser) => {
     if (newUser) {
-      console.log('Сессия успешно считана и обновилась:', newUser);
+      // console.log('Сессия успешно считана и обновилась:', newUser);
       // @ts-ignore
       userDep.value = newUser.department || '';
       // @ts-ignore
