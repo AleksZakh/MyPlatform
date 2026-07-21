@@ -36,9 +36,10 @@
             </a> -->
       <AuthState v-slot="{ loggedIn, clear }">
         <div
+          v-if="!authType"
           class="flex items-center px-2 transition-colors hover:text-red-500"
         >
-          <button v-if="loggedIn && !authType" @click="logout">
+          <button v-if="loggedIn" @click="logout">
             <Icon name="line-md:logout" />
           </button>
           <NuxtLink v-else to="/login"><Icon name="line-md:login" /></NuxtLink>
