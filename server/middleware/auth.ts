@@ -72,7 +72,8 @@ function getUserFromAD(sAMAccountName: string, config: ADConfig): Promise<any> {
         // @ts-ignore
         department: fullUserData.department || null,
         // @ts-ignore
-        title: fullUserData.title || null // Добавили должность, так как она есть в вашем списке attributes
+        title: fullUserData.title || null, // Добавили должность, так как она есть в вашем списке attributes
+        authType: 'Basic'
       }
 
       resolve(userInfo)
@@ -129,7 +130,8 @@ export default defineEventHandler(async (event) => {
       name: adUser.name,
       department: adUser.department,
       email: adUser.email || xUser,
-      title: adUser.title
+      title: adUser.title,
+      authType: adUser.authType
     }
     
   } else {
