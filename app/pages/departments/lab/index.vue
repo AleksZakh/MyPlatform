@@ -4,10 +4,13 @@
       <UTabs
         v-model="activeTab"
         :items="tabs"
+        size="lg"
+        color="custom"
         class="w-full tabs-area"
         :ui="{
-          trigger: 'border border-gray-300 rounded-md',
-          list: 'p-1 gap-4',
+          trigger: 'border border-gray-200 rounded-md',
+          list: 'p-1 gap-4 ',
+          
         }"
       >
         <template #incomingInspection>

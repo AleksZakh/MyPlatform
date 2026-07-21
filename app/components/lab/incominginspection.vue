@@ -1,7 +1,7 @@
 <!-- Контент для первой вкладки -->
 <template>
   <div
-    class="w-full max-h-[82vh] min-h-[80vh] flex flex-col overflow-hidden mx-auto bg-white p-3 rounded-lg shadow-[0_0_10px_rgba(0,0,0,0.1)]"
+    class="w-full max-h-[82vh] min-h-[82vh] flex flex-col overflow-hidden mx-auto bg-white py-1 px-3 rounded-lg shadow-[0_0_10px_rgba(0,0,0,0.1)]"
   >
     <div class="flex flex-wrap gap-4 items-center justify-between py-1">
       <div class="flex gap-2">
@@ -221,7 +221,7 @@ const visibleHeaders = computed(() => {
 
 // 👇 ОБРАБОТЧИК СМЕНЫ СТРАНИЦЫ
 const onPageChange = async (page: number) => {
-  console.log(`📄 Переход на страницу ${page}`);
+  // console.log(`📄 Переход на страницу ${page}`);
   await changePage(page);
   // Сбрасываем выделение строки
   rowSelectedId.value = null;

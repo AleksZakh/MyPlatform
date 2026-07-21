@@ -17,6 +17,7 @@ export const collections = {
   'lucide': () => require('@iconify-json/lucide/icons.json'),
   'marketeq': () => require('@iconify-json/marketeq/icons.json'),
   'material-symbols': () => require('@iconify-json/material-symbols/icons.json'),
+  'ph': () => require('@iconify-json/ph/icons.json'),
   'simple-icons': () => require('@iconify-json/simple-icons/icons.json'),
   'solar': () => require('@iconify-json/solar/icons.json'),
   'streamline-freehand-color': () => require('@iconify-json/streamline-freehand-color/icons.json'),
