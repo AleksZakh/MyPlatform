@@ -282,8 +282,8 @@
         />
         <UButton
           type="button"
-          variant="solid"
-          color="primary"
+          color="neutral"
+          variant="outline"
           label="✏️ Редактировать"
           @click="handleEdit"
         />
@@ -342,7 +342,8 @@
                   <p class="text-gray-400 mb-4">Не удалось отобразить PDF</p>
                   <UButton
                     @click="downloadViewerFile"
-                    color="primary"
+                    color="neutral"
+                    variant="outline"
                     icon="i-heroicons-arrow-down-tray"
                   >
                     Скачать PDF
@@ -357,7 +358,8 @@
               <p class="text-gray-400 mb-2">Предпросмотр для этого типа файлов не поддерживается</p>
               <UButton
                 @click="downloadViewerFile"
-                color="primary"
+                color="neutral"
+                variant="outline"
                 icon="i-heroicons-arrow-down-tray"
               >
                 Скачать файл
