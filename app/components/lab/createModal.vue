@@ -467,7 +467,7 @@ async function handleSubmit(event: FormSubmitEvent<Schema>) {
   } else if (props.selectedRecord?.action === 'create') {
     console.log('Создание новой записи');
     try {
-      console.log('Сохранение данных formData ===> ', formData)
+      // console.log('Сохранение данных formData ===> ', formData)
       const response = await $fetch<{ success: boolean }>(
         '/api/incoming-control',
         {
