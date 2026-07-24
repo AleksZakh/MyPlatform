@@ -6,6 +6,11 @@ import { CalendarDate } from '@internationalized/date';
  * @param dateStr - строка с датой (например, "29.05.2026")
  * @returns CalendarDate | null
  */
+
+export function convertDateToForm(date:string) {
+  const parts = date.split('.');
+  return `${parts[2]}-${parts[0]}-${parts[1]}`
+}
 export function parseDate(dateStr: string): CalendarDate | null {
   if (!dateStr || dateStr === 'Отсутствует' || dateStr.trim() === '') {
     return null;
@@ -112,6 +117,7 @@ export function isValidDate(date: CalendarDate | null): boolean {
     return false;
   }
 }
+
 
 /**
  * Сравнивает две даты

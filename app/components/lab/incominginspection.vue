@@ -1,7 +1,7 @@
 <!-- Контент для первой вкладки -->
 <template>
   <div
-    class="w-full max-h-[82vh] min-h-[82vh] flex flex-col overflow-hidden mx-auto bg-white py-1 px-3 rounded-lg shadow-[0_0_10px_rgba(0,0,0,0.1)]"
+    class="w-full max-h-[80vh] min-h-[80vh] flex flex-col overflow-hidden mx-auto bg-white py-1 px-3 rounded-lg shadow-[0_0_10px_rgba(0,0,0,0.1)]"
   >
     <div class="flex flex-wrap gap-4 items-center justify-between py-1">
       <div class="flex p-0  text-lg">
@@ -114,10 +114,10 @@
                 :class="{
                   'font-medium text-red-600':
                     header === 'Результат испытаний' &&
-                    row[header] === 'Не соответствует',
+                    row[header]?.toLowerCase().trim() === 'не соответствует',
                   'font-medium text-green-600':
                     header === 'Результат испытаний' &&
-                    row[header] === 'Соответствует',
+                    row[header]?.toLowerCase().trim() === 'соответствует',
                 }"
                 :title="formatCellValue(row[header], header, 'title')"
               >
@@ -205,7 +205,6 @@ const { deleteRecordWithRefresh } = useRecordDelete();
 
 const selectedRecord = ref<any>(null);
 const count = ref(0);
-const toast = useToast();
 const overlay = useOverlay();
 const modalExportRecords = overlay.create(ExportRecordsModal);
 const modalTableSettings = overlay.create(TableSettingsModal);
@@ -242,18 +241,6 @@ const handleSettingsSave = (columns: string[]) => {
   console.log('обновление настроек таблицы');
   // Обновляем отображение
   // Дополнительная логика при сохранении
-};
-
-// 👇 ОБНОВЛЕНИЕ ТАБЛИЦЫ (с сохранением текущей страницы)
-const handleUpdateTable = async () => {  
-  await reloadCurrentPage();
-  toast.add({
-    title: '✅ Таблица обновлена',
-    description: `Отображается ${getVisibleColumns().length} колонок (страница ${currentPage.value} из ${totalPages.value})`,
-    color: 'success',
-    icon: 'i-heroicons-check-circle',
-    duration: 3000,
-  });
 };
 
 const selectRow = (index: any): void => {
@@ -337,6 +324,7 @@ function handleDblClick(index: any, row: any, action: string = 'view') {
     index,
     action: action,
   };
+  console.log('selectedRecord ====> ', selectedRecord);
 
   setTimeout(() => {
     open(action);

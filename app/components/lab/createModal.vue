@@ -1,11 +1,33 @@
 <template>
   <UModal
     :close="{ onClick: () => emit('close', false) }"
-    :title="modalTitle"
-    description="Заполните все поля"
-    class="custom-modal"
+    class="custom-modal bg-sky-100 shadow-blue-200 max-h-full"
     :ui="{ content: 'sm:max-w-none w-max' }"
   >
+    <template #header>
+      <div class="flex items-center justify-between w-full">
+        <div class="flex items-center gap-3">
+          <div class="text-2xl text-blue-500">
+            <Icon name="streamline-freehand-color:content-write" size="30" />
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+              {{ modalTitle }}
+            </h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+              Заполните все поля
+            </p>
+          </div>
+        </div>
+        <UButton
+            variant="ghost"
+            color="neutral"
+            icon="i-heroicons-x-mark-20-solid"
+            class="rounded-full hover:bg-gray-100 transition-colors"
+            @click="emit('close', true);"
+        />
+      </div>
+    </template>
     <template #body>
       <UForm
         :schema="schema"
@@ -86,10 +108,12 @@
           </fieldset>
 
           <fieldset class="border-2 border-gray-200 px-2 py-1 rounded-md">
-            <legend class="text-xl font-normal px-2">
+            <legend class="flex items-baseline gap-2 text-xl font-normal px-2">
               Поступление материала
+              <USwitch color="info" default-value size="xs"/>
             </legend>
             <div class="flex flex-col gap-2">
+              
               <UFormField name="material" label="Материал" required
                 ><USelectMenu
                   :items="items"
@@ -133,7 +157,10 @@
             </div>
           </fieldset>
           <fieldset class="border-2 border-gray-200 px-2 py-1 rounded-md">
-            <legend class="text-xl font-normal px-2">Протокол испытаний</legend>
+            <legend class="text-xl flex items-baseline gap-1 font-normal px-2">
+              Протокол испытаний
+              <USwitch color="info" default-value size="xs"/>
+            </legend>
             <div class="flex flex-col gap-2">
               <UFormField name="testProtocolDate" label="Дата" required
                 ><CustomDateInput
@@ -223,10 +250,10 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ close: [boolean] }>();
 
-const toast = useToast();
 const items = ref(['Backlog', 'Todo', 'In Progress', 'Done']);
 const value = ref('Backlog');
 const modalTitle = ref('');
+const {showTost} = useAppToasts()
 
 function onCreate(newItem: string) {
   items.value.push(newItem);
@@ -378,7 +405,6 @@ function fillFormWithData(data: any) {
 watch(
   () => props.selectedRecord,
   (newVal) => {
-    console.log('selectedRecord changed:', newVal);
     if (newVal?.action === 'edit' || newVal?.action === 'view') {
       fillFormWithData(newVal);
       modalTitle.value =
@@ -386,6 +412,7 @@ watch(
           ? 'Редактирование записи'
           : newVal?.['Наименование объект'] || 'Просмотр записи';
     } else if (newVal?.action === 'create' || !newVal) {
+      modalTitle.value = 'Создание новой записи'
       resetForm();
     }
   },
@@ -406,6 +433,7 @@ async function handleSubmit(event: FormSubmitEvent<Schema>) {
   // 3. Заполняем FormData всеми полями из event.data
   Object.keys(event.data).forEach((key) => {
     const value = event.data[key as keyof Schema];
+    // console.log('event.data ===>  ', event.data)
 
     // Заменяем оригинальные объекты дат на подготовленные ISO строки
     if (key === 'sDate') {
@@ -434,7 +462,7 @@ async function handleSubmit(event: FormSubmitEvent<Schema>) {
       props.selectedRecord.ID
     );
     try {
-      const response = await $fetch<{ success: boolean }>(
+      const response = await $fetch<{ success: boolean; error?: string }>(
         `/api/incoming-control/${props.selectedRecord.ID}`,
         {
           method: 'PUT',
@@ -444,31 +472,21 @@ async function handleSubmit(event: FormSubmitEvent<Schema>) {
 
       if (response.success) {
         props.reloadData();
-        toast.add({
-          title: 'Успех!',
-          description: `Данные записи о ${event.data.objName} успешно обновлены.`,
-          color: 'success',
-        });
+        showTost('Успех!', `Данные записи о ${event.data.objName} успешно обновлены.`, 'success', 'streamline-freehand-color:form-validation-check-double', 3000)
+        
       } else {
-        toast.add({
-          title: 'Ошибка!',
-          description: `Не удалось обновить данные о ${event.data.objName}.`,
-          color: 'error',
-        });
+        console.log('response =====> ', response)
+        showTost('Ошибка!', `Не удалось обновить данные о ${event.data.objName}. ${response?.error}`, 'error', 'fxemoji:warningsign', 5000);
       }
     } catch (error) {
       console.error('Ошибка обновления:', error);
-      toast.add({
-        title: 'Ошибка!',
-        description: 'Не удалось обновить данные.',
-        color: 'error',
-      });
+    showTost('Ошибка!', `Не удалось обновить данные. ${error}.`, 'error', 'fxemoji:warningsign', 5000);
     }
   } else if (props.selectedRecord?.action === 'create') {
     console.log('Создание новой записи');
     try {
       // console.log('Сохранение данных formData ===> ', formData)
-      const response = await $fetch<{ success: boolean }>(
+      const response = await $fetch<{ success: boolean; error?: string }>(
         '/api/incoming-control',
         {
           method: 'POST',
@@ -478,25 +496,13 @@ async function handleSubmit(event: FormSubmitEvent<Schema>) {
 
       if (response.success) {
         props.reloadData();
-        toast.add({
-          title: 'Успех!',
-          description: `Данные новой записи о ${event.data.objName} успешно сохранены.`,
-          color: 'success',
-        });
+        showTost('Успех!', `Данные записи о ${event.data.objName} успешно сохранены.`, 'success', 'streamline-freehand-color:form-validation-check-double', 2000)
       } else {
-        toast.add({
-          title: 'Ошибка!',
-          description: `Не удалось сохранить данные о ${event.data.objName}.`,
-          color: 'error',
-        });
+        showTost('Ошибка!', `Не удалось сохранить данные о ${event.data.objName}.`, 'error', 'streamline-freehand-color:alerts-warning-triangle', 5000);
       }
     } catch (error) {
       console.error('Ошибка отправки:', error);
-      toast.add({
-        title: 'Ошибка!',
-        description: 'Не удалось сохранить данные.',
-        color: 'error',
-      });
+      showTost('Ошибка!', `Не удалось сохранить данные. ${error}.`, 'error', 'streamline-freehand-color:alerts-warning-triangle', 5000);
     }
   }
 
@@ -518,14 +524,4 @@ async function handleSubmit(event: FormSubmitEvent<Schema>) {
 .parent > *:last-child {
   margin-bottom: 16px;
 }
-
-/* Или задаем свои отступы */
-/* .custom-modal :deep([data-slot="body"]) {
-  padding: 0.5rem 1rem !important;
-} */
-
-/* Можно также через класс */
-/* .custom-modal :deep(.modal-body) {
-  padding: 0 !important;
-} */
 </style>

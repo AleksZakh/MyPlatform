@@ -8,7 +8,6 @@ const prisma = new PrismaClient();
 export default defineEventHandler(async (event) => {
   try {
     const multipartData = await readMultipartFormData(event);
-    console.log('Переданыданныедлязаписи multipartData ===>', multipartData);
 
     if (!multipartData) {
       throw createError({

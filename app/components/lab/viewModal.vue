@@ -1,7 +1,7 @@
 <!-- components/lab/RecordViewModal.vue -->
 <template>
   <UModal
-    class="custom-modal"
+    class="custom-modal bg-sky-100"
     :ui="{ content: 'sm:max-w-none w-max' }"
   >
     <template #header>
@@ -93,7 +93,7 @@
               <div class="flex flex-col">
                 <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Дата отбора проб</label>
                 <div class="mt-1 px-2 shadow-sm rounded-sm text-lg text-gray-800 min-w-70 bg-gray-50">
-                  {{ formatDate(record?.['Дата отбора проб']) || '—' }}
+                  {{ record?.['Дата отбора проб'] || '—' }}
                 </div>
               </div>
               
@@ -146,7 +146,7 @@
               <div class="flex flex-col">
                 <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Дата поступления</label>
                 <div class="mt-1 px-2 shadow-sm rounded-sm text-lg text-gray-800 min-w-70 bg-gray-50">
-                  {{ formatDate(record?.['Дата поступления материала']) || '—' }}
+                  {{ record?.['Дата поступления материала'] || '—' }}
                 </div>
               </div>
               
@@ -154,7 +154,7 @@
               <div class="flex flex-col">
                 <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Дата документа о качестве</label>
                 <div class="mt-1 px-2 shadow-sm rounded-sm text-lg text-gray-800 min-w-70 bg-gray-50">
-                  {{ formatDate(record?.qualDocDate) || '—' }}
+                  {{ record?.qualDocDate || '—' }}
                 </div>
               </div>
               
@@ -211,7 +211,7 @@
               <div class="flex flex-col">
                 <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Дата протокола</label>
                 <div class="mt-1 px-2 shadow-sm rounded-sm text-lg text-gray-800 min-w-70 bg-gray-50">
-                  {{ formatDate(record?.['Дата протокола']) || '—' }}
+                  {{ record?.['Дата протокола'] || '—' }}
                 </div>
               </div>
               
@@ -394,7 +394,7 @@
 
 <script setup lang="ts">
 // ======= ИМПОРТЫ =======
-import { ref, computed } from 'vue'
+import { ref, computed } from 'vue';
 
 // ======= ПРОПСЫ =======
 const props = defineProps<{
@@ -413,15 +413,7 @@ const viewerFilePath = ref('')
 const viewerFileName = ref('')
 const viewerError = ref('')
 
-// ======= МЕТОДЫ =======
-function formatDate(date: string | Date | null): string {
-  if (!date) return '—'
-  try {
-    return new Date(date).toLocaleDateString('ru-RU')
-  } catch {
-    return '—'
-  }
-}
+// ======= МЕТОДЫ ======
 
 function formatDateTime(date: string | Date | null): string {
   if (!date) return '—'
@@ -499,7 +491,7 @@ const isViewerImage = computed(() => {
 const isViewerPdf = computed(() => {
   return viewerFileExtension.value === 'pdf'
 })
-</script>
+</script>l
 
 <style scoped>
 /* Стили для легенд */

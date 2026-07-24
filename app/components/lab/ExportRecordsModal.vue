@@ -30,7 +30,7 @@
                             <span class="text-xs text-gray-400 font-light">(выберите необходимое)</span>
                         </legend>
                         <div class="py-5 px-10">
-                            <UCheckboxGroup v-model="value" :items="items" />
+                            <UCheckboxGroup v-model="docListValue" :items="items" />
                         </div>
                         <div class="flex items-center justify-start gap-2 w-full ">
                             <Icon name="gravity-ui:exclamation-shape" size="24"/>
@@ -72,27 +72,40 @@
 
     const items = ref<CheckboxGroupItem[]>([
         {
+            label: 'Реестр',
+            description: 'Будут выгружены отфильтрованные записи реестра.',
+            value: 'reestr'
+        },
+        {
             label: 'Акты отборов проб',
-            description: 'Будут выгружены все акты, отображенные на экране.',
-            value: 'tableRecords'
+            description: 'Выгрусзка актов отборов проб.',
+            value: 'samplingReport'
         },
         {
             label: 'Паспорта на материалы',
-            description: 'Будут выгружены Паспорта на материалы из актов.',
-            value: 'light'
+            description: 'Выгрузка протоколов на материалы.',
+            value: 'materialPassp'
         },
         {
             label: 'Протоколы испытаний',
-            description: 'Будут выгружены протоколы испытаний, относящиеся к отборам проб.',
-            value: 'dark'
+            description: 'Выгрузка протоколов испытаний.',
+            value: 'testProtocol'
         }
     ])
-    const value = ref([
-        'system'
-    ])
+    const docListValue = ref([
+        'reestr'
+    ]);
+    const toast = useToast();
 
     async function handleSave() {
-        saving.value = true
+        saving.value = true;
+        toast.add({
+            title: 'Список сформирован',
+            description: `Список документов для экспорта успешно сформирован.`,
+            color: 'info',
+            icon: 'streamline-freehand-color:lists-bullets',
+            duration:3000
+        });
         emit('save')
         emit('close')
     }

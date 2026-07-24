@@ -1,11 +1,12 @@
 // composables/useLabDataLoader.ts
 export const useLabDataLoader = () => {
-  const toast = useToast();
+
   const loading = ref(false);
   const originalData = ref<Record<string, string>[]>([]);
   const headers = ref<string[]>([]);
   const totalCount = ref(0);
   const loadingToastId = ref<string | number | null>(null);
+  const {showTost, removeToast} = useAppToasts();
   
   // 👇 ПАРАМЕТРЫ ПАГИНАЦИИ
   const currentPage = ref(1);
@@ -13,15 +14,8 @@ export const useLabDataLoader = () => {
   const totalPages = ref(0);
 
   const loadData = async (page: number = currentPage.value, size: number = pageSize.value) => {
-    // console.log(`📥 Загрузка данных: страница ${page}, размер ${size}`);
-    
-    const toastId = toast.add({
-      title: '⏳ Загрузка данных...',
-      description: 'Пожалуйста, подождите',
-      color: 'info',
-      icon: 'i-heroicons-arrow-path',
-      duration: 0,
-    });
+    // console.log(`📥 Загрузка данных: страница ${page}, размер ${size}`);    
+    const toastId = showTost('streamline-freehand-color:time-hourglass-triangle Загрузка данных...', 'Пожалуйста, подождите', 'info', 'heroicons:arrow-path-rounded-square-solid', 1000);    
 
     loading.value = true;
     loadingToastId.value = toastId.id;
@@ -36,7 +30,7 @@ export const useLabDataLoader = () => {
       const result = await response.json();
 
       if (result.success) {
-        toast.remove(loadingToastId.value);
+        removeToast(loadingToastId.value);
         originalData.value = result.data;
 
         if (originalData.value.length > 0 && originalData.value[0]) {
@@ -62,15 +56,9 @@ export const useLabDataLoader = () => {
         };
       } else {
         console.error('❌ Ошибка загрузки:', result.error);
-        toast.remove(loadingToastId.value);
+        removeToast(loadingToastId.value);
 
-        toast.add({
-          title: '❌ Ошибка загрузки',
-          description: result.error || 'Не удалось загрузить данные',
-          color: 'error',
-          icon: 'i-heroicons-exclamation-triangle',
-          duration: 5000,
-        });
+        showTost( '❌ Ошибка загрузки', `${result.error || 'Не удалось загрузить данные'}`, 'error', 'i-heroicons-exclamation-triangle', 5000);
 
         return {
           success: false,
@@ -80,14 +68,7 @@ export const useLabDataLoader = () => {
     } catch (error) {
       console.error('❌ Ошибка:', error);
 
-      toast.add({
-        title: '❌ Ошибка',
-        description:
-          error instanceof Error ? error.message : 'Неизвестная ошибка',
-        color: 'error',
-        icon: 'i-heroicons-exclamation-triangle',
-        duration: 5000,
-      });
+      showTost('❌ Ошибка', `${error instanceof Error ? error.message : 'Неизвестная ошибка'}`, 'error','i-heroicons-exclamation-triangle',5000);
 
       return {
         success: false,
