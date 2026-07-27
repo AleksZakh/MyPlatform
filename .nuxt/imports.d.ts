@@ -43,6 +43,7 @@ export { useRecordDelete, DeleteOptions } from '../app/composables/useRecordDele
 export { useRecordUpdate, UpdateOptions } from '../app/composables/useRecordUpdate';
 export { useTableSettings } from '../app/composables/useTableSettings';
 export { useAuthStore, actions, useIsLoadingStore } from '../app/stores/auth.store';
+export { useTableFilterStore } from '../app/stores/tableFilter';
 export { useToastStore } from '../app/stores/toast.store';
 export { useUserStore } from '../app/stores/user';
 export { useWebSocketStore } from '../app/stores/websocket.store';

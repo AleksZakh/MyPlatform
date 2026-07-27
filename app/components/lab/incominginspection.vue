@@ -8,6 +8,18 @@
         <UInput v-model="globalFilter" class=" min-w-80 text-lg" placeholder="фильтр..." />
       </div>
       <div class="flex gap-2">
+        <div>
+          <UTooltip text="Патаметры фильтра">
+            <UButton     
+              class="py-2"
+              variant="outline"
+              icon="streamline-freehand-color:filter"
+              color="neutral"
+              @click="hendleFilterPanel"
+            />
+
+          </UTooltip>
+        </div>
         <!-- Добавление новой записи -->
         <div>
           <UTooltip text="Создать новую запись" :kbds="['Alt', 'Shift', 'N']">
@@ -180,11 +192,13 @@
 import createModal from '~/components/lab/createModal.vue';
 import viewModal from '~/components/lab/viewModal.vue';
 import ExportRecordsModal from './ExportRecordsModal.vue';
+import FilterPanelModal from './FilterPanelModal.vue'
 import TableSettingsModal from '~/components/lab/TableSettingsModal.vue';
 import type { ContextMenuItem } from '@nuxt/ui';
 import { useRecordDelete } from '~/composables/useRecordDelete';
 import { useLabDataLoader } from '~/composables/useLabDataLoader';
 import { useTableSettings } from '~/composables/useTableSettings';
+import { useTableFilterStore } from '~/stores/tableFilter'
 
 // Используем композаблы
 const { 
@@ -202,6 +216,7 @@ const {
 
 const { tableSettings, getVisibleColumns, getAllAvailableColumns } = useTableSettings();
 const { deleteRecordWithRefresh } = useRecordDelete();
+const filterStore = useTableFilterStore()
 
 const selectedRecord = ref<any>(null);
 const count = ref(0);
@@ -209,6 +224,7 @@ const overlay = useOverlay();
 const modalExportRecords = overlay.create(ExportRecordsModal);
 const modalTableSettings = overlay.create(TableSettingsModal);
 const modalCreate = overlay.create(createModal);
+const modalFilterPanel = overlay.create(FilterPanelModal)
 const modalView = overlay.create(viewModal);
 const rowSelectedId = ref<number | null>(null);
 const showSettingsModal = ref(false);
@@ -242,6 +258,10 @@ const handleSettingsSave = (columns: string[]) => {
   // Обновляем отображение
   // Дополнительная логика при сохранении
 };
+const hendleFilterPanel = () => {
+  console.log('Открываем панель настройки фильтра')
+  modalFilterPanel.open()
+}
 
 const selectRow = (index: any): void => {
   if (rowSelectedId.value === index) {
@@ -324,7 +344,7 @@ function handleDblClick(index: any, row: any, action: string = 'view') {
     index,
     action: action,
   };
-  console.log('selectedRecord ====> ', selectedRecord);
+  // console.log('selectedRecord ====> ', selectedRecord);
 
   setTimeout(() => {
     open(action);
@@ -382,6 +402,8 @@ const columnLabels: Record<string, string> = {
 };
 
 onMounted(async () => {
+  // Как только страница смонтировалась в браузере — дергаем сохраненные настройки
+  filterStore.loadFromStorage()
   await loadData(1, 25);
 });
 

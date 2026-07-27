@@ -21,7 +21,7 @@ interface _GlobalComponents {
   Footer: typeof import("../../app/components/Footer.vue")['default']
   Toast: typeof import("../../app/components/Toast.vue")['default']
   LabExportRecordsModal: typeof import("../../app/components/lab/ExportRecordsModal.vue")['default']
-  LabFilterPanel: typeof import("../../app/components/lab/FilterPanel.vue")['default']
+  LabFilterPanelModal: typeof import("../../app/components/lab/FilterPanelModal.vue")['default']
   LabTableSettingsModal: typeof import("../../app/components/lab/TableSettingsModal.vue")['default']
   LabCreateModal: typeof import("../../app/components/lab/createModal.vue")['default']
   LabHandbook: typeof import("../../app/components/lab/handbook.vue")['default']
@@ -195,7 +195,7 @@ interface _GlobalComponents {
   LazyFooter: LazyComponent<typeof import("../../app/components/Footer.vue")['default']>
   LazyToast: LazyComponent<typeof import("../../app/components/Toast.vue")['default']>
   LazyLabExportRecordsModal: LazyComponent<typeof import("../../app/components/lab/ExportRecordsModal.vue")['default']>
-  LazyLabFilterPanel: LazyComponent<typeof import("../../app/components/lab/FilterPanel.vue")['default']>
+  LazyLabFilterPanelModal: LazyComponent<typeof import("../../app/components/lab/FilterPanelModal.vue")['default']>
   LazyLabTableSettingsModal: LazyComponent<typeof import("../../app/components/lab/TableSettingsModal.vue")['default']>
   LazyLabCreateModal: LazyComponent<typeof import("../../app/components/lab/createModal.vue")['default']>
   LazyLabHandbook: LazyComponent<typeof import("../../app/components/lab/handbook.vue")['default']>

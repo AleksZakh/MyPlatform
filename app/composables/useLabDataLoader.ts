@@ -15,7 +15,7 @@ export const useLabDataLoader = () => {
 
   const loadData = async (page: number = currentPage.value, size: number = pageSize.value) => {
     // console.log(`📥 Загрузка данных: страница ${page}, размер ${size}`);    
-    const toastId = showTost('streamline-freehand-color:time-hourglass-triangle Загрузка данных...', 'Пожалуйста, подождите', 'info', 'heroicons:arrow-path-rounded-square-solid', 1000);    
+    const toastId = showTost(`📥 Загрузка данных...`, 'Пожалуйста, подождите', 'info', 'heroicons:arrow-path-rounded-square-solid', 1000);    
 
     loading.value = true;
     loadingToastId.value = toastId.id;

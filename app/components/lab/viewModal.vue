@@ -465,6 +465,7 @@ function getResultDotClass(result: string): string {
 }
 
 function handleEdit() {
+  console.log('редактирование')
   emit('edit')
   emit('close')
 }
