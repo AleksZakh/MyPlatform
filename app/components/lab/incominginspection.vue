@@ -11,8 +11,9 @@
         <div>
           <UTooltip text="Патаметры фильтра">
             <UButton     
-              class="py-2"
+              class="p-2"
               variant="outline"
+              size="xl"
               icon="streamline-freehand-color:filter"
               color="neutral"
               @click="hendleFilterPanel"
