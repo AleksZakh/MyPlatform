@@ -1,8 +1,8 @@
 <template>
   <UModal
     :close="{ onClick: () => emit('close', false) }"
-    class="custom-modal bg-sky-100 shadow-blue-200 max-h-full"
-    :ui="{ content: 'sm:max-w-none w-max' }"
+    class="custom-modal bg-sky-100 shadow-blue-200 max-h-full border border-gray-300"
+    :ui="{ content: 'sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl w-full bg-blue-50' }"
   >
     <template #header>
       <div class="flex items-center justify-between w-full">
@@ -32,11 +32,11 @@
       <UForm
         :schema="schema"
         :state="state"
-        class="space-y-4 relative"
+        class="w-full relative"
         @submit="handleSubmit"
       >
         <!-- Контейнер для полей ввода (чтобы они не прижимались к линии) USelectMenu  -->
-        <div class="space-y-4 space-x-2 px-2 -my-6 -mx-6 bg-gray-50 parent">
+        <div class="grid grid-cols-3 gap-3 p-4 bg-gray-50 parent">
           <fieldset class="border-2 border-gray-200 px-2 py-1 rounded-md">
             <legend class="text-xl font-normal px-2">Отбор проб</legend>
             <div class="flex flex-col gap-3">

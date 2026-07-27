@@ -1,8 +1,8 @@
 <!-- components/lab/RecordViewModal.vue -->
 <template>
   <UModal
-    class="custom-modal bg-sky-100"
-    :ui="{ content: 'sm:max-w-none w-max' }"
+    class="custom-modal "
+    :ui="{ content: 'sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl w-full bg-blue-50' }"
   >
     <template #header>
       <div class="flex items-center justify-between w-full">
@@ -28,22 +28,23 @@
         />
       </div>
     </template>
+
     <template #body>
-      <div class="space-y-4 relative">
+      <div class="flex flex-col w-full bg-gray-50">
         <!-- Контейнер для полей -->
-        <div class="space-y-4 space-x-0 px-2 -my-6 -mx-6 bg-gray-50 parent">
+        <div class="grid grid-cols-2">
+
+        </div>
+        <div class="flex    parent">
           
           <!-- ===== БЛОК 1: Отбор проб ===== -->
           <fieldset class="border-2 border-gray-200 mx-4 px-2 py-1 rounded-md bg-white/80">
             <legend class="text-xl font-normal px-2 flex items-center gap-2 bg-transparent">
-              <span>
-                <Icon name="streamline-freehand-color:business-product-supplier-1" size="24"/>
-                Отбор проб
-              </span>
+              <span><Icon name="streamline-freehand-color:business-product-supplier-1" size="24"/>Отбор проб</span>
               <span class="text-xs text-gray-400 font-light">(информация)</span>
             </legend>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 p-2">
+            <div class="flex flex-col gap-x-6 gap-y-3 p-2">
               <!-- ПЛП -->
               <div class="flex flex-col">
                 <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">ПЛП</label>
@@ -126,14 +127,11 @@
           <!-- ===== БЛОК 2: Поступление материала ===== -->
           <fieldset class="border-2 border-gray-200 mx-4 px-2 py-1 rounded-md bg-white/80">
             <legend class="text-xl font-normal px-2 flex items-center gap-2 bg-transparent">
-              <span>
-                <Icon name="streamline-freehand-color:module-building-blocks" />
-                Поступление материала
-              </span>
+              <span><Icon name="streamline-freehand-color:module-building-blocks" /> Поступление материала</span>
               <span class="text-xs text-gray-400 font-light">(информация)</span>
             </legend>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 p-2">
+            <div class="flex flex-col gap-x-6 gap-y-3 p-2">
               <!-- Материал -->
               <div class="flex flex-col">
                 <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Материал</label>
@@ -206,7 +204,7 @@
               <span class="text-xs text-gray-400 font-light">(информация)</span>
             </legend>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 p-2">
+            <div class="flex flex-col gap-x-6 gap-y-3 p-2">
               <!-- Дата -->
               <div class="flex flex-col">
                 <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Дата протокола</label>
@@ -261,12 +259,11 @@
               </div>
             </div>
           </fieldset>
-
-          <!-- Дополнительная информация -->
-          <div class="text-xs text-gray-400 px-2 pb-1 flex justify-between">
-            <span>Создано: {{ formatDateTime(record?.createdAt) || '—' }}</span>
-            <span>Обновлено: {{ formatDateTime(record?.updatedAt) || '—' }}</span>
-          </div>
+        </div>
+        <!-- Дополнительная информация -->
+        <div class="text-xs text-gray-400 px-2 pt-4  grid grid-cols-2">
+          <span class="">Создано: {{ formatDateTime(record?.createdAt) || '—' }}</span>
+          <span class="">Обновлено: {{ formatDateTime(record?.updatedAt) || '—' }}</span>
         </div>
       </div>
     </template>
