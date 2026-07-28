@@ -1,8 +1,8 @@
 <template>
   <UModal
     :close="{ onClick: () => emit('close', false) }"
-    class="custom-modal bg-sky-100 shadow-blue-200 max-h-full border border-gray-300"
-    :ui="{ content: 'sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl w-full bg-blue-50' }"
+    class="custom-modal bg-sky-100 shadow-blue-200 max-h-full w-full border border-gray-300"
+    :ui="{ content: 'sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl bg-blue-50' }"
   >
     <template #header>
       <div class="flex items-center justify-between w-full">
@@ -36,170 +36,261 @@
         @submit="handleSubmit"
       >
         <!-- Контейнер для полей ввода (чтобы они не прижимались к линии) USelectMenu  -->
-        <div class="grid grid-cols-3 gap-3 p-4 bg-gray-50 parent">
-          <fieldset class="border-2 border-gray-200 px-2 py-1 rounded-md">
-            <legend class="text-xl font-normal px-2">Отбор проб</legend>
-            <div class="flex flex-col gap-3">
-              <UFormField name="plp" label="ПЛП" required
-                ><USelectMenu
+        <div class="grid grid-cols-3 gap-3 px-1 pb-2 bg-gray-50 parent">
+          <fieldset class="border-2 border-gray-200 bg-white px-2 py-2 rounded-md">
+            <legend class="text-xl font-normal gap-2 px-2 flex items-center"><Icon name="streamline-freehand-color:business-product-supplier-1" size="24"/> Отбор проб</legend>
+            <div class="flex flex-col gap-2">
+              <UFormField name="plp" required>
+                <template #label>
+                  <span class="font-medium uppercase text-gray-900">
+                    ПЛП
+                  </span>
+                </template>
+                <USelectMenu
                   :items="items"
                   @create="onCreate"
                   create-item
-                  class="min-w-70"
+                  class="w-full shadow-sm"
                   v-model="state.plp"
               /></UFormField>
-              <UFormField name="objName" label="Наименование объекта" required
-                ><USelectMenu
+              <UFormField name="objName" required>
+                <template #label>
+                  <span class="font-medium uppercase text-gray-900">
+                    Наименование объекта
+                  </span>
+                </template>
+                <USelectMenu
                   :items="items"
                   @create="onCreate"
                   create-item
-                  class="min-w-70 max-w-90"
+                  class="w-full shadow-sm"
                   v-model="state.objName"
-              /></UFormField>
-              <UFormField
-                name="actNumber"
-                label="Номер акта отборапроб"
-                required
-                ><UInput class="min-w-70" v-model="state.actNumber"
-              /></UFormField>
-              <UFormField name="sDoc" label="Документ отбора проб">
+                />
+              </UFormField>
+              <UFormField name="actNumber" required >
+                <template #label>
+                  <span class="font-medium uppercase text-gray-900">
+                    Номер акта отборапроб
+                  </span>
+                </template>
+                <UInput class="w-full shadow-sm" v-model="state.actNumber" />
+              </UFormField>
+              <UFormField name="sDoc">
+                <template #label>
+                  <span class="font-medium uppercase text-gray-900">
+                    Документ отбора проб
+                  </span> 
+                </template>
                 <UInput
                   @change="
                     (e: Event) =>
                       sDocChange((e.target as HTMLInputElement).files!)
                   "
                   type="file"
-                  class="min-w-50"
+                  class="w-full shadow-sm"
                 />
               </UFormField>
-              <UFormField name="sDate" label="Дата отбора проб" required
-                ><CustomDateInput
-                  v-model="state.sDate"
-                  :required="true"
-                  :min-value="minDate"
-                  :max-value="maxDate"
-              /></UFormField>
-              <UFormField name="sPlace" label="Место отбора проб"
-                ><USelectMenu
+              <UFormField name="sDate" required >                
+                <template #label>
+                  <span class="font-medium uppercase text-gray-900">
+                    Дата отбора проб
+                  </span>
+                </template>
+                <CustomDateInput v-model="state.sDate" :required="true" :min-value="minDate" :max-value="maxDate" class="shadow-sm w-fit" />
+              </UFormField>
+              <UFormField name="sPlace">
+                <template #label>
+                  <span class="font-medium uppercase text-gray-900">
+                    Место отбора проб
+                  </span>
+                </template>
+                <USelectMenu
                   :items="items"
                   @create="onCreate"
                   create-item
-                  class="min-w-70 max-w-70"
+                  class="w-full shadow-sm"
                   v-model="state.sPlace"
-              /></UFormField>
-              <UFormField
-                name="sPerson"
-                label="Лицо, предоставившее пробу"
-                required
-                ><USelectMenu
+                />
+              </UFormField>
+              <UFormField name="sPerson" required >
+                <template #label>
+                  <span class="font-medium uppercase text-gray-900">
+                    Лицо, предоставившее пробу
+                  </span>
+                </template>
+                <USelectMenu
                   :items="items"
                   @create="onCreate"
                   create-item
-                  class="min-w-70"
+                  class="w-full shadow-sm"
                   v-model="state.sPerson"
-              /></UFormField>
-              <UFormField name="sNote" label="Примечание"
-                ><UTextarea
-                  class="min-w-70 max-h-40 overflow-auto"
+                />
+              </UFormField>
+              <UFormField name="sNote" >
+                <template #label>
+                  <span class="font-medium uppercase text-gray-900">
+                    Примечание
+                  </span>
+                </template>
+                <UTextarea
+                  class="w-full overflow-auto shadow-sm"
                   v-model="state.sNote"
                   autoresize
-              /></UFormField>
+                />
+              </UFormField>
             </div>
           </fieldset>
 
-          <fieldset class="border-2 border-gray-200 px-2 py-1 rounded-md">
-            <legend class="flex items-baseline gap-2 text-xl font-normal px-2">
+          <fieldset class="border-2 border-gray-200 px-2 py-2 rounded-md">
+            <legend class="flex items-center gap-2 text-xl font-normal px-2">
+              <Icon name="streamline-freehand-color:module-building-blocks" />
               Поступление материала
-              <USwitch color="info" default-value size="xs"/>
+              <USwitch color="info" v-model="isMaterialActive" size="xs"/>
             </legend>
-            <div class="flex flex-col gap-2">
-              
-              <UFormField name="material" label="Материал" required
-                ><USelectMenu
+            <div class="flex flex-col gap-4" :class="{' opacity-50': !isMaterialActive,}">              
+              <UFormField name="material" :disabled="isMaterialActive" required>
+                <template #label>
+                  <span class="font-medium uppercase" :class="{ 'text-gray-900': isMaterialActive, 'text-gray-400': !isMaterialActive }">
+                    Материал
+                  </span>
+                </template>
+                <USelectMenu
                   :items="items"
                   @create="onCreate"
                   create-item
-                  class="min-w-70"
+                  class="w-full"
                   v-model="state.material"
-              /></UFormField>
-              <UFormField name="receiptDate" label="Дата поступления" required
-                ><CustomDateInput
+                  :disabled="!isMaterialActive"
+                />
+              </UFormField>
+              <UFormField name="receiptDate"  required>
+                <template #label>
+                  <span class="font-medium uppercase" :class="{ 'text-gray-900': isMaterialActive, 'text-gray-400': !isMaterialActive }">
+                    Дата поступления
+                  </span>
+                </template>
+                <CustomDateInput
                   v-model="state.receiptDate"
                   :required="true"
                   :min-value="minDate"
                   :max-value="maxDate"
-              /></UFormField>
-              <UFormField name="qualDocDate" label="Дата документа о качестве"
-                ><CustomDateInput
+                  :disabled="!isMaterialActive"
+                />
+              </UFormField>
+              <UFormField name="qualDocDate" >
+                <template #label>
+                  <span class="font-medium" :class="{ 'text-gray-900': isMaterialActive, 'text-gray-400': !isMaterialActive }">
+                    Дата документа о качестве
+                  </span>
+                </template>
+                <CustomDateInput
                   v-model="state.qualDocDate"
                   :required="false"
                   :min-value="minDate"
                   :max-value="maxDate"
+                  :disabled="!isMaterialActive"
               /></UFormField>
-              <UFormField name="qualDoc" label="Документ о качестве">
+              <UFormField name="qualDoc" >
+                <template #label>
+                  <span class="font-medium uppercase" :class="{ 'text-gray-900': isMaterialActive, 'text-gray-400': !isMaterialActive }">
+                    Документ о качестве
+                  </span>
+                </template>
                 <UInput
                   @change="
                     (e: Event) =>
                       qualDocChange((e.target as HTMLInputElement).files!)
                   "
                   type="file"
-                  class="min-w-50"
+                  class="w-full"
+                  :disabled="!isMaterialActive"
                 />
               </UFormField>
-              <UFormField
-                name="qualDocNumber"
-                label="Номер документа о качестве"
-                ><UInput class="min-w-70" v-model="state.qualDocNumber"
-              /></UFormField>
-              <UFormField name="manufacturer" label="Предприятие изготовитель"
-                ><UInput class="min-w-70" v-model="state.manufacturer"
-              /></UFormField>
+              <UFormField name="qualDocNumber" >
+                <template #label>
+                  <span class="font-medium uppercase" :class="{ 'text-gray-900': isMaterialActive, 'text-gray-400': !isMaterialActive }">
+                    Номер документа о качестве
+                  </span>
+                </template>
+                <UInput class="w-full" v-model="state.qualDocNumber" :disabled="!isMaterialActive"/>
+              </UFormField>
+              <UFormField name="manufacturer" >
+                <template #label>
+                  <span class="font-medium uppercase" :class="{ 'text-gray-900': isMaterialActive, 'text-gray-400': !isMaterialActive }">
+                    Предприятие изготовитель
+                  </span>
+                </template>
+                <UInput class="w-full" v-model="state.manufacturer" :disabled="!isMaterialActive"/>
+              </UFormField>
             </div>
           </fieldset>
-          <fieldset class="border-2 border-gray-200 px-2 py-1 rounded-md">
-            <legend class="text-xl flex items-baseline gap-1 font-normal px-2">
+          <fieldset class="border-2 border-gray-200 px-2 py-2 rounded-md ">
+            <legend class="text-xl flex items-center gap-1 font-normal px-2">
+              <Icon name="streamline-freehand-color:task-list-pen" />
               Протокол испытаний
-              <USwitch color="info" default-value size="xs"/>
+              <USwitch color="info" v-model="isTestActive" size="xs"/>
             </legend>
-            <div class="flex flex-col gap-2">
-              <UFormField name="testProtocolDate" label="Дата" required
-                ><CustomDateInput
+            <div class="flex flex-col gap-2" :class="{' opacity-50': !isTestActive,}">
+              <UFormField name="testProtocolDate"  required >
+                <template #label>
+                  <span class="font-medium uppercase" :class="{ 'text-gray-900': isTestActive, 'text-gray-400': !isTestActive }">
+                    Дата
+                  </span>               
+                </template>
+                <CustomDateInput
                   v-model="state.testProtocolDate"
                   :required="true"
                   :min-value="minDate"
                   :max-value="maxDate"
-              /></UFormField>
-              <UFormField name="protocolDoc" label="Документ">
+                  :disabled="!isTestActive"
+                />
+              </UFormField>
+              <UFormField name="protocolDoc" >
+                <template #label>
+                  <span class="font-medium uppercase" :class="{ 'text-gray-900': isTestActive, 'text-gray-400': !isTestActive }">
+                    Документ
+                  </span>
+                </template>
                 <UInput
                   @change="
                     (e: Event) =>
                       protocolDocChange((e.target as HTMLInputElement).files!)
                   "
                   type="file"
-                  class="min-w-50"
-              /></UFormField>
-              <UFormField name="testResult" label="Результат испытаний" required
-                ><USelectMenu
+                  class="w-full"
+                  :disabled="!isTestActive"
+              />
+              </UFormField>
+              <UFormField name="testResult"  required>
+                <template #label>
+                  <span class="font-medium uppercase" :class="{ 'text-gray-900': isTestActive, 'text-gray-400': !isTestActive }">
+                    Результат испытаний
+                  </span>
+                </template>
+                <USelectMenu
                   :items="items"
                   @create="onCreate"
                   create-item
-                  class="min-w-70"
+                  class="w-full"
                   v-model="state.testResult"
-              /></UFormField>
-              <UFormField name="testProtocolNumber" label="Номер" required
-                ><UInput class="min-w-70" v-model="state.testProtocolNumber"
-              /></UFormField>
+                  :disabled="!isTestActive"
+                />
+              </UFormField>
+              <UFormField name="testProtocolNumber"  required>
+                <template #label>
+                  <span class="font-medium uppercase" :class="{ 'text-gray-900': isMaterialActive, 'text-gray-400': !isMaterialActive }">
+                    Номер
+                  </span>
+                </template>
+                <UInput class="w-full" v-model="state.testProtocolNumber" :disabled="!isTestActive"/>
+              </UFormField>
             </div>
           </fieldset>
         </div>
 
         <!-- Визуальный разделитель и блок кнопок -->
         <div class="relative">
-          <div
-            class="absolute left-0 right-0 mt-2 -mx-6 border-t border-gray-200 dark:border-gray-800"
-          ></div>
-
-          <div class="flex w-full gap-6 justify-end pt-8 mt-4">
+          <div class="flex w-full gap-6 justify-end px-2 py-4 ">
             <UButton
               type="button"
               variant="outline"
@@ -259,7 +350,8 @@ function onCreate(newItem: string) {
   items.value.push(newItem);
   value.value = newItem;
 }
-const inputDate = useTemplateRef('inputDate');
+const isMaterialActive= ref(false);
+const isTestActive= ref(false);
 const minDate = new CalendarDate(2000, 1, 1);
 const maxDate = getToday();
 
