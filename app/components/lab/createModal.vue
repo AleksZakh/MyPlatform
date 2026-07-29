@@ -179,7 +179,7 @@
               </UFormField>
               <UFormField name="qualDocDate" >
                 <template #label>
-                  <span class="font-medium" :class="{ 'text-gray-900': isMaterialActive, 'text-gray-400': !isMaterialActive }">
+                  <span class="font-medium uppercase" :class="{ 'text-gray-900': isMaterialActive, 'text-gray-400': !isMaterialActive }">
                     Дата документа о качестве
                   </span>
                 </template>
@@ -316,6 +316,8 @@ import * as z from 'zod';
 import type { FormSubmitEvent } from '@nuxt/ui';
 import { CalendarDate } from '@internationalized/date';
 import { parseDate, getToday, dateToISOString } from '../../../utils/dateUtils'; // или '@/utils/dateUtils'
+const userStore = useUserStore();
+const { user } = storeToRefs(userStore);
 
 const props = defineProps<{
   count: number;
@@ -511,6 +513,20 @@ watch(
   { immediate: true }
 );
 
+watch(
+  user,
+  (newUser) => {
+    if (newUser) {
+      // console.log('Сессия успешно считана и обновилась:', newUser);
+      // @ts-ignore
+      userDep.value = newUser.department || '';
+      // @ts-ignore
+      authType.value = newUser.authType || null;
+    }
+  },
+  { immediate: true }
+); // immediate проверит значение сразу при старте
+
 // Обработчик нажатия кнопки "Сохранить"
 async function handleSubmit(event: FormSubmitEvent<Schema>) {
   // 1. Преобразуем даты в формат ISO строки перед упаковкой
@@ -600,6 +616,14 @@ async function handleSubmit(event: FormSubmitEvent<Schema>) {
 
   emit('close', true);
 }
+
+onMounted(() => {
+  console.log('Данные пользователя на клиенте === ', user);
+  // @ts-ignore
+  // userDep.value = adUser.department || '';
+});
+
+
 </script>
 
 <style scoped>

@@ -125,7 +125,7 @@ export default defineEventHandler(async (event) => {
       const filePath = path.join(uploadDir, fileName);
       fs.writeFileSync(filePath, body.qualDoc.data);
       
-      updateData.qualDoc = `/uploads/${fileName}`;
+      updateData.qualityDocument  = `/uploads/${fileName}`;
     }
 
     if (body.protocolDoc && body.protocolDoc.data) {
@@ -148,6 +148,8 @@ export default defineEventHandler(async (event) => {
         error: 'Нет данных для обновления',
       };
     }
+
+    console.groupCollapsed('updateData ===> ', updateData)
 
     // Обновляем запись
     const updatedRecord = await prisma.aEng.update({

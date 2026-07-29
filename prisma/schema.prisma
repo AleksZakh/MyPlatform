@@ -50,9 +50,14 @@ model AEng {
   // НАЧАЛО НОВЫХ ПОЛЕЙ (Все со знаком '?', чтобы миграция прошла успешно без потери данных)
   sDocPath                String?  @db.VarChar(255)   // Путь к файлу sDoc
   qualDocPath             String?  @db.VarChar(255)   // Путь к файлу qualDoc
+  testDocPath             String?     // Документ о качестве (новое имя) ✅ ПЕРЕИМЕНОВАНО
   protocolDocPath         String?  @db.VarChar(255)   // Путь к файлу protocolDoc
   qualDocNumber           String?  @db.VarChar(100)   // Номер документа о качестве из формы
-  // КОНЕЦ НОВЫХ ПОЛЕЙ
+  //================================
+
+  // НОВЫЕ ПОЛЯ 28.07.2026
+  qualDocDate             DateTime? @db.Date          // Дата документа о качестве
+  authorEmail             String?   @db.VarChar(100) // Email автора
 
   manufacturer            String?  @db.VarChar(255)   // Предприятие-изготовитель (может быть пустым)
   protocolNumber          String   @db.VarChar(100)   // Номер протокола
