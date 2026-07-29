@@ -111,8 +111,8 @@
 
           <!-- PDF -->
           <div v-else-if="isPdf" class="w-full h-[70vh] min-h-100">
-            <object
-              :data="fileUrl"
+            <iframe 
+              :src="fileUrl"
               type="application/pdf"
               class="w-full h-full rounded-lg shadow-sm"
             >
@@ -132,7 +132,7 @@
                   Скачать PDF
                 </UButton>
               </div>
-            </object>
+            </iframe>
           </div>
 
           <!-- Текстовые файлы -->
@@ -258,10 +258,12 @@ const fileUrl = computed(() => {
     props.filePath.startsWith('http://') ||
     props.filePath.startsWith('https://')
   ) {
+    console.log(props.filePath)
     return props.filePath;
   }
   // Убираем дублирующиеся слеши
   const cleanPath = props.filePath.replace(/^\/+/, '');
+  console.log(cleanPath)
   return `/${cleanPath}`;
 });
 

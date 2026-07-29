@@ -75,15 +75,15 @@
                 <div class="mt-1">
                   <!-- ✅ КНОПКА ДЛЯ ОТКРЫТИЯ ВЛОЖЕННОЙ МОДАЛКИ -->
                   <UButton
-                    v-if="record?.sDoc"
+                    v-if="response?.sDocPath"
                     variant="ghost"
                     color="primary"
                     size="sm"
                     class="px-0"
-                    @click="openFileViewer(record.sDoc)"
+                    @click="openFileViewer(response.sDocPath)"
                   >
                     <Icon name="i-heroicons-document-text" class="mr-1" />
-                    {{ getFileName(record.sDoc) }}
+                    {{ getFileName(response.sDocPath) }}
                     <Icon name="i-heroicons-arrow-top-right-on-square" class="ml-1 w-4 h-4" />
                   </UButton>
                   <span v-else class="text-md text-gray-400">—</span>
@@ -329,7 +329,7 @@
             
             <!-- PDF -->
             <div v-else-if="isViewerPdf" class="w-full h-[70vh] min-h-100">
-              <object
+              <object 
                 :data="viewerFileUrl"
                 type="application/pdf"
                 class="w-full h-full rounded-lg"
@@ -397,6 +397,37 @@ import { ref, computed } from 'vue';
 const props = defineProps<{
   record: any
 }>()
+const response = ref();
+
+// Функция генерации полного URL для скачивания/просмотра
+const getFileUrl = (path: string | null) => {
+  if (!path) return '#'
+  
+  // Добавляем префикс папки из public, убирая лишние слэши для безопасности
+  const cleanPath = path.startsWith('/') ? path.slice(1) : path
+  return `/files/${cleanPath}`
+}
+
+onMounted(async () => {
+  console.log('Данные пользователя на клиенте === ', props.record);
+  
+  
+  
+  if (props.record.action === 'view') {
+    try {
+      // Добавляем await для ожидания ответа и проверяем регистр ID (id или ID)
+      const recordId = props.record.id || props.record.ID || props.record.index;
+      // @ts-ignore
+      response.value = await $fetch(`/api/incoming-control/${recordId}`);
+    } catch (error) {
+      console.error('Ошибка при загрузке данных:', error);
+    }
+  }
+  
+  console.log('ответ от сервера response ===> ', response);
+});
+
+
 
 // ======= СОБЫТИЯ =======
 const emit = defineEmits<{
@@ -429,7 +460,7 @@ function getFileName(path: string): string {
 
 function openFileViewer(path: string) {
   if (!path) return
-  viewerFilePath.value = path
+  viewerFilePath.value = '/files/'+path
   viewerFileName.value = getFileName(path)
   viewerError.value = ''
   showFileViewer.value = true

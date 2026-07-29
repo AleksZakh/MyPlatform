@@ -77,9 +77,17 @@
               </UFormField>
               <UFormField name="sDoc">
                 <template #label>
-                  <span class="font-medium uppercase text-gray-900">
-                    Документ отбора проб
-                  </span> 
+                  <div class="flex items-end gap-2">
+                    <span class="font-medium uppercase text-gray-900">
+                      Документ отбора проб
+                    </span> 
+                    <div v-if="state.sDate" class=" flex items-center border border-transparent p-1 bg-orange-50 rounded-sm hover:border-gray-200 transition-colors">
+
+                      <a :href="getFileUrl(dbResponse.sDocPath)" class="flex items-center m-0 p-0 h-fit w-fit doc-link" >
+                        <Icon name="streamline-freehand-color:bookmarks-document"  class="p-0 m-0"/>
+                      </a>
+                    </div>
+                  </div>
                 </template>
                 <UInput
                   @change="
@@ -316,6 +324,7 @@ import * as z from 'zod';
 import type { FormSubmitEvent } from '@nuxt/ui';
 import { CalendarDate } from '@internationalized/date';
 import { parseDate, getToday, dateToISOString } from '../../../utils/dateUtils'; // или '@/utils/dateUtils'
+import {getFileUrl} from '@@/utils/fileUrl'
 const userStore = useUserStore();
 const { user } = storeToRefs(userStore);
 
@@ -347,6 +356,7 @@ const items = ref(['Backlog', 'Todo', 'In Progress', 'Done']);
 const value = ref('Backlog');
 const modalTitle = ref('');
 const {showTost} = useAppToasts()
+let dbResponse = ref()
 
 function onCreate(newItem: string) {
   items.value.push(newItem);
@@ -371,12 +381,21 @@ const ACCEPTED_FILE_TYPES = [
 const fileValidator = z
   .instanceof(File, { message: 'Пожалуйста, выберите корректный файл' })
   .refine(
-    (file) => file.size <= MAX_FILE_SIZE,
+    (file) => ((file.size <= MAX_FILE_SIZE)),
     `Максимальный размер файла — 5 МБ.`
   )
   .refine(
     (file) => ACCEPTED_FILE_TYPES.includes(file.type),
     'Допустимые форматы: .jpg, .png, .pdf, .doc, .docx, .txt'
+  )
+  .refine(
+    (val) => {
+      if (!val && (isMaterialActive || isTestActive)) {
+        return false; // Ошибка: флаги активны, но файл не прикрепили
+      }
+      return true;
+    },
+    { message: 'Пожалуйста, выберите корректный файл' }
   )
   .nullable() // Позволяет полю быть null, если файл не выбран
   .optional(); // Позволяет полю отсутствовать в объекте
@@ -399,13 +418,13 @@ const schema = z.object({
   receiptDate: z
     .any()
     .refine(
-      (val) => val !== null && val !== undefined,
+      (val) => ((val !== null && val !== undefined) || isMaterialActive),
       'Пожалуйста, выберите дату'
     ),
   qualDocDate: z
     .any()
     .refine(
-      (val) => val !== null && val !== undefined,
+      (val) => ((val !== null && val !== undefined) || isMaterialActive),
       'Пожалуйста, выберите дату'
     ),
   qualDoc: fileValidator.default(null),
@@ -414,7 +433,7 @@ const schema = z.object({
   testProtocolDate: z
     .any()
     .refine(
-      (val) => val !== null && val !== undefined,
+      (val) => ((val !== null && val !== undefined) || isTestActive),
       'Пожалуйста, выберите дату'
     ),
   protocolDoc: fileValidator.default(null),
@@ -432,17 +451,17 @@ const getInitialState = (): Schema => ({
   objName: '',
   actNumber: '',
   sDoc: null as File | null,
-  sDate: shallowRef(getToday()),
+  sDate: null,
   sPlace: '',
   sPerson: '',
   sNote: '',
   material: '',
-  receiptDate: shallowRef(getToday()),
-  qualDocDate: shallowRef(getToday()),
+  receiptDate: null,
+  qualDocDate: null,
   qualDoc: null as File | null,
   qualDocNumber: '',
   manufacturer: '',
-  testProtocolDate: shallowRef(getToday()),
+  testProtocolDate: null,
   protocolDoc: null as File | null,
   testResult: '',
   testProtocolNumber: '',
@@ -476,21 +495,21 @@ function fillFormWithData(data: any) {
   state.plp = data['ПЛП'] || '';
   state.objName = data['Наименование объект'] || '';
   state.actNumber = data['Номер акта отбора проб'] || '';
-  state.sDate = parseDate(data['Дата отбора проб']) || shallowRef(getToday());
+  state.sDate = parseDate(data['Дата отбора проб']) || null;
   state.sPlace = data['Место отбора проб'] || '';
   state.sPerson = data['Лицо, предоставившее пробу'] || '';
   state.sNote = data['Примечание'] || '';
   state.material = data['Наименование материала'] || '';
   state.receiptDate =
-    parseDate(data['Дата поступления материала']) || shallowRef(getToday());
+    parseDate(data['Дата поступления материала']) || null;
   state.qualDocDate =
-    parseDate(data['Дата протокола']) || shallowRef(getToday());
-  // state.qualDoc = data['Документ о качестве'] || ''
+    parseDate(data['Дата протокола']) || null;
+  state.qualDoc = data['Документ о качестве'] || ''
   state.qualDocNumber = data['Номер протокола'] || '';
   state.manufacturer = data['Предприятие-изготовитель'] || '';
   state.testProtocolDate =
-    parseDate(data['Дата протокола']) || shallowRef(getToday());
-  // state.protocolDoc = data['Документ протокола'] || ''
+    parseDate(data['Дата протокола']) || null;
+  state.protocolDoc = data['Документ протокола'] || ''
   state.testResult = data['Результат испытаний'] || '';
   state.testProtocolNumber = data['Номер протокола'] || '';
 }
@@ -498,8 +517,11 @@ function fillFormWithData(data: any) {
 // 6. Наблюдатель за открытием/закрытием/редактированием
 watch(
   () => props.selectedRecord,
-  (newVal) => {
+  async (newVal) => {
     if (newVal?.action === 'edit' || newVal?.action === 'view') {
+      console.log('newVal ====> ', newVal)
+      dbResponse.value = await $fetch(`/api/incoming-control/${newVal.ID}`);
+      console.log('dbResponse = ', dbResponse.value)
       fillFormWithData(newVal);
       modalTitle.value =
         newVal?.action === 'edit'
@@ -513,30 +535,40 @@ watch(
   { immediate: true }
 );
 
-watch(
-  user,
-  (newUser) => {
-    if (newUser) {
+// watch(
+  // user,
+  // (newUser) => {
+    // if (newUser) {
       // console.log('Сессия успешно считана и обновилась:', newUser);
       // @ts-ignore
-      userDep.value = newUser.department || '';
-      // @ts-ignore
-      authType.value = newUser.authType || null;
-    }
-  },
-  { immediate: true }
-); // immediate проверит значение сразу при старте
+    // }
+  // },
+  // { immediate: true }
+// ); // immediate проверит значение сразу при старте
 
 // Обработчик нажатия кнопки "Сохранить"
 async function handleSubmit(event: FormSubmitEvent<Schema>) {
   // 1. Преобразуем даты в формат ISO строки перед упаковкой
-  const sDateStr = dateToISOString(event.data.sDate);
-  const receiptDateStr = dateToISOString(event.data.receiptDate);
-  const qualDocDateStr = dateToISOString(event.data.qualDocDate);
-  const testProtocolDateStr = dateToISOString(event.data.testProtocolDate);
+  let sDateStr:any, receiptDateStr:any, qualDocDateStr:any, testProtocolDateStr:any;
+  if(event.data.sDate) sDateStr = dateToISOString(event.data.sDate);
+  if(event.data.receiptDate) receiptDateStr = dateToISOString(event.data.receiptDate);
+  if(event.data.qualDocDate) qualDocDateStr = dateToISOString(event.data.qualDocDate);
+  if(event.data.testProtocolDate) testProtocolDateStr = dateToISOString(event.data.testProtocolDate);
 
   // 2. Создаем объект FormData для multipart-отправки (текст + файлы)
   const formData = new FormData();
+  // @ts-ignore
+  if(user || user.email){
+    // @ts-ignore
+    formData.append('authorEmail', user.email);
+    // @ts-ignore
+    formData.append('editorEmail', user.email);
+  } else {
+    formData.append('authorEmail', 'noName');
+    // @ts-ignore
+    formData.append('editorEmail', 'noName');
+  }
+  
 
   // 3. Заполняем FormData всеми полями из event.data
   Object.keys(event.data).forEach((key) => {
@@ -569,6 +601,8 @@ async function handleSubmit(event: FormSubmitEvent<Schema>) {
       'Редактирование записи, добавляем id:',
       props.selectedRecord.ID
     );
+    // @ts-ignore
+    formData.append('editorEmail', user.email);
     try {
       const response = await $fetch<{ success: boolean; error?: string }>(
         `/api/incoming-control/${props.selectedRecord.ID}`,
@@ -627,6 +661,10 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.doc-link{
+  display: flex !important;
+}
+
 .parent {
   display: inline-grid;
   /* 3 колонки: минимум контент, максимум 1 часть оставшегося пространства */

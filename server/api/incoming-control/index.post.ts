@@ -70,28 +70,34 @@ export default defineEventHandler(async (event) => {
       // Формируем относительный путь для БД (например: "2025-11-30_17-45/sDoc.docx")
       fileDbPaths[fieldName] = path.join(folderName, newFilename);
     }
+    const parseDate = (value: any) => {
+      if (!value || String(value).trim() === '' || value === 'Invalid Date') {
+        return null;
+      }
+      const date = new Date(value);
+      // Проверяем, не получился ли Invalid Date внутри объекта
+      return isNaN(date.getTime()) ? null : date;
+    };
 
     // 3. Сохраняем очищенные данные в PostgreSQL через Prisma
     const newRecord = await prisma.aEng.create({
       data: {
+        authorEmail: body.authorEmail,
         plp: body.plp || '',
         objectName: body.objName || '',
         samplingActNumber: body.actNumber || '',
 
         // Конвертируем строки дат в объекты Date для PostgreSQL
-        samplingDate: body.sDate ? new Date(body.sDate) : new Date(),
+        samplingDate: parseDate(body.samplingDate) ?? new Date(),
         samplingPlace: body.sPlace || '',
         personProvidedSample: body.sPerson || '',
-        materialReceiptDate: body.receiptDate
-          ? new Date(body.receiptDate)
-          : new Date(),
+        materialReceiptDate: parseDate(body.receiptDate), 
         materialName: body.material || '',
         manufacturer: body.manufacturer || null,
 
         protocolNumber: body.testProtocolNumber || '',
-        protocolDate: body.testProtocolDate
-          ? new Date(body.testProtocolDate)
-          : new Date(),
+        protocolDate: parseDate(body.protocolDate),
+        qualDocDate: parseDate(body.qualDocDate),
         testResult: body.testResult || '',
         note: body.sNote || null,
 
