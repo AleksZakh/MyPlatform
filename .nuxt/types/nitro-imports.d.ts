@@ -92,6 +92,7 @@ declare global {
   const defineWebSocketHandler: typeof import('../../node_modules/h3').defineWebSocketHandler
   const deleteCookie: typeof import('../../node_modules/h3').deleteCookie
   const deleteFile: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/storage').deleteFile
+  const deleteUploadedFile: typeof import('../../server/utils/fileUtils').deleteUploadedFile
   const dynamicEventHandler: typeof import('../../node_modules/h3').dynamicEventHandler
   const ensureSafeBasename: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/path-safety').ensureSafeBasename
   const eventHandler: typeof import('../../node_modules/h3').eventHandler
@@ -433,7 +434,7 @@ export { sessionHooks, getUserSession, setUserSession, replaceUserSession, clear
 export { getUserGroups } from '/home/local_adm/Projects/MyPlatform/server/utils/ad';
 export { adCache } from '/home/local_adm/Projects/MyPlatform/server/utils/adCache';
 export { handleFileUpload, cleanOldFilesFromDisk, parseDate, updateFilePathsInData } from '/home/local_adm/Projects/MyPlatform/server/utils/fileUploadHandler';
-export { getFullFilePath, fileExists, getFileInfo } from '/home/local_adm/Projects/MyPlatform/server/utils/fileUtils';
+export { getFullFilePath, fileExists, getFileInfo, deleteUploadedFile } from '/home/local_adm/Projects/MyPlatform/server/utils/fileUtils';
 export { folderNameGenerator } from '/home/local_adm/Projects/MyPlatform/server/utils/folderNameGenerator';
 export { logger } from '/home/local_adm/Projects/MyPlatform/server/utils/logger';
 export { normalizeRelative, isSafeBasename, ensureSafeBasename, containsPathTraversal, resolveAndEnsureInside } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-file-storage/dist/runtime/server/utils/path-safety';

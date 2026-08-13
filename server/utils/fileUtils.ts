@@ -48,7 +48,7 @@ export function getFileInfo(relativePath: string | null): {
 /**
  * Удалить файл
  */
-export function deleteFile(relativePath: string | null): boolean {
+export function deleteUploadedFile(relativePath: string | null): boolean {
   if (!relativePath) return false;
   const fullPath = getFullFilePath(relativePath);
   if (!fullPath) return false;
