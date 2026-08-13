@@ -11,38 +11,99 @@ export function convertDateToForm(date:string) {
   const parts = date.split('.');
   return `${parts[2]}-${parts[0]}-${parts[1]}`
 }
-export function parseDate(dateStr: string): CalendarDate | null {
-  if (!dateStr || dateStr === 'Отсутствует' || dateStr.trim() === '') {
+export function parseDate(dateStr: string | Date | null | undefined): CalendarDate | null {
+  if (!dateStr || dateStr === 'Отсутствует' || dateStr === '—') {
     return null;
   }
 
   try {
-    const parts = dateStr.split('.');
-    if (parts.length === 3) {
-      const dayPart = parts[0];
-      const monthPart = parts[1];
-      const yearPart = parts[2];
+    // Если это уже объект Date
+    if (dateStr instanceof Date) {
+      if (isNaN(dateStr.getTime())) return null;
+      return new CalendarDate(
+        dateStr.getFullYear(),
+        dateStr.getMonth() + 1,
+        dateStr.getDate()
+      );
+    }
 
-      if (dayPart && monthPart && yearPart) {
-        const day = parseInt(dayPart, 10);
-        const month = parseInt(monthPart, 10);
-        const year = parseInt(yearPart, 10);
+    // Если это строка
+    if (typeof dateStr === 'string') {
+      const trimmed = dateStr.trim();
+      if (trimmed === '') return null;
 
-        if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
-          // Проверка на валидность даты
-          const date = new Date(year, month - 1, day);
-          if (
-            date.getFullYear() === year &&
-            date.getMonth() === month - 1 &&
-            date.getDate() === day
-          ) {
-            return new CalendarDate(year, month, day);
+      // 1. ISO формат (YYYY-MM-DD или YYYY-MM-DDTHH:mm:ss.sssZ)
+      if (trimmed.includes('-') || trimmed.includes('T')) {
+        const date = new Date(trimmed);
+        if (!isNaN(date.getTime())) {
+          return new CalendarDate(
+            date.getFullYear(),
+            date.getMonth() + 1,
+            date.getDate()
+          );
+        }
+      }
+
+      // 2. Формат с точками (DD.MM.YYYY)
+      if (trimmed.includes('.')) {
+        const parts = trimmed.split('.');
+        if (parts.length === 3) {
+          // ✅ Проверяем, что все части существуют
+          const dayPart = parts[0];
+          const monthPart = parts[1];
+          const yearPart = parts[2];
+          
+          if (dayPart && monthPart && yearPart) {
+            const day = parseInt(dayPart, 10);
+            const month = parseInt(monthPart, 10);
+            const year = parseInt(yearPart, 10);
+
+            if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+              const date = new Date(year, month - 1, day);
+              if (
+                date.getFullYear() === year &&
+                date.getMonth() === month - 1 &&
+                date.getDate() === day
+              ) {
+                return new CalendarDate(year, month, day);
+              }
+            }
+          }
+        }
+      }
+
+      // 3. Формат с слешами (YYYY/MM/DD)
+      if (trimmed.includes('/')) {
+        const parts = trimmed.split('/');
+        if (parts.length === 3) {
+          // ✅ Проверяем, что все части существуют
+          const yearPart = parts[0];
+          const monthPart = parts[1];
+          const dayPart = parts[2];
+          
+          if (yearPart && monthPart && dayPart) {
+            const year = parseInt(yearPart, 10);
+            const month = parseInt(monthPart, 10);
+            const day = parseInt(dayPart, 10);
+
+            if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+              const date = new Date(year, month - 1, day);
+              if (
+                date.getFullYear() === year &&
+                date.getMonth() === month - 1 &&
+                date.getDate() === day
+              ) {
+                return new CalendarDate(year, month, day);
+              }
+            }
           }
         }
       }
     }
+
     return null;
-  } catch {
+  } catch (error) {
+    console.error('Error parsing date:', dateStr, error);
     return null;
   }
 }

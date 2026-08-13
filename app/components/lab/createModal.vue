@@ -2,7 +2,7 @@
   <UModal
     :close="{ onClick: () => emit('close', false) }"
     class="custom-modal bg-sky-100 shadow-blue-200 max-h-full w-full border border-gray-300"
-    :ui="{ content: 'sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl bg-blue-50' }"
+    :ui="{ content: 'sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl bg-gray-100' }"
   >
     <template #header>
       <div class="flex items-center justify-between w-full">
@@ -36,7 +36,7 @@
         @submit="handleSubmit"
       >
         <!-- Контейнер для полей ввода (чтобы они не прижимались к линии) USelectMenu  -->
-        <div class="grid grid-cols-3 gap-3 px-1 pb-2 bg-gray-50 parent">
+        <div class="grid grid-cols-3 gap-3 px-1 pb-2 bg-white parent">
           <fieldset class="border-2 border-gray-200 bg-white px-2 py-2 rounded-md">
             <legend class="text-xl font-normal gap-2 px-2 flex items-center"><Icon name="streamline-freehand-color:business-product-supplier-1" size="24"/> Отбор проб</legend>
             <div class="flex flex-col gap-2">
@@ -81,10 +81,10 @@
                     <span class="font-medium uppercase text-gray-900">
                       Документ отбора проб
                     </span> 
-                    <div v-if="state.sDate" class=" flex items-center border border-transparent p-1 bg-orange-50 rounded-sm hover:border-gray-200 transition-colors">
-
-                      <a :href="getFileUrl(dbResponse.sDocPath)" class="flex items-center m-0 p-0 h-fit w-fit doc-link" >
-                        <Icon name="streamline-freehand-color:bookmarks-document"  class="p-0 m-0"/>
+                    <!-- Добавлена проверка на существование пути к файлу: dbResponse?.sDocPath -->
+                    <div v-if="state.sDate && dbResponse?.sDocPath" class="flex items-center border border-green-600 p-1 bg-green-50 rounded-sm hover:border-gray-200 transition-colors">
+                      <a :href="getFileUrl(dbResponse.sDocPath)" class="flex items-center m-0 p-0 h-fit w-fit doc-link" target="_blank">
+                        <Icon name="streamline-freehand-color:bookmarks-document" class="p-0 m-0"/>
                       </a>
                     </div>
                   </div>
@@ -98,6 +98,7 @@
                   class="w-full shadow-sm"
                 />
               </UFormField>
+              
               <UFormField name="sDate" required >                
                 <template #label>
                   <span class="font-medium uppercase text-gray-900">
@@ -200,9 +201,17 @@
               /></UFormField>
               <UFormField name="qualDoc" >
                 <template #label>
-                  <span class="font-medium uppercase" :class="{ 'text-gray-900': isMaterialActive, 'text-gray-400': !isMaterialActive }">
-                    Документ о качестве
-                  </span>
+                  <div class="flex items-end gap-2">
+                    <span class="font-medium uppercase" :class="{ 'text-gray-900': isMaterialActive, 'text-gray-400': !isMaterialActive }">
+                      Документ о качестве
+                    </span>
+                    <!-- Отображение ссылки на файл документа о качестве -->
+                    <div v-if="isMaterialActive && dbResponse?.qualityDocument" class="flex items-center border border-green-600 p-1 bg-green-50 rounded-sm hover:border-gray-200 transition-colors">
+                      <a :href="getFileUrl(dbResponse.qualityDocument)" class="flex items-center m-0 p-0 h-fit w-fit doc-link" target="_blank">
+                        <Icon name="streamline-freehand-color:bookmarks-document" class="p-0 m-0"/>
+                      </a>
+                    </div>
+                  </div>
                 </template>
                 <UInput
                   @change="
@@ -255,9 +264,17 @@
               </UFormField>
               <UFormField name="protocolDoc" >
                 <template #label>
-                  <span class="font-medium uppercase" :class="{ 'text-gray-900': isTestActive, 'text-gray-400': !isTestActive }">
-                    Документ
-                  </span>
+                  <div class="flex items-end gap-2">
+                    <span class="font-medium uppercase" :class="{ 'text-gray-900': isTestActive, 'text-gray-400': !isTestActive }">
+                      Документ
+                    </span>
+                    <!-- Отображение ссылки на файл документа о качестве -->
+                    <div v-if="isTestActive && dbResponse?.protocolDocPath" class="flex items-center border border-green-600 p-1 bg-green-50 rounded-sm hover:border-gray-200 transition-colors">
+                      <a :href="getFileUrl(dbResponse.protocolDocPath)" class="flex items-center m-0 p-0 h-fit w-fit doc-link" target="_blank">
+                        <Icon name="streamline-freehand-color:bookmarks-document" class="p-0 m-0"/>
+                      </a>
+                    </div>
+                  </div>
                 </template>
                 <UInput
                   @change="
@@ -280,6 +297,11 @@
                   @create="onCreate"
                   create-item
                   class="w-full"
+                  :class="{
+                    'border-2 border-green-100 ring-2 ring-green-100': state.testResult === 'Соответствует',
+                    'border-2 border-red-100 ring-2 ring-red-100': state.testResult === 'Не соответствует',
+                    'border border-gray-100': !state.testResult || state.testResult === ''
+                  }"
                   v-model="state.testResult"
                   :disabled="!isTestActive"
                 />
@@ -334,6 +356,7 @@ const props = defineProps<{
     action?: string;
     'Дата отбора проб'?: string;
     'Дата поступления материала'?: string;
+    'Дата документа о качестве'?: string;
     'Дата протокола'?: string;
     'Документ о качестве'?: string;
     'Лицо, предоставившее пробу'?: string;
@@ -377,34 +400,71 @@ const ACCEPTED_FILE_TYPES = [
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ];
 
-// Вынесем переиспользуемый валидатор файла
-const fileValidator = z
-  .instanceof(File, { message: 'Пожалуйста, выберите корректный файл' })
-  .refine(
-    (file) => ((file.size <= MAX_FILE_SIZE)),
-    `Максимальный размер файла — 5 МБ.`
-  )
-  .refine(
-    (file) => ACCEPTED_FILE_TYPES.includes(file.type),
-    'Допустимые форматы: .jpg, .png, .pdf, .doc, .docx, .txt'
-  )
-  .refine(
-    (val) => {
-      if (!val && (isMaterialActive || isTestActive)) {
-        return false; // Ошибка: флаги активны, но файл не прикрепили
-      }
-      return true;
-    },
-    { message: 'Пожалуйста, выберите корректный файл' }
-  )
-  .nullable() // Позволяет полю быть null, если файл не выбран
-  .optional(); // Позволяет полю отсутствовать в объекте
+function formatDateTime(date: string | Date | null): string {
+  if (!date) return '—'
+  try {
+    return new Date(date).toLocaleDateString('ru-RU')
+  } catch {
+    return '—'
+  }
+}
+
+// Создаем отдельные валидаторы для каждого поля файла
+const getFileValidator = (isActive: Ref<boolean>) => {
+  return z
+    .any()
+    .refine(
+      (val) => {
+        // Если блок неактивен - файл не требуется
+        if (!isActive.value) return true;
+        
+        // Проверяем наличие файла
+        if (val === null || val === undefined) return false;
+        
+        // Файл считается валидным если:
+        // 1. Это File объект
+        if (val instanceof File) return true;
+        
+        // 2. Это строка с путем к существующему файлу (при редактировании)
+        if (typeof val === 'string' && val.length > 0) return true;
+        
+        return false;
+      },
+      { message: 'Пожалуйста, выберите корректный файл' }
+    )
+    .refine(
+      (val) => {
+        // Проверка размера файла
+        if (!isActive.value || !val) return true;
+        if (typeof val === 'string') return true; // Существующий файл
+        if (val instanceof File) {
+          return val.size <= MAX_FILE_SIZE;
+        }
+        return true;
+      },
+      `Максимальный размер файла — 5 МБ.`
+    )
+    .refine(
+      (val) => {
+        // Проверка типа файла
+        if (!isActive.value || !val) return true;
+        if (typeof val === 'string') return true; // Существующий файл
+        if (val instanceof File) {
+          return ACCEPTED_FILE_TYPES.includes(val.type);
+        }
+        return true;
+      },
+      'Допустимые форматы: .jpg, .png, .pdf, .doc, .docx, .txt'
+    )
+    .nullable()
+    .optional();
+};
 
 const schema = z.object({
-  plp: z.string().min(1, 'Пожалуйста, введите логин'),
-  objName: z.string().min(1, 'Пожалуйста, введите пароль'),
-  actNumber: z.string().min(1, 'Пожалуйста, введите номер акта'),
-  sDoc: fileValidator.default(null),
+  plp: z.string().min(1, 'Поле ПЛП обязательно для ввода'),
+  objName: z.string().min(1, 'Название объекта является обязательным'),
+  actNumber: z.string().min(1, 'Дата обязательна для ввода'),
+  sDoc: getFileValidator(isMaterialActive),
   sDate: z
     .any()
     .refine(
@@ -427,7 +487,7 @@ const schema = z.object({
       (val) => ((val !== null && val !== undefined) || isMaterialActive),
       'Пожалуйста, выберите дату'
     ),
-  qualDoc: fileValidator.default(null),
+  qualDoc: getFileValidator(isMaterialActive),
   qualDocNumber: z.string().default(''),
   manufacturer: z.string().default(''),
   testProtocolDate: z
@@ -436,7 +496,7 @@ const schema = z.object({
       (val) => ((val !== null && val !== undefined) || isTestActive),
       'Пожалуйста, выберите дату'
     ),
-  protocolDoc: fileValidator.default(null),
+  protocolDoc: getFileValidator(isTestActive), // Используем обновленный валидатор
   testResult: z.string().default(''),
   testProtocolNumber: z.string().default(''),
 });
@@ -445,12 +505,12 @@ type Schema = z.output<typeof schema>;
 // Выводим тип схемы для TypeScript
 export type IncomingControlSchema = z.infer<typeof schema>;
 
-// 2. ЕДИНСТВЕННЫЙ источник правды для структуры полей
-const getInitialState = (): Schema => ({
+// 2. Структура полей
+const getInitialState = (): any => ({
   plp: '',
   objName: '',
   actNumber: '',
-  sDoc: null as File | null,
+  sDoc: null as File | string | null,
   sDate: null,
   sPlace: '',
   sPerson: '',
@@ -458,11 +518,11 @@ const getInitialState = (): Schema => ({
   material: '',
   receiptDate: null,
   qualDocDate: null,
-  qualDoc: null as File | null,
+  qualDoc: null as File | string | null,
   qualDocNumber: '',
   manufacturer: '',
   testProtocolDate: null,
-  protocolDoc: null as File | null,
+  protocolDoc: null as File | string | null,
   testResult: '',
   testProtocolNumber: '',
 });
@@ -489,7 +549,7 @@ function resetForm() {
 }
 
 // 5. Заполнение формы данными из таблицы
-function fillFormWithData(data: any) {
+function fillFormWithData(data: any, dbData: any) {
   if (!data) return;
 
   state.plp = data['ПЛП'] || '';
@@ -500,19 +560,31 @@ function fillFormWithData(data: any) {
   state.sPerson = data['Лицо, предоставившее пробу'] || '';
   state.sNote = data['Примечание'] || '';
   state.material = data['Наименование материала'] || '';
-  state.receiptDate =
-    parseDate(data['Дата поступления материала']) || null;
-  state.qualDocDate =
-    parseDate(data['Дата протокола']) || null;
-  state.qualDoc = data['Документ о качестве'] || ''
-  state.qualDocNumber = data['Номер протокола'] || '';
+  state.receiptDate = parseDate(data['Дата поступления материала']) || null;
+  
+  if (dbData) {
+    // Все файловые поля сохраняем как строки (пути к файлам)
+    state.sDoc = dbData.sDocPath || '';
+    state.qualDoc = dbData.qualityDocument || '';
+    state.protocolDoc = dbData.protocolDocPath || '';
+    
+    state.qualDocDate = parseDate(dbData.qualDocDate);
+    state.qualDocNumber = dbData.qualDocNumber || '';
+  } else {
+    state.sDoc = data['Документ отбора проб'] || '';
+    state.qualDoc = data['Документ о качестве'] || '';
+    state.protocolDoc = data['Документ протокола'] || '';
+    
+    state.qualDocDate = parseDate(data['Дата документа о качестве']);
+    state.qualDocNumber = data['Номер протокола'] || '';
+  }
+  
   state.manufacturer = data['Предприятие-изготовитель'] || '';
-  state.testProtocolDate =
-    parseDate(data['Дата протокола']) || null;
-  state.protocolDoc = data['Документ протокола'] || ''
+  state.testProtocolDate = parseDate(data['Дата протокола']) || null;
   state.testResult = data['Результат испытаний'] || '';
   state.testProtocolNumber = data['Номер протокола'] || '';
 }
+
 
 // 6. Наблюдатель за открытием/закрытием/редактированием
 watch(
@@ -520,9 +592,16 @@ watch(
   async (newVal) => {
     if (newVal?.action === 'edit' || newVal?.action === 'view') {
       console.log('newVal ====> ', newVal)
-      dbResponse.value = await $fetch(`/api/incoming-control/${newVal.ID}`);
+      const dbData = await $fetch(`/api/incoming-control/${newVal.ID}`);
+      dbResponse.value = dbData;
       console.log('dbResponse = ', dbResponse.value)
-      fillFormWithData(newVal);
+      if(dbData.qualDocDate || dbData.materialName){
+        isMaterialActive.value = true;
+      }
+      if(dbData.protocolNumber){
+        isTestActive.value = true
+      }
+      fillFormWithData(newVal, dbData);
       modalTitle.value =
         newVal?.action === 'edit'
           ? 'Редактирование записи'

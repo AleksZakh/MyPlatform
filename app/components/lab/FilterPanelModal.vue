@@ -2,7 +2,7 @@
 <template>
   <UModal
     :ui="{
-      content: 'sm:max-w-4xl md:max-w-5xl lg:max-w-6xl xl:max-w-7xl w-full bg-blue-50'
+      content: 'sm:max-w-4xl md:max-w-5xl lg:max-w-6xl xl:max-w-7xl w-full bg-gray-100'
     }"
   >
     <!-- Головная часть модального окна -->
@@ -36,7 +36,7 @@
       <div class="panel-wrapper  shadow-md" ref="panelRef">
         <form
           @submit.prevent="applyFilters"
-          class="bg-gray-50 rounded-md gap-4 p-5 md:p-6"
+          class="bg-white rounded-md gap-4 p-5 md:p-6"
         >
           <div class="flex">
             <!-- ОРБОР ПРОБ -->

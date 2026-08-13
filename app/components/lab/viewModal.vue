@@ -2,7 +2,7 @@
 <template>
   <UModal
     class="custom-modal "
-    :ui="{ content: 'sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl w-full bg-blue-50' }"
+    :ui="{ content: 'sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl w-full bg-gray-100' }"
   >
     <template #header>
       <div class="flex items-center justify-between w-full">
@@ -30,7 +30,7 @@
     </template>
 
     <template #body>
-      <div class="flex flex-col w-full bg-gray-50">
+      <div class="flex flex-col w-full bg-white">
         <!-- Контейнер для полей -->
         <div class="grid grid-cols-2">
 
@@ -152,7 +152,7 @@
               <div class="flex flex-col">
                 <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Дата документа о качестве</label>
                 <div class="mt-1 px-2 shadow-sm rounded-sm text-lg text-gray-800 min-w-70 bg-gray-50">
-                  {{ record?.qualDocDate || '—' }}
+                  {{ formatDateTime(response?.qualDocDate) || '—' }}
                 </div>
               </div>
               
@@ -180,7 +180,7 @@
               <div class="flex flex-col">
                 <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Номер документа о качестве</label>
                 <div class="mt-1 px-2 shadow-sm rounded-sm text-lg text-gray-800 min-w-70 bg-gray-50 font-mono">
-                  {{ record?.qualDocNumber || '—' }}
+                  {{ response?.qualDocNumber || '—' }}
                 </div>
               </div>
               
@@ -218,15 +218,15 @@
                 <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Документ протокола</label>
                 <div class="mt-1">
                   <UButton
-                    v-if="record?.protocolDoc"
+                    v-if="response?.protocolDocPath"
                     variant="ghost"
                     color="primary"
                     size="sm"
                     class="px-0"
-                    @click="openFileViewer(record.protocolDoc)"
+                    @click="openFileViewer(response.protocolDocPath)"
                   >
                     <Icon name="i-heroicons-document-text" class="mr-1" />
-                    {{ getFileName(record.protocolDoc) }}
+                    {{ getFileName(response.protocolDocPath) }}
                     <Icon name="i-heroicons-arrow-top-right-on-square" class="ml-1 w-4 h-4" />
                   </UButton>
                   <span v-else class="text-md text-gray-400">—</span>
@@ -446,7 +446,7 @@ const viewerError = ref('')
 function formatDateTime(date: string | Date | null): string {
   if (!date) return '—'
   try {
-    return new Date(date).toLocaleString('ru-RU')
+    return new Date(date).toLocaleDateString('ru-RU')
   } catch {
     return '—'
   }
