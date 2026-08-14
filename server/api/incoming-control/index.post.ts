@@ -17,6 +17,7 @@ export default defineEventHandler(async (event) => {
 
     // Используем универсальный обработчик
     const { body, fileDbPaths } = await handleFileUpload(multipartData);
+    console.log('body ============== ', body)
 
     // Создаем запись в БД
     const newRecord = await prisma.aEng.create({
