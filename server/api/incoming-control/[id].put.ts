@@ -65,8 +65,9 @@ export default defineEventHandler(async (event) => {
     if (body.testProtocolNumber !== undefined) updateData.protocolNumber = body.testProtocolNumber || '';
     if (body.sNote !== undefined) updateData.note = body.sNote || null;
     if (body.qualDocNumber !== undefined) updateData.qualDocNumber = body.qualDocNumber || '';
-    if (body.editorEmail !== undefined) updateData.editorEmail = body.editorEmail;
 
+    if (body.editorEmail !== undefined) updateData.editorEmail = body.editorEmail;
+    
     // Даты
     if (body.samplingDate !== undefined) {
       updateData.samplingDate = parseDate(body.samplingDate) ?? new Date();

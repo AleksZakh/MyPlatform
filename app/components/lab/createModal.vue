@@ -634,11 +634,9 @@ async function handleSubmit(event: FormSubmitEvent<Schema>) {
   // 2. Создаем объект FormData для multipart-отправки (текст + файлы)
   const formData = new FormData();
   // @ts-ignore
-  if(authorEmail.value || editorEmail.value){
+  if(authorEmail.value){
     // @ts-ignore
     formData.append('authorEmail', authorEmail.value);
-    // @ts-ignore
-    formData.append('editorEmail', editorEmail.value);
   } else {
     formData.append('authorEmail', 'noName');
     // @ts-ignore
@@ -678,7 +676,7 @@ async function handleSubmit(event: FormSubmitEvent<Schema>) {
       props.selectedRecord.ID
     );
     // @ts-ignore
-    formData.append('editorEmail', user.email);
+    formData.append('editorEmail', editorEmail.value);
     try {
       const response = await $fetch<{ success: boolean; error?: string }>(
         `/api/incoming-control/${props.selectedRecord.ID}`,
