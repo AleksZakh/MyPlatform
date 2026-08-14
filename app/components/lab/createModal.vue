@@ -389,6 +389,8 @@ const isMaterialActive= ref(false);
 const isTestActive= ref(false);
 const minDate = new CalendarDate(2000, 1, 1);
 const maxDate = getToday();
+const authorEmail = ref();
+const editorEmail = ref();
 
 // Настройки ограничений
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 Мегабайт
@@ -583,6 +585,8 @@ watch(
   async (newVal) => {
     if (newVal?.action === 'edit' || newVal?.action === 'view') {
       console.log('newVal ====> ', newVal)
+      editorEmail.value = authorEmail.value;
+      authorEmail.value = '';
       const dbData = await $fetch(`/api/incoming-control/${newVal.ID}`);
       dbResponse.value = dbData;
       console.log('dbResponse = ', dbResponse.value)
@@ -590,7 +594,7 @@ watch(
         isMaterialActive.value = true;
       }
       if(dbData.protocolNumber){
-        isTestActive.value = true
+        isTestActive.value = true;
       }
       fillFormWithData(newVal, dbData);
       modalTitle.value =
@@ -611,6 +615,8 @@ watch(
     if (newUser) {
       console.log('Сессия успешно считана и обновилась:', newUser);
       //@ts-ignore
+      authorEmail.value = newUser?.email
+      
     }
   },
   { immediate: true }
@@ -628,9 +634,9 @@ async function handleSubmit(event: FormSubmitEvent<Schema>) {
   // 2. Создаем объект FormData для multipart-отправки (текст + файлы)
   const formData = new FormData();
   // @ts-ignore
-  if(user || user.email){
+  if(authorEmail.value){
     // @ts-ignore
-    formData.append('authorEmail', user.email);
+    formData.append('authorEmail', authorEmail.value);
     // @ts-ignore
     formData.append('editorEmail', user.email);
   } else {
