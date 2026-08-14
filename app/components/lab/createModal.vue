@@ -615,7 +615,9 @@ watch(
     if (newUser) {
       console.log('Сессия успешно считана и обновилась:', newUser);
       //@ts-ignore
-      authorEmail.value = newUser?.email
+      authorEmail.value = newUser?.email;
+      //@ts-ignore
+      editorEmail.value = newUser?.email;
       
     }
   },
