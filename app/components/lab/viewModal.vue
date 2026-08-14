@@ -399,19 +399,9 @@ const props = defineProps<{
 }>()
 const response = ref();
 
-// Функция генерации полного URL для скачивания/просмотра
-const getFileUrl = (path: string | null) => {
-  if (!path) return '#'
-  
-  // Добавляем префикс папки из public, убирая лишние слэши для безопасности
-  const cleanPath = path.startsWith('/') ? path.slice(1) : path
-  return `/files/${cleanPath}`
-}
 
 onMounted(async () => {
   console.log('Данные пользователя на клиенте === ', props.record);
-  
-  
   
   if (props.record.action === 'view') {
     try {
@@ -432,7 +422,7 @@ onMounted(async () => {
 // ======= СОБЫТИЯ =======
 const emit = defineEmits<{
   (e: 'close'): void
-  (e: 'edit'): void
+  (e: 'edit', id: number): void   // ← передаем id
 }>()
 
 // ======= СОСТОЯНИЯ ДЛЯ ВЛОЖЕННОЙ МОДАЛКИ =======
@@ -494,7 +484,7 @@ function getResultDotClass(result: string): string {
 
 function handleEdit() {
   console.log('редактирование')
-  emit('edit')
+  emit('edit', props.record.id)
   emit('close')
 }
 

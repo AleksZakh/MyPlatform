@@ -6,6 +6,7 @@ const prisma = new PrismaClient();
 export default defineEventHandler(async (event) => {
   try {
     const multipartData = await readMultipartFormData(event);
+    
 
     if (!multipartData) {
       throw createError({
@@ -25,7 +26,7 @@ export default defineEventHandler(async (event) => {
         plp: body.plp || '',
         objectName: body.objName || '',
         samplingActNumber: body.actNumber || '',
-        samplingDate: parseDate(body.samplingDate) ?? new Date(),
+        samplingDate: parseDate(body.sDate) || '',
         samplingPlace: body.sPlace || '',
         personProvidedSample: body.sPerson || '',
         materialReceiptDate: parseDate(body.receiptDate),

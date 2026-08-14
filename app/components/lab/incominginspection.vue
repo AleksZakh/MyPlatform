@@ -225,8 +225,11 @@ const overlay = useOverlay();
 const modalExportRecords = overlay.create(ExportRecordsModal);
 const modalTableSettings = overlay.create(TableSettingsModal);
 const modalCreate = overlay.create(createModal);
-const modalFilterPanel = overlay.create(FilterPanelModal)
+const modalFilterPanel = overlay.create(FilterPanelModal);
+
 const modalView = overlay.create(viewModal);
+
+
 const rowSelectedId = ref<number | null>(null);
 const showSettingsModal = ref(false);
 const globalFilter = ref('');
@@ -375,6 +378,19 @@ async function open(action: string) {
   if (action == 'view') {
     modalView.open({
       record: record,
+      // ✅ Добавляем обработчики событий
+      onEdit: () => {
+        // Здесь открываем модалку редактирования
+        modalCreate.open({
+          count: count.value,
+          selectedRecord: record,  // ← та же запись, но теперь для редактирования
+          reloadData: reloadCurrentPage,
+        });
+      },
+      onClose: () => {
+        // Закрываем модалку просмотра
+        modalView.close();
+      }
     });
   } else if (action == 'create' || action == 'edit') {
     modalCreate.open({
