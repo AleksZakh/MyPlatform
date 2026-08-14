@@ -584,9 +584,7 @@ watch(
   () => props.selectedRecord,
   async (newVal) => {
     if (newVal?.action === 'edit' || newVal?.action === 'view') {
-      console.log('newVal ====> ', newVal)
-      editorEmail.value = authorEmail.value;
-      authorEmail.value = '';
+      console.log('newVal ====> ', newVal)      
       const dbData = await $fetch(`/api/incoming-control/${newVal.ID}`);
       dbResponse.value = dbData;
       console.log('dbResponse = ', dbResponse.value)
@@ -636,7 +634,7 @@ async function handleSubmit(event: FormSubmitEvent<Schema>) {
   // 2. Создаем объект FormData для multipart-отправки (текст + файлы)
   const formData = new FormData();
   // @ts-ignore
-  if(authorEmail.value){
+  if(authorEmail.value || editorEmail.value){
     // @ts-ignore
     formData.append('authorEmail', authorEmail.value);
     // @ts-ignore
