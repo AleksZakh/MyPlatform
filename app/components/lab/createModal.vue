@@ -640,7 +640,7 @@ async function handleSubmit(event: FormSubmitEvent<Schema>) {
     // @ts-ignore
     formData.append('authorEmail', authorEmail.value);
     // @ts-ignore
-    formData.append('editorEmail', user.email);
+    formData.append('editorEmail', editorEmail.value);
   } else {
     formData.append('authorEmail', 'noName');
     // @ts-ignore
