@@ -49,6 +49,8 @@ export default defineEventHandler(async (event) => {
       oldFilePaths,
     });
 
+    console.log('body - редактируемые данные ======== ', body)
+
     // Формируем данные для обновления
     const updateData: any = {};
 
