@@ -381,6 +381,7 @@ async function open(action: string) {
       // ✅ Добавляем обработчики событий
       onEdit: () => {
         // Здесь открываем модалку редактирования
+        record.action = 'edit'
         modalCreate.open({
           count: count.value,
           selectedRecord: record,  // ← та же запись, но теперь для редактирования
