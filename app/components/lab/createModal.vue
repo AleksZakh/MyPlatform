@@ -400,15 +400,6 @@ const ACCEPTED_FILE_TYPES = [
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ];
 
-function formatDateTime(date: string | Date | null): string {
-  if (!date) return '—'
-  try {
-    return new Date(date).toLocaleDateString('ru-RU')
-  } catch {
-    return '—'
-  }
-}
-
 // Создаем отдельные валидаторы для каждого поля файла
 const getFileValidator = (isActive: Ref<boolean>) => {
   return z
@@ -614,16 +605,16 @@ watch(
   { immediate: true }
 );
 
-// watch(
-  // user,
-  // (newUser) => {
-    // if (newUser) {
-      // console.log('Сессия успешно считана и обновилась:', newUser);
-      // @ts-ignore
-    // }
-  // },
-  // { immediate: true }
-// ); // immediate проверит значение сразу при старте
+watch(
+  user,
+  (newUser) => {
+    if (newUser) {
+      console.log('Сессия успешно считана и обновилась:', newUser);
+      //@ts-ignore
+    }
+  },
+  { immediate: true }
+); // immediate проверит значение сразу при старте
 
 // Обработчик нажатия кнопки "Сохранить"
 async function handleSubmit(event: FormSubmitEvent<Schema>) {
