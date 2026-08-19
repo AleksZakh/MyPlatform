@@ -15,7 +15,7 @@ export const menuItems: MenuItem[] = [
   {
     title: 'Профиль',
     url: '/profile',
-    icon: 'streamline-freehand-color:composition-man',
+    icon: 'streamline-freehand-color:face-id-male-1',
     tooltip: 'Профиль пользователя',
   },
   {

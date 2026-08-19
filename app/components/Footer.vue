@@ -2,13 +2,16 @@
   <UFooter class="bg-sky-100">
     <template #left>
       <div>
-        <UColorModeButton class="mr-10" />
+        <UColorModeButton class="mr-5" />
       </div>
-      <p class="text-muted text-sm">
-        Copyright © {{ new Date().getFullYear() }}
-      </p>
-      <div>
-        <!-- <UColorModeSelect /> -->
+      <div class="flex items-center gap-0.5 text-sm">
+        <p>Copyright</p>
+        <Icon name="streamline-freehand-color:form-validation-check-square-1" />
+        <p>{{ new Date().getFullYear() }}</p>
+      </div>
+      <div class="ml-8 flex items-center gap-1 hover:underline ">
+        <Icon name="streamline-freehand-color:settings-wrench-double"/>
+        <a class="hover:decoration-solid" href="mailto:a.zakharov@avtodor-eng.ru">Техническая поддержка</a>
       </div>
     </template>
 

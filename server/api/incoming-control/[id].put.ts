@@ -49,7 +49,7 @@ export default defineEventHandler(async (event) => {
       oldFilePaths,
     });
 
-    console.log('body - редактируемые данные ======== ', body)
+    // console.log('body - редактируемые данные ======== ', body)
 
     // Формируем данные для обновления
     const updateData: any = {};
@@ -67,7 +67,7 @@ export default defineEventHandler(async (event) => {
     if (body.qualDocNumber !== undefined) updateData.qualDocNumber = body.qualDocNumber || '';
 
     if (body.editorEmail !== undefined) updateData.editorEmail = body.editorEmail;
-    
+
     // Даты
     if (body.samplingDate !== undefined) {
       updateData.samplingDate = parseDate(body.samplingDate) ?? new Date();

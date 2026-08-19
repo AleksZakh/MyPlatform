@@ -423,7 +423,7 @@ const getFileValidator = (isActive: Ref<boolean>) => {
         
         return false;
       },
-      { message: 'Пожалуйста, выберите корректный файл' }
+      { message: 'Пожалуйста, выберите корректный файл (pdf, jpg)' }
     )
     .refine(
       (val) => {
@@ -584,10 +584,10 @@ watch(
   () => props.selectedRecord,
   async (newVal) => {
     if (newVal?.action === 'edit' || newVal?.action === 'view') {
-      console.log('newVal ====> ', newVal)      
+      // console.log('newVal ====> ', newVal)
       const dbData = await $fetch(`/api/incoming-control/${newVal.ID}`);
       dbResponse.value = dbData;
-      console.log('dbResponse = ', dbResponse.value)
+      // console.log('dbResponse = ', dbResponse.value)
       if(dbData.qualDocDate || dbData.materialName){
         isMaterialActive.value = true;
       }
@@ -611,7 +611,7 @@ watch(
   user,
   (newUser) => {
     if (newUser) {
-      console.log('Сессия успешно считана и обновилась:', newUser);
+      // console.log('Сессия успешно считана и обновилась:', newUser);
       //@ts-ignore
       authorEmail.value = newUser?.email;
       //@ts-ignore
@@ -726,7 +726,7 @@ async function handleSubmit(event: FormSubmitEvent<Schema>) {
 }
 
 onMounted(() => {
-  console.log('Данные пользователя на клиенте === ', user);
+  // console.log('Данные пользователя на клиенте === ', user);
   // @ts-ignore
   // userDep.value = adUser.department || '';
 });
