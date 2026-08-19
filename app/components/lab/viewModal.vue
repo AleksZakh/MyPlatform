@@ -261,9 +261,16 @@
           </fieldset>
         </div>
         <!-- Дополнительная информация -->
-        <div class="text-xs text-gray-400 px-2 pt-4  grid grid-cols-2">
-          <span class="">Создано: {{ formatDateTime(record?.createdAt) || '—' }}</span>
-          <span class="">Обновлено: {{ formatDateTime(record?.updatedAt) || '—' }}</span>
+        <div class="  text-gray-400 p-2  flex justify-center gap-70">
+          <div class="flex items-center gap-2">
+            <span class="text-xs">Создано: </span>
+            <span class="text-sm text-gray-600">{{ response?.authorEmail || '—' }} {{ formatDateTime(response?.createdAt) || '—' }}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs">Обновлено: </span>
+            <span class="text-sm text-gray-600">{{ response?.editorEmail || '—' }} {{ formatDateTime(response?.createdAt) || '—' }}</span>
+
+          </div>
         </div>
       </div>
     </template>
