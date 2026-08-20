@@ -336,7 +336,19 @@
             
             <!-- PDF -->
             <div v-else-if="isViewerPdf" class="w-full h-[70vh] min-h-100">
-              <iframe :src="viewerFileUrl" width="100%" height="800px" frameborder="0"></iframe>
+              <ClientOnly>
+                <VuePdfEmbed
+                  :source="viewerFileUrl"
+                  class="w-full h-full rounded-lg"
+                  :config="{
+                    enablePrint: true,
+                    enableDownload: true,
+                    renderMode: 'canvas'
+                  }"
+                >
+
+                </VuePdfEmbed>
+              </ClientOnly>
               <object 
                 :data="viewerFileUrl"
                 type="application/pdf"
@@ -400,6 +412,7 @@
 <script setup lang="ts">
 // ======= ИМПОРТЫ =======
 import { ref, computed } from 'vue';
+const VuePdfEmbed = defineAsyncComponent(() => import('vue-pdf-embed'));
 
 // ======= ПРОПСЫ =======
 const props = defineProps<{
@@ -420,7 +433,6 @@ onMounted(async () => {
       // @ts-ignore
       response.value = await $fetch(`/api/incoming-control/${recordId}`);
       if(response.value){
-        // console.log('response.value ----------> ', response.value )
         authorInfo.value = await searchUserInAD({'authorEmail':response.value.authorEmail})
         editorInfo.value = await searchUserInAD({'authorEmail':response.value.editorEmail})
         // console.log('authorInfo ====> ', authorInfo.value)
