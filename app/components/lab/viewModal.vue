@@ -477,7 +477,8 @@ function getFileName(path: string): string {
 }
 
 function isFileExist (path: string): boolean {
-  fetch(`https://space.avtodor-eng.ru${path}`, { method: 'HEAD' })
+  console.log('PATH = ', `https://space.avtodor-eng.ru/${path}`)
+  fetch(`https://space.avtodor-eng.ru/${path}`, { method: 'HEAD' })
   .then(response => {
     if (response.ok) {
       console.log('✅ Файл существует, статус:', response.status);
