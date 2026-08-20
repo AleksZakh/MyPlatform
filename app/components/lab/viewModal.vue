@@ -323,7 +323,7 @@
         </template>
 
         <template #body>
-          <div class="max-h-[70vh] overflow-auto">
+          <div class="w-full max-h-[70vh] overflow-y-auto -mx-6 px-6">
             <!-- Изображения -->
             <div v-if="isViewerImage" class="flex items-center justify-center min-h-75">
               <img 
@@ -335,39 +335,44 @@
             </div>
             
             <!-- PDF -->
-            <div v-else-if="isViewerPdf" class="w-full h-[70vh] min-h-100">
+            <!-- PDF -->
+            <div v-else-if="isViewerPdf" class=" h-[70vh] min-h-100 pdf-viewer-wrapper flex items-center justify-center  overflow-y-auto">
               <ClientOnly>
                 <VuePdfEmbed
                   :source="viewerFileUrl"
-                  class="w-full h-full rounded-lg"
+                  class="w-full pdf-canvas-stretched"
                   :config="{
                     enablePrint: true,
                     enableDownload: true,
                     renderMode: 'canvas'
                   }"
-                >
+                  verbosity: 0 
+                />
 
-                </VuePdfEmbed>
-              </ClientOnly>
-              <object 
-                :data="viewerFileUrl"
-                type="application/pdf"
-                class="w-full h-full rounded-lg"
-              >
-                <div class="flex flex-col items-center justify-center h-full text-center p-8">
-                  <Icon name="i-heroicons-document-text" class="w-16 h-16 text-gray-300 mb-4" />
-                  <p class="text-gray-400 mb-4">Не удалось отобразить PDF</p>
-                  <UButton
-                    @click="downloadViewerFile"
-                    color="neutral"
-                    variant="outline"
-                    icon="i-heroicons-arrow-down-tray"
+                <!-- Фоллбек (запасной вариант) на случай ошибки загрузки библиотеки -->
+                <template #fallback>
+                  <object 
+                    :data="viewerFileUrl"
+                    type="application/pdf"
+                    class="w-full h-full rounded-lg"
                   >
-                    Скачать PDF
-                  </UButton>
-                </div>
-              </object>
+                    <div class="flex flex-col items-center justify-center h-full text-center p-8">
+                      <Icon name="i-heroicons-document-text" class="w-16 h-16 text-gray-300 mb-4" />
+                      <p class="text-gray-400 mb-4">Не удалось отобразить PDF</p>
+                      <UButton
+                        @click="downloadViewerFile"
+                        color="neutral"
+                        variant="outline"
+                        icon="i-heroicons-arrow-down-tray"
+                      >
+                        Скачать PDF
+                      </UButton>
+                    </div>
+                  </object>
+                </template>
+              </ClientOnly>
             </div>
+
             
             <!-- Другие файлы -->
             <div v-else class="flex flex-col items-center justify-center min-h-75 text-center p-8">
@@ -476,20 +481,24 @@ function getFileName(path: string): string {
   return parts[parts.length - 1] || path
 }
 
-function isFileExist (path: string): boolean {
-  console.log('PATH = ', `https://space.avtodor-eng.ru/${path}`)
-  fetch(`https://space.avtodor-eng.ru/${path}`, { method: 'HEAD' })
-  .then(response => {
+async function isFileExist(path: string): Promise<boolean> {
+  try {
+    const url = `https://space.avtodor-eng.ru/${path}`;
+    console.log('Проверка PATH:', url);
+    
+    const response = await fetch(url, { method: 'HEAD' });
+    
     if (response.ok) {
       console.log('✅ Файл существует, статус:', response.status);
+      return true;
     } else {
       console.log('❌ Файл не найден, статус:', response.status);
+      return false;
     }
-  })
-  .catch(error => {
-    console.error('❌ Ошибка при проверке:', error);
-  });
-  return false
+  } catch (error) {
+    console.error('❌ Ошибка при проверке файла:', error);
+    return false;
+  }
 }
 
 
@@ -563,6 +572,28 @@ const isViewerPdf = computed(() => {
 </script>l
 
 <style scoped>
+
+/* Контейнер-обертка с прокруткой, если страниц много */
+.pdf-viewer-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+/* Глубокий селектор (deep), чтобы добраться до canvas внутри библиотеки */
+.pdf-canvas-stretched :deep(canvas) {
+  width: 100% !important;
+  height: auto !important;
+  display: block;
+}
+
+/* Стили для внутренней обертки самой библиотеки */
+.pdf-canvas-stretched :deep(.vue-pdf-embed__page) {
+  width: 100% !important;
+  margin-bottom: 16px; /* Небольшой отступ между страницами, если они идут друг за другом */
+}
+
 /* Стили для легенд */
 legend {
   background: transparent !important;
