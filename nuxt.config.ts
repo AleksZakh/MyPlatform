@@ -5,6 +5,15 @@ export default defineNuxtConfig({
   experimental: {
     serverAppConfig: false,
   },
+  routeRules: {
+    // Разрешаем для всех PDF файлов встраивание
+    '/**/*.pdf': {
+      headers: {
+        'Cross-Origin-Resource-Policy': 'cross-origin',
+        'X-Frame-Options': 'SAMEORIGIN'
+      }
+    }
+  },
   colorMode: {
     preference: 'light', // Всегда устанавливает светлую тему по умолчанию
     fallback: 'light', // Если произойдет сбой, вернет светлую тем
