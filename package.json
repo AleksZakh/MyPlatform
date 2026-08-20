@@ -38,7 +38,7 @@
     "tailwindcss": "^4.2.2",
     "uuid": "^14.0.0",
     "vue": "^3.5.32",
-    "vue-pdf-embed": "^2.1.4",
+    "vue-pdf-embed": "^2.1.5",
     "vue-router": "^5.0.4",
     "vuedraggable": "^4.1.0",
     "winston": "^3.19.0",

@@ -41,7 +41,7 @@ export const searchUserInAD = async (searcParam: any) =>{
     } else {
         return
     }
-    console.log('searchParam ======> ', adFilter);
+    // console.log('searchParam ======> ', adFilter);
 
     try {
         // Делаем запрос к вашему созданному эндпоинту
