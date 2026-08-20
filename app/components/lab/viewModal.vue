@@ -40,7 +40,7 @@
           <!-- ===== БЛОК 1: Отбор проб ===== -->
           <fieldset class="border-2 border-gray-200 mx-4 px-2 py-1 rounded-md bg-white/80">
             <legend class="text-xl font-normal px-2 flex items-center gap-2 bg-transparent">
-              <span><Icon name="streamline-freehand-color:business-product-supplier-1" size="24"/>Отбор проб</span>
+              <span><Icon name="streamline-freehand-color:business-product-supplier-1" size="24"/> Отбор проб</span>
               <span class="text-xs text-gray-400 font-light">(информация)</span>
             </legend>
             
@@ -264,11 +264,11 @@
         <div class="  text-gray-400 p-2  flex justify-center gap-70">
           <div class="flex items-center gap-2">
             <span class="text-xs">Создано: </span>
-            <span class="text-sm text-gray-600">{{ response?.authorEmail || '—' }} {{ formatDateTime(response?.createdAt) || '—' }}</span>
+            <span class="text-sm text-gray-600">{{ authorInfo?.shortName || response?.authorEmail || '—' }} {{ formatDateTime(response?.createdAt) || '—' }}</span>
           </div>
           <div class="flex items-center gap-2">
             <span class="text-xs">Обновлено: </span>
-            <span class="text-sm text-gray-600">{{ response?.editorEmail || '—' }} {{ formatDateTime(response?.createdAt) || '—' }}</span>
+            <span class="text-sm text-gray-600">{{ editorInfo?.shortName || response?.editorEmail || '—' }} {{ formatDateTime(response?.createdAt) || '—' }}</span>
 
           </div>
         </div>
@@ -405,10 +405,12 @@ const props = defineProps<{
   record: any
 }>()
 const response = ref();
+const authorInfo = ref();
+const editorInfo = ref();
 
 
 onMounted(async () => {
-  console.log('Данные пользователя на клиенте === ', props.record);
+  // console.log('Данные пользователя на клиенте === ', props.record);
   
   if (props.record.action === 'view') {
     try {
@@ -416,12 +418,17 @@ onMounted(async () => {
       const recordId = props.record.id || props.record.ID || props.record.index;
       // @ts-ignore
       response.value = await $fetch(`/api/incoming-control/${recordId}`);
+      if(response.value){
+        authorInfo.value = await searchUserInAD({'authorEmail':response.value.authorEmail})
+        editorInfo.value = await searchUserInAD({'authorEmail':response.value.editorEmail})
+        // console.log('authorInfo ====> ', authorInfo.value)
+      }
     } catch (error) {
       console.error('Ошибка при загрузке данных:', error);
     }
   }
   
-  console.log('ответ от сервера response ===> ', response);
+  // console.log('ответ от сервера response ===> ', response);
 });
 
 
@@ -454,6 +461,8 @@ function getFileName(path: string): string {
   const parts = path.split('/')
   return parts[parts.length - 1] || path
 }
+
+
 
 function openFileViewer(path: string) {
   if (!path) return

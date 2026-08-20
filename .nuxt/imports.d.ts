@@ -32,6 +32,7 @@ export { setInterval } from '#app/compat/interval';
 export { definePageMeta, PageMeta } from '#app/composables/pages';
 export { defineLazyHydrationComponent } from '#app/composables/lazy-hydration';
 export { loginNormal } from '../app/composables/loginNormal';
+export { searchUserInAD } from '../app/composables/searchUserInAD';
 export { securePW } from '../app/composables/securePW';
 export { useADUsers } from '../app/composables/useADUsers';
 export { useAppToasts } from '../app/composables/useAppToasts';
