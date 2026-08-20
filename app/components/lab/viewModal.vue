@@ -476,6 +476,20 @@ function getFileName(path: string): string {
   return parts[parts.length - 1] || path
 }
 
+function isFileExist (path: string): boolean {
+  fetch(`https://space.avtodor-eng.ru${path}`, { method: 'HEAD' })
+  .then(response => {
+    if (response.ok) {
+      console.log('✅ Файл существует, статус:', response.status);
+    } else {
+      console.log('❌ Файл не найден, статус:', response.status);
+    }
+  })
+  .catch(error => {
+    console.error('❌ Ошибка при проверке:', error);
+  });
+  return false
+}
 
 
 function openFileViewer(path: string) {
@@ -528,6 +542,7 @@ const viewerFileUrl = computed(() => {
   }
   const cleanPath = viewerFilePath.value.replace(/^\/+/, '')
   console.log('ссылка на файл === ', `/${cleanPath}`)
+  isFileExist(cleanPath);
   return `/${cleanPath}`
 })
 
