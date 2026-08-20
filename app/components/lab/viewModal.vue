@@ -511,11 +511,13 @@ const viewerFileUrl = computed(() => {
     return viewerFilePath.value
   }
   const cleanPath = viewerFilePath.value.replace(/^\/+/, '')
-  return `/${cleanPath}`
+  console.log('ссылка на файл === ', `/${cleanPath}`)
+  return `https://space.avtodor-eng.ru/${cleanPath}`
 })
 
 const viewerFileExtension = computed(() => {
   const name = viewerFileName.value
+  // console.log('viewerFileName.value ===> ', name.split('.').pop()?.toLowerCase() || '')
   return name.split('.').pop()?.toLowerCase() || ''
 })
 

@@ -36,7 +36,7 @@ interface ADSearchResponse {
     // Экранируем введенный email для безопасности и приводим к нижнему регистру
     const cleanEmail = searcParam.authorEmail.trim().toLowerCase();
     const adFilter = `(&(objectClass=user)(mail=${cleanEmail}))`;
-    console.log('searchParam ======> ', adFilter);
+    // console.log('searchParam ======> ', adFilter);
 
     try {
         // Делаем запрос к вашему созданному эндпоинту
@@ -49,7 +49,7 @@ interface ADSearchResponse {
         })
         if (response.success && response.count > 0) {
             // Забираем первого пользователя из массива результатов ad.find
-            
+
             return response.results.users[0]
         }
         
