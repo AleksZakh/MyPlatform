@@ -477,6 +477,8 @@ function downloadViewerFile() {
   const url = viewerFilePath.value.startsWith('/') 
     ? viewerFilePath.value 
     : `/${viewerFilePath.value}`
+
+  console.log('url ----------> ', url)
   window.open(url, '_blank')
 }
 
@@ -512,7 +514,7 @@ const viewerFileUrl = computed(() => {
   }
   const cleanPath = viewerFilePath.value.replace(/^\/+/, '')
   console.log('ссылка на файл === ', `/${cleanPath}`)
-  return `https://space.avtodor-eng.ru/${cleanPath}`
+  return `/${cleanPath}`
 })
 
 const viewerFileExtension = computed(() => {

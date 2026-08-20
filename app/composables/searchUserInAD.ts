@@ -4,27 +4,28 @@ export const searchUserInAD = async (searcParam: any) =>{
     const searchPerformed = ref(false)
     const pending = ref(false)
     const error = ref(null)
+    let adFilter 
 
     // 1. Описываем структуру объекта пользователя из Active Directory
-interface ADUser {
-  dn: string
-  cn: string
-  displayName?: string
-  mail?: string
-  title?: string
-  department?: string
-  telephoneNumber?: string
-  [key: string]: any // Для любых других динамических свойств
-}
+    interface ADUser {
+    dn: string
+    cn: string
+    displayName?: string
+    mail?: string
+    title?: string
+    department?: string
+    telephoneNumber?: string
+    [key: string]: any // Для любых других динамических свойств
+    }
 
-// 2. Описываем структуру ответа вашего API-эндпоинта
-interface ADSearchResponse {
-  success: boolean
-  count: number
-  results: {
-    users: ADUser[]
-  }
-}
+    // 2. Описываем структуру ответа вашего API-эндпоинта
+    interface ADSearchResponse {
+    success: boolean
+    count: number
+    results: {
+        users: ADUser[]
+    }
+    }
 
     pending.value = true
     error.value = null
@@ -34,9 +35,13 @@ interface ADSearchResponse {
 
     // Формируем стандартный LDAP-фильтр для Active Directory
     // Экранируем введенный email для безопасности и приводим к нижнему регистру
-    const cleanEmail = searcParam.authorEmail.trim().toLowerCase();
-    const adFilter = `(&(objectClass=user)(mail=${cleanEmail}))`;
-    // console.log('searchParam ======> ', adFilter);
+    if(searcParam.authorEmail !== ''){
+        const cleanEmail = searcParam.authorEmail.trim().toLowerCase();
+        adFilter = `(&(objectClass=user)(mail=${cleanEmail}))`;
+    } else {
+        return
+    }
+    console.log('searchParam ======> ', adFilter);
 
     try {
         // Делаем запрос к вашему созданному эндпоинту
