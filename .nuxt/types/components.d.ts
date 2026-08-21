@@ -17,10 +17,10 @@ interface _GlobalComponents {
   ConfirmDialog: typeof import("../../app/components/ConfirmDialog.vue")['default']
   CustomDateInput: typeof import("../../app/components/CustomDateInput.vue")['default']
   DepartmentCard: typeof import("../../app/components/DepartmentCard.vue")['default']
-  FileViewerModal: typeof import("../../app/components/FileViewerModal.vue")['default']
   Footer: typeof import("../../app/components/Footer.vue")['default']
   Toast: typeof import("../../app/components/Toast.vue")['default']
   LabExportRecordsModal: typeof import("../../app/components/lab/ExportRecordsModal.vue")['default']
+  LabFileViewerModal: typeof import("../../app/components/lab/FileViewerModal.vue")['default']
   LabFilterPanelModal: typeof import("../../app/components/lab/FilterPanelModal.vue")['default']
   LabTableSettingsModal: typeof import("../../app/components/lab/TableSettingsModal.vue")['default']
   LabCreateModal: typeof import("../../app/components/lab/createModal.vue")['default']
@@ -191,10 +191,10 @@ interface _GlobalComponents {
   LazyConfirmDialog: LazyComponent<typeof import("../../app/components/ConfirmDialog.vue")['default']>
   LazyCustomDateInput: LazyComponent<typeof import("../../app/components/CustomDateInput.vue")['default']>
   LazyDepartmentCard: LazyComponent<typeof import("../../app/components/DepartmentCard.vue")['default']>
-  LazyFileViewerModal: LazyComponent<typeof import("../../app/components/FileViewerModal.vue")['default']>
   LazyFooter: LazyComponent<typeof import("../../app/components/Footer.vue")['default']>
   LazyToast: LazyComponent<typeof import("../../app/components/Toast.vue")['default']>
   LazyLabExportRecordsModal: LazyComponent<typeof import("../../app/components/lab/ExportRecordsModal.vue")['default']>
+  LazyLabFileViewerModal: LazyComponent<typeof import("../../app/components/lab/FileViewerModal.vue")['default']>
   LazyLabFilterPanelModal: LazyComponent<typeof import("../../app/components/lab/FilterPanelModal.vue")['default']>
   LazyLabTableSettingsModal: LazyComponent<typeof import("../../app/components/lab/TableSettingsModal.vue")['default']>
   LazyLabCreateModal: LazyComponent<typeof import("../../app/components/lab/createModal.vue")['default']>

@@ -17,10 +17,10 @@ type LazyComponent<T> = DefineComponent<HydrationStrategies, {}, {}, {}, {}, {},
 export const ConfirmDialog: typeof import("../app/components/ConfirmDialog.vue")['default']
 export const CustomDateInput: typeof import("../app/components/CustomDateInput.vue")['default']
 export const DepartmentCard: typeof import("../app/components/DepartmentCard.vue")['default']
-export const FileViewerModal: typeof import("../app/components/FileViewerModal.vue")['default']
 export const Footer: typeof import("../app/components/Footer.vue")['default']
 export const Toast: typeof import("../app/components/Toast.vue")['default']
 export const LabExportRecordsModal: typeof import("../app/components/lab/ExportRecordsModal.vue")['default']
+export const LabFileViewerModal: typeof import("../app/components/lab/FileViewerModal.vue")['default']
 export const LabFilterPanelModal: typeof import("../app/components/lab/FilterPanelModal.vue")['default']
 export const LabTableSettingsModal: typeof import("../app/components/lab/TableSettingsModal.vue")['default']
 export const LabCreateModal: typeof import("../app/components/lab/createModal.vue")['default']
@@ -191,10 +191,10 @@ export const NuxtIsland: typeof import("../node_modules/nuxt/dist/app/components
 export const LazyConfirmDialog: LazyComponent<typeof import("../app/components/ConfirmDialog.vue")['default']>
 export const LazyCustomDateInput: LazyComponent<typeof import("../app/components/CustomDateInput.vue")['default']>
 export const LazyDepartmentCard: LazyComponent<typeof import("../app/components/DepartmentCard.vue")['default']>
-export const LazyFileViewerModal: LazyComponent<typeof import("../app/components/FileViewerModal.vue")['default']>
 export const LazyFooter: LazyComponent<typeof import("../app/components/Footer.vue")['default']>
 export const LazyToast: LazyComponent<typeof import("../app/components/Toast.vue")['default']>
 export const LazyLabExportRecordsModal: LazyComponent<typeof import("../app/components/lab/ExportRecordsModal.vue")['default']>
+export const LazyLabFileViewerModal: LazyComponent<typeof import("../app/components/lab/FileViewerModal.vue")['default']>
 export const LazyLabFilterPanelModal: LazyComponent<typeof import("../app/components/lab/FilterPanelModal.vue")['default']>
 export const LazyLabTableSettingsModal: LazyComponent<typeof import("../app/components/lab/TableSettingsModal.vue")['default']>
 export const LazyLabCreateModal: LazyComponent<typeof import("../app/components/lab/createModal.vue")['default']>
