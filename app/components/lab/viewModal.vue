@@ -166,7 +166,7 @@
                     color="primary"
                     size="md"
                     class="p-1"
-                    @click="openFileViewer(record?.['Документ о качестве'])"
+                    @click="fileViewerOpen(record?.['Документ о качестве'])"
                   >
                     <Icon name="i-heroicons-document-text" class="mr-1" />
                     {{ getFileName(record?.['Документ о качестве']) }}
@@ -223,7 +223,7 @@
                     color="primary"
                     size="sm"
                     class="px-0"
-                    @click="openFileViewer(response.protocolDocPath)"
+                    @click="fileViewerOpen(response.protocolDocPath)"
                   >
                     <Icon name="i-heroicons-document-text" class="mr-1" />
                     {{ getFileName(response.protocolDocPath) }}
@@ -366,15 +366,6 @@ function getFileName(path: string): string {
   if (!path) return '—'
   const parts = path.split('/')
   return parts[parts.length - 1] || path
-}
-
-
-function openFileViewer(path: string) {
-  if (!path) return
-  viewerFilePath.value = '/files/'+path
-  viewerFileName.value = getFileName(path)
-  viewerError.value = ''
-  showFileViewer.value = true
 }
 
 function getResultBadgeClass(result: string): string {
