@@ -28,7 +28,7 @@
         </template>
 
         <template #body>
-          <div class="w-full max-h-[70vh] overflow-y-auto -mx-6 px-6">
+          <div class="w-full overflow-y-auto -mx-6 px-6">
             <!-- Изображения -->
             <div v-if="isViewerImage" class="flex items-center justify-center min-h-75">
               <img 
@@ -40,7 +40,7 @@
             </div>
             
             <!-- PDF -->
-            <div v-else-if="isViewerPdf" class=" h-[70vh] min-h-100 pdf-viewer-wrapper flex items-center justify-center  overflow-y-auto">
+            <div v-else-if="isViewerPdf" class=" min-h-100 pdf-viewer-wrapper flex items-center justify-center  overflow-y-auto">
               <ClientOnly>
                 <VuePdfEmbed
                   :source="viewerFileUrl"
@@ -127,12 +127,28 @@ const props = defineProps<{
   path: any
 }>()
 
-onMounted(async () => {
-    console.log('props ====> ', props.path)
-    if (!props.path) return
-    viewerFilePath.value = '/files/'+props.path
+onBeforeMount(async() =>{
+    if (!props.path) return;
+    console.log("Перед запуском ===== ", props.path) //name.split('.').pop()?.toLowerCase()
+    if (props.path.split('.').pop()?.toLowerCase() === 'docx' || props.path.split('.').pop()?.toLowerCase() === 'doc') {
+        // Извлекаем чистое имя файла (например, "dogovor.docx")
+        const fileName = props.path
+        console.log('viewerFilePath.value ---------> ', fileName)
+        viewerFilePath.value = `/api/convert?file=${fileName}`
+    } else {
+        viewerFilePath.value = '/files/'+props.path
+    }
+    
+    
     viewerFileName.value = getFileName(props.path)
     viewerError.value = ''
+
+})
+
+onMounted(async () => {
+    console.log('props ====> ', viewerFilePath.value)
+    if (!props.path) return
+    
 })
 
 // ======= СОБЫТИЯ =======
@@ -167,13 +183,13 @@ async function isFileExist(path: string): Promise<boolean> {
 }
 
 
-function openFileViewer(path: string) {
-  if (!path) return
-    viewerFilePath.value = '/files/'+path
-    viewerFileName.value = getFileName(path)
-    viewerError.value = ''
-    // showFileViewer.value = true
-}
+// function openFileViewer(path: string) {
+//   if (!path) return
+//     viewerFilePath.value = '/files/'+path
+//     viewerFileName.value = getFileName(path)
+//     viewerError.value = ''
+//     // showFileViewer.value = true
+// }
 
 function downloadViewerFile() {
   if (!viewerFilePath.value) return
@@ -188,6 +204,7 @@ function downloadViewerFile() {
 // ======= ВЫЧИСЛЯЕМЫЕ СВОЙСТВА ДЛЯ ПРОСМОТРА ФАЙЛА =======
 const viewerFileUrl = computed(() => {
   if (!viewerFilePath.value) return ''
+  
   if (viewerFilePath.value.startsWith('http://') || viewerFilePath.value.startsWith('https://')) {
     return viewerFilePath.value
   }
@@ -199,7 +216,6 @@ const viewerFileUrl = computed(() => {
 
 const viewerFileExtension = computed(() => {
   const name = viewerFileName.value
-  // console.log('viewerFileName.value ===> ', name.split('.').pop()?.toLowerCase() || '')
   return name.split('.').pop()?.toLowerCase() || ''
 })
 
@@ -208,7 +224,7 @@ const isViewerImage = computed(() => {
 })
 
 const isViewerPdf = computed(() => {
-  return viewerFileExtension.value === 'pdf'
+  return viewerFileExtension.value === 'pdf' || viewerFileExtension.value === 'docx' || viewerFileExtension.value === 'doc'
 })
 
 
