@@ -86,7 +86,7 @@ export async function handleFileUpload(
 
   // 3. Если нужно удалить старые файлы
   if (cleanOldFiles && Object.keys(oldFilePaths).length > 0) {
-    await cleanOldFilesFromDisk(oldFilePaths, baseUploadDir);
+    // await cleanOldFilesFromDisk(oldFilePaths, baseUploadDir);
   }
 
   return {
