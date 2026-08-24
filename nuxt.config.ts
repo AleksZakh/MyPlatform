@@ -76,6 +76,7 @@ export default defineNuxtConfig({
         'crypto-js', // CJS
         'sweetalert2',
         'uuid',
+        'vue-pdf-embed',
         'zod',
       ],
     },
