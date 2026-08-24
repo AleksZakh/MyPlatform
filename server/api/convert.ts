@@ -25,7 +25,7 @@ export default defineEventHandler(async (event) => {
   // Предположим, файлы хранятся в корне проекта в папке .files/ или public/files/
   if (host.includes('space.avtodor-eng.ru') || host.startsWith('space')) {
     // Вариант 1: Запрос через боевой домен space...
-    const UPLOADS_DIR = '/var/www/uploads-storage/'
+    const UPLOADS_DIR = '/var/www/uploads-storage/files/'
     docxPath = path.join(UPLOADS_DIR, fileName)
 
     // Защита от Path Traversal (выхода за пределы разрешенной папки)
