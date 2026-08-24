@@ -1,4 +1,4 @@
-import { defineEventHandler, createError, setResponseHeader } from 'h3'
+import { defineEventHandler, createError, setResponseHeader, getHeader } from 'h3'
 import fs from 'node:fs'
 import path from 'node:path'
 import libre from 'libreoffice-convert'
@@ -18,10 +18,34 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Имя файла не указано' })
   }
 
+  const host = getHeader(event, 'host') || ''
+  let docxPath = ''
+
   // 2. Формируем абсолютный путь к вашему исходному DOCX-файлу
   // Предположим, файлы хранятся в корне проекта в папке .files/ или public/files/
-  const docxPath = path.resolve(process.cwd(), 'public/files', fileName)
-  console.log('docxPath ---------> ', docxPath)
+  if (host.includes('space.avtodor-eng.ru') || host.startsWith('space')) {
+    // Вариант 1: Запрос через боевой домен space...
+    const UPLOADS_DIR = '/var/www/uploads-storage/'
+    docxPath = path.join(UPLOADS_DIR, fileName)
+
+    // Защита от Path Traversal (выхода за пределы разрешенной папки)
+    if (!docxPath.startsWith(UPLOADS_DIR)) {
+      throw createError({ statusCode: 400, statusMessage: 'Недопустимый путь к файлу' })
+    }
+  } else {
+    // Вариант 2: Запрос через локальный IP 10.0.18.201:3000 или localhost
+    const LOCAL_DIR = path.resolve(process.cwd(), 'public/files')
+    docxPath = path.join(LOCAL_DIR, fileName)
+
+    // Аналогичная защита для локальной папки
+    if (!docxPath.startsWith(LOCAL_DIR)) {
+      throw createError({ statusCode: 400, statusMessage: 'Недопустимый путь к файлу' })
+    }
+  }
+
+  // Выводим в консоль сервера для отладки, какой путь в итоге выбрался
+  console.log(`[Convert API] Request from Host: ${host} -> Target Path: ${docxPath}`)
+
 
   if (!fs.existsSync(docxPath)) {
     throw createError({ statusCode: 404, statusMessage: 'Файл Word не найден на сервере' })
@@ -29,6 +53,7 @@ export default defineEventHandler(async (event) => {
 
   try {
     // 3. Читаем DOCX файл в буфер памяти
+    console.log('docxPath ######### ==> ', docxPath)
     const docxBuffer = await fs.promises.readFile(docxPath)
 
     // 4. Конвертируем DOCX-буфер в PDF-буфер с помощью LibreOffice
