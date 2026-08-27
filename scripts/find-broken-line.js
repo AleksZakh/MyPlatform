@@ -7,7 +7,7 @@ import readline from 'readline';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const filePath = path.join(__dirname, '..', 'server', 'assets', 'Reestr_1.csv');
+const filePath = path.join(__dirname, '..', 'server', 'assets', 'Reestr.csv');
 
 console.log('🔍 Поиск проблемных строк в CSV...\n');
 

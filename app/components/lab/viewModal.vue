@@ -161,7 +161,7 @@
                 <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Документ о качестве</label>
                 <div class="mt-1">
                   <UButton
-                    v-if="record?.['Документ о качестве']"
+                    v-if="record?.['Документ о качестве'] && record?.['Документ о качестве'] !== '-'"
                     variant="ghost"
                     color="primary"
                     size="md"

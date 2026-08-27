@@ -35,43 +35,45 @@ model users {
 
 model AEng {
   id                      Int      @id @default(autoincrement())
-  plp                     String   @db.VarChar(50)    // ПЛП
-  objectName              String   @db.Text           // Наименование объекта
-  samplingActNumber       String   @db.VarChar(100)   // Номер акта отбора проб
-  samplingDate            DateTime @db.Date           // Дата отбора проб
-  samplingPlace           String   @db.Text           // Место отбора проб
-  personProvidedSample    String   @db.VarChar(255)   // Лицо, предоставившее пробу
-  materialReceiptDate     DateTime? @db.Date           // Дата поступления материала
-  materialName            String   @db.VarChar(255)   // Наименование материала
   
-  // Старое поле (оставляем для обратной совместимости, чтобы старые данные не стерлись)
-  qualityDocument         String   @db.VarChar(100)   // Документ о качестве (старое поле)
-
-  // НАЧАЛО НОВЫХ ПОЛЕЙ (Все со знаком '?', чтобы миграция прошла успешно без потери данных)
-  sDocPath                String?  @db.VarChar(255)   // Путь к файлу sDoc
-  qualDocPath             String?  @db.VarChar(255)   // Путь к файлу qualDoc
-  testDocPath             String?  @db.VarChar(255)  // Документ о качестве (новое имя) ✅ ПЕРЕИМЕНОВАНО
-  protocolDocPath         String?  @db.VarChar(255)   // Путь к файлу protocolDoc
-  qualDocNumber           String?  @db.VarChar(100)   // Номер документа о качестве из формы
-  //================================
-
-  // НОВЫЕ ПОЛЯ 28.07.2026
-  qualDocDate             DateTime? @db.Date          // Дата документа о качестве
-  authorEmail             String?   @db.VarChar(100) // Email автора
-  editorEmail             String?   @db.VarChar(100) // Email редактора
-
-  manufacturer            String?  @db.VarChar(255)   // Предприятие-изготовитель (может быть пустым)
-  protocolNumber          String   @db.VarChar(100)   // Номер протокола
-  protocolDate            DateTime? @db.Date           // Дата протокола
-  testResult              String   @db.VarChar(100)   // Результат испытаний
-  note                    String?  @db.Text           // Примечание (может быть пустым)
+  // Основные данные из CSV
+  plp                     String   @db.Text
+  objectName              String   @db.Text
+  samplingActNumber       String   @db.Text
+  samplingDate            DateTime @db.Date
+  samplingPlace           String   @db.Text
+  personProvidedSample    String   @db.Text
+  materialReceiptDate     DateTime? @db.Date
+  materialName            String   @db.Text
+  
+  // Документы (старое поле для обратной совместимости)
+  qualityDocument         String   @db.Text
+  
+  // Новые поля для документов
+  sDocPath                String?  @db.Text
+  qualDocPath             String?  @db.Text
+  testDocPath             String?  @db.Text
+  protocolDocPath         String?  @db.Text
+  qualDocNumber           String?  @db.Text
+  qualDocDate             DateTime? @db.Date
+  authorEmail             String?  @db.Text
+  editorEmail             String?  @db.Text
+  
+  // Остальные данные из CSV
+  manufacturer            String?  @db.Text
+  protocolNumber          String   @db.Text
+  protocolDate            DateTime? @db.Date
+  testResult              String   @db.Text
+  note                    String?  @db.Text
+  
+  // Системные поля
   createdAt               DateTime @default(now())
+  editedAt                DateTime? @db.Date   // Дата редактирования (только при обновлении через форму)
 
-  @@map("aeng") // Название таблицы в PostgreSQL в нижнем регистре
-
-  // Индексы
+  @@map("aeng")
   @@index([samplingActNumber])
   @@index([protocolNumber])
+  @@index([editedAt])
 }
 
 

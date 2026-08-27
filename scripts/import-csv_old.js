@@ -1,41 +1,27 @@
-// scripts/import-csv.js
+// scripts/import-csv-improved.js
 import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import csv from 'csv-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import iconv from 'iconv-lite'; // npm install iconv-lite
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const prisma = new PrismaClient();
 
-// Функция парсинга даты из DD.MM.YYYY
 function parseRussianDate(dateStr) {
   if (!dateStr || dateStr.trim() === '') return null;
   const parts = dateStr.trim().split('.');
   if (parts.length !== 3) return null;
-  const day = parseInt(parts[0]);
-  const month = parseInt(parts[1]) - 1;
-  const year = parseInt(parts[2]);
-  return new Date(Date.UTC(year, month, day));
+  return new Date(Date.UTC(parts[2], parts[1] - 1, parts[0]));
 }
 
-// Функция очистки поля от лишних кавычек и пробелов
 function cleanValue(value) {
-  if (!value || value.trim() === '') return null;
-  let cleaned = value.trim();
-  if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
-    cleaned = cleaned.slice(1, -1);
-  }
-  cleaned = cleaned.replace(/""/g, '"');
-  return cleaned || null;
-}
-
-// Функция для безопасного получения значения из строки CSV
-function getField(row, key) {
-  const value = row[key];
-  return cleanValue(value);
+  if (!value) return '#null#';
+  const cleaned = value.trim();
+  return cleaned || '#null#';
 }
 
 async function importCSV() {
@@ -43,7 +29,7 @@ async function importCSV() {
     await prisma.$connect();
     console.log('✅ Подключение к БД установлено');
 
-    const filePath = path.join(__dirname, '..', 'server', 'assets', 'Reestr.csv');
+    const filePath = path.join(__dirname, '..', 'server/assets/Reestr.csv');
 
     if (!fs.existsSync(filePath)) {
       throw new Error(`Файл не найден: ${filePath}`);
@@ -51,71 +37,67 @@ async function importCSV() {
 
     console.log(`📖 Чтение файла: ${filePath}`);
 
-    const records = [];
+    // Проверяем кодировку файла
+    const buffer = fs.readFileSync(filePath);
+    const isWindows1251 = buffer[0] === 0xff && buffer[1] === 0xfe;
+    console.log(`🔤 Кодировка: ${isWindows1251 ? 'UTF-16' : 'UTF-8'}`);
+
+    let records = [];
     let totalRows = 0;
-    let emptyRows = 0;
     let errorRows = 0;
+    let emptyRows = 0;
 
     await new Promise((resolve, reject) => {
-      fs.createReadStream(filePath, { encoding: 'utf-8' })
-        .pipe(csv({
-          separator: ';',
-          quote: '"',
-          escape: '"',
-          skipLines: 0,
-          strict: false,
-          trim: true,
-        }))
+      // Используем более гибкие настройки парсера
+      fs.createReadStream(filePath)
+        .pipe(
+          csv({
+            separator: ';',
+            quote: '"',
+            escape: '"',
+            skipLines: 0,
+            strict: false,
+            trim: true,
+          })
+        )
         .on('data', (row) => {
           totalRows++;
 
-          const hasData = Object.values(row).some(val => val && val.trim() !== '');
+          // Проверяем, что строка не пустая
+          const hasData = Object.values(row).some(
+            (val) => val && val.trim() !== ''
+          );
           if (!hasData) {
             emptyRows++;
             return;
           }
 
+          // Проверяем наличие обязательных полей
           if (!row['Дата отбора проб'] && !row['Номер протокола']) {
-            console.log(`⚠️ Пропущена строка ${totalRows}: нет даты и номера протокола`);
+            console.log(
+              `⚠️ Пропущена строка ${totalRows}: нет даты и номера протокола`
+            );
             errorRows++;
             return;
           }
 
-          // Создаем запись в соответствии с новой схемой
           const record = {
-            // Основные поля из CSV
-            plp: getField(row, 'ПЛП'),
-            objectName: getField(row, 'Наименование объект'),
-            samplingActNumber: getField(row, 'Номер акта отбора проб'),
+            plp: cleanValue(row['ПЛП']),
+            objectName: cleanValue(row['Наименование объект']),
+            samplingActNumber: cleanValue(row['Номер акта отбора проб']),
             samplingDate: parseRussianDate(row['Дата отбора проб']),
-            samplingPlace: getField(row, 'Место отбора проб'),
-            personProvidedSample: getField(row, 'Лицо, предоставившее пробу'),
-            materialReceiptDate: parseRussianDate(row['Дата поступления материала']),
-            materialName: getField(row, 'Наименование материала'),
-            
-            // Старое поле (оставляем для обратной совместимости)
-            qualityDocument: getField(row, 'Документ о качестве'),
-            
-            // Новые поля для документов (пока null)
-            sDocPath: null,
-            qualDocPath: null,
-            testDocPath: null,
-            protocolDocPath: null,
-            qualDocNumber: null,
-            qualDocDate: null,
-            authorEmail: null,
-            editorEmail: null,
-            
-            // Остальные поля из CSV
-            manufacturer: getField(row, 'Предприятие-изготовитель'),
-            protocolNumber: getField(row, 'Номер протокола'),
+            samplingPlace: cleanValue(row['Место отбора проб']),
+            personProvidedSample: cleanValue(row['Лицо, предоставившее пробу']),
+            materialReceiptDate: parseRussianDate(
+              row['Дата поступления материала']
+            ),
+            materialName: cleanValue(row['Наименование материала']),
+            qualityDocument: cleanValue(row['Документ о качестве']),
+            manufacturer: cleanValue(row['Предприятие-изготовитель']),
+            protocolNumber: cleanValue(row['Номер протокола']),
             protocolDate: parseRussianDate(row['Дата протокола']),
-            testResult: getField(row, 'Результат испытаний'),
-            note: getField(row, 'Примечание'),
-            
-            // Системные поля
-            createdAt: new Date(),
-            // editedAt: null - не указываем, Prisma сам поставит null по умолчанию
+            testResult: cleanValue(row['Результат испытаний']),
+            note: cleanValue(row['Примечание']),
           };
 
           records.push(record);
@@ -138,10 +120,12 @@ async function importCSV() {
       return;
     }
 
+    // Проверяем, какие записи уже есть в БД
     console.log('\n🔍 Проверка существующих записей в БД...');
     const existingCount = await prisma.aEng.count();
     console.log(`📊 Уже в БД: ${existingCount} записей`);
 
+    // Импорт батчами с детальным логированием
     const batchSize = 100;
     let imported = 0;
     let skipped = 0;
@@ -160,18 +144,27 @@ async function importCSV() {
         imported += result.count;
         skipped += batch.length - result.count;
 
-        console.log(`✅ Батч ${Math.floor(i / batchSize) + 1}: вставлено ${result.count}, пропущено ${batch.length - result.count}`);
-        console.log(`📊 Прогресс: ${Math.min(i + batchSize, records.length)}/${records.length} (всего вставлено: ${imported})`);
-
+        console.log(
+          `✅ Батч ${Math.floor(i / batchSize) + 1}: вставлено ${result.count}, пропущено ${batch.length - result.count}`
+        );
+        console.log(
+          `📊 Прогресс: ${Math.min(i + batchSize, records.length)}/${records.length} (всего вставлено: ${imported})`
+        );
       } catch (error) {
-        console.error(`❌ Ошибка в батче ${Math.floor(i / batchSize) + 1}:`, error.message);
+        console.error(
+          `❌ Ошибка в батче ${Math.floor(i / batchSize) + 1}:`,
+          error.message
+        );
 
         // Пытаемся найти проблемную запись
         for (let j = 0; j < batch.length; j++) {
           try {
             await prisma.aEng.create({ data: batch[j] });
           } catch (singleError) {
-            console.error(`   🔴 Проблемная запись ${i + j + 1}:`, singleError.message);
+            console.error(
+              `   🔴 Проблемная запись ${i + j + 1}:`,
+              singleError.message
+            );
             console.log('   Данные:', JSON.stringify(batch[j], null, 2));
             break;
           }
@@ -186,6 +179,14 @@ async function importCSV() {
     console.log(`⏭️ Пропущено (дубликаты): ${skipped}`);
     console.log(`📊 Всего в БД: ${await prisma.aEng.count()} записей`);
 
+    // Проверка: сколько не хватает
+    const totalInDb = await prisma.aEng.count();
+    const difference = records.length - (imported + skipped);
+    if (difference > 0) {
+      console.log(
+        `⚠️ Несоответствие: ${difference} записей не были обработаны`
+      );
+    }
   } catch (error) {
     console.error('❌ Критическая ошибка:', error);
   } finally {

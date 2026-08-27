@@ -26,5 +26,6 @@ export const collections = {
   'streamline-freehand-color': () => require('@iconify-json/streamline-freehand-color/icons.json'),
   'streamline-ultimate-color': () => require('@iconify-json/streamline-ultimate-color/icons.json'),
   'system-uicons': () => require('@iconify-json/system-uicons/icons.json'),
+  'teenyicons': () => require('@iconify-json/teenyicons/icons.json'),
   'vscode-icons': () => require('@iconify-json/vscode-icons/icons.json'),
 }

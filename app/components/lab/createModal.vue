@@ -47,11 +47,12 @@
                   </span>
                 </template>
                 <USelectMenu
-                  :items="items"
-                  @create="onCreate"
-                  create-item
+                  v-model:search="searchQuery"
+                  :items="plp_items"
                   class="w-full shadow-sm"
                   v-model="state.plp"
+                  :searchable="true"
+                  :search-input="{ placeholder: 'Введите название...' }"
               /></UFormField>
               <UFormField name="objName" required>
                 <template #label>
@@ -60,11 +61,11 @@
                   </span>
                 </template>
                 <USelectMenu
-                  :items="items"
-                  @create="onCreate"
-                  create-item
+                  v-model:search="searchQuery"
+                  :items="objName_items"
                   class="w-full shadow-sm"
                   v-model="state.objName"
+                  :searchable="true"
                 />
               </UFormField>
               <UFormField name="actNumber" required >
@@ -114,10 +115,8 @@
                   </span>
                 </template>
                 <USelectMenu
-                  :items="items"
-                  @create="onCreate"
-                  create-item
-                  class="w-full shadow-sm"
+                  :items="sPlace_items.slice(0, 200)"
+                  class="shadow-sm w-88"
                   v-model="state.sPlace"
                 />
               </UFormField>
@@ -128,8 +127,7 @@
                   </span>
                 </template>
                 <USelectMenu
-                  :items="items"
-                  @create="onCreate"
+                  :items="persProv_items"
                   create-item
                   class="w-full shadow-sm"
                   v-model="state.sPerson"
@@ -164,9 +162,7 @@
                   </span>
                 </template>
                 <USelectMenu
-                  :items="items"
-                  @create="onCreate"
-                  create-item
+                  :items="materials_items"
                   class="w-full"
                   v-model="state.material"
                   :disabled="!isMaterialActive"
@@ -237,7 +233,13 @@
                     Предприятие изготовитель
                   </span>
                 </template>
-                <UInput class="w-full" v-model="state.manufacturer" :disabled="!isMaterialActive"/>
+                <!--  -->
+                <USelectMenu
+                  :items="manufacturer_items.slice(0, 200)"
+                  class="w-full"
+                  v-model="state.manufacturer"
+                  :disabled="!isMaterialActive"
+                />
               </UFormField>
             </div>
           </fieldset>
@@ -292,10 +294,8 @@
                     Результат испытаний
                   </span>
                 </template>
-                <USelectMenu
-                  :items="items"
-                  @create="onCreate"
-                  create-item
+                <USelect
+                  :items="testResult"
                   class="w-full"
                   :class="{
                     'border-2 border-green-100 ring-2 ring-green-100': state.testResult === 'Соответствует',
@@ -346,9 +346,53 @@ import * as z from 'zod';
 import type { FormSubmitEvent } from '@nuxt/ui';
 import { CalendarDate } from '@internationalized/date';
 import { parseDate, getToday, dateToISOString } from '../../../utils/dateUtils'; // или '@/utils/dateUtils'
-import {getFileUrl} from '@@/utils/fileUrl'
+import {getFileUrl} from '@@/utils/fileUrl';
+import { refDebounced } from '@vueuse/core'; // Рекомендуется для debounce
+
+
 const userStore = useUserStore();
 const { user } = storeToRefs(userStore);
+
+
+const searchQuery = ref('')
+// const debouncedSearch = refDebounced(searchQuery, 300) // Ждем 300мс после окончания ввода
+const loading = ref(false)
+const plp_items = ref([]);
+const sPlace_items = ref([]);
+const persProv_items = ref([]);
+const materials_items = ref([]);
+const manufacturer_items = ref([]);
+const testResult = ref(['Соответствует', 'Не соответствует'])
+
+// Следим за изменением текста и делаем запрос
+// watch(searchQuery, async (query) => {
+//   // const cleanQuery = query?.trim()
+//   console.log('query === >', query)
+//   if (!query) {
+//     plp_items.value = []
+//     return
+//   }
+  
+//   loading.value = true
+//   try {
+//     const data = await $fetch('/api/incoming-control/fieldsInfo', {
+//       query: { 
+//         model: 'aEng', 
+//         field: 'plp', 
+//       }
+//     })
+//     plp_items.value = data 
+//     // plp_items.value = await $fetch('/api/construction-objects', {
+//     //   query: { search: query, limit: 20 }
+//     // })
+//   } catch (error) {
+//     plp_items.value = []
+//   } finally {
+//     loading.value = false
+//   }
+// })
+
+
 
 const props = defineProps<{
   count: number;
@@ -376,6 +420,8 @@ const props = defineProps<{
 const emit = defineEmits<{ close: [boolean] }>();
 
 const items = ref(['Backlog', 'Todo', 'In Progress', 'Done']);
+
+const objName_items = ref([]);
 const value = ref('Backlog');
 const modalTitle = ref('');
 const {showTost} = useAppToasts()
@@ -725,7 +771,44 @@ async function handleSubmit(event: FormSubmitEvent<Schema>) {
   emit('close', true);
 }
 
-onMounted(() => {
+onMounted(async () => {
+  loading.value = true
+  try { //   'manufacturer' 
+    const [plpData, objNameData, sPlaceData, persProvData, materialsData, manufacturerData] = await Promise.all([
+      $fetch('/api/incoming-control/fieldsInfo', {
+        query: { model: 'aEng', field: 'plp' }
+      }),
+      $fetch('/api/incoming-control/fieldsInfo', {
+        query: { model: 'aEng', field: 'objectName' }
+      }),
+      $fetch('/api/incoming-control/fieldsInfo', {
+        query: { model: 'aEng', field: 'samplingPlace' }
+      }),
+      $fetch('/api/incoming-control/fieldsInfo', {
+        query: { model: 'aEng', field: 'personProvidedSample' }
+      }),
+      $fetch('/api/incoming-control/fieldsInfo', {
+        query: { model: 'aEng', field: 'materialName' }
+      }),
+      $fetch('/api/incoming-control/fieldsInfo', {
+        query: { model: 'aEng', field: 'manufacturer' }
+      }),
+    ])
+    // console.log('data ====> ', sPlaceData)
+    plp_items.value = plpData;
+    objName_items.value = objNameData;
+    sPlace_items.value = sPlaceData;
+    persProv_items.value = persProvData;
+    materials_items.value = materialsData;
+    manufacturer_items.value = manufacturerData;
+    // plp_items.value = await $fetch('/api/construction-objects', {
+    //   query: { search: query, limit: 20 }
+    // })
+  } catch (error) {
+    plp_items.value = []
+  } finally {
+    loading.value = false
+  }
   // console.log('Данные пользователя на клиенте === ', user);
   // @ts-ignore
   // userDep.value = adUser.department || '';
