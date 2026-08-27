@@ -51,7 +51,7 @@ export default defineEventHandler(async (event) => {
     // 4. Конвертируем DOCX-буфер в PDF-буфер с помощью LibreOffice
     // ✅ ИСПРАВЛЕНО: Вызываем libre.convert напрямую, так как он уже возвращает Promise
     // @ts-ignore
-    const pdfBuffer = await libre.convert.promises(docxBuffer, '.pdf', undefined);
+    const pdfBuffer = await libre.convert(docxBuffer, '.pdf', undefined)
 
     // 5. Устанавливаем заголовок ответа, чтобы браузер понял, что это PDF
     setResponseHeader(event, 'Content-Type', 'application/pdf')
