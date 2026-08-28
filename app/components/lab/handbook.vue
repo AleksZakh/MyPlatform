@@ -7,10 +7,10 @@
     color="info"
     variant="link"
     :ui="{
-      trigger: 'flex items-center px-4 py-5',
-      content: 'relative p-6 bg-white rounded-xl shadow-sm min-h-150',
+      trigger: 'flex items-center px-4 py-8 max-w-20 flex-col',
+      content: 'relative p-2 bg-white rounded-xl shadow-sm min-h-150',
       indicator: 'absolute transition-all duration-300',
-      leadingIcon: 'w-5 h-5 ',                  // иконка внутри триггера
+      leadingIcon: 'w-5 h-5 size-10',                  // иконка внутри триггера
     }"
   >
     <!-- Слот для вкладки "Аккаунт" -->
@@ -48,18 +48,18 @@
 <script setup lang="ts">
 const items = [
   {
-    label: '',
-    icon: 'i-lucide-user',
+    label: 'ПЛП',
+    icon: 'streamline:shipping-transfer-truck-time-truck-shipping-delivery-time-waiting-delay',
     slot: 'account'  // ← имя слота
   },
   {
-    label: '',
-    icon: 'i-lucide-settings',
+    label: 'Материалы',
+    icon: 'game-icons:concrete-bag',
     slot: 'settings'  // ← имя слота
   },
   {
-    label: '',
-    icon: 'i-lucide-bell',
+    label: 'Объекты',
+    icon: 'streamline-freehand-color:worldwide-web-location-pin',
     slot: 'notifications'  // ← имя слота
   }
 ];
