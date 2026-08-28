@@ -114,11 +114,8 @@
                     Место отбора проб
                   </span>
                 </template>
-                <USelectMenu
-                  :items="sPlace_items.slice(0, 200)"
-                  class="shadow-sm w-88"
-                  v-model="state.sPlace"
-                />
+                <!--<UInput class="w-full shadow-sm" v-model="state.actNumber" />-->
+                <UInput class="shadow-sm w-88" v-model="state.sPlace" />
               </UFormField>
               <UFormField name="sPerson" required >
                 <template #label>
