@@ -8,7 +8,7 @@
     variant="link"
     :ui="{
       trigger: 'flex items-center px-4 py-5',
-      content: 'relative p-6 bg-white rounded-xl shadow-sm min-h-200',
+      content: 'relative p-6 bg-white rounded-xl shadow-sm min-h-150',
       indicator: 'absolute transition-all duration-300',
       leadingIcon: 'w-5 h-5 ',                  // иконка внутри триггера
     }"
