@@ -74,7 +74,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    console.log('multipartData ===> ', multipartData)
+    // console.log('multipartData ===> ', multipartData)
 
     const { body, fileDbPaths } = await handleFileUpload(multipartData);
 

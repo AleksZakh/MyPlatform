@@ -30,13 +30,7 @@
 
     <!-- Слот для вкладки "Уведомления" -->
     <template #objects>
-      <div class="p-4 rounded">
-        <h3 class="text-lg font-bold">Последние уведомления</h3>
-        <ul>
-          <li>🔔 Новое сообщение</li>
-          <li>⭐ Обновление системы</li>
-        </ul>
-      </div>
+      <LabObjectsForm />
     </template>
   </UTabs>
 </template>

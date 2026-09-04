@@ -24,6 +24,7 @@ interface _GlobalComponents {
   LabFilterPanelModal: typeof import("../../app/components/lab/FilterPanelModal.vue")['default']
   LabManufacturersForm: typeof import("../../app/components/lab/ManufacturersForm.vue")['default']
   LabMaterialsForm: typeof import("../../app/components/lab/MaterialsForm.vue")['default']
+  LabObjectsForm: typeof import("../../app/components/lab/ObjectsForm.vue")['default']
   LabPlpForm: typeof import("../../app/components/lab/PlpForm.vue")['default']
   LabTableSettingsModal: typeof import("../../app/components/lab/TableSettingsModal.vue")['default']
   LabCreateModal: typeof import("../../app/components/lab/createModal.vue")['default']
@@ -201,6 +202,7 @@ interface _GlobalComponents {
   LazyLabFilterPanelModal: LazyComponent<typeof import("../../app/components/lab/FilterPanelModal.vue")['default']>
   LazyLabManufacturersForm: LazyComponent<typeof import("../../app/components/lab/ManufacturersForm.vue")['default']>
   LazyLabMaterialsForm: LazyComponent<typeof import("../../app/components/lab/MaterialsForm.vue")['default']>
+  LazyLabObjectsForm: LazyComponent<typeof import("../../app/components/lab/ObjectsForm.vue")['default']>
   LazyLabPlpForm: LazyComponent<typeof import("../../app/components/lab/PlpForm.vue")['default']>
   LazyLabTableSettingsModal: LazyComponent<typeof import("../../app/components/lab/TableSettingsModal.vue")['default']>
   LazyLabCreateModal: LazyComponent<typeof import("../../app/components/lab/createModal.vue")['default']>
