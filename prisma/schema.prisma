@@ -76,4 +76,213 @@ model AEng {
   @@index([editedAt])
 }
 
+// ===== НОВЫЕ ТАБЛИЦЫ (ВЕРСИЯ 4) =====
+
+// ============================================
+// СПРАВОЧНИКИ
+// ============================================
+
+// 1. ПЛП
+model Plp {
+  id        Int    @id @default(autoincrement())
+  name      String @unique @db.VarChar(255)
+  note      String? @db.Text
+  
+  // Системные поля
+  createdAt  DateTime @default(now())
+  authorEmail String? @db.VarChar(255)
+  editedAt   DateTime? @updatedAt
+  editorEmail String? @db.VarChar(255)
+  
+  samplingTests SamplingTest[]
+
+  @@map("plps")
+}
+
+// 2. Инспектор
+model Inspector {
+  id        Int    @id @default(autoincrement())
+  name      String @unique @db.VarChar(255)
+  note      String? @db.Text
+  
+  // Системные поля
+  createdAt  DateTime @default(now())
+  authorEmail String? @db.VarChar(255)
+  editedAt   DateTime? @updatedAt
+  editorEmail String? @db.VarChar(255)
+  
+  samplingTests SamplingTest[]
+
+  @@map("inspectors")
+}
+
+// 3. Производитель
+model Manufacturer {
+  id        Int    @id @default(autoincrement())
+  name      String @unique @db.Text
+  note      String? @db.Text
+  
+  // Системные поля
+  createdAt  DateTime @default(now())
+  authorEmail String? @db.VarChar(255)
+  editedAt   DateTime? @updatedAt
+  editorEmail String? @db.VarChar(255)
+  
+  materials Material[]
+
+  @@map("manufacturers")
+  @@index([name])
+}
+
+// 4. Материал
+model Material {
+  id             Int    @id @default(autoincrement())
+  name           String @unique @db.Text
+  note           String? @db.Text
+  
+  manufacturerId Int?
+  manufacturer   Manufacturer? @relation(fields: [manufacturerId], references: [id])
+  
+  // Системные поля
+  createdAt  DateTime @default(now())
+  authorEmail String? @db.VarChar(255)
+  editedAt   DateTime? @updatedAt
+  editorEmail String? @db.VarChar(255)
+  
+  receipts       ReceiptMaterial[]
+
+  @@map("materials")
+  @@index([name])
+}
+
+// ============================================
+// 5. Поступление материала
+// ============================================
+model ReceiptMaterial {
+  id            Int       @id @default(autoincrement())
+  qualDate      DateTime? @db.Date
+  qualDocNumber String?   @db.VarChar(255)
+  qualDocPath   String?   @db.Text
+  note          String?   @db.Text  // ← ДОБАВЛЕНО ПОЛЕ "ПРИМЕЧАНИЕ"
+  
+  materialId    Int
+  material      Material  @relation(fields: [materialId], references: [id])
+  
+  // Системные поля
+  createdAt  DateTime @default(now())
+  authorEmail String? @db.VarChar(255)
+  editedAt   DateTime? @updatedAt
+  editorEmail String? @db.VarChar(255)
+  
+  testProtocols TestProtocol[]
+  samplingTests SamplingTest[]
+
+  @@map("receipt_materials")
+}
+
+// 6. Объект испытаний
+model TestObject {
+  id        Int    @id @default(autoincrement())
+  name      String @unique @db.Text
+  note      String? @db.Text
+  
+  // Системные поля
+  createdAt  DateTime @default(now())
+  authorEmail String? @db.VarChar(255)
+  editedAt   DateTime? @updatedAt
+  editorEmail String? @db.VarChar(255)
+  
+  locations TestLocation[]
+
+  @@map("test_objects")
+  @@index([name])
+}
+
+// 7. Место отбора
+model TestLocation {
+  id            Int        @id @default(autoincrement())
+  name          String     @db.Text
+  note          String?    @db.Text
+  
+  testObjectId  Int
+  testObject    TestObject @relation(fields: [testObjectId], references: [id])
+  
+  // Системные поля
+  createdAt  DateTime @default(now())
+  authorEmail String? @db.VarChar(255)
+  editedAt   DateTime? @updatedAt
+  editorEmail String? @db.VarChar(255)
+  
+  samplingTests SamplingTest[]
+
+  @@unique([testObjectId, name])
+  @@map("test_locations")
+  @@index([name])
+}
+
+// 8. Протокол испытаний
+model TestProtocol {
+  id                 Int       @id @default(autoincrement())
+  protocolNumber     String    @db.VarChar(255)
+  protocolDate       DateTime? @db.Date
+  protocolDocPath    String?   @db.Text
+  testResult         String    @db.Text
+  note               String?   @db.Text
+  
+  receiptMaterialId  Int
+  receiptMaterial    ReceiptMaterial @relation(fields: [receiptMaterialId], references: [id])
+  
+  // Системные поля
+  createdAt  DateTime @default(now())
+  authorEmail String? @db.VarChar(255)
+  editedAt   DateTime? @updatedAt
+  editorEmail String? @db.VarChar(255)
+  
+  samplingTests      SamplingTest[]
+
+  @@map("test_protocols")
+  @@index([protocolNumber])
+  @@index([protocolDate])
+}
+
+// ============================================
+// ГЛАВНАЯ ТАБЛИЦА - АКТЫ ОТБОРА ПРОБ
+// ============================================
+model SamplingTest {
+  id              Int        @id @default(autoincrement())
+  sActNumber      String     @db.VarChar(255)
+  sActDate        DateTime   @db.Date
+  sDocPath        String?    @db.Text
+  note            String?    @db.Text
+  
+  // Внешние ключи на справочники
+  plpId           Int
+  plp             Plp        @relation(fields: [plpId], references: [id])
+  
+  inspectorId     Int
+  inspector       Inspector  @relation(fields: [inspectorId], references: [id])
+  
+  testLocationId  Int
+  testLocation    TestLocation @relation(fields: [testLocationId], references: [id])
+  
+  // Связь с протоколом (опционально)
+  testProtocolId  Int?
+  testProtocol    TestProtocol? @relation(fields: [testProtocolId], references: [id])
+  
+  // ПРЯМАЯ СВЯЗЬ С ПОСТУПЛЕНИЕМ МАТЕРИАЛА (добавлено!)
+  receiptMaterialId Int?
+  receiptMaterial   ReceiptMaterial? @relation(fields: [receiptMaterialId], references: [id])
+  
+  // Системные поля
+  createdAt  DateTime @default(now())
+  authorEmail String? @db.VarChar(255)
+  editedAt   DateTime? @updatedAt
+  editorEmail String? @db.VarChar(255)
+
+  @@map("sampling_tests")
+  @@index([sActNumber])
+  @@index([sActDate])
+}
+
+
 

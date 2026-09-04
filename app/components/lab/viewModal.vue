@@ -12,7 +12,7 @@
           </div>
           <div>
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-              Просмотр записи #{{ record?.index || '' }}
+              Просмотр записи - Акт №{{ record?.['Номер акта отбора проб'] || '' }}
             </h3>
             <p class="text-sm text-gray-500 dark:text-gray-400">
               Просмотр данных записи
@@ -57,7 +57,7 @@
               <div class="flex flex-col">
                 <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Наименование объекта</label>
                 <div class="mt-1 px-2 shadow-sm rounded-sm text-lg text-gray-800 min-w-70 bg-gray-50">
-                  {{ record?.['Наименование объект'] || '—' }}
+                  {{ record?.['Наименование объекта'] || '—' }}
                 </div>
               </div>
               
@@ -75,15 +75,15 @@
                 <div class="mt-1">
                   <!-- ✅ КНОПКА ДЛЯ ОТКРЫТИЯ ВЛОЖЕННОЙ МОДАЛКИ -->
                   <UButton
-                    v-if="response?.sDocPath"
+                    v-if="record?.['Документ отбора проб']"
                     variant="ghost"
                     color="primary"
                     size="sm"
                     class="px-0"
-                    @click="fileViewerOpen(response.sDocPath)"
+                    @click="fileViewerOpen(record?.['Документ отбора проб'])"
                   >
                     <Icon name="i-heroicons-document-text" class="mr-1" />
-                    {{ getFileName(response.sDocPath) }}
+                    {{ getFileName(record?.['Документ отбора проб']) }}
                     <Icon name="i-heroicons-arrow-top-right-on-square" class="ml-1 w-4 h-4" />
                   </UButton>
                   <span v-else class="text-md text-gray-400">—</span>
@@ -118,7 +118,7 @@
               <div class="flex flex-col md:col-span-2">
                 <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Примечание</label>
                 <div class="mt-1 px-2 shadow-sm text-lg text-gray-800 min-w-70 bg-gray-100/50 p-2 rounded-md whitespace-pre-wrap max-h-24 overflow-y-auto">
-                  {{ record?.['Примечание'] || '—' }}
+                  {{ record?.['Примечание (акт)'] || '—' }}
                 </div>
               </div>
             </div>
@@ -161,15 +161,15 @@
                 <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Документ о качестве</label>
                 <div class="mt-1">
                   <UButton
-                    v-if="record?.['Документ о качестве'] && record?.['Документ о качестве'] !== '-'"
+                    v-if="qualDocPath && qualDocPath !== '-'"
                     variant="ghost"
                     color="primary"
                     size="md"
                     class="p-1"
-                    @click="fileViewerOpen(record?.['Документ о качестве'])"
+                    @click="fileViewerOpen(qualDocPath)"
                   >
                     <Icon name="i-heroicons-document-text" class="mr-1" />
-                    {{ getFileName(record?.['Документ о качестве']) }}
+                    {{ getFileName(qualDocPath) }}
                     <Icon name="i-heroicons-arrow-top-right-on-square" class="ml-1 w-4 h-4" />
                   </UButton>
                   <span v-else class="text-md text-gray-400">—</span>
@@ -218,15 +218,15 @@
                 <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Документ протокола</label>
                 <div class="mt-1">
                   <UButton
-                    v-if="response?.protocolDocPath"
+                    v-if="protocolDocPath"
                     variant="ghost"
                     color="primary"
                     size="sm"
                     class="px-0"
-                    @click="fileViewerOpen(response.protocolDocPath)"
+                    @click="fileViewerOpen(protocolDocPath)"
                   >
                     <Icon name="i-heroicons-document-text" class="mr-1" />
-                    {{ getFileName(response.protocolDocPath) }}
+                    {{ getFileName(protocolDocPath) }}
                     <Icon name="i-heroicons-arrow-top-right-on-square" class="ml-1 w-4 h-4" />
                   </UButton>
                   <span v-else class="text-md text-gray-400">—</span>
@@ -264,11 +264,11 @@
         <div class="  text-gray-400 p-2  flex justify-center gap-70">
           <div class="flex items-center gap-2">
             <span class="text-xs">Создано: </span>
-            <span class="text-sm text-gray-600">{{ authorInfo?.shortName || response?.authorEmail || '—' }} {{ formatDateTime(response?.createdAt) || '—' }}</span>
+            <span class="text-sm text-gray-600">{{ authorInfo?.shortName || autorEmail || '—' }} {{ dateCreate|| '—' }}</span>
           </div>
           <div class="flex items-center gap-2">
             <span class="text-xs">Обновлено: </span>
-            <span class="text-sm text-gray-600">{{ editorInfo?.shortName || response?.editorEmail || '—' }} {{ formatDateTime(response?.createdAt) || '—' }}</span>
+            <span class="text-sm text-gray-600">{{ editorInfo?.shortName || editorEmail || '—' }} {{ dateEdit || '—' }}</span>
 
           </div>
         </div>
@@ -310,6 +310,14 @@ const props = defineProps<{
 const response = ref();
 const authorInfo = ref();
 const editorInfo = ref();
+const dateCreate = ref();
+const dateEdit = ref();
+const sDocPath = ref();
+const qualDocPath = ref();
+const protocolDocPath = ref();
+const objName = ref();
+const autorEmail = ref();
+const editorEmail = ref();
 
 const overlay = useOverlay();
 const modalFViewer = overlay.create(fViewerModal);
@@ -325,9 +333,20 @@ onMounted(async () => {
       // @ts-ignore
       response.value = await $fetch(`/api/incoming-control/${recordId}`);
       if(response.value){
-        authorInfo.value = await searchUserInAD({'authorEmail':response.value.authorEmail})
-        editorInfo.value = await searchUserInAD({'authorEmail':response.value.editorEmail})
+        
+        authorInfo.value = await searchUserInAD({'authorEmail':response.value.data['Автор (акт)']})
+        editorInfo.value = await searchUserInAD({'authorEmail':response.value.data['Редактор  (акт)']})
+        dateCreate.value = response.value.data['Дата создания (акт)']
+        dateEdit.value = response.value.data['Дата редактирования']
+        sDocPath.value = response.value.data['Документ отбора проб']
+        qualDocPath.value = response.value.data['Документ о качестве']
+        protocolDocPath.value = response.value.data['Документ протокола']
+        objName.value = response.value.data['Наименование объекта']
+        autorEmail.value = response.value.data['Автор (акт)']
+        editorEmail.value = response.value.data['Редактор (акт)'] !== 'undefined' ? response.value.data['Редактор (акт)'] : '-'
+        dateEdit.value = response.value.data['Дата редактирования (акт)']
         // console.log('authorInfo ====> ', authorInfo.value)
+        // console.log('response.value ====> ', response.value)
       }
     } catch (error) {
       console.error('Ошибка при загрузке данных:', error);
@@ -399,8 +418,6 @@ function fileViewerOpen(path: string) {
 
   })
 }
-
-
 
 
 </script>

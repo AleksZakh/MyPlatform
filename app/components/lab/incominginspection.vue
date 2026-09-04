@@ -1,7 +1,7 @@
 <!-- Контент для первой вкладки -->
 <template>
   <div
-    class="w-full max-h-[80vh] min-h-[80vh] flex flex-col overflow-hidden mx-auto bg-white py-1 px-3 rounded-lg shadow-[0_0_10px_rgba(0,0,0,0.1)]"
+    class="w-full absolute top-0 bottom-0 flex flex-col overflow-hidden mx-auto bg-white py-1 px-3 rounded-lg shadow-[0_0_10px_rgba(0,0,0,0.1)]"
   >
     <div class="flex flex-wrap gap-4 items-center justify-between py-1">
       <div class="flex p-0  text-lg">
@@ -11,13 +11,15 @@
         <div>
           <UTooltip text="Патаметры фильтра">
             <UButton     
-              class="p-2"
+              class="px-3 py-1 bg-white border text-lg text-black font-normal border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
               variant="outline"
               size="xl"
               icon="streamline-freehand-color:filter"
               color="neutral"
               @click="hendleFilterPanel"
-            />
+            >
+            Настройка фильтра
+            </UButton>
 
           </UTooltip>
         </div>
@@ -26,7 +28,7 @@
           <UTooltip text="Создать новую запись" :kbds="['Alt', 'Shift', 'N']">
             <UButton
               @click="open('create')"
-              class="px-4 py-2 bg-white border text-black font-normal border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+              class="px-4 py-1 bg-white border text-lg text-black font-normal border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
             >
               <Icon
                 :name="'streamline-freehand-color:edit-pen-write-paper'"
@@ -40,7 +42,7 @@
           <UTooltip text="Экспорт записей" :kbds="['Alt', 'Shift', 'E']">
             <UButton
               @click="exportRecordsOpen"
-              class="px-4 py-2 bg-white border text-black font-normal border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+              class="px-3 py-2 bg-white border text-black font-normal border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
             >
               <Icon
                 :name="'streamline-freehand-color:database-hand'"
@@ -237,10 +239,13 @@ const globalFilter = ref('');
 // Вычисляем видимые заголовки (на основе настроек)
 const visibleHeaders = computed(() => {
   const visibleColumns = getVisibleColumns();
+  // console.log('visibleColumns ===> ', visibleColumns)
   return headers.value.filter(header => 
     visibleColumns.includes(header)
   );
 });
+
+// console.log('visibleHeaders =+=+==> ', visibleHeaders)
 
 // 👇 ОБРАБОТЧИК СМЕНЫ СТРАНИЦЫ
 const onPageChange = async (page: number) => {
@@ -320,6 +325,7 @@ const items: ContextMenuItem[][] = [
       label: 'Удалить',
       color: 'error' as const,
       icon: 'streamline-freehand-color:delete-bin-2',
+      disabled: true,
       onClick: () => handleDelete(selectedRecord.value),
     },
   ],
@@ -329,7 +335,7 @@ async function handleDelete(record: any) {
   if (!record) return;
   const id = record.ID || record.index;
   const recordName =
-    record['Наименование объект'] || record.objectName || `запись #${id}`;
+    record['Наименование объекта'] || record.objectName || `запись #${id}`;
 
   await deleteRecordWithRefresh(id, recordName, async () => {
     // После удаления перезагружаем текущую страницу
@@ -403,8 +409,8 @@ async function open(action: string) {
 }
 
 const columnLabels: Record<string, string> = {
-  ПЛП: 'ПЛП',
-  'Наименование объект': 'Объект',
+  'ПЛП': 'ПЛП',
+  'Наименование объекта': 'Объект',
   'Номер акта отбора проб': '№ Акта',
   'Дата отбора проб': 'Дата отбора',
   'Место отбора проб': 'Место отбора',
@@ -417,7 +423,7 @@ const columnLabels: Record<string, string> = {
   'Номер протокола': '№ Протокола',
   'Дата протокола': 'Дата протокола',
   'Результат испытаний': 'Результат',
-  Примечание: 'Примечание',
+  'Примечание (акт)': 'Примечание',
 };
 
 onMounted(async () => {
@@ -427,6 +433,7 @@ onMounted(async () => {
 });
 
 function getColumnLabel(header: string): string {
+  // console.log('header =+=+==> ', header)
   return columnLabels[header] || header;
 }
 

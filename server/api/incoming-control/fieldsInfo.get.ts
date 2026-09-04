@@ -1,63 +1,84 @@
-import { PrismaClient } from '@prisma/client'
+// server/api/reference/search.get.ts
+import { PrismaClient } from '@prisma/client';
+import { defineEventHandler, getQuery } from 'h3';
 
-const prisma = new PrismaClient() as any // кастуем к any для динамического обращения к моделям
+const prisma = new PrismaClient();
 
 // Белый список: какие модели и какие поля разрешено искать через этот эндпоинт
 const ALLOWED_TARGETS: Record<string, string[]> = {
-  aEng: ['objectName', 'plp', 'samplingPlace', 'personProvidedSample', 'materialName', 'manufacturer'], // Ваша таблица и её поля
-  buildingMaterials: ['materialName', 'vendorCode'],     // Пример другой таблицы
-  regions: ['title']                                     // Пример третьей таблицы
-}
+  // Справочники (новая структура)
+  plp: ['name'],                    // ПЛП
+  inspector: ['name'],              // Инспекторы (лицо, предоставившее пробу)
+  manufacturer: ['name'],           // Производители
+  material: ['name'],               // Материалы
+  testObject: ['name'],             // Объекты испытаний
+  testLocation: ['name'],           // Места отбора
+  receiptMaterial: ['qualDocNumber'], // Поступления материалов
+  testProtocol: ['protocolNumber', 'testResult'], // Протоколы испытаний
+  samplingTest: ['sActNumber'],     // Акты отбора проб (ГЛАВНАЯ ТАБЛИЦА)
+};
 
 export default defineEventHandler(async (event) => {
-  const query = getQuery(event)
-//   console.log('query == >', query)
-  
-//   const search = String(query.search || '').trim()
-//   const limit = Number(query.limit) || 20
-  
-  // Новые параметры динамического запроса
-  const targetModel = String(query.model || '')
-  const targetField = String(query.field || '')
+  const query = getQuery(event);
+  console.log('query ====> ', query)
+  const targetModel = String(query.model || '');
+  const targetField = String(query.field || '');
+  const searchValue = String(query.search || '').trim();
 
   // 1. Валидация безопасности
   if (!ALLOWED_TARGETS[targetModel] || !ALLOWED_TARGETS[targetModel].includes(targetField)) {
     throw createError({
       statusCode: 400,
       statusMessage: 'Недопустимая модель или поле для поиска',
-    })
+    });
   }
 
-//   if (!search) return []
-
   try {
-    // Динамически обращаемся к модели Prisma, например: prisma.aEng
-    const modelDelegate = prisma[targetModel]
+    // Динамически обращаемся к модели Prisma
+    const modelDelegate = (prisma as any)[targetModel];
 
-    const records = await modelDelegate.groupBy({
-        by: [targetField],
-        where: {
-            [targetField]: {        // Динамическое имя поля (например, objectName)
-            mode: 'insensitive',  // Уберите эту строку, если у вас MySQL
-            },
-        },
-        select: {
-            [targetField]: true,    // Выбираем только id и нужное текстовое поле
-        },
-        orderBy: {
-            [targetField]: 'asc', // ЯВНО задаем сортировку по этому же полю по алфавиту
-        }
-    })
+    if (!modelDelegate) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: `Модель "${targetModel}" не найдена`,
+      });
+    }
 
-    // Преобразуем массив объектов [{ objectName: 'А' }, { objectName: 'Б' }] 
-    // в плоский массив строк: ['А', 'Б']
-    return records.map((item: any) => item[targetField])
+    // Строим where условие с поиском по частичному совпадению
+    const whereCondition: any = {};
+    
+    if (searchValue) {
+      // Для PostgreSQL используем contains с insensitive режимом
+      whereCondition[targetField] = {
+        contains: searchValue,
+        mode: 'insensitive',
+      };
+    }
+
+    // Выполняем поиск с группировкой по уникальным значениям
+    const records = await modelDelegate.findMany({
+      where: whereCondition,
+      select: {
+        [targetField]: true,
+      },
+      distinct: [targetField],
+      orderBy: {
+        [targetField]: 'asc',
+      },
+      // take: 50, // Максимум 50 записей для производительности
+    });
+
+    // Преобразуем массив объектов в плоский массив строк
+    return records.map((item: any) => item[targetField]);
 
   } catch (error) {
-    console.error(`Ошибка универсального поиска (${targetModel}.${targetField}):`, error)
+    console.error(`Ошибка поиска (${targetModel}.${targetField}):`, error);
+    
+    if ((error as any).statusCode) throw error;
+    
     throw createError({
       statusCode: 500,
       statusMessage: 'Внутренняя ошибка сервера при поиске',
-    })
+    });
   }
-})
+});

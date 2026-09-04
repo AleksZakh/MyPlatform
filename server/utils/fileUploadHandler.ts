@@ -76,6 +76,7 @@ export async function handleFileUpload(
     // Формируем новое имя файла
     const newFilename = `${fieldName}${fileExt}`;
     const fullPath = path.join(targetDir, newFilename);
+    console.log('fullPath ===> ', fullPath)
 
     // Записываем файл на диск
     fs.writeFileSync(fullPath, item.data);

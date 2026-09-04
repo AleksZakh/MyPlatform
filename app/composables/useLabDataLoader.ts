@@ -28,6 +28,8 @@ export const useLabDataLoader = () => {
 
       const response = await fetch(`/api/incoming-control/?${params}`);
       const result = await response.json();
+      console.log('result ======> ', result);
+      
 
       if (result.success) {
         removeToast(loadingToastId.value);

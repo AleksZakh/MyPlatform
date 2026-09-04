@@ -1,7 +1,7 @@
 <template>
   <UApp :locale="ru">
     <NuxtLayout>
-      <div class="bg-gray-50 h-full">
+      <div class="bg-gray-50 h-full relative">
         <NuxtPage />
       </div>
     </NuxtLayout>

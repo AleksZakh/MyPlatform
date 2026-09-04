@@ -22,6 +22,9 @@ export const Toast: typeof import("../app/components/Toast.vue")['default']
 export const LabExportRecordsModal: typeof import("../app/components/lab/ExportRecordsModal.vue")['default']
 export const LabFileViewerModal: typeof import("../app/components/lab/FileViewerModal.vue")['default']
 export const LabFilterPanelModal: typeof import("../app/components/lab/FilterPanelModal.vue")['default']
+export const LabManufacturersForm: typeof import("../app/components/lab/ManufacturersForm.vue")['default']
+export const LabMaterialsForm: typeof import("../app/components/lab/MaterialsForm.vue")['default']
+export const LabPlpForm: typeof import("../app/components/lab/PlpForm.vue")['default']
 export const LabTableSettingsModal: typeof import("../app/components/lab/TableSettingsModal.vue")['default']
 export const LabCreateModal: typeof import("../app/components/lab/createModal.vue")['default']
 export const LabHandbook: typeof import("../app/components/lab/handbook.vue")['default']
@@ -196,6 +199,9 @@ export const LazyToast: LazyComponent<typeof import("../app/components/Toast.vue
 export const LazyLabExportRecordsModal: LazyComponent<typeof import("../app/components/lab/ExportRecordsModal.vue")['default']>
 export const LazyLabFileViewerModal: LazyComponent<typeof import("../app/components/lab/FileViewerModal.vue")['default']>
 export const LazyLabFilterPanelModal: LazyComponent<typeof import("../app/components/lab/FilterPanelModal.vue")['default']>
+export const LazyLabManufacturersForm: LazyComponent<typeof import("../app/components/lab/ManufacturersForm.vue")['default']>
+export const LazyLabMaterialsForm: LazyComponent<typeof import("../app/components/lab/MaterialsForm.vue")['default']>
+export const LazyLabPlpForm: LazyComponent<typeof import("../app/components/lab/PlpForm.vue")['default']>
 export const LazyLabTableSettingsModal: LazyComponent<typeof import("../app/components/lab/TableSettingsModal.vue")['default']>
 export const LazyLabCreateModal: LazyComponent<typeof import("../app/components/lab/createModal.vue")['default']>
 export const LazyLabHandbook: LazyComponent<typeof import("../app/components/lab/handbook.vue")['default']>

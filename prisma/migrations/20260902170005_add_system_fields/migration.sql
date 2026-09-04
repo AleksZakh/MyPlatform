@@ -1,0 +1,53 @@
+-- AlterTable
+ALTER TABLE "inspectors" ADD COLUMN     "authorEmail" VARCHAR(255),
+ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN     "editedAt" TIMESTAMP(3),
+ADD COLUMN     "editorEmail" VARCHAR(255);
+
+-- AlterTable
+ALTER TABLE "manufacturers" ADD COLUMN     "authorEmail" VARCHAR(255),
+ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN     "editedAt" TIMESTAMP(3),
+ADD COLUMN     "editorEmail" VARCHAR(255);
+
+-- AlterTable
+ALTER TABLE "materials" ADD COLUMN     "authorEmail" VARCHAR(255),
+ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN     "editedAt" TIMESTAMP(3),
+ADD COLUMN     "editorEmail" VARCHAR(255);
+
+-- AlterTable
+ALTER TABLE "plps" ADD COLUMN     "authorEmail" VARCHAR(255),
+ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN     "editedAt" TIMESTAMP(3),
+ADD COLUMN     "editorEmail" VARCHAR(255);
+
+-- AlterTable
+ALTER TABLE "receipt_materials" ADD COLUMN     "authorEmail" VARCHAR(255),
+ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN     "editedAt" TIMESTAMP(3),
+ADD COLUMN     "editorEmail" VARCHAR(255);
+
+-- AlterTable
+ALTER TABLE "sampling_tests" ADD COLUMN     "authorEmail" VARCHAR(255),
+ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN     "editedAt" TIMESTAMP(3),
+ADD COLUMN     "editorEmail" VARCHAR(255);
+
+-- AlterTable
+ALTER TABLE "test_locations" ADD COLUMN     "authorEmail" VARCHAR(255),
+ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN     "editedAt" TIMESTAMP(3),
+ADD COLUMN     "editorEmail" VARCHAR(255);
+
+-- AlterTable
+ALTER TABLE "test_objects" ADD COLUMN     "authorEmail" VARCHAR(255),
+ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN     "editedAt" TIMESTAMP(3),
+ADD COLUMN     "editorEmail" VARCHAR(255);
+
+-- AlterTable
+ALTER TABLE "test_protocols" ADD COLUMN     "authorEmail" VARCHAR(255),
+ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN     "editedAt" TIMESTAMP(3),
+ADD COLUMN     "editorEmail" VARCHAR(255);

@@ -35,7 +35,8 @@ export const searchUserInAD = async (searcParam: any) =>{
 
     // Формируем стандартный LDAP-фильтр для Active Directory
     // Экранируем введенный email для безопасности и приводим к нижнему регистру
-    if(searcParam.authorEmail !== ''){
+    // console.log('searcParam ===> ', searcParam)
+    if(searcParam.authorEmail  && searcParam.authorEmail !== ''){
         const cleanEmail = searcParam.authorEmail.trim().toLowerCase();
         adFilter = `(&(objectClass=user)(mail=${cleanEmail}))`;
     } else {

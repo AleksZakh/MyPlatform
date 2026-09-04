@@ -36,6 +36,9 @@ declare module "nitropack/types" {
     '/api/departments': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/departments.get').default>>>>
     }
+    '/api/incoming-control/_index_': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/_index_.get').default>>>>
+    }
     '/api/incoming-control/:id': {
       'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/[id].delete').default>>>>
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/[id].get').default>>>>
@@ -47,6 +50,39 @@ declare module "nitropack/types" {
     '/api/incoming-control': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/index.get').default>>>>
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/index.post').default>>>>
+    }
+    '/api/lab/manufacturer/:id': {
+      'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/manufacturer/[id].delete').default>>>>
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/manufacturer/[id].get').default>>>>
+      'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/manufacturer/[id].put').default>>>>
+    }
+    '/api/lab/manufacturer/all': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/manufacturer/all.get').default>>>>
+    }
+    '/api/lab/manufacturer': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/manufacturer/index.get').default>>>>
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/manufacturer/index.post').default>>>>
+    }
+    '/api/lab/material/:id': {
+      'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/material/[id].delete').default>>>>
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/material/[id].get').default>>>>
+      'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/material/[id].put').default>>>>
+    }
+    '/api/lab/material/all': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/material/all.get').default>>>>
+    }
+    '/api/lab/material': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/material/index.get').default>>>>
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/material/index.post').default>>>>
+    }
+    '/api/lab/plp/:id': {
+      'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/plp/[id].delete').default>>>>
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/plp/[id].get').default>>>>
+      'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/plp/[id].put').default>>>>
+    }
+    '/api/lab/plp': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/plp/index.get').default>>>>
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/plp/index.post').default>>>>
     }
     '/api/test/domain-connection': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/test/domain-connection.get').default>>>>

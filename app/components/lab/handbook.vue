@@ -3,38 +3,34 @@
   <UTabs
     :items="items"
     orientation="vertical"
-    class="vertical-tabs"
+    class="vertical-tabs absolute left-0 right-0 bottom-0 top-0"
     color="info"
     variant="link"
     :ui="{
-      trigger: 'flex items-center px-4 py-8 max-w-20 flex-col',
-      content: 'relative p-2 bg-white rounded-xl shadow-sm min-h-150',
+      list: 'flex items-center justify-center ',
+      trigger: 'flex items-center px-4 py-8 max-w-25 flex-col',
+      content: 'relative p-2 bg-white rounded-xl shadow-sm h-full',
       indicator: 'absolute transition-all duration-300',
       leadingIcon: 'w-5 h-5 size-10',                  // иконка внутри триггера
     }"
   >
     <!-- Слот для вкладки "Аккаунт" -->
-    <template #account>
-      <div class="p-4 bg-blue-50 rounded">
-        <h3 class="text-lg font-bold">Личная информация</h3>
-        <p>Email: user@example.com</p>
-        <p>Имя: Иван Иванов</p>
-        <UButton>Редактировать</UButton>
-      </div>
+    <template #plp>
+      <LabPlpForm />
     </template>
 
     <!-- Слот для вкладки "Настройки" -->
-    <template #settings>
-      <div class="p-4 bg-green-50 rounded">
-        <h3 class="text-lg font-bold">Настройки приложения</h3>
-        <div class="space-y-2">
-        </div>
-      </div>
+    <template #materials>
+      <LabMaterialsForm />
+    </template>
+
+    <template #manufacturers>
+      <LabManufacturersForm />
     </template>
 
     <!-- Слот для вкладки "Уведомления" -->
-    <template #notifications>
-      <div class="p-4 bg-yellow-50 rounded">
+    <template #objects>
+      <div class="p-4 rounded">
         <h3 class="text-lg font-bold">Последние уведомления</h3>
         <ul>
           <li>🔔 Новое сообщение</li>
@@ -50,17 +46,22 @@ const items = [
   {
     label: 'ПЛП',
     icon: 'streamline:shipping-transfer-truck-time-truck-shipping-delivery-time-waiting-delay',
-    slot: 'account'  // ← имя слота
+    slot: 'plp'  // ← имя слота
   },
   {
     label: 'Материалы',
     icon: 'game-icons:concrete-bag',
-    slot: 'settings'  // ← имя слота
+    slot: 'materials'  // ← имя слота
+  },
+  {
+    label: 'Производители',
+    icon: 'streamline-ultimate:factory-building-1',
+    slot: 'manufacturers'
   },
   {
     label: 'Объекты',
     icon: 'streamline-freehand-color:worldwide-web-location-pin',
-    slot: 'notifications'  // ← имя слота
+    slot: 'objects'  // ← имя слота
   }
 ];
 </script>

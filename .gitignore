@@ -12,6 +12,9 @@ node_modules
 
 #temporary files folder
 temp
+scripts
+scripts/ *.ts
+scripts/ *.js
 
 #upload files
 public/files

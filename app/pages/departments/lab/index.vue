@@ -1,16 +1,16 @@
 <template>
-  <div class="max-w-screen h-full mx-auto lab-area">
-    <UCard class="h-full tabs-wrapper" :ui="{ root: 'rounded-none' }">
+  <div class=" h-full absolute left-0 right-0 lab-area">
+    <UCard class="h-full tabs-wrapper absolute  left-0 right-0 bottom-0 top-0" :ui="{ root: 'rounded-none' }">
       <UTabs
         v-model="activeTab"
         :items="tabs"
         size="lg"
         color="custom"
-        class="w-full tabs-area"
+        class=" tabs-area  absolute bottom-2 top-1 left-1 right-1"
         :ui="{
           trigger: 'border border-gray-200 rounded-md',
           list: 'p-1 gap-4 ',
-          
+          content: ' relative h-full'
         }"
       >
         <template #incomingInspection>
