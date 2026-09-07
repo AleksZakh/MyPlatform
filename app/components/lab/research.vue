@@ -46,7 +46,7 @@ const items = [
     slot: 'receipt_material'  // ← имя слота
   },
   {
-    label: 'Протокол испытаний',
+    label: 'Протоколы испытаний',
     icon: 'streamline-ultimate:laboratory-drug-file',
     slot: 'test_report'
   }
