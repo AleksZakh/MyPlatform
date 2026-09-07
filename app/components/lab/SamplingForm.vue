@@ -666,7 +666,7 @@ async function loadProtocolsForSelect(search: string = '', page: number = 1) {
       protocolHasMore.value = (response.total || 0) > displayedProtocolItems.value.length;
       protocolPage.value = page;
       
-      console.log(`📥 Загружено протоколов: ${displayedProtocolItems.value.length} из ${response.total || 0}`);
+    //   console.log(`📥 Загружено протоколов: ${displayedProtocolItems.value.length} из ${response.total || 0}`);
     }
   } catch (error) {
     console.error('Ошибка загрузки протоколов:', error);
@@ -740,7 +740,7 @@ async function loadReceiptsForSelect(search: string = '', page: number = 1) {
       receiptHasMore.value = (response.total || 0) > displayedReceiptItems.value.length;
       receiptPage.value = page;
       
-      console.log(`📥 Загружено поступлений: ${displayedReceiptItems.value.length} из ${response.total || 0}`);
+    //   console.log(`📥 Загружено поступлений: ${displayedReceiptItems.value.length} из ${response.total || 0}`);
     }
   } catch (error) {
     console.error('Ошибка загрузки поступлений:', error);

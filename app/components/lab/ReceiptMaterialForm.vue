@@ -520,10 +520,10 @@ function handleQualDocChange(event: Event): void {
   const target = event.target as HTMLInputElement;
   if (target?.files && target.files.length) {
     qualDocFile.value = target.files[0] ?? null;
-    console.log('📎 Файл выбран:', qualDocFile.value?.name, qualDocFile.value?.size, 'байт');
+    // console.log('📎 Файл выбран:', qualDocFile.value?.name, qualDocFile.value?.size, 'байт');
   } else {
     qualDocFile.value = null;
-    console.log('📎 Файл не выбран');
+    // console.log('📎 Файл не выбран');
   }
 }
 
@@ -538,7 +538,7 @@ async function loadMaterials() {
     });
     
     if (response?.success) {
-        console.log('response ====> ', response)
+        // console.log('response ====> ', response)
       materials.value = response.data.map((item: any) => ({
         id: item.id,
         label: item.name,
@@ -643,12 +643,12 @@ const saveReceipt = async () => {
     return;
   }
 
-  console.log('🔍 Данные для отправки:');
-    console.log('  materialId:', currentReceipt.materialId, typeof currentReceipt.materialId);
-    console.log('  qualDate:', currentReceipt.qualDate);
-    console.log('  qualDocNumber:', currentReceipt.qualDocNumber);
-    console.log('  note:', currentReceipt.note);
-    console.log('  qualDocFile:', qualDocFile.value);
+//   console.log('🔍 Данные для отправки:');
+//     console.log('  materialId:', currentReceipt.materialId, typeof currentReceipt.materialId);
+//     console.log('  qualDate:', currentReceipt.qualDate);
+//     console.log('  qualDocNumber:', currentReceipt.qualDocNumber);
+//     console.log('  note:', currentReceipt.note);
+//     console.log('  qualDocFile:', qualDocFile.value);
 
   isLoading.value = true;
   try {

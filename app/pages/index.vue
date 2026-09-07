@@ -85,8 +85,8 @@ const wsStore = useWebSocketStore();
 const router = useRouter();
 
 const userStore = useUserStore();
-const name = computed(() => userStore.name);
-const email = computed(() => userStore.email);
+// const name = computed(() => userStore.name);
+// const email = computed(() => userStore.email);
 
 // Асинхронно запрашиваем данные с нашего локального API
 const { data: departments, pending } = await useFetch('/api/departments');

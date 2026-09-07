@@ -263,12 +263,12 @@ const openTableSettings = () => {
 
 // Обработчик сохранения настроек
 const handleSettingsSave = (columns: string[]) => {
-  console.log('обновление настроек таблицы');
+  // console.log('обновление настроек таблицы');
   // Обновляем отображение
   // Дополнительная логика при сохранении
 };
 const hendleFilterPanel = () => {
-  console.log('Открываем панель настройки фильтра')
+  // console.log('Открываем панель настройки фильтра')
   modalFilterPanel.open()
 }
 
@@ -366,7 +366,7 @@ async function exportRecordsOpen() {
 }
 
 async function tableSettingsOpen() {
-  console.log('настройка таблицы');
+  // console.log('настройка таблицы');
   modalTableSettings.open({
     onSave: handleSettingsSave,
     reloadData: reloadCurrentPage,
