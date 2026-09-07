@@ -51,6 +51,9 @@ declare module "nitropack/types" {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/index.get').default>>>>
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/index.post').default>>>>
     }
+    '/api/lab/inspector/all': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/inspector/all.get').default>>>>
+    }
     '/api/lab/locations/:id': {
       'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/locations/[id].delete').default>>>>
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/locations/[id].get').default>>>>
@@ -104,9 +107,45 @@ declare module "nitropack/types" {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/plp/[id].get').default>>>>
       'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/plp/[id].put').default>>>>
     }
+    '/api/lab/plp/all': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/plp/all.get').default>>>>
+    }
     '/api/lab/plp': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/plp/index.get').default>>>>
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/plp/index.post').default>>>>
+    }
+    '/api/lab/receipt-material/:id': {
+      'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/receipt-material/[id].delete').default>>>>
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/receipt-material/[id].get').default>>>>
+      'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/receipt-material/[id].put').default>>>>
+    }
+    '/api/lab/receipt-material/all': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/receipt-material/all.get').default>>>>
+    }
+    '/api/lab/receipt-material': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/receipt-material/index.get').default>>>>
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/receipt-material/index.post').default>>>>
+    }
+    '/api/lab/sampling-test/:id': {
+      'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/sampling-test/[id].delete').default>>>>
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/sampling-test/[id].get').default>>>>
+      'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/sampling-test/[id].put').default>>>>
+    }
+    '/api/lab/sampling-test': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/sampling-test/index.get').default>>>>
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/sampling-test/index.post').default>>>>
+    }
+    '/api/lab/test-protocol/:id': {
+      'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/test-protocol/[id].delete').default>>>>
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/test-protocol/[id].get').default>>>>
+      'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/test-protocol/[id].put').default>>>>
+    }
+    '/api/lab/test-protocol/all': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/test-protocol/all.get').default>>>>
+    }
+    '/api/lab/test-protocol': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/test-protocol/index.get').default>>>>
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/test-protocol/index.post').default>>>>
     }
     '/api/test/domain-connection': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/test/domain-connection.get').default>>>>

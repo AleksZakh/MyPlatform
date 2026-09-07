@@ -9,6 +9,7 @@
         class=" tabs-area  absolute bottom-2 top-1 left-1 right-1"
         :ui="{
           trigger: 'border border-gray-200 rounded-md',
+          label: 'text-balance font-normal text-lg',
           list: 'p-1 gap-4 ',
           content: ' relative h-full'
         }"

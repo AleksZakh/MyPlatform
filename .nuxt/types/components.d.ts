@@ -26,7 +26,10 @@ interface _GlobalComponents {
   LabMaterialsForm: typeof import("../../app/components/lab/MaterialsForm.vue")['default']
   LabObjectsForm: typeof import("../../app/components/lab/ObjectsForm.vue")['default']
   LabPlpForm: typeof import("../../app/components/lab/PlpForm.vue")['default']
+  LabReceiptMaterialForm: typeof import("../../app/components/lab/ReceiptMaterialForm.vue")['default']
+  LabSamplingForm: typeof import("../../app/components/lab/SamplingForm.vue")['default']
   LabTableSettingsModal: typeof import("../../app/components/lab/TableSettingsModal.vue")['default']
+  LabTestReportForm: typeof import("../../app/components/lab/TestReportForm.vue")['default']
   LabCreateModal: typeof import("../../app/components/lab/createModal.vue")['default']
   LabHandbook: typeof import("../../app/components/lab/handbook.vue")['default']
   LabIncominginspection: typeof import("../../app/components/lab/incominginspection.vue")['default']
@@ -204,7 +207,10 @@ interface _GlobalComponents {
   LazyLabMaterialsForm: LazyComponent<typeof import("../../app/components/lab/MaterialsForm.vue")['default']>
   LazyLabObjectsForm: LazyComponent<typeof import("../../app/components/lab/ObjectsForm.vue")['default']>
   LazyLabPlpForm: LazyComponent<typeof import("../../app/components/lab/PlpForm.vue")['default']>
+  LazyLabReceiptMaterialForm: LazyComponent<typeof import("../../app/components/lab/ReceiptMaterialForm.vue")['default']>
+  LazyLabSamplingForm: LazyComponent<typeof import("../../app/components/lab/SamplingForm.vue")['default']>
   LazyLabTableSettingsModal: LazyComponent<typeof import("../../app/components/lab/TableSettingsModal.vue")['default']>
+  LazyLabTestReportForm: LazyComponent<typeof import("../../app/components/lab/TestReportForm.vue")['default']>
   LazyLabCreateModal: LazyComponent<typeof import("../../app/components/lab/createModal.vue")['default']>
   LazyLabHandbook: LazyComponent<typeof import("../../app/components/lab/handbook.vue")['default']>
   LazyLabIncominginspection: LazyComponent<typeof import("../../app/components/lab/incominginspection.vue")['default']>

@@ -24,6 +24,7 @@ export const collections = {
   'streamline-cyber-color': () => require('@iconify-json/streamline-cyber-color/icons.json'),
   'streamline-flex-color': () => require('@iconify-json/streamline-flex-color/icons.json'),
   'streamline-freehand-color': () => require('@iconify-json/streamline-freehand-color/icons.json'),
+  'streamline-ultimate': () => require('@iconify-json/streamline-ultimate/icons.json'),
   'streamline-ultimate-color': () => require('@iconify-json/streamline-ultimate-color/icons.json'),
   'system-uicons': () => require('@iconify-json/system-uicons/icons.json'),
   'teenyicons': () => require('@iconify-json/teenyicons/icons.json'),

@@ -1,4 +1,4 @@
-// server/api/lab/manufacturer/all.get.ts
+// server/api/lab/material/all.get.ts (расширенная версия)
 import { PrismaClient } from '@prisma/client';
 import { defineEventHandler, getQuery } from 'h3';
 
@@ -11,42 +11,63 @@ export default defineEventHandler(async (event) => {
     const sortKey = (query.sortKey as string) || 'name';
     const sortOrder = (query.sortOrder as string) || 'asc';
 
-    // Формируем условия поиска с явным указанием типа
+    // Формируем условия поиска
     const where: any = {};
     
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' as const } },
         { note: { contains: search, mode: 'insensitive' as const } },
+        { manufacturer: { name: { contains: search, mode: 'insensitive' as const } } },
       ];
     }
 
     // Формируем сортировку
     const orderBy: any = {};
-    orderBy[sortKey] = sortOrder === 'asc' ? 'asc' : 'desc';
+    if (sortKey === 'manufacturer') {
+      orderBy.manufacturer = {
+        name: sortOrder === 'asc' ? 'asc' : 'desc',
+      };
+    } else {
+      orderBy[sortKey] = sortOrder === 'asc' ? 'asc' : 'desc';
+    }
 
-    const manufacturers = await prisma.manufacturer.findMany({
+    // Получаем все материалы без пагинации
+    const materials = await prisma.material.findMany({
       where,
       orderBy,
       select: {
         id: true,
         name: true,
         note: true,
+        manufacturerId: true,
+        manufacturer: {
+          select: {
+            id: true,
+            name: true,
+            note: true,
+          },
+        },
+        _count: {
+          select: {
+            receipts: true,
+          },
+        },
       },
     });
 
     return {
       success: true,
-      data: manufacturers,
-      total: manufacturers.length,
+      data: materials,
+      total: materials.length,
     };
 
   } catch (error: any) {
-    console.error('Ошибка при получении списка производителей:', error);
+    console.error('Ошибка при получении списка материалов:', error);
     
     throw createError({
       statusCode: 500,
-      statusMessage: error.message || 'Ошибка при получении списка производителей',
+      statusMessage: error.message || 'Ошибка при получении списка материалов',
     });
   }
 });

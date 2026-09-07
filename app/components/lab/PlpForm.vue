@@ -1,15 +1,15 @@
 <template>
-  <div class=" bg-gray-50 p-0">
+  <div class="p-0 absolute right-0 left-0 bottom-0 top-0">
     <!-- Основная карточка -->
-    <div class=" mx-auto bg-white rounded-xl shadow-lg p-6">
-      <h1 class="text-3xl font-bold text-gray-800 mb-6">
-        ПЛП (передвижные лабораторные пункты)
+    <div class="mx-auto bg-white rounded-xl shadow-lg px-4 py-2 absolute top-0 bottom-0 left-0 right-0 flex flex-col justify-start">
+      <h1 class="text-3xl font-bold text-gray-800 mb-2">
+        ПЛП (передвижные лабораторные посты)
       </h1>
 
       <!-- Форма добавления/редактирования -->
       <form
         @submit.prevent="savePlp"
-        class="bg-gray-50 rounded-lg p-6 mb-8"
+        class="bg-gray-50 rounded-lg px-6 py-4 mb-2"
       >
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -62,13 +62,13 @@
       </form>
 
       <!-- Поиск и таблица -->
-      <div>
-        <div class="mb-4">
+      <div class="flex flex-col justify-start relative h-full">
+        <div class="mb-1 absolute top-0 left-0 right-0">
           <div class="relative">
             <input
               v-model="search"
               type="text"
-              placeholder="Поиск ПЛП"
+              placeholder="Поиск ПЛП..."
               class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <svg
@@ -89,11 +89,15 @@
         </div>
 
         <!-- Таблица -->
-        <div
-          class="overflow-x-auto shadow-md rounded-lg border max-h-95 border-gray-200"
-        >
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
+        <div class="overflow-x-auto shadow-md rounded-lg border border-gray-200 overflow-y-auto absolute top-13 bottom-15 left-0 right-0">
+          <!-- Индикатор загрузки -->
+          <div v-if="isLoading" class="flex justify-center items-center py-8">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            <span class="ml-2 text-gray-500">Загрузка...</span>
+          </div>
+
+          <table v-else class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50 sticky top-0 z-10">
               <tr>
                 <th
                   v-for="header in headers"
@@ -111,12 +115,12 @@
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-              <tr v-if="filteredPlps.length === 0">
+              <tr v-if="plps.length === 0">
                 <td colspan="4" class="px-6 py-4 text-center text-gray-500">
                   ПЛП не найдены
                 </td>
               </tr>
-              <tr v-for="plp in paginatedPlps" :key="plp.id">
+              <tr v-for="plp in plps" :key="plp.id">
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
                   {{ plp.name }}
                 </td>
@@ -176,31 +180,34 @@
         </div>
 
         <!-- Пагинация -->
-        <div class="mt-4 flex items-center justify-between">
+        <div class="mt-4 flex justify-between gap-3 items-center absolute bottom-0 left-0 right-0">
           <div class="text-sm text-gray-700">
             Показано с {{ (currentPage - 1) * pageSize + 1 }} по
-            {{ Math.min(currentPage * pageSize, filteredPlps.length) }}
-            из {{ filteredPlps.length }} записей
+            {{ Math.min(currentPage * pageSize, totalCount) }}
+            из {{ totalCount }} записей
           </div>
-          <div class="flex gap-2">
+          <div class="flex gap-2 items-center">
             <button
               @click="previousPage"
-              :disabled="currentPage === 1"
+              :disabled="currentPage === 1 || isLoading"
               :class="[
                 'px-4 py-2 rounded-md transition-colors',
-                currentPage === 1
+                currentPage === 1 || isLoading
                   ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                   : 'bg-gray-200 hover:bg-gray-300 text-gray-700',
               ]"
             >
               Назад
             </button>
+            <span class="px-3 py-2 text-sm text-gray-600">
+              {{ currentPage }} / {{ totalPages }}
+            </span>
             <button
               @click="nextPage"
-              :disabled="currentPage >= totalPages"
+              :disabled="currentPage >= totalPages || isLoading"
               :class="[
                 'px-4 py-2 rounded-md transition-colors',
-                currentPage >= totalPages
+                currentPage >= totalPages || isLoading
                   ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                   : 'bg-gray-200 hover:bg-gray-300 text-gray-700',
               ]"
@@ -246,7 +253,7 @@ const sortOrder = ref('asc');
 const currentPage = ref(1);
 const pageSize = ref(10);
 
-// Данные
+// Данные с сервера
 const plps = ref([]);
 const totalCount = ref(0);
 
@@ -258,10 +265,18 @@ const currentPlp = reactive({
 });
 
 // ============================================
+// ВЫЧИСЛЯЕМЫЕ СВОЙСТВА
+// ============================================
+
+const totalPages = computed(() => {
+  return Math.ceil(totalCount.value / pageSize.value);
+});
+
+// ============================================
 // МЕТОДЫ
 // ============================================
 
-// Загрузка данных с сервера
+// Загрузка данных с сервера с пагинацией
 async function loadPlps() {
   isLoading.value = true;
   try {
@@ -277,67 +292,21 @@ async function loadPlps() {
     
     if (response?.success) {
       plps.value = response.data;
-      totalCount.value = response.total || 0;
+      totalCount.value = response.total;
     }
   } catch (error) {
     console.error('Ошибка загрузки ПЛП:', error);
-    showTost({
-      type: 'error',
-      title: 'Ошибка',
-      message: 'Не удалось загрузить данные',
-    });
+    showTost(
+      'Ошибка!',
+      'Не удалось загрузить данные',
+      'error',
+      'fxemoji:warningsign',
+      5000
+    );
   } finally {
     isLoading.value = false;
   }
 }
-
-// Фильтрация и сортировка (клиентская)
-const filteredPlps = computed(() => {
-  let items = plps.value;
-
-  // Поиск
-  if (search.value) {
-    const query = search.value.toLowerCase();
-    items = items.filter((plp) =>
-      plp.name.toLowerCase().includes(query) ||
-      (plp.note && plp.note.toLowerCase().includes(query))
-    );
-  }
-
-  // Сортировка
-  const key = sortKey.value;
-  const order = sortOrder.value;
-  items = [...items].sort((a, b) => {
-    let aVal = a[key] || '';
-    let bVal = b[key] || '';
-    
-    if (key === 'count') {
-      aVal = a._count?.samplingTests || 0;
-      bVal = b._count?.samplingTests || 0;
-    }
-    
-    if (typeof aVal === 'string') {
-      aVal = aVal.toLowerCase();
-      bVal = bVal.toLowerCase();
-    }
-    
-    if (aVal < bVal) return order === 'asc' ? -1 : 1;
-    if (aVal > bVal) return order === 'asc' ? 1 : -1;
-    return 0;
-  });
-
-  return items;
-});
-
-const totalPages = computed(() => {
-  return Math.ceil(filteredPlps.value.length / pageSize.value);
-});
-
-const paginatedPlps = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value;
-  const end = start + pageSize.value;
-  return filteredPlps.value.slice(start, end);
-});
 
 // Сортировка
 const sortBy = (key) => {
@@ -348,25 +317,34 @@ const sortBy = (key) => {
     sortOrder.value = 'asc';
   }
   currentPage.value = 1;
+  loadPlps();
 };
 
 // Пагинация
 const previousPage = () => {
-  if (currentPage.value > 1) currentPage.value--;
+  if (currentPage.value > 1) {
+    currentPage.value--;
+    loadPlps();
+  }
 };
 
 const nextPage = () => {
-  if (currentPage.value < totalPages.value) currentPage.value++;
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++;
+    loadPlps();
+  }
 };
 
 // Сохранение ПЛП
 const savePlp = async () => {
   if (!currentPlp.name?.trim()) {
-    showTost({
-      type: 'warning',
-      title: 'Предупреждение',
-      message: 'Название ПЛП обязательно для заполнения',
-    });
+    showTost(
+      'Предупреждение!',
+      'Название ПЛП обязательно для заполнения',
+      'warning',
+      'fxemoji:warningsign',
+      5000
+    );
     return;
   }
 
@@ -387,23 +365,25 @@ const savePlp = async () => {
     });
 
     if (response?.success) {
-        showTost('Успех!', `Данные успешно обновлены.`, 'success', 'streamline-freehand-color:form-validation-check-double', 3000)
-//       showTost({
-// type: 'success',
-// title: 'Успешно',
-// message: currentPlp.id ? 'ПЛП обновлен' : 'ПЛП добавлен',
-//       });
+      showTost(
+        'Успех!',
+        currentPlp.id ? 'ПЛП обновлен' : 'ПЛП добавлен',
+        'success',
+        'streamline-freehand-color:form-validation-check-double',
+        3000
+      );
       await loadPlps();
       resetForm();
     }
   } catch (error) {
     console.error('Ошибка сохранения ПЛП:', error);
-    showTost('Ошибка!', `Не удалось сохранить ПЛП. ${error.message}`, 'error', 'fxemoji:warningsign', 5000);
-    // showTost({
-    //   type: 'error',
-    //   title: 'Ошибка',
-    //   message: error.message || 'Не удалось сохранить ПЛП',
-    // });
+    showTost(
+      'Ошибка!',
+      `Не удалось сохранить ПЛП. ${error.message || ''}`,
+      'error',
+      'fxemoji:warningsign',
+      5000
+    );
   } finally {
     isLoading.value = false;
   }
@@ -424,8 +404,13 @@ const deletePlp = async (id) => {
   // Проверка, есть ли связанные акты
   const plp = plps.value.find(p => p.id === id);
   if (plp?._count?.samplingTests > 0) {
-    showTost('Невозможно удалить.', `ПЛП используется в ${plp._count.samplingTests} актах отбора проб.`, 'warning', 'fxemoji:warningsign', 5000);
-    
+    showTost(
+      'Невозможно удалить!',
+      `ПЛП используется в ${plp._count.samplingTests} актах отбора проб`,
+      'warning',
+      'fxemoji:warningsign',
+      5000
+    );
     return;
   }
 
@@ -438,14 +423,24 @@ const deletePlp = async (id) => {
     });
 
     if (response?.success) {
-        showTost('Успех!', `ПЛП удален.`, 'success', 'streamline-freehand-color:form-validation-check-double', 3000)
-      
+      showTost(
+        'Успех!',
+        'ПЛП удален',
+        'success',
+        'streamline-freehand-color:form-validation-check-double',
+        3000
+      );
       await loadPlps();
     }
   } catch (error) {
     console.error('Ошибка удаления ПЛП:', error);
-    showTost('Ошибка!', `${error.message || 'Не удалось удалить ПЛП'}`, 'error', 'fxemoji:warningsign', 5000);
-    
+    showTost(
+      'Ошибка!',
+      `${error.message || 'Не удалось удалить ПЛП'}`,
+      'error',
+      'fxemoji:warningsign',
+      5000
+    );
   } finally {
     isLoading.value = false;
   }
@@ -477,8 +472,9 @@ watch(search, () => {
   loadPlps();
 });
 
-// Следим за изменением страницы и размера страницы
-watch([currentPage, pageSize], () => {
+// Следим за изменением размера страницы
+watch(pageSize, () => {
+  currentPage.value = 1;
   loadPlps();
 });
 
@@ -492,5 +488,23 @@ defineExpose({
 </script>
 
 <style scoped>
-/* Дополнительные стили при необходимости */
+.sticky {
+  position: sticky;
+}
+.top-0 {
+  top: 0;
+}
+.z-10 {
+  z-index: 10;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
 </style>
