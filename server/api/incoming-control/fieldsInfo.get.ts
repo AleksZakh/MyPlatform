@@ -20,7 +20,7 @@ const ALLOWED_TARGETS: Record<string, string[]> = {
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event);
-  console.log('query ====> ', query)
+  // console.log('query ====> ', query)
   const targetModel = String(query.model || '');
   const targetField = String(query.field || '');
   const searchValue = String(query.search || '').trim();

@@ -13,7 +13,6 @@
             <UButton     
               class="px-3 py-1 bg-white border text-lg text-black font-normal border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
               variant="outline"
-              size="xl"
               icon="streamline-freehand-color:filter"
               color="neutral"
               @click="hendleFilterPanel"

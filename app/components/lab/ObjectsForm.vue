@@ -6,43 +6,43 @@
         Объекты и места отбора проб
       </h1>
 
-      <!-- Форма добавления/редактирования объекта -->
+      <!-- Форма добавления/редактирования объекта - УМЕНЬШЕННЫЕ ОТСТУПЫ -->
       <form
         @submit.prevent="saveObject"
-        class="bg-gray-50 rounded-lg px-6 py-4 mb-2"
+        class="bg-gray-50 rounded-lg px-4 py-2 mb-2"
       >
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1.5">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
+            <label class="block text-xs font-medium text-gray-700 mb-0.5">
               Название объекта <span class="text-red-500">*</span>
             </label>
             <input
               v-model="currentObject.name"
               type="text"
               required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Введите название объекта"
             />
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
+            <label class="block text-xs font-medium text-gray-700 mb-0.5">
               Примечание
             </label>
             <input
               v-model="currentObject.note"
               type="text"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Дополнительная информация"
             />
           </div>
         </div>
 
-        <div class="mt-4 flex gap-3">
+        <div class="mt-2 flex gap-2">
           <button
             type="submit"
             :class="[
-              'px-6 py-2 rounded-md text-white font-medium transition-colors',
+              'px-4 py-1.5 text-sm rounded-md text-white font-medium transition-colors',
               isEditingObject
                 ? 'bg-yellow-500 hover:bg-yellow-600'
                 : 'bg-green-500 hover:bg-green-600',
@@ -54,7 +54,7 @@
             v-if="isEditingObject"
             @click="cancelEditObject"
             type="button"
-            class="px-6 py-2 bg-gray-400 hover:bg-gray-500 text-white rounded-md font-medium transition-colors"
+            class="px-4 py-1.5 text-sm bg-gray-400 hover:bg-gray-500 text-white rounded-md font-medium transition-colors"
           >
             Отмена
           </button>
@@ -66,17 +66,17 @@
         <!-- ===== ВЕРХНЯЯ ЧАСТЬ: Таблица объектов ===== -->
         <div class="flex-1 mb-2 relative" style="height: 45%;">
           <div class="absolute inset-0 flex flex-col">
-            <div class="flex items-center justify-between mb-2">
-              <h2 class="text-lg font-semibold text-gray-700">Список объектов</h2>
-              <div class="relative w-64">
+            <div class="flex items-center justify-between mb-1">
+              <h2 class="text-sm font-semibold text-gray-700">Список объектов</h2>
+              <div class="relative w-56">
                 <input
                   v-model="objectSearch"
                   type="text"
                   placeholder="Поиск объектов..."
-                  class="w-full px-4 py-1.5 pl-8 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  class="w-full px-3 py-1 pl-7 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <svg
-                  class="absolute left-2.5 top-2 h-4 w-4 text-gray-400"
+                  class="absolute left-2 top-1.5 h-3.5 w-3.5 text-gray-400"
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
                   viewBox="0 0 24 24"
@@ -105,7 +105,7 @@
                     <th
                       v-for="header in objectHeaders"
                       :key="header.key"
-                      class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
+                      class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
                       @click="sortObjectsBy(header.key)"
                     >
                       <span class="flex items-center gap-1">
@@ -118,30 +118,30 @@
                   </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                  <tr v-if="paginatedObjects.length === 0">
-                    <td colspan="4" class="px-4 py-4 text-center text-gray-500">
+                  <tr v-if="objects.length === 0">
+                    <td colspan="4" class="px-3 py-3 text-center text-gray-500 text-sm">
                       Объекты не найдены
                     </td>
                   </tr>
                   <tr
-                    v-for="object in paginatedObjects"
+                    v-for="object in objects"
                     :key="object.id"
                     @click="selectObject(object)"
                     class="cursor-pointer hover:bg-gray-50 transition-colors"
                     :class="{ 'bg-blue-50': selectedObjectId === object.id }"
                   >
-                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900 font-medium">
+                    <td class="px-3 py-2 whitespace-nowrap max-w-3xl overflow-hidden text-sm text-gray-900 font-medium">
                       {{ object.name }}
                     </td>
-                    <td class="px-4 py-2 text-sm text-gray-600 max-w-xs truncate">
+                    <td class="px-3 py-2 text-sm text-gray-600 max-w-25 truncate">
                       {{ object.note || '—' }}
                     </td>
-                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
-                      <span class="text-xs bg-gray-100 px-2 py-1 rounded">
+                    <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
+                      <span class="text-xs bg-gray-100 px-2 py-0.5 rounded">
                         {{ object._count?.locations || 0 }} мест
                       </span>
                     </td>
-                    <td class="px-4 py-2 whitespace-nowrap text-sm font-medium">
+                    <td class="px-3 py-2 whitespace-nowrap text-sm font-medium">
                       <button
                         @click.stop="editObject(object)"
                         class="text-blue-600 hover:text-blue-900 mr-2 transition-colors"
@@ -166,35 +166,35 @@
               </table>
             </div>
 
-            <!-- Пагинация объектов -->
-            <div class="mt-2 flex justify-between items-center text-sm">
+            <!-- Пагинация объектов - СЕРВЕРНАЯ -->
+            <div class="mt-1 flex justify-between items-center text-xs">
               <div class="text-gray-700">
                 Показано с {{ (objectPage - 1) * objectPageSize + 1 }} по
-                {{ Math.min(objectPage * objectPageSize, filteredObjects.length) }}
-                из {{ filteredObjects.length }} записей
+                {{ Math.min(objectPage * objectPageSize, totalObjectsCount) }}
+                из {{ totalObjectsCount }} записей
               </div>
               <div class="flex gap-1">
                 <button
                   @click="previousObjectPage"
-                  :disabled="objectPage === 1"
+                  :disabled="objectPage === 1 || isLoadingObjects"
                   :class="[
-                    'px-3 py-1 rounded-md transition-colors text-sm',
-                    objectPage === 1
+                    'px-3 py-0.5 rounded-md transition-colors text-xs',
+                    objectPage === 1 || isLoadingObjects
                       ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                       : 'bg-gray-200 hover:bg-gray-300 text-gray-700',
                   ]"
                 >
                   Назад
                 </button>
-                <span class="px-2 py-1 text-gray-600">
+                <span class="px-2 py-0.5 text-gray-600">
                   {{ objectPage }} / {{ objectTotalPages }}
                 </span>
                 <button
                   @click="nextObjectPage"
-                  :disabled="objectPage >= objectTotalPages"
+                  :disabled="objectPage >= objectTotalPages || isLoadingObjects"
                   :class="[
-                    'px-3 py-1 rounded-md transition-colors text-sm',
-                    objectPage >= objectTotalPages
+                    'px-3 py-0.5 rounded-md transition-colors text-xs',
+                    objectPage >= objectTotalPages || isLoadingObjects
                       ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                       : 'bg-gray-200 hover:bg-gray-300 text-gray-700',
                   ]"
@@ -212,13 +212,13 @@
         <!-- ===== НИЖНЯЯ ЧАСТЬ: Таблица мест отбора ===== -->
         <div class="flex-1 relative" style="height: 45%;">
           <div class="absolute inset-0 flex flex-col">
-            <div class="flex items-center justify-between mb-2">
-              <h2 class="text-lg font-semibold text-gray-700">
+            <div class="flex items-center justify-between mb-1">
+              <h2 class="text-sm font-semibold text-gray-700">
                 Места отбора проб
-                <span v-if="selectedObject" class="text-sm font-normal text-gray-500">
-                  для объекта "{{ selectedObject.name }}"
+                <span v-if="selectedObject" class="text-xs font-normal text-gray-500">
+                  для "{{ selectedObject.name }}"
                 </span>
-                <span v-else class="text-sm font-normal text-gray-400">
+                <span v-else class="text-xs font-normal text-gray-400">
                   (выберите объект)
                 </span>
               </h2>
@@ -227,29 +227,29 @@
                   @click="openAddLocationModal"
                   :disabled="!selectedObject"
                   :class="[
-                    'px-3 py-1.5 text-sm rounded-md transition-colors',
+                    'px-2 py-0.5 text-xs rounded-md transition-colors',
                     selectedObject
                       ? 'bg-green-500 hover:bg-green-600 text-white'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   ]"
                 >
                   <span class="flex items-center gap-1">
-                    <svg class="w-4 h-4 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg class="w-3.5 h-3.5 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
-                    Добавить место
+                    Добавить
                   </span>
                 </button>
-                <div class="relative w-48">
+                <div class="relative w-40">
                   <input
                     v-model="locationSearch"
                     type="text"
                     placeholder="Поиск мест..."
-                    class="w-full px-3 py-1.5 pl-7 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    class="w-full px-3 py-1 pl-6 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     :disabled="!selectedObject"
                   />
                   <svg
-                    class="absolute left-2 top-1.5 h-4 w-4 text-gray-400"
+                    class="absolute left-1.5 top-1.5 h-3.5 w-3.5 text-gray-400"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
@@ -262,7 +262,7 @@
             </div>
 
             <div class="flex-1 overflow-x-auto shadow-md rounded-lg border border-gray-200">
-              <div v-if="!selectedObject" class="flex justify-center items-center h-full text-gray-400">
+              <div v-if="!selectedObject" class="flex justify-center items-center h-full text-gray-400 text-sm">
                 Выберите объект для просмотра мест отбора
               </div>
 
@@ -277,7 +277,7 @@
                     <th
                       v-for="header in locationHeaders"
                       :key="header.key"
-                      class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
+                      class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
                       @click="sortLocationsBy(header.key)"
                     >
                       <span class="flex items-center gap-1">
@@ -290,24 +290,24 @@
                   </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                  <tr v-if="paginatedLocations.length === 0">
-                    <td colspan="4" class="px-4 py-4 text-center text-gray-500">
+                  <tr v-if="locations.length === 0">
+                    <td colspan="4" class="px-3 py-3 text-center text-gray-500 text-sm">
                       {{ selectedObject ? 'Нет мест отбора для этого объекта' : 'Выберите объект' }}
                     </td>
                   </tr>
-                  <tr v-for="location in paginatedLocations" :key="location.id">
-                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900 font-medium">
+                  <tr v-for="location in locations" :key="location.id">
+                    <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-900 font-medium">
                       {{ location.name }}
                     </td>
-                    <td class="px-4 py-2 text-sm text-gray-600 max-w-xs truncate">
+                    <td class="px-3 py-2 text-sm text-gray-600 max-w-25 truncate">
                       {{ location.note || '—' }}
                     </td>
-                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
-                      <span class="text-xs bg-gray-100 px-2 py-1 rounded">
+                    <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
+                      <span class="text-xs bg-gray-100 px-2 py-0.5 rounded">
                         {{ location._count?.samplingTests || 0 }} отборов
                       </span>
                     </td>
-                    <td class="px-4 py-2 whitespace-nowrap text-sm font-medium">
+                    <td class="px-3 py-2 whitespace-nowrap text-sm font-medium">
                       <button
                         @click="editLocation(location)"
                         class="text-blue-600 hover:text-blue-900 mr-2 transition-colors"
@@ -333,34 +333,34 @@
             </div>
 
             <!-- Пагинация мест отбора -->
-            <div class="mt-2 flex justify-between items-center text-sm">
+            <div class="mt-1 flex justify-between items-center text-xs">
               <div class="text-gray-700">
                 Показано с {{ (locationPage - 1) * locationPageSize + 1 }} по
-                {{ Math.min(locationPage * locationPageSize, filteredLocations.length) }}
-                из {{ filteredLocations.length }} записей
+                {{ Math.min(locationPage * locationPageSize, totalLocationsCount) }}
+                из {{ totalLocationsCount }} записей
               </div>
               <div class="flex gap-1">
                 <button
                   @click="previousLocationPage"
-                  :disabled="locationPage === 1"
+                  :disabled="locationPage === 1 || isLoadingLocations"
                   :class="[
-                    'px-3 py-1 rounded-md transition-colors text-sm',
-                    locationPage === 1
+                    'px-3 py-0.5 rounded-md transition-colors text-xs',
+                    locationPage === 1 || isLoadingLocations
                       ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                       : 'bg-gray-200 hover:bg-gray-300 text-gray-700',
                   ]"
                 >
                   Назад
                 </button>
-                <span class="px-2 py-1 text-gray-600">
+                <span class="px-2 py-0.5 text-gray-600">
                   {{ locationPage }} / {{ locationTotalPages }}
                 </span>
                 <button
                   @click="nextLocationPage"
-                  :disabled="locationPage >= locationTotalPages"
+                  :disabled="locationPage >= locationTotalPages || isLoadingLocations"
                   :class="[
-                    'px-3 py-1 rounded-md transition-colors text-sm',
-                    locationPage >= locationTotalPages
+                    'px-3 py-0.5 rounded-md transition-colors text-xs',
+                    locationPage >= locationTotalPages || isLoadingLocations
                       ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                       : 'bg-gray-200 hover:bg-gray-300 text-gray-700',
                   ]"
@@ -514,101 +514,15 @@ const currentLocation = reactive({
 });
 
 // ============================================
-// ВЫЧИСЛЯЕМЫЕ СВОЙСТВА ДЛЯ ОБЪЕКТОВ
+// ВЫЧИСЛЯЕМЫЕ СВОЙСТВА
 // ============================================
-
-const filteredObjects = computed(() => {
-  let items = objects.value;
-
-  if (objectSearch.value) {
-    const query = objectSearch.value.toLowerCase();
-    items = items.filter((obj) =>
-      obj.name.toLowerCase().includes(query) ||
-      (obj.note && obj.note.toLowerCase().includes(query))
-    );
-  }
-
-  const key = objectSortKey.value;
-  const order = objectSortOrder.value;
-  items = [...items].sort((a, b) => {
-    let aVal = a[key] || '';
-    let bVal = b[key] || '';
-    
-    if (key === 'count') {
-      aVal = a._count?.locations || 0;
-      bVal = b._count?.locations || 0;
-    }
-    
-    if (typeof aVal === 'string') {
-      aVal = aVal.toLowerCase();
-      bVal = bVal.toLowerCase();
-    }
-    
-    if (aVal < bVal) return order === 'asc' ? -1 : 1;
-    if (aVal > bVal) return order === 'asc' ? 1 : -1;
-    return 0;
-  });
-
-  return items;
-});
 
 const objectTotalPages = computed(() => {
-  return Math.ceil(filteredObjects.value.length / objectPageSize.value);
-});
-
-const paginatedObjects = computed(() => {
-  const start = (objectPage.value - 1) * objectPageSize.value;
-  const end = start + objectPageSize.value;
-  return filteredObjects.value.slice(start, end);
-});
-
-// ============================================
-// ВЫЧИСЛЯЕМЫЕ СВОЙСТВА ДЛЯ МЕСТ ОТБОРА
-// ============================================
-
-const filteredLocations = computed(() => {
-  let items = locations.value;
-
-  if (locationSearch.value) {
-    const query = locationSearch.value.toLowerCase();
-    items = items.filter((loc) =>
-      loc.name.toLowerCase().includes(query) ||
-      (loc.note && loc.note.toLowerCase().includes(query))
-    );
-  }
-
-  const key = locationSortKey.value;
-  const order = locationSortOrder.value;
-  items = [...items].sort((a, b) => {
-    let aVal = a[key] || '';
-    let bVal = b[key] || '';
-    
-    if (key === 'count') {
-      aVal = a._count?.samplingTests || 0;
-      bVal = b._count?.samplingTests || 0;
-    }
-    
-    if (typeof aVal === 'string') {
-      aVal = aVal.toLowerCase();
-      bVal = bVal.toLowerCase();
-    }
-    
-    if (aVal < bVal) return order === 'asc' ? -1 : 1;
-    if (aVal > bVal) return order === 'asc' ? 1 : -1;
-    return 0;
-  });
-
-  return items;
+  return Math.ceil(totalObjectsCount.value / objectPageSize.value);
 });
 
 const locationTotalPages = computed(() => {
-  return Math.ceil(filteredLocations.value.length / locationPageSize.value);
-});
-
-const paginatedLocations = computed(() => {
-  const start = (locationPage.value - 1) * locationPageSize.value;
-  const end = start + locationPageSize.value;
-  return filteredLocations.value.slice(start, end);
+  return Math.ceil(totalLocationsCount.value / locationPageSize.value);
 });
 
 // ============================================
@@ -629,8 +543,8 @@ async function loadObjects() {
     });
     
     if (response?.success) {
-      objects.value = response.data;
-      totalObjectsCount.value = response.total;
+      objects.value = response.data || [];
+      totalObjectsCount.value = Number(response.total) || 0;
     }
   } catch (error) {
     console.error('Ошибка загрузки объектов:', error);
@@ -681,7 +595,7 @@ async function saveObject() {
 
   isLoadingObjects.value = true;
   try {
-    const url = currentObject.id ? `/api/lab/objects/${currentObject.id}` : '/api/lab/objects';
+    const url = currentObject.id ? `/api/lab/test-object/${currentObject.id}` : '/api/lab/test-object';
     const method = currentObject.id ? 'put' : 'post';
     
     const response = await $fetch(url, {
@@ -725,7 +639,7 @@ async function deleteObject(id) {
 
   isLoadingObjects.value = true;
   try {
-    const response = await $fetch(`/api/lab/objects/${id}`, {
+    const response = await $fetch(`/api/lab/test-object/${id}`, {
       method: 'delete',
     });
 
@@ -778,8 +692,8 @@ async function loadLocations(objectId) {
     });
     
     if (response?.success) {
-      locations.value = response.data;
-      totalLocationsCount.value = response.total;
+      locations.value = response.data || [];
+      totalLocationsCount.value = Number(response.total) || 0;
     }
   } catch (error) {
     console.error('Ошибка загрузки мест отбора:', error);
@@ -844,8 +758,8 @@ async function saveLocation() {
 
   try {
     const url = currentLocation.id
-      ? `/api/lab/locations/${currentLocation.id}`
-      : '/api/lab/locations';
+      ? `/api/lab/test-location/${currentLocation.id}`
+      : '/api/lab/test-location';
     const method = currentLocation.id ? 'put' : 'post';
     
     const response = await $fetch(url, {
@@ -862,7 +776,7 @@ async function saveLocation() {
       closeLocationModal();
       if (selectedObjectId.value) {
         loadLocations(selectedObjectId.value);
-        loadObjects(); // Обновляем счетчик мест у объекта
+        loadObjects();
       }
     }
   } catch (error) {
@@ -881,7 +795,7 @@ async function deleteLocation(id) {
   if (!confirm('Вы уверены, что хотите удалить это место отбора?')) return;
 
   try {
-    const response = await $fetch(`/api/lab/locations/${id}`, {
+    const response = await $fetch(`/api/lab/test-location/${id}`, {
       method: 'delete',
     });
 
@@ -889,7 +803,7 @@ async function deleteLocation(id) {
       showTost('Успех!', 'Место отбора удалено', 'success', 'streamline-freehand-color:form-validation-check-double', 3000);
       if (selectedObjectId.value) {
         loadLocations(selectedObjectId.value);
-        loadObjects(); // Обновляем счетчик мест у объекта
+        loadObjects();
       }
     }
   } catch (error) {
@@ -935,6 +849,13 @@ watch(objectPageSize, () => {
 // Следим за изменением поиска мест
 watch(locationSearch, () => {
   locationPage.value = 1;
+  if (selectedObjectId.value) {
+    loadLocations(selectedObjectId.value);
+  }
+});
+
+// Следим за изменением страницы мест
+watch([locationPage, locationPageSize], () => {
   if (selectedObjectId.value) {
     loadLocations(selectedObjectId.value);
   }
