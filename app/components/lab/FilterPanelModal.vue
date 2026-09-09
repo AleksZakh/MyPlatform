@@ -2,7 +2,7 @@
 <template>
   <UModal
     :ui="{
-      content: 'sm:max-w-4xl md:max-w-5xl lg:max-w-6xl xl:max-w-7xl w-full bg-gray-100'
+      content: 'sm:max-w-4xl md:max-w-5xl lg:max-w-6xl xl:max-w-8xl w-full bg-gray-100'
     }"
   >
     <!-- Головная часть модального окна -->
@@ -36,7 +36,7 @@
       <div class="panel-wrapper  shadow-md" ref="panelRef">
         <form
           @submit.prevent="applyFilters"
-          class="bg-white rounded-md gap-4 p-5 md:p-6"
+          class="bg-white rounded-md gap-4 px-5 md:px-6 pt-6 md:pt-6 pb-6 md:pb-7 relative"
         >
           <div class="flex">
             <!-- ОРБОР ПРОБ -->
@@ -47,7 +47,21 @@
               <div class="flex flex-col gap-3">
   
                 <!-- ПЛП -->
-                <div class="flex flex-col items-start gap-1">
+                <UFormField name="plp" >
+                  <template #label>
+                    <label class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm" >
+                    <Icon name="streamline-freehand-color:content-paper-edit" size="24" /> ПЛП:</label>
+                  </template>
+                  <USelectMenu
+                    v-model="localFilters.plp as any"
+                    :items="plp_items"
+                    :searchable="true"
+                    :search-input="{ placeholder: 'Введите название...' }"
+                    class="w-full shadow-sm"
+                  />
+                </UFormField>
+                <!-- ПЛП -->
+                <!-- <div class="flex flex-col items-start gap-1">
                   <label class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm" >
                     <Icon name="streamline-freehand-color:content-paper-edit" size="24" /> ПЛП:</label>
                   <input
@@ -56,10 +70,26 @@
                     placeholder="Поиск по ПЛП..."
                     class="flex-1 px-4 py-2 rounded-md w-full border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none transition text-sm"
                   />
-                </div>
-          
+                </div> -->
+                
                 <!-- Наименование объекта -->
-                <div class="flex flex-col items-start gap-1">
+                <UFormField name="objName">
+                  <template #label>
+                    <label class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm" >
+                    <Icon name="streamline-freehand-color:tags-double" size="24" />Наименование объекта:</label>
+                  </template>
+                  <USelectMenu
+                    v-model="localFilters.objName as any"
+                    :items="objName_items"
+                    :searchable="true"
+                    :search-input="{ placeholder: 'Введите название...' }"                 
+                    class="max-w-120 w-full shadow-sm"
+                  />
+                </UFormField>
+              
+          
+                
+                <!-- <div class="flex flex-col items-start gap-1">
                   <label class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm" >
                     <Icon name="streamline-freehand-color:tags-double" size="24" />Наименование объекта:</label>
                   <input
@@ -68,7 +98,7 @@
                     placeholder="Поиск по наименованию..."
                     class="flex-1 px-4 py-2 rounded-md w-full border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none transition text-sm"
                   />
-                </div>
+                </div> -->
           
                 <!-- Номер акта отбора проб -->
                 <div class="flex flex-col items-start gap-1">
@@ -78,7 +108,7 @@
                     v-model="localFilters.samplActNumber"
                     type="text"
                     placeholder="Поиск по номеру акта..."
-                    class="flex-1 px-4 py-2 rounded-md w-full border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none transition text-sm"
+                    class="flex-1 px-4 py-2 shadow-sm  rounded-md w-full border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none transition text-sm"
                   />
                 </div>
           
@@ -90,13 +120,13 @@
                     <input
                       v-model="localFilters.sDateStart"
                       type="date"
-                      class="flex-1 min-w-30 px-3 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none text-sm"
+                      class="flex-1 shadow-sm min-w-30 px-3 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none text-sm"
                     />
                     <span class="text-gray-400">—</span>
                     <input
                       v-model="localFilters.sDateEnd"
                       type="date"
-                      class="flex-1 min-w-30 px-3 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none text-sm"
+                      class="flex-1 shadow-sm min-w-30 px-3 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none text-sm"
                     />
                   </div>
                 </div>
@@ -109,21 +139,25 @@
                     v-model="localFilters.sPlace"
                     type="text"
                     placeholder="Поиск по месту отбора..."
-                    class="flex-1 px-4 py-2 rounded-md border w-full border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none transition text-sm"
+                    class="flex-1 px-4 py-2 shadow-sm rounded-md border w-full border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none transition text-sm"
                   />
                 </div>
           
                 <!-- Лицо, предоставившее пробу -->
-                <div class="flex flex-wrap items-center gap-1">
-                  <label class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 " >
+                <UFormField name="sPerson" >
+                  <template #label>
+                    <label class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 " >
                     <Icon name="streamline-freehand-color:job-profile-search" size="24" />Кто предоставил:</label>
-                  <input
-                    v-model="localFilters.sProvaider"
-                    type="text"
-                    placeholder="Поиск по предоставившему пробу..."
-                    class="flex-1 px-4 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none transition text-sm"
+                  </template>
+                  <USelectMenu
+                    v-model="localFilters.sProvaider as any"
+                    :items="persProv_items"
+                    create-item
+                    :searchable="true"
+                    :search-input="{ placeholder: 'Введите имя...' }"
+                    class="w-full shadow-sm"
                   />
-                </div>
+                </UFormField>
               </div>
             </fieldset>
   
@@ -140,19 +174,33 @@
                     <input
                       v-model="localFilters.receiveDateStart"
                       type="date"
-                      class="flex-1 min-w-30 px-3 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none text-sm"
+                      class="flex-1 shadow-sm min-w-30 px-3 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none text-sm"
                     />
                     <span class="text-gray-400">—</span>
                     <input
                       v-model="localFilters.receiveDateEnd"
                       type="date"
-                      class="flex-1 min-w-30 px-3 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none text-sm"
+                      class="flex-1 shadow-sm min-w-30 px-3 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none text-sm"
                     />
                   </div>
                 </div>
           
                 <!-- Наименование материала -->
-                <div class="flex flex-col items-start gap-1">
+                <UFormField name="material">
+                  <template #label>
+                    <label class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm" >
+                    <Icon name="streamline-ultimate-color:road-straight" size="24" />Материал:</label>
+                  </template>
+                  <USelectMenu
+                    v-model="localFilters.materialName as any"
+                    :items="materials_items"
+                    :searchable="true"
+                    :search-input="{ placeholder: 'Введите материал...' }"
+                    class="shadow-sm w-full "
+                  />
+                </UFormField>
+
+                <!-- <div class="flex flex-col items-start gap-1">
                   <label class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm" >
                     <Icon name="streamline-ultimate-color:road-straight" size="24" />Материал:</label>
                   <input
@@ -161,7 +209,7 @@
                     placeholder="Поиск по материалу..."
                     class="flex-1 px-4 py-2 rounded-md border w-full border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none transition text-sm"
                   />
-                </div>
+                </div> -->
           
                 <!-- Дата документа о качестве (диапазон) -->
                 <div class="flex flex-col items-start gap-1">
@@ -171,13 +219,13 @@
                     <input
                       v-model="localFilters.qualiDateStart"
                       type="date"
-                      class="flex-1 min-w-30 px-3 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none text-sm"
+                      class="flex-1 shadow-sm min-w-30 px-3 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none text-sm"
                     />
                     <span class="text-gray-400">—</span>
                     <input
                       v-model="localFilters.qualiDateEnd"
                       type="date"
-                      class="flex-1 min-w-30 px-3 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none text-sm"
+                      class="flex-1 shadow-sm min-w-30 px-3 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none text-sm"
                     />
                   </div>
                 </div>
@@ -189,21 +237,24 @@
                     v-model="localFilters.qualiDocNumber"
                     type="text"
                     placeholder="Поиск по номеру докумета качества..."
-                    class="flex-1 px-4 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none transition text-sm"
+                    class="flex-1 px-4 shadow-sm py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none transition text-sm"
                   />
                 </div>
           
                 <!-- Предприятие-изготовитель -->
-                <div class="flex flex-col items-start gap-1">
-                  <label class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm" >
+                <UFormField name="manufacturer">
+                  <template #label>
+                    <label class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm" >
                     <Icon name="streamline-cyber-color:factory" size="24" /> Изготовитель:</label >
-                  <input
-                    v-model="localFilters.manufacturer"
-                    type="text"
-                    placeholder="Поиск по изготовителю..."
-                    class="flex-1 px-4 py-2 rounded-md border w-full border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none transition text-sm"
+                  </template>
+                  <USelectMenu
+                    v-model="localFilters.manufacturer as any"
+                    :items="manufacturer_items.slice(0, 200)"
+                    :searchable="true"
+                    :search-input="{ placeholder: 'Введите производителя...' }"
+                    class="max-w-120 w-full shadow-sm"
                   />
-                </div>
+                </UFormField>
               </div>
             </fieldset>
 
@@ -220,7 +271,7 @@
                     v-model="localFilters.testProtocolNumber"
                     type="text"
                     placeholder="Поиск по номеру протокола..."
-                    class="flex-1 px-4 py-2 rounded-md border w-full border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none transition text-sm"
+                    class="flex-1 shadow-sm px-4 py-2 rounded-md border w-full border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none transition text-sm"
                   />
                 </div>
           
@@ -232,13 +283,13 @@
                     <input
                       v-model="localFilters.testReportDataStart"
                       type="date"
-                      class="flex-1 min-w-30 px-3 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none text-sm"
+                      class="flex-1 shadow-sm min-w-30 px-3 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none text-sm"
                     />
                     <span class="text-gray-400">—</span>
                     <input
                       v-model="localFilters.testReportDataEnd"
                       type="date"
-                      class="flex-1 min-w-30 px-3 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none text-sm"
+                      class="flex-1 shadow-sm min-w-30 px-3 py-2 rounded-md border border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none text-sm"
                     />
                   </div>
                 </div>
@@ -249,7 +300,7 @@
                     <Icon name="streamline-freehand-color:mobilephone-action-voice-approved" size=""/>Результат испытания:</label >
                   <select
                     v-model="localFilters.testResult"
-                    class="flex-1 px-4 py-2 rounded-md border w-full border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none text-sm"
+                    class="flex-1 shadow-sm px-4 py-2 rounded-md border w-full border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none text-sm"
                   >
                     <option value="">Все</option>
                     <option value="Соответствует">Соответствует</option>
@@ -264,26 +315,46 @@
     </template>
     <template #footer>
       <!-- Кнопки действий -->
-          <div class="flex justify-end w-full gap-3 " >
-            <UButton
-              @click="resetFilters"
-              color="neutral"
-              variant="outline"
-              class="font-medium py-2 px-6 rounded-md transition text-sm"
-            >
-              <Icon name="system-uicons:reset" size="24" /> Сбросить всё
-            </UButton>
-            <UButton
-              @click="applyFilters"
-              type="submit"
-              color="secondary"
-              variant="outline"
-              class="font-semibold py-2 px-7 rounded-md transition shadow-sm text-sm"
-            >
-              <Icon name="streamline-freehand-color:form-edition-clipboard-check" size="24" />
-              Применить фильтр
-            </UButton>
-          </div>
+      <div class="flex justify-between w-full">
+        <div class="flex items-end">
+          <UFormField name="filterTemplate" class="flex items-center gap-2">
+            <template #label>
+              <span class="flex gap-1 mt-1">
+                <UIcon name="octicon:repo-template-24" size="24" class="text-blue-600" />
+                Выбрать шаблон
+              </span>
+            </template>
+            <USelectMenu
+              v-model="localFilters.materialName as any"
+              :items="filterTemplates"
+              :searchable="true"
+              :search-input="{ placeholder: 'Введите шаблон...' }"
+              class="shadow-sm min-w-50 "
+/>
+          </UFormField>
+        </div>
+        <div class="flex gap-3 " >
+          <UButton
+            @click="resetFilters"
+            color="neutral"
+            variant="outline"
+            class="font-medium py-2 px-6 rounded-md transition text-sm"
+          >
+            <Icon name="system-uicons:reset" size="24" /> Сбросить всё
+          </UButton>
+          <LabFilterSavePopover />
+          <UButton
+            @click="applyFilters"
+            type="submit"
+            color="secondary"
+            variant="outline"
+            class="font-semibold py-2 px-7 rounded-md transition shadow-sm text-sm"
+          >
+            <Icon name="streamline-freehand-color:form-edition-clipboard-check" size="24" />
+            Применить фильтр
+          </UButton>
+        </div>
+      </div>
 
     </template>
   </UModal>
@@ -296,6 +367,36 @@ import { useTableFilterStore } from '~/stores/tableFilter'
 
 // Инициализируем хранилище Pinia
 const filterStore = useTableFilterStore()
+
+// console.log('filterStore призагрузке = ', filterStore)
+const { loadReference } = useReferenceDataLoader();
+
+// Данные для выпадающих списков
+const plp_items = ref<string[]>([]);
+const objName_items = ref<string[]>([]);
+const persProv_items = ref<string[]>([]);
+const materials_items = ref<string[]>([]);
+const manufacturer_items = ref<string[]>([]);
+const testResultItems = ref(['Соответствует', 'Не соответствует']);
+const isLoading = ref(false);
+const filterTemplates = ref();
+
+const props = defineProps<{
+  onApply?: () => void
+}>()
+
+// ============================================
+// ЗАГРУЗКА СПРАВОЧНИКОВ
+// ============================================
+async function loadReferenceData() {
+  isLoading.value = true;
+  
+  const refData = await loadReference()
+  if(refData){
+    [plp_items.value, objName_items.value, persProv_items.value , materials_items.value, manufacturer_items.value] = refData
+  }
+  
+}
 
 // Локальное реактивное состояние формы (черновик)
 const localFilters = reactive<ITableFilter>({
@@ -335,13 +436,13 @@ const cleanFiltersBeforeSave = (filters: ITableFilter): ITableFilter => {
 
 // Срабатывает в момент физического раскрытия оверлея на экране
 onMounted(() => {
-  if (!filterStore.isLoaded) {
-    filterStore.loadFromStorage()
-  }  
+  // if (!filterStore.isLoaded) {
+  //   filterStore.loadFromStorage()
+  // }  
   // Синхронизируем: переносим данные из Pinia в инпуты нашей формы
   Object.assign(localFilters, filterStore.filter)
 })
-
+loadReferenceData()
 // ======= СОБЫТИЯ (EMITS) =======
 const emit = defineEmits<{
   (e: 'apply'): void    
@@ -350,11 +451,16 @@ const emit = defineEmits<{
 }>()
 
 // ======= ПРИМЕНЕНИЕ ФИЛЬТРОВ =======
-const applyFilters = () => {
+const applyFilters = async() => {
   // Очищаем пустые строки до null, чтобы Pinia понимала, что фильтр выключен
+  // console.log('состояниефильтра при сохоанении ===> ', localFilters)
   const cleanedData = cleanFiltersBeforeSave(localFilters)  
   // Сохраняем в глобальный стейт и localStorage
-  filterStore.setFilter(cleanedData)  
+  filterStore.setFilter(cleanedData)
+  await nextTick()
+  if (props.onApply) {
+    props.onApply()
+  }
   // Посылаем сигнал родителю
   emit('apply')
   emit('close') 
@@ -368,7 +474,7 @@ const resetFilters = () => {
   Object.assign(localFilters, filterStore.filter)
   // 3. Посылаем сигнал родителю, чтобы таблица сразу обновилась
   emit('reset')
-  emit('close')
+  // emit('close')
 }
 </script>
 

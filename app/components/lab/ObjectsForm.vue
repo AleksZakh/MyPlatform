@@ -167,7 +167,7 @@
             </div>
 
             <!-- Пагинация объектов - СЕРВЕРНАЯ -->
-            <div class="mt-1 flex justify-between items-center text-xs">
+            <div class="mt-2 flex justify-between items-center text-xs">
               <div class="text-gray-700">
                 Показано с {{ (objectPage - 1) * objectPageSize + 1 }} по
                 {{ Math.min(objectPage * objectPageSize, totalObjectsCount) }}
@@ -333,7 +333,7 @@
             </div>
 
             <!-- Пагинация мест отбора -->
-            <div class="mt-1 flex justify-between items-center text-xs">
+            <div class="mt-2 flex justify-between items-center text-xs">
               <div class="text-gray-700">
                 Показано с {{ (locationPage - 1) * locationPageSize + 1 }} по
                 {{ Math.min(locationPage * locationPageSize, totalLocationsCount) }}

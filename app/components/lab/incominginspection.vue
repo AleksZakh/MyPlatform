@@ -5,7 +5,7 @@
   >
     <div class="flex flex-wrap gap-4 items-center justify-between py-1">
       <div class="flex p-0  text-lg">
-        <UInput v-model="globalFilter" class=" min-w-80 text-lg" placeholder="фильтр..." />
+        <UInput v-model="globalFilter" class=" min-w-80 text-lg" placeholder="быстрый поиск ..." />
       </div>
       <div class="flex gap-2">
         <div>
@@ -13,11 +13,22 @@
             <UButton     
               class="px-3 py-1 bg-white border text-lg text-black font-normal border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
               variant="outline"
-              icon="streamline-freehand-color:filter"
               color="neutral"
               @click="hendleFilterPanel"
             >
+            <div class="relative flex">
+              <Icon  name="streamline-freehand-color:filter"  size="20" />
+            </div>
             Настройка фильтра
+            <!-- Бейдж с количеством активных фильтров -->
+            <UBadge 
+              v-if="activeFiltersCount > 0"
+              size="sm"
+              color="primary"
+              class="ml-1"
+            >
+              {{ activeFiltersCount }}
+            </UBadge>
             </UButton>
 
           </UTooltip>
@@ -213,7 +224,8 @@ const {
   pageSize,
   loadData, 
   changePage,
-  reloadCurrentPage
+  reloadCurrentPage,
+  refreshTableData
 } = useLabDataLoader();
 
 const { tableSettings, getVisibleColumns, getAllAvailableColumns } = useTableSettings();
@@ -244,6 +256,11 @@ const visibleHeaders = computed(() => {
   );
 });
 
+const activeFiltersCount = computed(() => {
+  return filterStore.getActiveFiltersCount;
+  
+});
+
 // console.log('visibleHeaders =+=+==> ', visibleHeaders)
 
 // 👇 ОБРАБОТЧИК СМЕНЫ СТРАНИЦЫ
@@ -268,7 +285,11 @@ const handleSettingsSave = (columns: string[]) => {
 };
 const hendleFilterPanel = () => {
   // console.log('Открываем панель настройки фильтра')
-  modalFilterPanel.open()
+  modalFilterPanel.open({
+    onApply: () => {
+      refreshTableData()
+    }
+  })
 }
 
 const selectRow = (index: any): void => {
@@ -427,8 +448,9 @@ const columnLabels: Record<string, string> = {
 
 onMounted(async () => {
   // Как только страница смонтировалась в браузере — дергаем сохраненные настройки
-  filterStore.loadFromStorage()
+  // filterStore.loadFromStorage()
   await loadData(1, 25);
+  
 });
 
 function getColumnLabel(header: string): string {

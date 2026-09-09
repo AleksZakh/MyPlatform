@@ -42,6 +42,7 @@ export { useIncomingControl } from '../app/composables/useIncomingControl';
 export { useLabDataLoader } from '../app/composables/useLabDataLoader';
 export { useRecordDelete, DeleteOptions } from '../app/composables/useRecordDelete';
 export { useRecordUpdate, UpdateOptions } from '../app/composables/useRecordUpdate';
+export { useReferenceDataLoader } from '../app/composables/useReferenceDataLoader';
 export { useTableSettings } from '../app/composables/useTableSettings';
 export { useAuthStore, actions, useIsLoadingStore } from '../app/stores/auth.store';
 export { useTableFilterStore } from '../app/stores/tableFilter';

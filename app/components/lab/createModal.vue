@@ -55,13 +55,6 @@
                   :items="plp_items"
                   :searchable="true"
                   :search-input="{ placeholder: 'Введите название...' }"
-                  :ui="{
-                    size: 'md',
-                    variant: 'outline',
-                    color: 'primary',
-                    position: 'popper',
-                    virtualize: true
-                  }"
                   class="w-full shadow-sm"
                 />
               </UFormField>
@@ -75,14 +68,7 @@
                   v-model="state.objName"
                   :items="objName_items"
                   :searchable="true"
-                  :search-input="{ placeholder: 'Введите название...' }"
-                  :ui="{
-                    size: 'md',
-                    variant: 'outline',
-                    color: 'primary',
-                    position: 'popper',
-                    virtualize: true
-                  }"
+                  :search-input="{ placeholder: 'Введите название...' }"                 
                   class="w-full shadow-sm"
                 />
               </UFormField>
@@ -95,11 +81,6 @@
                 <UInput
                   v-model="state.actNumber"
                   class="w-full shadow-sm"
-                  :ui="{
-                    size: 'md',
-                    variant: 'outline',
-                    color: 'primary'
-                  }"
                 />
               </UFormField>
 
@@ -126,11 +107,6 @@
                   @change="(e: Event) => sDocChange((e.target as HTMLInputElement).files!)"
                   type="file"
                   class="w-full shadow-sm"
-                  :ui="{
-                    size: 'md',
-                    variant: 'outline',
-                    color: 'primary'
-                  }"
                 />
               </UFormField>
 
@@ -156,11 +132,6 @@
                 <UInput
                   v-model="state.sPlace"
                   class="shadow-sm w-88"
-                  :ui="{
-                    size: 'md',
-                    variant: 'outline',
-                    color: 'primary'
-                  }"
                 />
               </UFormField>
 
@@ -175,13 +146,6 @@
                   create-item
                   :searchable="true"
                   :search-input="{ placeholder: 'Введите имя...' }"
-                  :ui="{
-                    size: 'md',
-                    variant: 'outline',
-                    color: 'primary',
-                    position: 'popper',
-                    virtualize: true
-                  }"
                   class="w-full shadow-sm"
                 />
               </UFormField>
@@ -195,11 +159,6 @@
                   v-model="state.sNote"
                   autoresize
                   class="w-full overflow-auto shadow-sm"
-                  :ui="{
-                    size: 'md',
-                    variant: 'outline',
-                    color: 'primary'
-                  }"
                 />
               </UFormField>
             </div>
@@ -229,13 +188,6 @@
                   :searchable="true"
                   :search-input="{ placeholder: 'Введите материал...' }"
                   :disabled="!isMaterialActive"
-                  :ui="{
-                    size: 'md',
-                    variant: 'outline',
-                    color: 'primary',
-                    position: 'popper',
-                    virtualize: true
-                  }"
                   class="w-full"
                 />
               </UFormField>
@@ -324,11 +276,6 @@
                   v-model="state.qualDocNumber"
                   class="w-full"
                   :disabled="!isMaterialActive"
-                  :ui="{
-                    size: 'md',
-                    variant: 'outline',
-                    color: 'primary'
-                  }"
                 />
               </UFormField>
 
@@ -348,13 +295,6 @@
                   :searchable="true"
                   :search-input="{ placeholder: 'Введите производителя...' }"
                   :disabled="!isMaterialActive"
-                  :ui="{
-                    size: 'md',
-                    variant: 'outline',
-                    color: 'primary',
-                    position: 'popper',
-                    virtualize: true
-                  }"
                   class="w-full"
                 />
               </UFormField>
@@ -417,11 +357,6 @@
                   type="file"
                   class="w-full"
                   :disabled="!isTestActive"
-                  :ui="{
-                    size: 'md',
-                    variant: 'outline',
-                    color: 'primary'
-                  }"
                 />
               </UFormField>
 
@@ -439,20 +374,6 @@
                   v-model="state.testResult"
                   :items="testResultItems"
                   :disabled="!isTestActive"
-                  :ui="{
-                    size: 'md',
-                    variant: 'outline',
-                    color: 'primary',
-                    class: {
-                      base: [
-                        'relative group rounded-md inline-flex items-center disabled:cursor-not-allowed disabled:opacity-75 transition-colors',
-                        {
-                          'border-2 border-green-100 ring-2 ring-green-100': state.testResult === 'Соответствует',
-                          'border-2 border-red-100 ring-2 ring-red-100': state.testResult === 'Не соответствует'
-                        }
-                      ]
-                    }
-                  }"
                   class="w-full"
                 />
               </UFormField>
@@ -471,11 +392,6 @@
                   v-model="state.testProtocolNumber"
                   class="w-full"
                   :disabled="!isTestActive"
-                  :ui="{
-                    size: 'md',
-                    variant: 'outline',
-                    color: 'primary'
-                  }"
                 />
               </UFormField>
             </div>
@@ -491,22 +407,12 @@
               color="neutral"
               label="Отменить"
               @click="emit('close', false)"
-              :ui="{
-                size: 'md',
-                variant: 'outline',
-                color: 'neutral'
-              }"
             />
             <UButton
               type="submit"
               variant="outline"
               color="primary"
               label="Сохранить"
-              :ui="{
-                size: 'md',
-                variant: 'outline',
-                color: 'primary'
-              }"
             />
           </div>
         </div>
@@ -529,6 +435,7 @@ import { refDebounced } from '@vueuse/core';
 const userStore = useUserStore();
 const { user } = storeToRefs(userStore);
 const { showTost } = useAppToasts();
+const { loadReference } = useReferenceDataLoader();
 
 // ============================================
 // ПРОПСЫ И EMITS
@@ -658,26 +565,12 @@ const protocolDocChange = (files: FileList) => {
 // ============================================
 async function loadReferenceData() {
   isLoading.value = true;
-  try {
-    const [plpData, objNameData, persProvData, materialsData, manufacturerData] = await Promise.all([
-      $fetch('/api/incoming-control/fieldsInfo', { query: { model: 'plp', field: 'name' } }),
-      $fetch('/api/incoming-control/fieldsInfo', { query: { model: 'testObject', field: 'name' } }),
-      $fetch('/api/incoming-control/fieldsInfo', { query: { model: 'inspector', field: 'name' } }),
-      $fetch('/api/incoming-control/fieldsInfo', { query: { model: 'material', field: 'name' } }),
-      $fetch('/api/incoming-control/fieldsInfo', { query: { model: 'manufacturer', field: 'name' } }),
-    ]);
-    
-    plp_items.value = plpData || [];
-    objName_items.value = objNameData || [];
-    persProv_items.value = persProvData || [];
-    materials_items.value = materialsData || [];
-    manufacturer_items.value = manufacturerData || [];
-  } catch (error) {
-    console.error('Ошибка загрузки справочников:', error);
-    showTost('Ошибка!', 'Не удалось загрузить справочные данные', 'error', 'fxemoji:warningsign', 5000);
-  } finally {
-    isLoading.value = false;
+  
+  const refData = await loadReference()
+  if(refData){
+    [plp_items.value, objName_items.value, persProv_items.value , materials_items.value, manufacturer_items.value] = refData
   }
+  
 }
 
 // ============================================
@@ -834,6 +727,7 @@ async function handleSubmit(event: FormSubmitEvent<Schema>) {
 // ============================================
 onMounted(() => {
   loadReferenceData();
+  
 });
 
 // ============================================

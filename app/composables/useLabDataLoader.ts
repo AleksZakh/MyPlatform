@@ -1,5 +1,7 @@
 // composables/useLabDataLoader.ts
 export const useLabDataLoader = () => {
+  const tableData = ref<any>(null)
+  const isLoading = ref(false)
 
   const loading = ref(false);
   const originalData = ref<Record<string, string>[]>([]);
@@ -7,6 +9,7 @@ export const useLabDataLoader = () => {
   const totalCount = ref(0);
   const loadingToastId = ref<string | number | null>(null);
   const {showTost, removeToast} = useAppToasts();
+  const filterStore = useTableFilterStore() // Наш стор
   
   // 👇 ПАРАМЕТРЫ ПАГИНАЦИИ
   const currentPage = ref(1);
@@ -14,6 +17,7 @@ export const useLabDataLoader = () => {
   const totalPages = ref(0);
 
   const loadData = async (page: number = currentPage.value, size: number = pageSize.value) => {
+    if (isLoading.value) return;
     // console.log(`📥 Загрузка данных: страница ${page}, размер ${size}`);    
     const toastId = showTost(`📥 Загрузка данных...`, 'Пожалуйста, подождите', 'info', 'heroicons:arrow-path-rounded-square-solid', 1000);    
 
@@ -81,6 +85,25 @@ export const useLabDataLoader = () => {
     }
   };
 
+  async function refreshTableData() {
+    isLoading.value = true
+    try {
+      // ... ваша логика сборки параметров и fetch запроса
+    } catch (error) {
+      console.error(error)
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  // watch(
+  //   () => filterStore.filter,
+  //   () => {
+  //     refreshTableData()
+  //   },
+  //   { deep: true }
+  // )
+
   // 👇 МЕТОД ДЛЯ СМЕНЫ СТРАНИЦЫ
   const changePage = async (page: number) => {
     if (page < 1 || page > totalPages.value) return;
@@ -95,6 +118,7 @@ export const useLabDataLoader = () => {
 
   // 👇 МЕТОД ДЛЯ ПЕРЕЗАГРУЗКИ ТЕКУЩЕЙ СТРАНИЦЫ
   const reloadCurrentPage = async () => {
+    console.log('Перезагрузка данных ---> ')
     return await loadData(currentPage.value, pageSize.value);
   };
 
@@ -114,5 +138,6 @@ export const useLabDataLoader = () => {
     changePage,
     changePageSize,
     reloadCurrentPage,
+    refreshTableData: loadData
   };
 };

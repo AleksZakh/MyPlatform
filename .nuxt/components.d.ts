@@ -22,6 +22,7 @@ export const Toast: typeof import("../app/components/Toast.vue")['default']
 export const LabExportRecordsModal: typeof import("../app/components/lab/ExportRecordsModal.vue")['default']
 export const LabFileViewerModal: typeof import("../app/components/lab/FileViewerModal.vue")['default']
 export const LabFilterPanelModal: typeof import("../app/components/lab/FilterPanelModal.vue")['default']
+export const LabFilterSavePopover: typeof import("../app/components/lab/FilterSavePopover.vue")['default']
 export const LabManufacturersForm: typeof import("../app/components/lab/ManufacturersForm.vue")['default']
 export const LabMaterialsForm: typeof import("../app/components/lab/MaterialsForm.vue")['default']
 export const LabObjectsForm: typeof import("../app/components/lab/ObjectsForm.vue")['default']
@@ -203,6 +204,7 @@ export const LazyToast: LazyComponent<typeof import("../app/components/Toast.vue
 export const LazyLabExportRecordsModal: LazyComponent<typeof import("../app/components/lab/ExportRecordsModal.vue")['default']>
 export const LazyLabFileViewerModal: LazyComponent<typeof import("../app/components/lab/FileViewerModal.vue")['default']>
 export const LazyLabFilterPanelModal: LazyComponent<typeof import("../app/components/lab/FilterPanelModal.vue")['default']>
+export const LazyLabFilterSavePopover: LazyComponent<typeof import("../app/components/lab/FilterSavePopover.vue")['default']>
 export const LazyLabManufacturersForm: LazyComponent<typeof import("../app/components/lab/ManufacturersForm.vue")['default']>
 export const LazyLabMaterialsForm: LazyComponent<typeof import("../app/components/lab/MaterialsForm.vue")['default']>
 export const LazyLabObjectsForm: LazyComponent<typeof import("../app/components/lab/ObjectsForm.vue")['default']>
