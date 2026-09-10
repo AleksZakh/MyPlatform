@@ -42,7 +42,7 @@ export default defineEventHandler(async (event) => {
         }
 
         // Для отладки в консоли терминала (не браузера!):
-        // console.log('Полученные на сервере фильтры:', cookieFilters)
+        console.log('Полученные на сервере фильтры:', cookieFilters)
         
 
         // ---- Текстовые фильтры ----
