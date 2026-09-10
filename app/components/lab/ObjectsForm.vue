@@ -595,7 +595,7 @@ async function saveObject() {
 
   isLoadingObjects.value = true;
   try {
-    const url = currentObject.id ? `/api/lab/test-object/${currentObject.id}` : '/api/lab/test-object';
+    const url = currentObject.id ? `/api/lab/objects/${currentObject.id}` : '/api/lab/objects';
     const method = currentObject.id ? 'put' : 'post';
     
     const response = await $fetch(url, {
@@ -639,7 +639,7 @@ async function deleteObject(id) {
 
   isLoadingObjects.value = true;
   try {
-    const response = await $fetch(`/api/lab/test-object/${id}`, {
+    const response = await $fetch(`/api/lab/objects/${id}`, {
       method: 'delete',
     });
 
@@ -758,8 +758,8 @@ async function saveLocation() {
 
   try {
     const url = currentLocation.id
-      ? `/api/lab/test-location/${currentLocation.id}`
-      : '/api/lab/test-location';
+      ? `/api/lab/locations/${currentLocation.id}`
+      : '/api/lab/locations';
     const method = currentLocation.id ? 'put' : 'post';
     
     const response = await $fetch(url, {
@@ -795,7 +795,7 @@ async function deleteLocation(id) {
   if (!confirm('Вы уверены, что хотите удалить это место отбора?')) return;
 
   try {
-    const response = await $fetch(`/api/lab/test-location/${id}`, {
+    const response = await $fetch(`/api/lab/locations/${id}`, {
       method: 'delete',
     });
 
