@@ -22,7 +22,15 @@ export default defineEventHandler(async (event) => {
         // ============================================
         const where: any = {};
 
-        let cookieFilters = null
+        let cookieFilters: any = {
+            plp: null,
+            objName: null,
+            samplActNumber: null,
+            sPlace: null,
+            sProvairer: null,
+            materialName: null,
+            manufacturer: null
+        }
 
         // 2. Поскольку плагин сохраняет данные в куку как JSON-строку, нам нужно её распарсить
         if (rawCookie) {
@@ -42,7 +50,7 @@ export default defineEventHandler(async (event) => {
         }
 
         // Для отладки в консоли терминала (не браузера!):
-        console.log('Полученные на сервере фильтры:', cookieFilters)
+        // console.log('Полученные на сервере фильтры:', cookieFilters)
         
 
         // ---- Текстовые фильтры ----
