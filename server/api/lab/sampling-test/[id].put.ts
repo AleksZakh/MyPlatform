@@ -2,209 +2,471 @@
 import { PrismaClient } from '@prisma/client';
 import { defineEventHandler, getRouterParam, readMultipartFormData } from 'h3';
 import { handleFileUpload, parseDate } from '~~/server/utils/fileUploadHandler';
+import {
+  logAudit,
+  computeChangedFields,
+  getActorEmail,
+  getRequestMeta,
+} from '~~/server/utils/auditLog';
 
 const prisma = new PrismaClient();
 
 export default defineEventHandler(async (event) => {
   try {
+    // ========================================
+    // 1. ПОДГОТОВКА
+    // ========================================
+    // console.log('Начало обновления')
     const idParam = getRouterParam(event, 'id');
     const id = parseInt(idParam || '', 10);
 
     if (isNaN(id) || id <= 0) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Некорректный ID акта отбора',
-      });
-    }
-
-    // Проверяем существование записи
-    const existingSamplingTest = await prisma.samplingTest.findUnique({
-      where: { id },
-    });
-
-    if (!existingSamplingTest) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: `Акт отбора с ID ${id} не найден`,
-      });
+      throw createError({ statusCode: 400, statusMessage: 'Некорректный ID акта отбора' });
     }
 
     const multipartData = await readMultipartFormData(event);
-
     if (!multipartData) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Форма не содержит данных',
-      });
+      throw createError({ statusCode: 400, statusMessage: 'Форма не содержит данных' });
     }
 
     const { body, fileDbPaths } = await handleFileUpload(multipartData);
+    const editorEmail = body.editorEmail || getActorEmail(event);
+    const requestMeta = getRequestMeta(event);
 
     // ========================================
-    // ПОДГОТОВКА ДАННЫХ ДЛЯ ОБНОВЛЕНИЯ
+    // 2. ЗАГРУЗКА СОСТОЯНИЯ "ДО" (вне транзакции — только чтение)
     // ========================================
-    
-    const updateData: any = {};
-    const relationsData: any = {};
-
-    // Проверяем ПЛП
-    if (body.plpId) {
-      const plpId = parseInt(body.plpId);
-      if (isNaN(plpId) || plpId <= 0) {
-        throw createError({
-          statusCode: 400,
-          statusMessage: 'Некорректный ID ПЛП',
-        });
-      }
-      const plp = await prisma.plp.findUnique({ where: { id: plpId } });
-      if (!plp) {
-        throw createError({
-          statusCode: 404,
-          statusMessage: `ПЛП с ID ${plpId} не найден`,
-        });
-      }
-      relationsData.plpId = plpId;
-    }
-
-    // Проверяем Инспектора
-    if (body.inspectorId) {
-      const inspectorId = parseInt(body.inspectorId);
-      if (isNaN(inspectorId) || inspectorId <= 0) {
-        throw createError({
-          statusCode: 400,
-          statusMessage: 'Некорректный ID Инспектора',
-        });
-      }
-      const inspector = await prisma.inspector.findUnique({ where: { id: inspectorId } });
-      if (!inspector) {
-        throw createError({
-          statusCode: 404,
-          statusMessage: `Инспектор с ID ${inspectorId} не найден`,
-        });
-      }
-      relationsData.inspectorId = inspectorId;
-    }
-
-    // Проверяем Место отбора
-    if (body.testLocationId) {
-      const testLocationId = parseInt(body.testLocationId);
-      if (isNaN(testLocationId) || testLocationId <= 0) {
-        throw createError({
-          statusCode: 400,
-          statusMessage: 'Некорректный ID места отбора',
-        });
-      }
-      const testLocation = await prisma.testLocation.findUnique({ where: { id: testLocationId } });
-      if (!testLocation) {
-        throw createError({
-          statusCode: 404,
-          statusMessage: `Место отбора с ID ${testLocationId} не найдено`,
-        });
-      }
-      relationsData.testLocationId = testLocationId;
-    }
-
-    // Проверяем уникальность номера акта (если изменился)
-    if (body.sActNumber?.trim() && body.sActNumber.trim() !== existingSamplingTest.sActNumber) {
-      const duplicate = await prisma.samplingTest.findUnique({
-        where: { sActNumber: body.sActNumber.trim() },
-      });
-      if (duplicate) {
-        throw createError({
-          statusCode: 400,
-          statusMessage: `Акт с номером "${body.sActNumber}" уже существует`,
-        });
-      }
-      updateData.sActNumber = body.sActNumber.trim();
-    }
-
-    // Проверяем Поступление материала
-    if (body.receiptMaterialId !== undefined) {
-      if (body.receiptMaterialId) {
-        const rmId = parseInt(body.receiptMaterialId);
-        if (isNaN(rmId) || rmId <= 0) {
-          throw createError({
-            statusCode: 400,
-            statusMessage: 'Некорректный ID поступления материала',
-          });
-        }
-        const receiptMaterial = await prisma.receiptMaterial.findUnique({
-          where: { id: rmId },
-        });
-        if (!receiptMaterial) {
-          throw createError({
-            statusCode: 404,
-            statusMessage: `Поступление материала с ID ${rmId} не найдено`,
-          });
-        }
-        relationsData.receiptMaterialId = rmId;
-      } else {
-        relationsData.receiptMaterialId = null;
-      }
-    }
-
-    // Проверяем Протокол испытаний
-    if (body.testProtocolId !== undefined) {
-      if (body.testProtocolId) {
-        const tpId = parseInt(body.testProtocolId);
-        if (isNaN(tpId) || tpId <= 0) {
-          throw createError({
-            statusCode: 400,
-            statusMessage: 'Некорректный ID протокола испытаний',
-          });
-        }
-        const testProtocol = await prisma.testProtocol.findUnique({
-          where: { id: tpId },
-        });
-        if (!testProtocol) {
-          throw createError({
-            statusCode: 404,
-            statusMessage: `Протокол испытаний с ID ${tpId} не найден`,
-          });
-        }
-        relationsData.testProtocolId = tpId;
-      } else {
-        relationsData.testProtocolId = null;
-      }
-    }
-
-    // Обновляем поля
-    if (body.sActDate) {
-      updateData.sActDate = parseDate(body.sActDate);
-    }
-    if (body.note !== undefined) {
-      updateData.note = body.note || null;
-    }
-    if (fileDbPaths.sDoc) {
-      updateData.sDocPath = fileDbPaths.sDoc;
-    }
-
-    // Объединяем данные
-    const finalData = { ...updateData, ...relationsData };
-
-    // Добавляем системные поля
-    finalData.editorEmail = body.editorEmail || event.context.user?.email || 'system@user';
-    finalData.editedAt = new Date();
-
-    // ========================================
-    // ОБНОВЛЕНИЕ АКТА ОТБОРА
-    // ========================================
-    const updatedSamplingTest = await prisma.samplingTest.update({
+    const beforeSamplingTest = await prisma.samplingTest.findUnique({
       where: { id },
-      data: finalData,
+      include: {
+        receiptMaterial: true,
+        testProtocol: true,
+        testLocation: true,
+      },
     });
 
+    if (!beforeSamplingTest) {
+      throw createError({ statusCode: 404, statusMessage: `Акт отбора с ID ${id} не найден` });
+    }
+
+    if (beforeSamplingTest.deletedAt) {
+      throw createError({ statusCode: 400, statusMessage: 'Нельзя редактировать удалённую запись' });
+    }
+
+    // Загружаем beforeData для связанных сущностей
+    const beforeReceiptMaterial = beforeSamplingTest.receiptMaterialId
+      ? await prisma.receiptMaterial.findUnique({
+          where: { id: beforeSamplingTest.receiptMaterialId },
+          include: { material: true },
+        })
+      : null;
+
+    const beforeTestProtocol = beforeSamplingTest.testProtocolId
+      ? await prisma.testProtocol.findUnique({
+          where: { id: beforeSamplingTest.testProtocolId },
+        })
+      : null;
+
+    // ========================================
+    // 3. ТРАНЗАКЦИЯ
+    // ========================================
+    const result = await prisma.$transaction(async (tx) => {
+      // ----- Локальные переменные для результата -----
+      const auditEntries: Array<{
+        entityType: string;
+        entityId: number;
+        action: 'CREATE' | 'UPDATE' | 'DELETE';
+        note: string;
+        beforeData?: any;
+        afterData?: any;
+        changedFields?: string[];
+      }> = [];
+
+      // ----- 3.1 Подготовка данных для SamplingTest -----
+      const updateSamplingTestData: any = {};
+      const relationUpdates: any = {};
+
+      // --- Проверка ПЛП ---
+      if (body.plpId) {
+        const plpId = parseInt(body.plpId);
+        if (isNaN(plpId) || plpId <= 0) {
+          throw createError({ statusCode: 400, statusMessage: 'Некорректный ID ПЛП' });
+        }
+        const plp = await tx.plp.findUnique({ where: { id: plpId } });
+        if (!plp) {
+          throw createError({ statusCode: 404, statusMessage: `ПЛП с ID ${plpId} не найден` });
+        }
+        relationUpdates.plpId = plpId;
+      }
+
+      // --- Проверка Инспектора ---
+      if (body.inspectorId) {
+        const inspectorId = parseInt(body.inspectorId);
+        if (isNaN(inspectorId) || inspectorId <= 0) {
+          throw createError({ statusCode: 400, statusMessage: 'Некорректный ID Инспектора' });
+        }
+        const inspector = await tx.inspector.findUnique({ where: { id: inspectorId } });
+        if (!inspector) {
+          throw createError({ statusCode: 404, statusMessage: `Инспектор с ID ${inspectorId} не найден` });
+        }
+        relationUpdates.inspectorId = inspectorId;
+      }
+
+      // --- Проверка/создание TestLocation ---
+      if (body.testObjectId && body.testLocationName?.trim()) {
+        const testObjectId = parseInt(body.testObjectId);
+        if (isNaN(testObjectId) || testObjectId <= 0) {
+          throw createError({ statusCode: 400, statusMessage: 'Некорректный ID объекта' });
+        }
+
+        const testObject = await tx.testObject.findUnique({ where: { id: testObjectId } });
+        if (!testObject) {
+          throw createError({ statusCode: 404, statusMessage: `Объект с ID ${testObjectId} не найден` });
+        }
+
+        const locationName = body.testLocationName.trim();
+
+        let testLocation = await tx.testLocation.findUnique({
+          where: { testObjectId_name: { testObjectId, name: locationName } },
+        });
+
+        if (!testLocation) {
+          testLocation = await tx.testLocation.create({
+            data: {
+              name: locationName,
+              testObjectId,
+              note: `Создано при редактировании акта № ${id}`,
+              authorEmail: editorEmail,
+              createdAt: new Date(),
+            },
+          });
+
+          auditEntries.push({
+            entityType: 'TestLocation',
+            entityId: testLocation.id,
+            action: 'CREATE',
+            note: `Создана новая локация "${locationName}" (объект: ${testObject.name})`,
+            afterData: testLocation,
+          });
+        }
+
+        relationUpdates.testLocationId = testLocation.id;
+      }
+
+      // --- Проверка уникальности номера акта ---
+      if (body.sActNumber?.trim() && body.sActNumber.trim() !== beforeSamplingTest.sActNumber) {
+        const duplicate = await tx.samplingTest.findFirst({
+          where: {
+            sActNumber: body.sActNumber.trim(),
+            deletedAt: null,
+            id: { not: id },
+          },
+        });
+        if (duplicate) {
+          throw createError({
+            statusCode: 400,
+            statusMessage: `Акт с номером "${body.sActNumber}" уже существует`,
+          });
+        }
+        updateSamplingTestData.sActNumber = body.sActNumber.trim();
+      }
+
+      // ----- 3.2 Обновление ReceiptMaterial -----
+      const hasReceiptChanges =
+        body.materialId !== undefined ||
+        body.qualDate !== undefined ||
+        body.qualDocNumber !== undefined ||
+        body.receiptNote !== undefined ||
+        !!fileDbPaths.qualDoc;
+
+      let receiptMaterialId = beforeSamplingTest.receiptMaterialId;
+
+      if (hasReceiptChanges) {
+        if (!receiptMaterialId) {
+          // Создание нового поступления
+          if (!body.materialId) {
+            throw createError({
+              statusCode: 400,
+              statusMessage: 'Для создания поступления материала нужно указать materialId',
+            });
+          }
+          const materialId = parseInt(body.materialId);
+          if (isNaN(materialId) || materialId <= 0) {
+            throw createError({ statusCode: 400, statusMessage: 'Некорректный ID материала' });
+          }
+          const material = await tx.material.findUnique({ where: { id: materialId } });
+          if (!material) {
+            throw createError({ statusCode: 404, statusMessage: `Материал с ID ${materialId} не найден` });
+          }
+
+          const createdReceipt = await tx.receiptMaterial.create({
+            data: {
+              qualDate: body.qualDate ? parseDate(body.qualDate) : null,
+              qualDocNumber: body.qualDocNumber || null,
+              qualDocPath: fileDbPaths.qualDoc || null,
+              note: body.receiptNote || null,
+              materialId,
+              authorEmail: editorEmail,
+              createdAt: new Date(),
+            },
+          });
+
+          receiptMaterialId = createdReceipt.id;
+
+          auditEntries.push({
+            entityType: 'ReceiptMaterial',
+            entityId: createdReceipt.id,
+            action: 'CREATE',
+            note: `Создано поступление материала "${material.name}" (акт № ${beforeSamplingTest.sActNumber})`,
+            afterData: createdReceipt,
+          });
+        } else {
+          // Обновление существующего поступления
+          const receiptUpdateData: any = {};
+
+          if (body.materialId) {
+            const materialId = parseInt(body.materialId);
+            if (isNaN(materialId) || materialId <= 0) {
+              throw createError({ statusCode: 400, statusMessage: 'Некорректный ID материала' });
+            }
+            const material = await tx.material.findUnique({ where: { id: materialId } });
+            if (!material) {
+              throw createError({ statusCode: 404, statusMessage: `Материал с ID ${materialId} не найден` });
+            }
+            receiptUpdateData.materialId = materialId;
+          }
+
+          if (body.qualDate !== undefined) {
+            receiptUpdateData.qualDate = body.qualDate ? parseDate(body.qualDate) : null;
+          }
+          if (body.qualDocNumber !== undefined) {
+            receiptUpdateData.qualDocNumber = body.qualDocNumber || null;
+          }
+          if (body.receiptNote !== undefined) {
+            receiptUpdateData.note = body.receiptNote || null;
+          }
+          if (fileDbPaths.qualDoc) {
+            receiptUpdateData.qualDocPath = fileDbPaths.qualDoc;
+          }
+
+          if (Object.keys(receiptUpdateData).length > 0) {
+            receiptUpdateData.editorEmail = editorEmail;
+            receiptUpdateData.editedAt = new Date();
+
+            const updatedReceipt = await tx.receiptMaterial.update({
+              where: { id: receiptMaterialId },
+              data: receiptUpdateData,
+            });
+
+            const changedFields = computeChangedFields(
+              beforeReceiptMaterial as any,
+              updatedReceipt as any
+            );
+
+            if (changedFields.length > 0) {
+              auditEntries.push({
+                entityType: 'ReceiptMaterial',
+                entityId: receiptMaterialId,
+                action: 'UPDATE',
+                note: `Изменено поступление материала. Поля: ${changedFields.join(', ')}`,
+                beforeData: beforeReceiptMaterial,
+                afterData: updatedReceipt,
+                changedFields,
+              });
+            }
+          }
+        }
+
+        relationUpdates.receiptMaterialId = receiptMaterialId;
+      }
+
+      // ----- 3.3 Обновление TestProtocol -----
+      const hasProtocolChanges =
+        body.protocolNumber !== undefined ||
+        body.protocolDate !== undefined ||
+        body.testResult !== undefined ||
+        body.protocolNote !== undefined ||
+        !!fileDbPaths.protocolDoc;
+
+      let testProtocolId = beforeSamplingTest.testProtocolId;
+
+      if (hasProtocolChanges) {
+        if (!testProtocolId) {
+          // Создание нового протокола
+          if (!receiptMaterialId) {
+            throw createError({
+              statusCode: 400,
+              statusMessage: 'Для создания протокола необходимо сначала создать поступление материала',
+            });
+          }
+
+          const createdProtocol = await tx.testProtocol.create({
+            data: {
+              protocolNumber: body.protocolNumber || `Без номера-${Date.now()}`,
+              protocolDate: body.protocolDate ? parseDate(body.protocolDate) : null,
+              protocolDocPath: fileDbPaths.protocolDoc || null,
+              testResult: body.testResult || 'Не указан',
+              note: body.protocolNote || null,
+              receiptMaterialId,
+              authorEmail: editorEmail,
+              createdAt: new Date(),
+            },
+          });
+
+          testProtocolId = createdProtocol.id;
+
+          auditEntries.push({
+            entityType: 'TestProtocol',
+            entityId: createdProtocol.id,
+            action: 'CREATE',
+            note: `Создан протокол № ${createdProtocol.protocolNumber} (акт № ${beforeSamplingTest.sActNumber})`,
+            afterData: createdProtocol,
+          });
+        } else {
+          // Обновление существующего протокола
+          const protocolUpdateData: any = {};
+
+          if (body.protocolNumber !== undefined) {
+            protocolUpdateData.protocolNumber = body.protocolNumber || null;
+          }
+          if (body.protocolDate !== undefined) {
+            protocolUpdateData.protocolDate = body.protocolDate ? parseDate(body.protocolDate) : null;
+          }
+          if (body.testResult !== undefined) {
+            protocolUpdateData.testResult = body.testResult || null;
+          }
+          if (body.protocolNote !== undefined) {
+            protocolUpdateData.note = body.protocolNote || null;
+          }
+          if (fileDbPaths.protocolDoc) {
+            protocolUpdateData.protocolDocPath = fileDbPaths.protocolDoc;
+          }
+
+          if (Object.keys(protocolUpdateData).length > 0) {
+            protocolUpdateData.editorEmail = editorEmail;
+            protocolUpdateData.editedAt = new Date();
+
+            const updatedProtocol = await tx.testProtocol.update({
+              where: { id: testProtocolId },
+              data: protocolUpdateData,
+            });
+
+            const changedFields = computeChangedFields(
+              beforeTestProtocol as any,
+              updatedProtocol as any
+            );
+
+            if (changedFields.length > 0) {
+              auditEntries.push({
+                entityType: 'TestProtocol',
+                entityId: testProtocolId,
+                action: 'UPDATE',
+                note: `Изменён протокол испытаний. Поля: ${changedFields.join(', ')}`,
+                beforeData: beforeTestProtocol,
+                afterData: updatedProtocol,
+                changedFields,
+              });
+            }
+          }
+        }
+
+        relationUpdates.testProtocolId = testProtocolId;
+      }
+
+      // ----- 3.4 Обновление самой SamplingTest -----
+      if (body.sActDate) {
+        updateSamplingTestData.sActDate = parseDate(body.sActDate);
+      }
+      if (body.note !== undefined) {
+        updateSamplingTestData.note = body.note || null;
+      }
+      if (fileDbPaths.sDoc) {
+        updateSamplingTestData.sDocPath = fileDbPaths.sDoc;
+      }
+
+      const finalData = {
+        ...updateSamplingTestData,
+        ...relationUpdates,
+        editorEmail,
+        editedAt: new Date(),
+      };
+
+      const updatedSamplingTest = await tx.samplingTest.update({
+        where: { id },
+        data: finalData,
+      });
+
+      // ----- 3.5 Логирование изменений SamplingTest -----
+      const samplingChangedFields = computeChangedFields(
+        beforeSamplingTest as any,
+        updatedSamplingTest as any
+      );
+
+      if (samplingChangedFields.length > 0) {
+        auditEntries.push({
+          entityType: 'SamplingTest',
+          entityId: id,
+          action: 'UPDATE',
+          note: `Изменён акт отбора. Поля: ${samplingChangedFields.join(', ')}`,
+          beforeData: beforeSamplingTest,
+          afterData: updatedSamplingTest,
+          changedFields: samplingChangedFields,
+        });
+      }
+
+      // ----- 3.6 Запись всех audit-логов внутри транзакции -----
+      for (const entry of auditEntries) {
+        // console.log('Запись в журнал ==>')
+        await tx.auditLog.create({
+          data: {
+            entityType: entry.entityType,
+            entityId: entry.entityId,
+            action: entry.action,
+            actorEmail: editorEmail,
+            note: entry.note,
+            beforeData: entry.beforeData ?? undefined,
+            afterData: entry.afterData ?? undefined,
+            changedFields: entry.changedFields ?? undefined,
+            ipAddress: requestMeta.ipAddress ?? null,
+            userAgent: requestMeta.userAgent ?? null,
+          },
+        });
+      }
+
+      // ----- Возвращаем результат транзакции -----
+      return {
+        updatedSamplingTest,
+        samplingChangedFields,
+        auditEntries,
+      };
+    }, {
+      // Таймаут транзакции — 30 секунд (на случай больших обновлений)
+      timeout: 30000,
+    });
+
+    // ========================================
+    // 4. ОТВЕТ
+    // ========================================
     return {
       success: true,
-      data: updatedSamplingTest,
-      message: 'Акт отбора успешно обновлен',
+      data: result.updatedSamplingTest,
+      message: 'Акт отбора успешно обновлён',
+      meta: {
+        changedFields: result.samplingChangedFields,
+        auditEntriesCount: result.auditEntries.length,
+        auditEntries: result.auditEntries.map(e => ({
+          entityType: e.entityType,
+          action: e.action,
+          note: e.note,
+        })),
+      },
     };
 
   } catch (error: any) {
     console.error('Ошибка при обновлении акта отбора:', error);
-    
+
     if (error.statusCode) throw error;
-    
+
     throw createError({
       statusCode: 500,
       statusMessage: error.message || 'Ошибка при обновлении акта отбора',

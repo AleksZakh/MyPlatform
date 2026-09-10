@@ -13,7 +13,7 @@ export default {
     "root": "relative min-w-0",
     "list": "flex items-center gap-1.5",
     "item": "flex min-w-0",
-    "link": "group relative flex items-center gap-1.5 text-sm min-w-0",
+    "link": "group relative flex items-center gap-1.5 text-sm min-w-0 rounded-md",
     "linkLeadingIcon": "shrink-0 size-5",
     "linkLeadingAvatar": "shrink-0",
     "linkLeadingAvatarSize": "2xs",
@@ -40,25 +40,25 @@ export default {
     },
     "color": {
       "primary": {
-        "link": "focus-visible:outline-primary"
+        "link": "outline-primary/25 focus-visible:outline-3"
       },
       "secondary": {
-        "link": "focus-visible:outline-secondary"
+        "link": "outline-secondary/25 focus-visible:outline-3"
       },
       "success": {
-        "link": "focus-visible:outline-success"
+        "link": "outline-success/25 focus-visible:outline-3"
       },
       "info": {
-        "link": "focus-visible:outline-info"
+        "link": "outline-info/25 focus-visible:outline-3"
       },
       "warning": {
-        "link": "focus-visible:outline-warning"
+        "link": "outline-warning/25 focus-visible:outline-3"
       },
       "error": {
-        "link": "focus-visible:outline-error"
+        "link": "outline-error/25 focus-visible:outline-3"
       },
       "neutral": {
-        "link": "focus-visible:outline-inverted"
+        "link": "outline-inverted/25 focus-visible:outline-3"
       }
     }
   },

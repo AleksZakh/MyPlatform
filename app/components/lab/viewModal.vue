@@ -152,7 +152,7 @@
               <div class="flex flex-col">
                 <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Дата документа о качестве</label>
                 <div class="mt-1 px-2 shadow-sm rounded-sm text-lg text-gray-800 min-w-70 bg-gray-50">
-                  {{ formatDateTime(response?.qualDocDate) || '—' }}
+                  {{ qualDocDate || '—' }}
                 </div>
               </div>
               
@@ -180,7 +180,7 @@
               <div class="flex flex-col">
                 <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Номер документа о качестве</label>
                 <div class="mt-1 px-2 shadow-sm rounded-sm text-lg text-gray-800 min-w-70 bg-gray-50 font-mono">
-                  {{ response?.qualDocNumber || '—' }}
+                  {{ qualDocNumber || '—' }}
                 </div>
               </div>
               
@@ -314,6 +314,8 @@ const dateCreate = ref();
 const dateEdit = ref();
 const sDocPath = ref();
 const qualDocPath = ref();
+const qualDocDate = ref();
+const qualDocNumber = ref();
 const protocolDocPath = ref();
 const objName = ref();
 const autorEmail = ref();
@@ -333,13 +335,15 @@ onMounted(async () => {
       // @ts-ignore
       response.value = await $fetch(`/api/incoming-control/${recordId}`);
       if(response.value){
-        
+        // console.log('response.value.data ---> ', response.value.data)
         authorInfo.value = await searchUserInAD({'authorEmail':response.value.data['Автор (акт)']})
         editorInfo.value = await searchUserInAD({'authorEmail':response.value.data['Редактор  (акт)']})
         dateCreate.value = response.value.data['Дата создания (акт)']
         dateEdit.value = response.value.data['Дата редактирования']
         sDocPath.value = response.value.data['Документ отбора проб']
         qualDocPath.value = response.value.data['Документ о качестве']
+        qualDocDate.value = response.value.data['Дата документа о качестве']
+        qualDocNumber.value = response.value.data['Номер документа о качестве']
         protocolDocPath.value = response.value.data['Документ протокола']
         objName.value = response.value.data['Наименование объекта']
         autorEmail.value = response.value.data['Автор (акт)']

@@ -306,7 +306,10 @@ export default defineEventHandler(async (event) => {
                 'Примечание (акт)': test.note || '',
                 'Наименование материала': material?.name || '',
                 'Предприятие-изготовитель': manufacturer?.name || '',
-                'Дата поступления материала': receipt?.qualDate
+                'Дата поступления материала': receipt?.receiptDate
+                    ? new Date(receipt.receiptDate).toLocaleDateString('ru-RU')
+                    : '',
+                'Дата документа о качестве': receipt?.qualDate
                     ? new Date(receipt.qualDate).toLocaleDateString('ru-RU')
                     : '',
                 'Документ о качестве': receipt?.qualDocPath || '',

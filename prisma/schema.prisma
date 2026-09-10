@@ -1,14 +1,12 @@
-
-
 generator client {
   // provider = "prisma-client"
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
   provider = "postgresql"
-  url = env("DATABASE_URL")
+  url      = env("DATABASE_URL")
 }
 
 model sessions {
@@ -22,61 +20,61 @@ model sessions {
 }
 
 model users {
-  id             Int              @id @default(autoincrement())
-  userName       String           @unique(map: "users_username_unique") @db.VarChar(255)
-  password       String           @db.VarChar(255)
-  login          String           @unique @db.VarChar(255)
-  email          String           @unique @db.VarChar(255)
-  role           String           @db.VarChar(100)
-  sessions       sessions[]
+  id       Int        @id @default(autoincrement())
+  userName String     @unique(map: "users_username_unique") @db.VarChar(255)
+  password String     @db.VarChar(255)
+  login    String     @unique @db.VarChar(255)
+  email    String     @unique @db.VarChar(255)
+  role     String     @db.VarChar(100)
+  sessions sessions[]
 
   @@index([userName], map: "idx_users_userName")
 }
 
 model AEng {
-  id                      Int      @id @default(autoincrement())
-  
-  // Основные данные из CSV
-  plp                     String   @db.Text
-  objectName              String   @db.Text
-  samplingActNumber       String   @db.Text
-  samplingDate            DateTime @db.Date
-  samplingPlace           String   @db.Text
-  personProvidedSample    String   @db.Text
-  materialReceiptDate     DateTime? @db.Date
-  materialName            String   @db.Text
-  
-  // Документы (старое поле для обратной совместимости)
-  qualityDocument         String   @db.Text
-  
-  // Новые поля для документов
-  sDocPath                String?  @db.Text
-  qualDocPath             String?  @db.Text
-  testDocPath             String?  @db.Text
-  protocolDocPath         String?  @db.Text
-  qualDocNumber           String?  @db.Text
-  qualDocDate             DateTime? @db.Date
-  authorEmail             String?  @db.Text
-  editorEmail             String?  @db.Text
-  
-  // Остальные данные из CSV
-  manufacturer            String?  @db.Text
-  protocolNumber          String   @db.Text
-  protocolDate            DateTime? @db.Date
-  testResult              String   @db.Text
-  note                    String?  @db.Text
-  
-  // Системные поля
-  createdAt               DateTime @default(now())
-  editedAt                DateTime? @db.Date   // Дата редактирования (только при обновлении через форму)
+  id Int @id @default(autoincrement())
 
-  @@map("aeng")
+  // Основные данные из CSV
+  plp                  String    @db.Text
+  objectName           String    @db.Text
+  samplingActNumber    String    @db.Text
+  samplingDate         DateTime  @db.Date
+  samplingPlace        String    @db.Text
+  personProvidedSample String    @db.Text
+  materialReceiptDate  DateTime? @db.Date
+  materialName         String    @db.Text
+
+  // Документы (старое поле для обратной совместимости)
+  qualityDocument String @db.Text
+
+  // Новые поля для документов
+  sDocPath        String?   @db.Text
+  qualDocPath     String?   @db.Text
+  testDocPath     String?   @db.Text
+  protocolDocPath String?   @db.Text
+  qualDocNumber   String?   @db.Text
+  qualDocDate     DateTime? @db.Date
+  authorEmail     String?   @db.Text
+  editorEmail     String?   @db.Text
+
+  // Остальные данные из CSV
+  manufacturer   String?   @db.Text
+  protocolNumber String    @db.Text
+  protocolDate   DateTime? @db.Date
+  testResult     String    @db.Text
+  note           String?   @db.Text
+
+  // Системные поля
+  createdAt DateTime  @default(now())
+  editedAt  DateTime? @db.Date // Дата редактирования (только при обновлении через форму)
+
   @@index([samplingActNumber])
   @@index([protocolNumber])
   @@index([editedAt])
+  @@map("aeng")
 }
 
-// ===== НОВЫЕ ТАБЛИЦЫ (ВЕРСИЯ 4) =====
+// ===== НОВЫЕ ТАБЛИЦЫ (ВЕРСИЯ 5) =====
 
 // ============================================
 // СПРАВОЧНИКИ
@@ -84,16 +82,20 @@ model AEng {
 
 // 1. ПЛП
 model Plp {
-  id        Int    @id @default(autoincrement())
-  name      String @unique @db.VarChar(255)
-  note      String? @db.Text
-  
+  id   Int     @id @default(autoincrement())
+  name String  @unique @db.VarChar(255)
+  note String? @db.Text
+
   // Системные поля
-  createdAt  DateTime @default(now())
-  authorEmail String? @db.VarChar(255)
-  editedAt   DateTime? @updatedAt
-  editorEmail String? @db.VarChar(255)
-  
+  createdAt   DateTime  @default(now())
+  authorEmail String?   @db.VarChar(255)
+  editedAt    DateTime? @updatedAt
+  editorEmail String?   @db.VarChar(255)
+
+  // Поля для мягкого удаления
+  deletedAt DateTime? @db.Date
+  deletedBy String?   @db.VarChar(255)
+
   samplingTests SamplingTest[]
 
   @@map("plps")
@@ -101,16 +103,20 @@ model Plp {
 
 // 2. Инспектор
 model Inspector {
-  id        Int    @id @default(autoincrement())
-  name      String @unique @db.VarChar(255)
-  note      String? @db.Text
-  
+  id   Int     @id @default(autoincrement())
+  name String  @unique @db.VarChar(255)
+  note String? @db.Text
+
   // Системные поля
-  createdAt  DateTime @default(now())
-  authorEmail String? @db.VarChar(255)
-  editedAt   DateTime? @updatedAt
-  editorEmail String? @db.VarChar(255)
-  
+  createdAt   DateTime  @default(now())
+  authorEmail String?   @db.VarChar(255)
+  editedAt    DateTime? @updatedAt
+  editorEmail String?   @db.VarChar(255)
+
+  // Поля для мягкого удаления
+  deletedAt DateTime? @db.Date
+  deletedBy String?   @db.VarChar(255)
+
   samplingTests SamplingTest[]
 
   @@map("inspectors")
@@ -118,41 +124,49 @@ model Inspector {
 
 // 3. Производитель
 model Manufacturer {
-  id        Int    @id @default(autoincrement())
-  name      String @unique @db.Text
-  note      String? @db.Text
-  
+  id   Int     @id @default(autoincrement())
+  name String  @unique @db.Text
+  note String? @db.Text
+
   // Системные поля
-  createdAt  DateTime @default(now())
-  authorEmail String? @db.VarChar(255)
-  editedAt   DateTime? @updatedAt
-  editorEmail String? @db.VarChar(255)
-  
+  createdAt   DateTime  @default(now())
+  authorEmail String?   @db.VarChar(255)
+  editedAt    DateTime? @updatedAt
+  editorEmail String?   @db.VarChar(255)
+
+  // Поля для мягкого удаления
+  deletedAt DateTime? @db.Date
+  deletedBy String?   @db.VarChar(255)
+
   materials Material[]
 
-  @@map("manufacturers")
   @@index([name])
+  @@map("manufacturers")
 }
 
 // 4. Материал
 model Material {
-  id             Int    @id @default(autoincrement())
-  name           String @unique @db.Text
-  note           String? @db.Text
-  
+  id   Int     @id @default(autoincrement())
+  name String  @unique @db.Text
+  note String? @db.Text
+
   manufacturerId Int?
   manufacturer   Manufacturer? @relation(fields: [manufacturerId], references: [id])
-  
-  // Системные поля
-  createdAt  DateTime @default(now())
-  authorEmail String? @db.VarChar(255)
-  editedAt   DateTime? @updatedAt
-  editorEmail String? @db.VarChar(255)
-  
-  receipts       ReceiptMaterial[]
 
-  @@map("materials")
+  // Системные поля
+  createdAt   DateTime  @default(now())
+  authorEmail String?   @db.VarChar(255)
+  editedAt    DateTime? @updatedAt
+  editorEmail String?   @db.VarChar(255)
+
+  // Поля для мягкого удаления
+  deletedAt DateTime? @db.Date
+  deletedBy String?   @db.VarChar(255)
+
+  receipts ReceiptMaterial[]
+
   @@index([name])
+  @@map("materials")
 }
 
 // ============================================
@@ -160,19 +174,27 @@ model Material {
 // ============================================
 model ReceiptMaterial {
   id            Int       @id @default(autoincrement())
-  qualDate      DateTime? @db.Date
+  
+  // ДВЕ РАЗНЫЕ ДАТЫ
+  receiptDate   DateTime? @db.Date   // ← НОВОЕ: дата поступления материала
+  qualDate      DateTime? @db.Date   // ← дата документа о качестве
+  
   qualDocNumber String?   @db.VarChar(255)
   qualDocPath   String?   @db.Text
-  note          String?   @db.Text  // ← ДОБАВЛЕНО ПОЛЕ "ПРИМЕЧАНИЕ"
+  note          String?   @db.Text
   
   materialId    Int
   material      Material  @relation(fields: [materialId], references: [id])
   
   // Системные поля
-  createdAt  DateTime @default(now())
-  authorEmail String? @db.VarChar(255)
-  editedAt   DateTime? @updatedAt
-  editorEmail String? @db.VarChar(255)
+  createdAt   DateTime @default(now())
+  authorEmail String?  @db.VarChar(255)
+  editedAt    DateTime? @updatedAt
+  editorEmail String?  @db.VarChar(255)
+  
+  // Мягкое удаление
+  deletedAt   DateTime? @db.Date
+  deletedBy   String?   @db.VarChar(255)
   
   testProtocols TestProtocol[]
   samplingTests SamplingTest[]
@@ -182,107 +204,154 @@ model ReceiptMaterial {
 
 // 6. Объект испытаний
 model TestObject {
-  id        Int    @id @default(autoincrement())
-  name      String @unique @db.Text
-  note      String? @db.Text
-  
+  id   Int     @id @default(autoincrement())
+  name String  @unique @db.Text
+  note String? @db.Text
+
   // Системные поля
-  createdAt  DateTime @default(now())
-  authorEmail String? @db.VarChar(255)
-  editedAt   DateTime? @updatedAt
-  editorEmail String? @db.VarChar(255)
-  
+  createdAt   DateTime  @default(now())
+  authorEmail String?   @db.VarChar(255)
+  editedAt    DateTime? @updatedAt
+  editorEmail String?   @db.VarChar(255)
+
+  // Поля для мягкого удаления
+  deletedAt DateTime? @db.Date
+  deletedBy String?   @db.VarChar(255)
+
   locations TestLocation[]
 
-  @@map("test_objects")
   @@index([name])
+  @@map("test_objects")
 }
 
 // 7. Место отбора
 model TestLocation {
-  id            Int        @id @default(autoincrement())
-  name          String     @db.Text
-  note          String?    @db.Text
-  
-  testObjectId  Int
-  testObject    TestObject @relation(fields: [testObjectId], references: [id])
-  
+  id   Int     @id @default(autoincrement())
+  name String  @db.Text
+  note String? @db.Text
+
+  testObjectId Int
+  testObject   TestObject @relation(fields: [testObjectId], references: [id])
+
   // Системные поля
-  createdAt  DateTime @default(now())
-  authorEmail String? @db.VarChar(255)
-  editedAt   DateTime? @updatedAt
-  editorEmail String? @db.VarChar(255)
-  
+  createdAt   DateTime  @default(now())
+  authorEmail String?   @db.VarChar(255)
+  editedAt    DateTime? @updatedAt
+  editorEmail String?   @db.VarChar(255)
+
+  // Поля для мягкого удаления
+  deletedAt DateTime? @db.Date
+  deletedBy String?   @db.VarChar(255)
+
   samplingTests SamplingTest[]
 
   @@unique([testObjectId, name])
-  @@map("test_locations")
   @@index([name])
+  @@map("test_locations")
 }
 
 // 8. Протокол испытаний
 model TestProtocol {
-  id                 Int       @id @default(autoincrement())
-  protocolNumber     String    @db.VarChar(255)
-  protocolDate       DateTime? @db.Date
-  protocolDocPath    String?   @db.Text
-  testResult         String    @db.Text
-  note               String?   @db.Text
-  
-  receiptMaterialId  Int
-  receiptMaterial    ReceiptMaterial @relation(fields: [receiptMaterialId], references: [id])
-  
-  // Системные поля
-  createdAt  DateTime @default(now())
-  authorEmail String? @db.VarChar(255)
-  editedAt   DateTime? @updatedAt
-  editorEmail String? @db.VarChar(255)
-  
-  samplingTests      SamplingTest[]
+  id              Int       @id @default(autoincrement())
+  protocolNumber  String    @db.VarChar(255)
+  protocolDate    DateTime? @db.Date
+  protocolDocPath String?   @db.Text
+  testResult      String    @db.Text
+  note            String?   @db.Text
 
-  @@map("test_protocols")
+  receiptMaterialId Int
+  receiptMaterial   ReceiptMaterial @relation(fields: [receiptMaterialId], references: [id])
+
+  // Системные поля
+  createdAt   DateTime  @default(now())
+  authorEmail String?   @db.VarChar(255)
+  editedAt    DateTime? @updatedAt
+  editorEmail String?   @db.VarChar(255)
+
+  // Поля для мягкого удаления
+  deletedAt DateTime? @db.Date
+  deletedBy String?   @db.VarChar(255)
+
+  samplingTests SamplingTest[]
+
   @@index([protocolNumber])
   @@index([protocolDate])
+  @@map("test_protocols")
 }
 
 // ============================================
 // ГЛАВНАЯ ТАБЛИЦА - АКТЫ ОТБОРА ПРОБ
 // ============================================
 model SamplingTest {
-  id              Int        @id @default(autoincrement())
-  sActNumber      String     @db.VarChar(255)
-  sActDate        DateTime   @db.Date
-  sDocPath        String?    @db.Text
-  note            String?    @db.Text
-  
+  id         Int      @id @default(autoincrement())
+  sActNumber String   @db.VarChar(255)
+  sActDate   DateTime @db.Date
+  sDocPath   String?  @db.Text
+  note       String?  @db.Text
+
   // Внешние ключи на справочники
-  plpId           Int
-  plp             Plp        @relation(fields: [plpId], references: [id])
-  
-  inspectorId     Int
-  inspector       Inspector  @relation(fields: [inspectorId], references: [id])
-  
-  testLocationId  Int
-  testLocation    TestLocation @relation(fields: [testLocationId], references: [id])
-  
+  plpId Int
+  plp   Plp @relation(fields: [plpId], references: [id])
+
+  inspectorId Int
+  inspector   Inspector @relation(fields: [inspectorId], references: [id])
+
+  testLocationId Int
+  testLocation   TestLocation @relation(fields: [testLocationId], references: [id])
+
   // Связь с протоколом (опционально)
-  testProtocolId  Int?
-  testProtocol    TestProtocol? @relation(fields: [testProtocolId], references: [id])
-  
+  testProtocolId Int?
+  testProtocol   TestProtocol? @relation(fields: [testProtocolId], references: [id])
+
   // ПРЯМАЯ СВЯЗЬ С ПОСТУПЛЕНИЕМ МАТЕРИАЛА (добавлено!)
   receiptMaterialId Int?
   receiptMaterial   ReceiptMaterial? @relation(fields: [receiptMaterialId], references: [id])
-  
-  // Системные поля
-  createdAt  DateTime @default(now())
-  authorEmail String? @db.VarChar(255)
-  editedAt   DateTime? @updatedAt
-  editorEmail String? @db.VarChar(255)
 
-  @@map("sampling_tests")
+  // Системные поля
+  createdAt   DateTime  @default(now())
+  authorEmail String?   @db.VarChar(255)
+  editedAt    DateTime? @updatedAt
+  editorEmail String?   @db.VarChar(255)
+
+  // Поля для мягкого удаления
+  deletedAt DateTime? @db.Date
+  deletedBy String?   @db.VarChar(255)
+
   @@index([sActNumber])
   @@index([sActDate])
+  @@map("sampling_tests")
 }
 
+// ============================================
+// 9. ЖУРНАЛ АУДИТА (AuditLog)
+// ============================================
+model AuditLog {
+  id Int @id @default(autoincrement())
 
+  // К какой сущности относится запись
+  entityType String @db.VarChar(50) // 'SamplingTest', 'ReceiptMaterial', 'TestProtocol', 'Material', ...
+  entityId   Int // ID записи в исходной таблице
 
+  // Тип действия
+  action String @db.VarChar(20) // 'CREATE', 'UPDATE', 'DELETE', 'RESTORE'
+
+  // Кто и когда выполнил действие
+  actorEmail String   @db.VarChar(255) // Email пользователя
+  timestamp  DateTime @default(now()) // Когда выполнено
+  note         String?  @db.Text
+
+  // Снимки данных (JSON)
+  beforeData    Json? // Состояние до изменения
+  afterData     Json? // Состояние после изменения
+  changedFields Json? // Список изменённых полей (для UPDATE)
+
+  // Метаданные запроса
+  ipAddress String? @db.VarChar(45) // IPv4 или IPv6
+  userAgent String? @db.Text // User-Agent браузера
+
+  @@index([entityType, entityId])
+  @@index([timestamp])
+  @@index([actorEmail])
+  @@index([action])
+  @@map("audit_logs")
+}

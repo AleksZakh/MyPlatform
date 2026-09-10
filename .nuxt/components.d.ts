@@ -114,6 +114,7 @@ export const UInput: typeof import("../node_modules/@nuxt/ui/dist/runtime/compon
 export const UInputDate: typeof import("../node_modules/@nuxt/ui/dist/runtime/components/InputDate.vue")['default']
 export const UInputMenu: typeof import("../node_modules/@nuxt/ui/dist/runtime/components/InputMenu.vue")['default']
 export const UInputNumber: typeof import("../node_modules/@nuxt/ui/dist/runtime/components/InputNumber.vue")['default']
+export const UInputRating: typeof import("../node_modules/@nuxt/ui/dist/runtime/components/InputRating.vue")['default']
 export const UInputTags: typeof import("../node_modules/@nuxt/ui/dist/runtime/components/InputTags.vue")['default']
 export const UInputTime: typeof import("../node_modules/@nuxt/ui/dist/runtime/components/InputTime.vue")['default']
 export const UKbd: typeof import("../node_modules/@nuxt/ui/dist/runtime/components/Kbd.vue")['default']
@@ -147,6 +148,7 @@ export const UPricingPlan: typeof import("../node_modules/@nuxt/ui/dist/runtime/
 export const UPricingPlans: typeof import("../node_modules/@nuxt/ui/dist/runtime/components/PricingPlans.vue")['default']
 export const UPricingTable: typeof import("../node_modules/@nuxt/ui/dist/runtime/components/PricingTable.vue")['default']
 export const UProgress: typeof import("../node_modules/@nuxt/ui/dist/runtime/components/Progress.vue")['default']
+export const UProgressGroup: typeof import("../node_modules/@nuxt/ui/dist/runtime/components/ProgressGroup.vue")['default']
 export const URadioGroup: typeof import("../node_modules/@nuxt/ui/dist/runtime/components/RadioGroup.vue")['default']
 export const UScrollArea: typeof import("../node_modules/@nuxt/ui/dist/runtime/components/ScrollArea.vue")['default']
 export const USelect: typeof import("../node_modules/@nuxt/ui/dist/runtime/components/Select.vue")['default']
@@ -156,6 +158,7 @@ export const USidebar: typeof import("../node_modules/@nuxt/ui/dist/runtime/comp
 export const USkeleton: typeof import("../node_modules/@nuxt/ui/dist/runtime/components/Skeleton.vue")['default']
 export const USlideover: typeof import("../node_modules/@nuxt/ui/dist/runtime/components/Slideover.vue")['default']
 export const USlider: typeof import("../node_modules/@nuxt/ui/dist/runtime/components/Slider.vue")['default']
+export const USplitter: typeof import("../node_modules/@nuxt/ui/dist/runtime/components/Splitter.vue")['default']
 export const UStepper: typeof import("../node_modules/@nuxt/ui/dist/runtime/components/Stepper.vue")['default']
 export const USwitch: typeof import("../node_modules/@nuxt/ui/dist/runtime/components/Switch.vue")['default']
 export const UTable: typeof import("../node_modules/@nuxt/ui/dist/runtime/components/Table.vue")['default']
@@ -296,6 +299,7 @@ export const LazyUInput: LazyComponent<typeof import("../node_modules/@nuxt/ui/d
 export const LazyUInputDate: LazyComponent<typeof import("../node_modules/@nuxt/ui/dist/runtime/components/InputDate.vue")['default']>
 export const LazyUInputMenu: LazyComponent<typeof import("../node_modules/@nuxt/ui/dist/runtime/components/InputMenu.vue")['default']>
 export const LazyUInputNumber: LazyComponent<typeof import("../node_modules/@nuxt/ui/dist/runtime/components/InputNumber.vue")['default']>
+export const LazyUInputRating: LazyComponent<typeof import("../node_modules/@nuxt/ui/dist/runtime/components/InputRating.vue")['default']>
 export const LazyUInputTags: LazyComponent<typeof import("../node_modules/@nuxt/ui/dist/runtime/components/InputTags.vue")['default']>
 export const LazyUInputTime: LazyComponent<typeof import("../node_modules/@nuxt/ui/dist/runtime/components/InputTime.vue")['default']>
 export const LazyUKbd: LazyComponent<typeof import("../node_modules/@nuxt/ui/dist/runtime/components/Kbd.vue")['default']>
@@ -329,6 +333,7 @@ export const LazyUPricingPlan: LazyComponent<typeof import("../node_modules/@nux
 export const LazyUPricingPlans: LazyComponent<typeof import("../node_modules/@nuxt/ui/dist/runtime/components/PricingPlans.vue")['default']>
 export const LazyUPricingTable: LazyComponent<typeof import("../node_modules/@nuxt/ui/dist/runtime/components/PricingTable.vue")['default']>
 export const LazyUProgress: LazyComponent<typeof import("../node_modules/@nuxt/ui/dist/runtime/components/Progress.vue")['default']>
+export const LazyUProgressGroup: LazyComponent<typeof import("../node_modules/@nuxt/ui/dist/runtime/components/ProgressGroup.vue")['default']>
 export const LazyURadioGroup: LazyComponent<typeof import("../node_modules/@nuxt/ui/dist/runtime/components/RadioGroup.vue")['default']>
 export const LazyUScrollArea: LazyComponent<typeof import("../node_modules/@nuxt/ui/dist/runtime/components/ScrollArea.vue")['default']>
 export const LazyUSelect: LazyComponent<typeof import("../node_modules/@nuxt/ui/dist/runtime/components/Select.vue")['default']>
@@ -338,6 +343,7 @@ export const LazyUSidebar: LazyComponent<typeof import("../node_modules/@nuxt/ui
 export const LazyUSkeleton: LazyComponent<typeof import("../node_modules/@nuxt/ui/dist/runtime/components/Skeleton.vue")['default']>
 export const LazyUSlideover: LazyComponent<typeof import("../node_modules/@nuxt/ui/dist/runtime/components/Slideover.vue")['default']>
 export const LazyUSlider: LazyComponent<typeof import("../node_modules/@nuxt/ui/dist/runtime/components/Slider.vue")['default']>
+export const LazyUSplitter: LazyComponent<typeof import("../node_modules/@nuxt/ui/dist/runtime/components/Splitter.vue")['default']>
 export const LazyUStepper: LazyComponent<typeof import("../node_modules/@nuxt/ui/dist/runtime/components/Stepper.vue")['default']>
 export const LazyUSwitch: LazyComponent<typeof import("../node_modules/@nuxt/ui/dist/runtime/components/Switch.vue")['default']>
 export const LazyUTable: LazyComponent<typeof import("../node_modules/@nuxt/ui/dist/runtime/components/Table.vue")['default']>

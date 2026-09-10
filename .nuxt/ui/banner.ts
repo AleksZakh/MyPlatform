@@ -48,7 +48,9 @@ export default {
       }
     },
     "to": {
-      "true": ""
+      "true": {
+        "root": "outline-(--ui-bg)/25 -outline-offset-3 has-[>a:focus-visible]:outline-3"
+      }
     }
   },
   "compoundVariants": [

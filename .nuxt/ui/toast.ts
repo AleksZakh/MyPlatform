@@ -10,7 +10,7 @@ const color = [
 
 export default {
   "slots": {
-    "root": "relative group overflow-hidden bg-default shadow-lg rounded-lg ring ring-default p-4 flex gap-2.5 focus:outline-none",
+    "root": "relative group overflow-hidden bg-default shadow-lg rounded-lg ring ring-default p-4 flex gap-2.5",
     "wrapper": "w-0 flex-1 flex flex-col",
     "title": "text-sm font-medium text-highlighted",
     "description": "text-sm text-muted",
@@ -24,31 +24,31 @@ export default {
   "variants": {
     "color": {
       "primary": {
-        "root": "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary",
+        "root": "outline-primary/25 focus-visible:outline-3 focus-visible:ring-primary",
         "icon": "text-primary"
       },
       "secondary": {
-        "root": "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-secondary",
+        "root": "outline-secondary/25 focus-visible:outline-3 focus-visible:ring-secondary",
         "icon": "text-secondary"
       },
       "success": {
-        "root": "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-success",
+        "root": "outline-success/25 focus-visible:outline-3 focus-visible:ring-success",
         "icon": "text-success"
       },
       "info": {
-        "root": "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-info",
+        "root": "outline-info/25 focus-visible:outline-3 focus-visible:ring-info",
         "icon": "text-info"
       },
       "warning": {
-        "root": "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-warning",
+        "root": "outline-warning/25 focus-visible:outline-3 focus-visible:ring-warning",
         "icon": "text-warning"
       },
       "error": {
-        "root": "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-error",
+        "root": "outline-error/25 focus-visible:outline-3 focus-visible:ring-error",
         "icon": "text-error"
       },
       "neutral": {
-        "root": "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-inverted",
+        "root": "outline-inverted/25 focus-visible:outline-3 focus-visible:ring-inverted",
         "icon": "text-highlighted"
       }
     },

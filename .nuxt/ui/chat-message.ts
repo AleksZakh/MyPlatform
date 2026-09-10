@@ -35,7 +35,7 @@ export default {
     "content": "relative text-pretty wrap-break-word *:first:mt-0 *:last:mb-0",
     "actions": [
       "[@media(hover:hover)]:opacity-0 group-hover/message:opacity-100 absolute bottom-0 flex items-center",
-      "transition-opacity"
+      "transition-opacity ease-out"
     ]
   },
   "variants": {
@@ -124,6 +124,7 @@ export default {
       "variant": "naked" as typeof variant[number],
       "side": "left" as typeof side[number],
       "class": {
+        "body": "w-full",
         "content": "w-full"
       }
     },

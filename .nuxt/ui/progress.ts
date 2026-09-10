@@ -41,10 +41,10 @@ export default {
   "slots": {
     "root": "gap-2",
     "base": "relative overflow-hidden rounded-full bg-accented",
-    "indicator": "rounded-full size-full transition-transform duration-200 ease-out",
-    "status": "flex text-dimmed transition-[width] duration-200",
+    "indicator": "rounded-full size-full transition-transform duration-200 ease-out motion-reduce:transition-none motion-reduce:data-[state=indeterminate]:animate-pulse",
+    "status": "flex text-dimmed duration-200 ease-out motion-reduce:transition-none",
     "steps": "grid items-end",
-    "step": "truncate text-end row-start-1 col-start-1 transition-opacity" as typeof step[number]
+    "step": "truncate text-end row-start-1 col-start-1 transition-opacity ease-out" as typeof step[number]
   },
   "variants": {
     "animation": {
@@ -80,7 +80,7 @@ export default {
       },
       "neutral": {
         "indicator": "bg-inverted",
-        "steps": "text-inverted"
+        "steps": "text-highlighted"
       }
     },
     "size": {
@@ -131,12 +131,12 @@ export default {
       "horizontal": {
         "root": "w-full flex flex-col",
         "base": "w-full",
-        "status": "flex-row items-center justify-end min-w-fit"
+        "status": "flex-row items-center justify-end w-(--percent) min-w-fit transition-[width]"
       },
       "vertical": {
         "root": "h-full flex flex-row-reverse",
         "base": "h-full",
-        "status": "flex-col justify-end min-h-fit"
+        "status": "flex-col justify-end h-(--percent) min-h-fit transition-[height]"
       }
     },
     "inverted": {
@@ -236,56 +236,56 @@ export default {
       "orientation": "horizontal" as typeof orientation[number],
       "animation": "carousel" as typeof animation[number],
       "class": {
-        "indicator": "data-[state=indeterminate]:animate-[carousel_2s_ease-in-out_infinite] data-[state=indeterminate]:rtl:animate-[carousel-rtl_2s_ease-in-out_infinite]"
+        "indicator": "motion-safe:data-[state=indeterminate]:animate-[carousel_2s_linear_infinite] motion-safe:data-[state=indeterminate]:rtl:animate-[carousel-rtl_2s_linear_infinite]"
       }
     },
     {
       "orientation": "vertical" as typeof orientation[number],
       "animation": "carousel" as typeof animation[number],
       "class": {
-        "indicator": "data-[state=indeterminate]:animate-[carousel-vertical_2s_ease-in-out_infinite]"
+        "indicator": "motion-safe:data-[state=indeterminate]:animate-[carousel-vertical_2s_linear_infinite]"
       }
     },
     {
       "orientation": "horizontal" as typeof orientation[number],
       "animation": "carousel-inverse" as typeof animation[number],
       "class": {
-        "indicator": "data-[state=indeterminate]:animate-[carousel-inverse_2s_ease-in-out_infinite] data-[state=indeterminate]:rtl:animate-[carousel-inverse-rtl_2s_ease-in-out_infinite]"
+        "indicator": "motion-safe:data-[state=indeterminate]:animate-[carousel-inverse_2s_linear_infinite] motion-safe:data-[state=indeterminate]:rtl:animate-[carousel-inverse-rtl_2s_linear_infinite]"
       }
     },
     {
       "orientation": "vertical" as typeof orientation[number],
       "animation": "carousel-inverse" as typeof animation[number],
       "class": {
-        "indicator": "data-[state=indeterminate]:animate-[carousel-inverse-vertical_2s_ease-in-out_infinite]"
+        "indicator": "motion-safe:data-[state=indeterminate]:animate-[carousel-inverse-vertical_2s_linear_infinite]"
       }
     },
     {
       "orientation": "horizontal" as typeof orientation[number],
       "animation": "swing" as typeof animation[number],
       "class": {
-        "indicator": "data-[state=indeterminate]:animate-[swing_2s_ease-in-out_infinite]"
+        "indicator": "motion-safe:data-[state=indeterminate]:animate-[swing_2s_var(--ease-in-out)_infinite]"
       }
     },
     {
       "orientation": "vertical" as typeof orientation[number],
       "animation": "swing" as typeof animation[number],
       "class": {
-        "indicator": "data-[state=indeterminate]:animate-[swing-vertical_2s_ease-in-out_infinite]"
+        "indicator": "motion-safe:data-[state=indeterminate]:animate-[swing-vertical_2s_var(--ease-in-out)_infinite]"
       }
     },
     {
       "orientation": "horizontal" as typeof orientation[number],
       "animation": "elastic" as typeof animation[number],
       "class": {
-        "indicator": "data-[state=indeterminate]:animate-[elastic_2s_ease-in-out_infinite]"
+        "indicator": "relative motion-safe:data-[state=indeterminate]:animate-[elastic_2s_var(--ease-in-out)_infinite]"
       }
     },
     {
       "orientation": "vertical" as typeof orientation[number],
       "animation": "elastic" as typeof animation[number],
       "class": {
-        "indicator": "data-[state=indeterminate]:animate-[elastic-vertical_2s_ease-in-out_infinite]"
+        "indicator": "relative motion-safe:data-[state=indeterminate]:animate-[elastic-vertical_2s_var(--ease-in-out)_infinite]"
       }
     }
   ],

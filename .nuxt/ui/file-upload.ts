@@ -30,8 +30,8 @@ export default {
   "slots": {
     "root": "relative flex flex-col",
     "base": [
-      "w-full flex-1 bg-default border border-default flex flex-col gap-2 items-stretch justify-center rounded-lg focus-visible:outline-2",
-      "transition-[background]"
+      "w-full flex-1 bg-default border border-default flex flex-col gap-2 items-stretch justify-center rounded-lg focus-visible:outline-3",
+      "transition-[background] ease-out"
     ],
     "wrapper": "flex flex-col items-center justify-center text-center",
     "icon": "shrink-0",
@@ -130,27 +130,27 @@ export default {
   "compoundVariants": [
     {
       "color": "primary" as typeof color[number],
-      "class": "focus-visible:outline-primary"
+      "class": "outline-primary/25 focus-visible:outline-3 focus-visible:border-primary"
     },
     {
       "color": "secondary" as typeof color[number],
-      "class": "focus-visible:outline-secondary"
+      "class": "outline-secondary/25 focus-visible:outline-3 focus-visible:border-secondary"
     },
     {
       "color": "success" as typeof color[number],
-      "class": "focus-visible:outline-success"
+      "class": "outline-success/25 focus-visible:outline-3 focus-visible:border-success"
     },
     {
       "color": "info" as typeof color[number],
-      "class": "focus-visible:outline-info"
+      "class": "outline-info/25 focus-visible:outline-3 focus-visible:border-info"
     },
     {
       "color": "warning" as typeof color[number],
-      "class": "focus-visible:outline-warning"
+      "class": "outline-warning/25 focus-visible:outline-3 focus-visible:border-warning"
     },
     {
       "color": "error" as typeof color[number],
-      "class": "focus-visible:outline-error"
+      "class": "outline-error/25 focus-visible:outline-3 focus-visible:border-error"
     },
     {
       "color": "primary" as typeof color[number],
@@ -184,7 +184,7 @@ export default {
     },
     {
       "color": "neutral" as typeof color[number],
-      "class": "focus-visible:outline-inverted"
+      "class": "outline-inverted/25 focus-visible:outline-3 focus-visible:border-inverted"
     },
     {
       "color": "neutral" as typeof color[number],

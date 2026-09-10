@@ -53,10 +53,17 @@ export default {
       "neutral": {}
     },
     "variant": {
-      "list": {},
-      "card": {},
+      "list": {
+        "fieldset": "flex-wrap"
+      },
+      "card": {
+        "fieldset": "flex-wrap"
+      },
       "table": {
-        "item": "border border-muted"
+        "item": [
+          "border border-default hover:not-has-disabled:not-has-focus-visible:not-has-data-[state=checked]:bg-elevated/50",
+          "transition-colors"
+        ]
       }
     },
     "size": {
@@ -86,11 +93,71 @@ export default {
         "legend": "after:content-['*'] after:ms-0.5 after:text-error"
       }
     },
+    "highlight": {
+      "true": {},
+      "false": {}
+    },
     "disabled": {
       "true": {}
     }
   },
   "compoundVariants": [
+    {
+      "color": "primary" as typeof color[number],
+      "variant": "table" as typeof variant[number],
+      "class": {
+        "item": "outline-primary/25 has-focus-visible:outline-3 not-has-disabled:has-focus-visible:border-primary has-focus-visible:z-[1]"
+      }
+    },
+    {
+      "color": "secondary" as typeof color[number],
+      "variant": "table" as typeof variant[number],
+      "class": {
+        "item": "outline-secondary/25 has-focus-visible:outline-3 not-has-disabled:has-focus-visible:border-secondary has-focus-visible:z-[1]"
+      }
+    },
+    {
+      "color": "success" as typeof color[number],
+      "variant": "table" as typeof variant[number],
+      "class": {
+        "item": "outline-success/25 has-focus-visible:outline-3 not-has-disabled:has-focus-visible:border-success has-focus-visible:z-[1]"
+      }
+    },
+    {
+      "color": "info" as typeof color[number],
+      "variant": "table" as typeof variant[number],
+      "class": {
+        "item": "outline-info/25 has-focus-visible:outline-3 not-has-disabled:has-focus-visible:border-info has-focus-visible:z-[1]"
+      }
+    },
+    {
+      "color": "warning" as typeof color[number],
+      "variant": "table" as typeof variant[number],
+      "class": {
+        "item": "outline-warning/25 has-focus-visible:outline-3 not-has-disabled:has-focus-visible:border-warning has-focus-visible:z-[1]"
+      }
+    },
+    {
+      "color": "error" as typeof color[number],
+      "variant": "table" as typeof variant[number],
+      "class": {
+        "item": "outline-error/25 has-focus-visible:outline-3 not-has-disabled:has-focus-visible:border-error has-focus-visible:z-[1]"
+      }
+    },
+    {
+      "color": "neutral" as typeof color[number],
+      "variant": "table" as typeof variant[number],
+      "class": {
+        "item": "outline-inverted/25 has-focus-visible:outline-3 not-has-disabled:has-focus-visible:border-inverted has-focus-visible:z-[1]"
+      }
+    },
+    {
+      "variant": "table" as typeof variant[number],
+      "highlight": false,
+      "class": {
+        "item": "hover:not-has-disabled:not-has-focus-visible:not-has-data-[state=checked]:border-accented"
+      }
+    },
     {
       "size": "xs" as typeof size[number],
       "variant": "table" as typeof variant[number],
@@ -200,6 +267,7 @@ export default {
     }
   ],
   "defaultVariants": {
+    "highlight": false,
     "size": "md" as typeof size[number],
     "variant": "list" as typeof variant[number],
     "color": "primary" as typeof color[number]

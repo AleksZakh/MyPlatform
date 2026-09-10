@@ -37,7 +37,7 @@ export default {
     "trailing": "absolute inset-y-0 end-0 flex items-center",
     "trailingIcon": "shrink-0 text-dimmed",
     "segment": [
-      "rounded text-center outline-hidden data-placeholder:text-dimmed data-[segment=literal]:text-muted data-invalid:text-error data-disabled:cursor-not-allowed data-disabled:opacity-75",
+      "rounded-sm text-center outline-hidden data-placeholder:text-dimmed data-[segment=literal]:text-muted data-invalid:text-error data-disabled:cursor-not-allowed data-disabled:opacity-75",
       "transition-colors"
     ],
     "separatorIcon": "shrink-0 size-4 text-muted"
@@ -111,10 +111,10 @@ export default {
     },
     "variant": {
       "outline": "text-highlighted bg-default ring ring-inset ring-accented",
-      "soft": "text-highlighted bg-elevated/50 hover:bg-elevated focus:bg-elevated disabled:bg-elevated/50",
+      "soft": "text-highlighted bg-elevated/50 hover:bg-elevated has-focus:bg-elevated disabled:bg-elevated/50",
       "subtle": "text-highlighted bg-elevated ring ring-inset ring-accented",
-      "ghost": "text-highlighted bg-transparent hover:bg-elevated focus:bg-elevated disabled:bg-transparent dark:disabled:bg-transparent",
-      "none": "text-highlighted bg-transparent"
+      "ghost": "text-highlighted bg-transparent hover:bg-elevated has-focus:bg-elevated disabled:bg-transparent dark:disabled:bg-transparent",
+      "none": "text-highlighted bg-transparent has-focus:outline-none"
     },
     "color": {
       "primary": "",
@@ -146,42 +146,12 @@ export default {
   },
   "compoundVariants": [
     {
-      "variant": "outline" as typeof variant[number],
-      "class": {
-        "segment": "focus:bg-elevated"
-      }
-    },
-    {
-      "variant": "soft" as typeof variant[number],
-      "class": {
-        "segment": "focus:bg-accented/50 group-hover:focus:bg-accented"
-      }
-    },
-    {
-      "variant": "subtle" as typeof variant[number],
-      "class": {
-        "segment": "focus:bg-accented"
-      }
-    },
-    {
-      "variant": "ghost" as typeof variant[number],
-      "class": {
-        "segment": "focus:bg-elevated group-hover:focus:bg-accented"
-      }
-    },
-    {
-      "variant": "none" as typeof variant[number],
-      "class": {
-        "segment": "focus:bg-elevated"
-      }
-    },
-    {
       "color": "primary" as typeof color[number],
       "variant": [
         "outline" as typeof variant[number],
         "subtle" as typeof variant[number]
       ],
-      "class": "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+      "class": "outline-primary/25 has-focus-visible:outline-3 has-focus-visible:ring-primary"
     },
     {
       "color": "secondary" as typeof color[number],
@@ -189,7 +159,7 @@ export default {
         "outline" as typeof variant[number],
         "subtle" as typeof variant[number]
       ],
-      "class": "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-secondary"
+      "class": "outline-secondary/25 has-focus-visible:outline-3 has-focus-visible:ring-secondary"
     },
     {
       "color": "success" as typeof color[number],
@@ -197,7 +167,7 @@ export default {
         "outline" as typeof variant[number],
         "subtle" as typeof variant[number]
       ],
-      "class": "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-success"
+      "class": "outline-success/25 has-focus-visible:outline-3 has-focus-visible:ring-success"
     },
     {
       "color": "info" as typeof color[number],
@@ -205,7 +175,7 @@ export default {
         "outline" as typeof variant[number],
         "subtle" as typeof variant[number]
       ],
-      "class": "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-info"
+      "class": "outline-info/25 has-focus-visible:outline-3 has-focus-visible:ring-info"
     },
     {
       "color": "warning" as typeof color[number],
@@ -213,7 +183,7 @@ export default {
         "outline" as typeof variant[number],
         "subtle" as typeof variant[number]
       ],
-      "class": "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-warning"
+      "class": "outline-warning/25 has-focus-visible:outline-3 has-focus-visible:ring-warning"
     },
     {
       "color": "error" as typeof color[number],
@@ -221,7 +191,55 @@ export default {
         "outline" as typeof variant[number],
         "subtle" as typeof variant[number]
       ],
-      "class": "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-error"
+      "class": "outline-error/25 has-focus-visible:outline-3 has-focus-visible:ring-error"
+    },
+    {
+      "color": "primary" as typeof color[number],
+      "variant": [
+        "soft" as typeof variant[number],
+        "ghost" as typeof variant[number]
+      ],
+      "class": "outline-primary/25 has-focus-visible:outline-3"
+    },
+    {
+      "color": "secondary" as typeof color[number],
+      "variant": [
+        "soft" as typeof variant[number],
+        "ghost" as typeof variant[number]
+      ],
+      "class": "outline-secondary/25 has-focus-visible:outline-3"
+    },
+    {
+      "color": "success" as typeof color[number],
+      "variant": [
+        "soft" as typeof variant[number],
+        "ghost" as typeof variant[number]
+      ],
+      "class": "outline-success/25 has-focus-visible:outline-3"
+    },
+    {
+      "color": "info" as typeof color[number],
+      "variant": [
+        "soft" as typeof variant[number],
+        "ghost" as typeof variant[number]
+      ],
+      "class": "outline-info/25 has-focus-visible:outline-3"
+    },
+    {
+      "color": "warning" as typeof color[number],
+      "variant": [
+        "soft" as typeof variant[number],
+        "ghost" as typeof variant[number]
+      ],
+      "class": "outline-warning/25 has-focus-visible:outline-3"
+    },
+    {
+      "color": "error" as typeof color[number],
+      "variant": [
+        "soft" as typeof variant[number],
+        "ghost" as typeof variant[number]
+      ],
+      "class": "outline-error/25 has-focus-visible:outline-3"
     },
     {
       "color": "primary" as typeof color[number],
@@ -259,7 +277,15 @@ export default {
         "outline" as typeof variant[number],
         "subtle" as typeof variant[number]
       ],
-      "class": "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-inverted"
+      "class": "outline-inverted/25 has-focus-visible:outline-3 has-focus-visible:ring-inverted"
+    },
+    {
+      "color": "neutral" as typeof color[number],
+      "variant": [
+        "soft" as typeof variant[number],
+        "ghost" as typeof variant[number]
+      ],
+      "class": "outline-inverted/25 has-focus-visible:outline-3"
     },
     {
       "color": "neutral" as typeof color[number],
@@ -350,6 +376,36 @@ export default {
       "fixed": false,
       "size": "lg" as typeof size[number],
       "class": "md:text-sm"
+    },
+    {
+      "variant": "outline" as typeof variant[number],
+      "class": {
+        "segment": "focus:bg-elevated"
+      }
+    },
+    {
+      "variant": "soft" as typeof variant[number],
+      "class": {
+        "segment": "focus:bg-accented/50 group-hover:focus:bg-accented"
+      }
+    },
+    {
+      "variant": "subtle" as typeof variant[number],
+      "class": {
+        "segment": "focus:bg-accented"
+      }
+    },
+    {
+      "variant": "ghost" as typeof variant[number],
+      "class": {
+        "segment": "focus:bg-elevated group-hover:focus:bg-accented"
+      }
+    },
+    {
+      "variant": "none" as typeof variant[number],
+      "class": {
+        "segment": "focus:bg-elevated"
+      }
     }
   ],
   "defaultVariants": {

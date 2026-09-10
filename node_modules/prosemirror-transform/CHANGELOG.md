@@ -1,3 +1,9 @@
+## 1.12.1 (2026-09-02)
+
+### Bug fixes
+
+Fix an issue where replace step fitting could create an invalid slice, and then crash or loop forever.
+
 ## 1.12.0 (2026-03-30)
 
 ### Bug fixes

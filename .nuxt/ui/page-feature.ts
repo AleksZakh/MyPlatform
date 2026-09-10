@@ -20,7 +20,7 @@ export default {
     "to": {
       "true": {
         "root": [
-          "has-focus-visible:ring-2 has-focus-visible:ring-primary",
+          "outline-primary/25 has-focus-visible:outline-3",
           "transition"
         ]
       }

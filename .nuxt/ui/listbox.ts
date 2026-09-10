@@ -110,13 +110,27 @@ export default {
       }
     },
     "color": {
-      "primary": "",
-      "secondary": "",
-      "success": "",
-      "info": "",
-      "warning": "",
-      "error": "",
-      "neutral": ""
+      "primary": {
+        "root": "outline-primary/25 has-focus-visible:outline-3 has-focus-visible:ring-primary"
+      },
+      "secondary": {
+        "root": "outline-secondary/25 has-focus-visible:outline-3 has-focus-visible:ring-secondary"
+      },
+      "success": {
+        "root": "outline-success/25 has-focus-visible:outline-3 has-focus-visible:ring-success"
+      },
+      "info": {
+        "root": "outline-info/25 has-focus-visible:outline-3 has-focus-visible:ring-info"
+      },
+      "warning": {
+        "root": "outline-warning/25 has-focus-visible:outline-3 has-focus-visible:ring-warning"
+      },
+      "error": {
+        "root": "outline-error/25 has-focus-visible:outline-3 has-focus-visible:ring-error"
+      },
+      "neutral": {
+        "root": "outline-inverted/25 has-focus-visible:outline-3 has-focus-visible:ring-inverted"
+      }
     },
     "virtualize": {
       "true": {
@@ -187,6 +201,7 @@ export default {
     }
   ],
   "defaultVariants": {
+    "color": "primary" as typeof color[number],
     "size": "md" as typeof size[number]
   }
 }

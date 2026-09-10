@@ -22,11 +22,11 @@ export default {
     "item": "w-full",
     "listWithChildren": "border-s border-default",
     "itemWithChildren": "ps-1.5 -ms-px",
-    "link": "relative group w-full flex items-center text-sm select-none before:absolute before:inset-y-px before:inset-x-0 before:z-[-1] before:rounded-md focus:outline-none focus-visible:outline-none focus-visible:before:ring-inset focus-visible:before:ring-2",
+    "link": "relative group w-full flex items-center text-sm select-none before:absolute before:inset-y-px before:inset-x-0 before:z-[-1] before:rounded-md focus:outline-none focus-visible:outline-none focus-visible:before:outline-3",
     "linkLeadingIcon": "shrink-0 relative",
     "linkLabel": "truncate",
     "linkTrailing": "ms-auto inline-flex gap-1.5 items-center",
-    "linkTrailingIcon": "shrink-0 transform transition-transform duration-200 group-data-expanded:rotate-180"
+    "linkTrailingIcon": "shrink-0 transform transition-transform duration-200 ease-out motion-reduce:transition-none group-data-expanded:rotate-180"
   },
   "variants": {
     "virtualize": {
@@ -36,25 +36,25 @@ export default {
     },
     "color": {
       "primary": {
-        "link": "focus-visible:before:ring-primary"
+        "link": "before:outline-primary/25"
       },
       "secondary": {
-        "link": "focus-visible:before:ring-secondary"
+        "link": "before:outline-secondary/25"
       },
       "success": {
-        "link": "focus-visible:before:ring-success"
+        "link": "before:outline-success/25"
       },
       "info": {
-        "link": "focus-visible:before:ring-info"
+        "link": "before:outline-info/25"
       },
       "warning": {
-        "link": "focus-visible:before:ring-warning"
+        "link": "before:outline-warning/25"
       },
       "error": {
-        "link": "focus-visible:before:ring-error"
+        "link": "before:outline-error/25"
       },
       "neutral": {
-        "link": "focus-visible:before:ring-inverted"
+        "link": "before:outline-inverted/25"
       }
     },
     "size": {

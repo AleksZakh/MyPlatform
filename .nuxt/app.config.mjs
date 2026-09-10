@@ -51,6 +51,7 @@ const inlineConfig = {
       "reload": "i-lucide-rotate-ccw",
       "search": "i-lucide-search",
       "stop": "i-lucide-square",
+      "star": "i-lucide-star",
       "success": "i-lucide-circle-check",
       "system": "i-lucide-monitor",
       "tip": "i-lucide-lightbulb",

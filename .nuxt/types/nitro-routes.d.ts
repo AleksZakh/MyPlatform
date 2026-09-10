@@ -44,6 +44,9 @@ declare module "nitropack/types" {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/[id].get').default>>>>
       'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/[id].put').default>>>>
     }
+    '/api/incoming-control/:id.put copy': {
+      'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/[id].put copy').default>>>>
+    }
     '/api/incoming-control/fieldsInfo': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/fieldsInfo.get').default>>>>
     }

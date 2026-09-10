@@ -24,10 +24,6 @@ import { RuntimeConfig as UserRuntimeConfig, PublicRuntimeConfig as UserPublicRu
       databaseUrl: string,
    },
 
-   nitro: {
-      envPrefix: string,
-   },
-
    session: {
       name: string,
 

@@ -1,40 +1,41 @@
 declare global {
-  const H3Error: typeof import('../../node_modules/h3').H3Error
-  const H3Event: typeof import('../../node_modules/h3').H3Event
+  const H3Error: typeof import('../../node_modules/h3/dist/index').H3Error
+  const H3Event: typeof import('../../node_modules/h3/dist/index').H3Event
   const __buildAssetsURL: typeof import('../../node_modules/@nuxt/nitro-server/dist/runtime/utils/paths').buildAssetsURL
   const __publicAssetsURL: typeof import('../../node_modules/@nuxt/nitro-server/dist/runtime/utils/paths').publicAssetsURL
   const adCache: typeof import('../../server/utils/adCache').adCache
-  const appendCorsHeaders: typeof import('../../node_modules/h3').appendCorsHeaders
-  const appendCorsPreflightHeaders: typeof import('../../node_modules/h3').appendCorsPreflightHeaders
-  const appendHeader: typeof import('../../node_modules/h3').appendHeader
-  const appendHeaders: typeof import('../../node_modules/h3').appendHeaders
-  const appendResponseHeader: typeof import('../../node_modules/h3').appendResponseHeader
-  const appendResponseHeaders: typeof import('../../node_modules/h3').appendResponseHeaders
-  const assertMethod: typeof import('../../node_modules/h3').assertMethod
+  const appendCorsHeaders: typeof import('../../node_modules/h3/dist/index').appendCorsHeaders
+  const appendCorsPreflightHeaders: typeof import('../../node_modules/h3/dist/index').appendCorsPreflightHeaders
+  const appendHeader: typeof import('../../node_modules/h3/dist/index').appendHeader
+  const appendHeaders: typeof import('../../node_modules/h3/dist/index').appendHeaders
+  const appendResponseHeader: typeof import('../../node_modules/h3/dist/index').appendResponseHeader
+  const appendResponseHeaders: typeof import('../../node_modules/h3/dist/index').appendResponseHeaders
+  const assertMethod: typeof import('../../node_modules/h3/dist/index').assertMethod
   const cachedEventHandler: typeof import('../../node_modules/nitropack/dist/runtime/internal/cache').cachedEventHandler
   const cachedFunction: typeof import('../../node_modules/nitropack/dist/runtime/internal/cache').cachedFunction
-  const callNodeListener: typeof import('../../node_modules/h3').callNodeListener
+  const callNodeListener: typeof import('../../node_modules/h3/dist/index').callNodeListener
   const cleanOldFilesFromDisk: typeof import('../../server/utils/fileUploadHandler').cleanOldFilesFromDisk
-  const clearResponseHeaders: typeof import('../../node_modules/h3').clearResponseHeaders
-  const clearSession: typeof import('../../node_modules/h3').clearSession
+  const clearResponseHeaders: typeof import('../../node_modules/h3/dist/index').clearResponseHeaders
+  const clearSession: typeof import('../../node_modules/h3/dist/index').clearSession
   const clearUserSession: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/session').clearUserSession
+  const computeChangedFields: typeof import('../../server/utils/auditLog').computeChangedFields
   const containsPathTraversal: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/path-safety').containsPathTraversal
-  const createApp: typeof import('../../node_modules/h3').createApp
-  const createAppEventHandler: typeof import('../../node_modules/h3').createAppEventHandler
-  const createError: typeof import('../../node_modules/h3').createError
-  const createEvent: typeof import('../../node_modules/h3').createEvent
-  const createEventStream: typeof import('../../node_modules/h3').createEventStream
-  const createRouter: typeof import('../../node_modules/h3').createRouter
-  const defaultContentType: typeof import('../../node_modules/h3').defaultContentType
+  const createApp: typeof import('../../node_modules/h3/dist/index').createApp
+  const createAppEventHandler: typeof import('../../node_modules/h3/dist/index').createAppEventHandler
+  const createError: typeof import('../../node_modules/h3/dist/index').createError
+  const createEvent: typeof import('../../node_modules/h3/dist/index').createEvent
+  const createEventStream: typeof import('../../node_modules/h3/dist/index').createEventStream
+  const createRouter: typeof import('../../node_modules/h3/dist/index').createRouter
+  const defaultContentType: typeof import('../../node_modules/h3/dist/index').defaultContentType
   const defineAppConfig: typeof import('../../node_modules/@nuxt/nitro-server/dist/runtime/utils/config').defineAppConfig
   const defineCachedEventHandler: typeof import('../../node_modules/nitropack/dist/runtime/internal/cache').defineCachedEventHandler
   const defineCachedFunction: typeof import('../../node_modules/nitropack/dist/runtime/internal/cache').defineCachedFunction
-  const defineEventHandler: typeof import('../../node_modules/h3').defineEventHandler
-  const defineLazyEventHandler: typeof import('../../node_modules/h3').defineLazyEventHandler
+  const defineEventHandler: typeof import('../../node_modules/h3/dist/index').defineEventHandler
+  const defineLazyEventHandler: typeof import('../../node_modules/h3/dist/index').defineLazyEventHandler
   const defineNitroErrorHandler: typeof import('../../node_modules/nitropack/dist/runtime/internal/error/utils').defineNitroErrorHandler
   const defineNitroPlugin: typeof import('../../node_modules/nitropack/dist/runtime/internal/plugin').defineNitroPlugin
-  const defineNodeListener: typeof import('../../node_modules/h3').defineNodeListener
-  const defineNodeMiddleware: typeof import('../../node_modules/h3').defineNodeMiddleware
+  const defineNodeListener: typeof import('../../node_modules/h3/dist/index').defineNodeListener
+  const defineNodeMiddleware: typeof import('../../node_modules/h3/dist/index').defineNodeMiddleware
   const defineOAuthAppleEventHandler: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/lib/oauth/apple').defineOAuthAppleEventHandler
   const defineOAuthAtlassianEventHandler: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/lib/oauth/atlassian').defineOAuthAtlassianEventHandler
   const defineOAuthAuth0EventHandler: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/lib/oauth/auth0').defineOAuthAuth0EventHandler
@@ -84,136 +85,140 @@ declare global {
   const defineOAuthYandexEventHandler: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/lib/oauth/yandex').defineOAuthYandexEventHandler
   const defineOAuthZitadelEventHandler: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/lib/oauth/zitadel').defineOAuthZitadelEventHandler
   const defineRenderHandler: typeof import('../../node_modules/nitropack/dist/runtime/internal/renderer').defineRenderHandler
-  const defineRequestMiddleware: typeof import('../../node_modules/h3').defineRequestMiddleware
-  const defineResponseMiddleware: typeof import('../../node_modules/h3').defineResponseMiddleware
+  const defineRequestMiddleware: typeof import('../../node_modules/h3/dist/index').defineRequestMiddleware
+  const defineResponseMiddleware: typeof import('../../node_modules/h3/dist/index').defineResponseMiddleware
   const defineRouteMeta: typeof import('../../node_modules/nitropack/dist/runtime/internal/meta').defineRouteMeta
   const defineTask: typeof import('../../node_modules/nitropack/dist/runtime/internal/task').defineTask
-  const defineWebSocket: typeof import('../../node_modules/h3').defineWebSocket
-  const defineWebSocketHandler: typeof import('../../node_modules/h3').defineWebSocketHandler
-  const deleteCookie: typeof import('../../node_modules/h3').deleteCookie
+  const defineWebSocket: typeof import('../../node_modules/h3/dist/index').defineWebSocket
+  const defineWebSocketHandler: typeof import('../../node_modules/h3/dist/index').defineWebSocketHandler
+  const deleteCookie: typeof import('../../node_modules/h3/dist/index').deleteCookie
   const deleteFile: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/storage').deleteFile
   const deleteUploadedFile: typeof import('../../server/utils/fileUtils').deleteUploadedFile
-  const dynamicEventHandler: typeof import('../../node_modules/h3').dynamicEventHandler
+  const dynamicEventHandler: typeof import('../../node_modules/h3/dist/index').dynamicEventHandler
   const ensureSafeBasename: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/path-safety').ensureSafeBasename
-  const eventHandler: typeof import('../../node_modules/h3').eventHandler
-  const fetchWithEvent: typeof import('../../node_modules/h3').fetchWithEvent
+  const eventHandler: typeof import('../../node_modules/h3/dist/index').eventHandler
+  const fetchWithEvent: typeof import('../../node_modules/h3/dist/index').fetchWithEvent
   const fileExists: typeof import('../../server/utils/fileUtils').fileExists
   const folderNameGenerator: typeof import('../../server/utils/folderNameGenerator').folderNameGenerator
-  const fromNodeMiddleware: typeof import('../../node_modules/h3').fromNodeMiddleware
-  const fromPlainHandler: typeof import('../../node_modules/h3').fromPlainHandler
-  const fromWebHandler: typeof import('../../node_modules/h3').fromWebHandler
+  const fromNodeMiddleware: typeof import('../../node_modules/h3/dist/index').fromNodeMiddleware
+  const fromPlainHandler: typeof import('../../node_modules/h3/dist/index').fromPlainHandler
+  const fromWebHandler: typeof import('../../node_modules/h3/dist/index').fromWebHandler
+  const getActorEmail: typeof import('../../server/utils/auditLog').getActorEmail
   const getAtprotoClientMetadata: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/atproto').getAtprotoClientMetadata
-  const getCookie: typeof import('../../node_modules/h3').getCookie
+  const getCookie: typeof import('../../node_modules/h3/dist/index').getCookie
   const getFileInfo: typeof import('../../server/utils/fileUtils').getFileInfo
   const getFileLocally: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/storage').getFileLocally
   const getFilesLocally: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/storage').getFilesLocally
   const getFullFilePath: typeof import('../../server/utils/fileUtils').getFullFilePath
-  const getHeader: typeof import('../../node_modules/h3').getHeader
-  const getHeaders: typeof import('../../node_modules/h3').getHeaders
-  const getMethod: typeof import('../../node_modules/h3').getMethod
-  const getProxyRequestHeaders: typeof import('../../node_modules/h3').getProxyRequestHeaders
-  const getQuery: typeof import('../../node_modules/h3').getQuery
-  const getRequestFingerprint: typeof import('../../node_modules/h3').getRequestFingerprint
-  const getRequestHeader: typeof import('../../node_modules/h3').getRequestHeader
-  const getRequestHeaders: typeof import('../../node_modules/h3').getRequestHeaders
-  const getRequestHost: typeof import('../../node_modules/h3').getRequestHost
-  const getRequestIP: typeof import('../../node_modules/h3').getRequestIP
-  const getRequestPath: typeof import('../../node_modules/h3').getRequestPath
-  const getRequestProtocol: typeof import('../../node_modules/h3').getRequestProtocol
-  const getRequestURL: typeof import('../../node_modules/h3').getRequestURL
-  const getRequestWebStream: typeof import('../../node_modules/h3').getRequestWebStream
-  const getResponseHeader: typeof import('../../node_modules/h3').getResponseHeader
-  const getResponseHeaders: typeof import('../../node_modules/h3').getResponseHeaders
-  const getResponseStatus: typeof import('../../node_modules/h3').getResponseStatus
-  const getResponseStatusText: typeof import('../../node_modules/h3').getResponseStatusText
+  const getHeader: typeof import('../../node_modules/h3/dist/index').getHeader
+  const getHeaders: typeof import('../../node_modules/h3/dist/index').getHeaders
+  const getMethod: typeof import('../../node_modules/h3/dist/index').getMethod
+  const getProxyRequestHeaders: typeof import('../../node_modules/h3/dist/index').getProxyRequestHeaders
+  const getQuery: typeof import('../../node_modules/h3/dist/index').getQuery
+  const getRequestFingerprint: typeof import('../../node_modules/h3/dist/index').getRequestFingerprint
+  const getRequestHeader: typeof import('../../node_modules/h3/dist/index').getRequestHeader
+  const getRequestHeaders: typeof import('../../node_modules/h3/dist/index').getRequestHeaders
+  const getRequestHost: typeof import('../../node_modules/h3/dist/index').getRequestHost
+  const getRequestIP: typeof import('../../node_modules/h3/dist/index').getRequestIP
+  const getRequestMeta: typeof import('../../server/utils/auditLog').getRequestMeta
+  const getRequestPath: typeof import('../../node_modules/h3/dist/index').getRequestPath
+  const getRequestProtocol: typeof import('../../node_modules/h3/dist/index').getRequestProtocol
+  const getRequestURL: typeof import('../../node_modules/h3/dist/index').getRequestURL
+  const getRequestWebStream: typeof import('../../node_modules/h3/dist/index').getRequestWebStream
+  const getResponseHeader: typeof import('../../node_modules/h3/dist/index').getResponseHeader
+  const getResponseHeaders: typeof import('../../node_modules/h3/dist/index').getResponseHeaders
+  const getResponseStatus: typeof import('../../node_modules/h3/dist/index').getResponseStatus
+  const getResponseStatusText: typeof import('../../node_modules/h3/dist/index').getResponseStatusText
   const getRouteRules: typeof import('../../node_modules/nitropack/dist/runtime/internal/route-rules').getRouteRules
-  const getRouterParam: typeof import('../../node_modules/h3').getRouterParam
-  const getRouterParams: typeof import('../../node_modules/h3').getRouterParams
-  const getSession: typeof import('../../node_modules/h3').getSession
+  const getRouterParam: typeof import('../../node_modules/h3/dist/index').getRouterParam
+  const getRouterParams: typeof import('../../node_modules/h3/dist/index').getRouterParams
+  const getSession: typeof import('../../node_modules/h3/dist/index').getSession
   const getUserGroups: typeof import('../../server/utils/ad').getUserGroups
   const getUserSession: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/session').getUserSession
-  const getValidatedQuery: typeof import('../../node_modules/h3').getValidatedQuery
-  const getValidatedRouterParams: typeof import('../../node_modules/h3').getValidatedRouterParams
-  const handleCacheHeaders: typeof import('../../node_modules/h3').handleCacheHeaders
-  const handleCors: typeof import('../../node_modules/h3').handleCors
+  const getValidatedQuery: typeof import('../../node_modules/h3/dist/index').getValidatedQuery
+  const getValidatedRouterParams: typeof import('../../node_modules/h3/dist/index').getValidatedRouterParams
+  const handleCacheHeaders: typeof import('../../node_modules/h3/dist/index').handleCacheHeaders
+  const handleCors: typeof import('../../node_modules/h3/dist/index').handleCors
   const handleFileUpload: typeof import('../../server/utils/fileUploadHandler').handleFileUpload
   const hashPassword: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/password').hashPassword
-  const isCorsOriginAllowed: typeof import('../../node_modules/h3').isCorsOriginAllowed
-  const isError: typeof import('../../node_modules/h3').isError
-  const isEvent: typeof import('../../node_modules/h3').isEvent
-  const isEventHandler: typeof import('../../node_modules/h3').isEventHandler
-  const isMethod: typeof import('../../node_modules/h3').isMethod
-  const isPreflightRequest: typeof import('../../node_modules/h3').isPreflightRequest
+  const isCorsOriginAllowed: typeof import('../../node_modules/h3/dist/index').isCorsOriginAllowed
+  const isError: typeof import('../../node_modules/h3/dist/index').isError
+  const isEvent: typeof import('../../node_modules/h3/dist/index').isEvent
+  const isEventHandler: typeof import('../../node_modules/h3/dist/index').isEventHandler
+  const isMethod: typeof import('../../node_modules/h3/dist/index').isMethod
+  const isPreflightRequest: typeof import('../../node_modules/h3/dist/index').isPreflightRequest
   const isSafeBasename: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/path-safety').isSafeBasename
-  const isStream: typeof import('../../node_modules/h3').isStream
-  const isWebResponse: typeof import('../../node_modules/h3').isWebResponse
-  const lazyEventHandler: typeof import('../../node_modules/h3').lazyEventHandler
+  const isStream: typeof import('../../node_modules/h3/dist/index').isStream
+  const isWebResponse: typeof import('../../node_modules/h3/dist/index').isWebResponse
+  const lazyEventHandler: typeof import('../../node_modules/h3/dist/index').lazyEventHandler
+  const logAudit: typeof import('../../server/utils/auditLog').logAudit
   const logger: typeof import('../../server/utils/logger').logger
   const nitroPlugin: typeof import('../../node_modules/nitropack/dist/runtime/internal/plugin').nitroPlugin
   const normalizeRelative: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/path-safety').normalizeRelative
-  const parseCookies: typeof import('../../node_modules/h3').parseCookies
+  const parseCookies: typeof import('../../node_modules/h3/dist/index').parseCookies
   const parseDataUrl: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/storage').parseDataUrl
   const parseDate: typeof import('../../server/utils/fileUploadHandler').parseDate
   const passwordNeedsReHash: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/password').passwordNeedsReHash
-  const promisifyNodeListener: typeof import('../../node_modules/h3').promisifyNodeListener
-  const proxyRequest: typeof import('../../node_modules/h3').proxyRequest
-  const readBody: typeof import('../../node_modules/h3').readBody
-  const readFormData: typeof import('../../node_modules/h3').readFormData
-  const readMultipartFormData: typeof import('../../node_modules/h3').readMultipartFormData
-  const readRawBody: typeof import('../../node_modules/h3').readRawBody
-  const readValidatedBody: typeof import('../../node_modules/h3').readValidatedBody
-  const removeResponseHeader: typeof import('../../node_modules/h3').removeResponseHeader
+  const promisifyNodeListener: typeof import('../../node_modules/h3/dist/index').promisifyNodeListener
+  const proxyRequest: typeof import('../../node_modules/h3/dist/index').proxyRequest
+  const readBody: typeof import('../../node_modules/h3/dist/index').readBody
+  const readFormData: typeof import('../../node_modules/h3/dist/index').readFormData
+  const readMultipartFormData: typeof import('../../node_modules/h3/dist/index').readMultipartFormData
+  const readRawBody: typeof import('../../node_modules/h3/dist/index').readRawBody
+  const readValidatedBody: typeof import('../../node_modules/h3/dist/index').readValidatedBody
+  const removeResponseHeader: typeof import('../../node_modules/h3/dist/index').removeResponseHeader
   const replaceUserSession: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/session').replaceUserSession
   const requireUserSession: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/session').requireUserSession
   const resolveAndEnsureInside: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/path-safety').resolveAndEnsureInside
   const retrieveFileLocally: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/storage').retrieveFileLocally
   const runTask: typeof import('../../node_modules/nitropack/dist/runtime/internal/task').runTask
-  const sanitizeStatusCode: typeof import('../../node_modules/h3').sanitizeStatusCode
-  const sanitizeStatusMessage: typeof import('../../node_modules/h3').sanitizeStatusMessage
-  const sealSession: typeof import('../../node_modules/h3').sealSession
-  const send: typeof import('../../node_modules/h3').send
-  const sendError: typeof import('../../node_modules/h3').sendError
-  const sendIterable: typeof import('../../node_modules/h3').sendIterable
-  const sendNoContent: typeof import('../../node_modules/h3').sendNoContent
-  const sendProxy: typeof import('../../node_modules/h3').sendProxy
-  const sendRedirect: typeof import('../../node_modules/h3').sendRedirect
-  const sendStream: typeof import('../../node_modules/h3').sendStream
-  const sendWebResponse: typeof import('../../node_modules/h3').sendWebResponse
-  const serveStatic: typeof import('../../node_modules/h3').serveStatic
+  const sanitizeStatusCode: typeof import('../../node_modules/h3/dist/index').sanitizeStatusCode
+  const sanitizeStatusMessage: typeof import('../../node_modules/h3/dist/index').sanitizeStatusMessage
+  const sealSession: typeof import('../../node_modules/h3/dist/index').sealSession
+  const send: typeof import('../../node_modules/h3/dist/index').send
+  const sendError: typeof import('../../node_modules/h3/dist/index').sendError
+  const sendIterable: typeof import('../../node_modules/h3/dist/index').sendIterable
+  const sendNoContent: typeof import('../../node_modules/h3/dist/index').sendNoContent
+  const sendProxy: typeof import('../../node_modules/h3/dist/index').sendProxy
+  const sendRedirect: typeof import('../../node_modules/h3/dist/index').sendRedirect
+  const sendStream: typeof import('../../node_modules/h3/dist/index').sendStream
+  const sendWebResponse: typeof import('../../node_modules/h3/dist/index').sendWebResponse
+  const serveStatic: typeof import('../../node_modules/h3/dist/index').serveStatic
   const sessionHooks: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/session').sessionHooks
-  const setCookie: typeof import('../../node_modules/h3').setCookie
-  const setHeader: typeof import('../../node_modules/h3').setHeader
-  const setHeaders: typeof import('../../node_modules/h3').setHeaders
-  const setResponseHeader: typeof import('../../node_modules/h3').setResponseHeader
-  const setResponseHeaders: typeof import('../../node_modules/h3').setResponseHeaders
-  const setResponseStatus: typeof import('../../node_modules/h3').setResponseStatus
+  const setCookie: typeof import('../../node_modules/h3/dist/index').setCookie
+  const setHeader: typeof import('../../node_modules/h3/dist/index').setHeader
+  const setHeaders: typeof import('../../node_modules/h3/dist/index').setHeaders
+  const setResponseHeader: typeof import('../../node_modules/h3/dist/index').setResponseHeader
+  const setResponseHeaders: typeof import('../../node_modules/h3/dist/index').setResponseHeaders
+  const setResponseStatus: typeof import('../../node_modules/h3/dist/index').setResponseStatus
   const setUserSession: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/session').setUserSession
-  const splitCookiesString: typeof import('../../node_modules/h3').splitCookiesString
+  const softDelete: typeof import('../../server/utils/auditLog').softDelete
+  const splitCookiesString: typeof import('../../node_modules/h3/dist/index').splitCookiesString
   const storeFileLocally: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/storage').storeFileLocally
-  const toEventHandler: typeof import('../../node_modules/h3').toEventHandler
-  const toNodeListener: typeof import('../../node_modules/h3').toNodeListener
-  const toPlainHandler: typeof import('../../node_modules/h3').toPlainHandler
-  const toWebHandler: typeof import('../../node_modules/h3').toWebHandler
-  const toWebRequest: typeof import('../../node_modules/h3').toWebRequest
-  const unsealSession: typeof import('../../node_modules/h3').unsealSession
+  const toEventHandler: typeof import('../../node_modules/h3/dist/index').toEventHandler
+  const toNodeListener: typeof import('../../node_modules/h3/dist/index').toNodeListener
+  const toPlainHandler: typeof import('../../node_modules/h3/dist/index').toPlainHandler
+  const toWebHandler: typeof import('../../node_modules/h3/dist/index').toWebHandler
+  const toWebRequest: typeof import('../../node_modules/h3/dist/index').toWebRequest
+  const unsealSession: typeof import('../../node_modules/h3/dist/index').unsealSession
   const updateFilePathsInData: typeof import('../../server/utils/fileUploadHandler').updateFilePathsInData
-  const updateSession: typeof import('../../node_modules/h3').updateSession
+  const updateSession: typeof import('../../node_modules/h3/dist/index').updateSession
   const useAppConfig: typeof import('../../node_modules/nitropack/dist/runtime/internal/config').useAppConfig
-  const useBase: typeof import('../../node_modules/h3').useBase
+  const useBase: typeof import('../../node_modules/h3/dist/index').useBase
   const useEvent: typeof import('../../node_modules/nitropack/dist/runtime/internal/context').useEvent
   const useImage: typeof import('../../node_modules/@nuxt/image/dist/runtime/server/utils/image').useImage
   const useNitroApp: typeof import('../../node_modules/nitropack/dist/runtime/internal/app').useNitroApp
   const useRuntimeConfig: typeof import('../../node_modules/nitropack/dist/runtime/internal/config').useRuntimeConfig
-  const useSession: typeof import('../../node_modules/h3').useSession
+  const useSession: typeof import('../../node_modules/h3/dist/index').useSession
   const useStorage: typeof import('../../node_modules/nitropack/dist/runtime/internal/storage').useStorage
   const verifyPassword: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/password').verifyPassword
-  const writeEarlyHints: typeof import('../../node_modules/h3').writeEarlyHints
+  const writeEarlyHints: typeof import('../../node_modules/h3/dist/index').writeEarlyHints
 }
 // for type re-export
 declare global {
   // @ts-ignore
-  export type { EventHandler, EventHandlerRequest, EventHandlerResponse, EventHandlerObject, H3EventContext } from '../../node_modules/h3'
-  import('../../node_modules/h3')
+  export type { EventHandler, EventHandlerRequest, EventHandlerResponse, EventHandlerObject, H3EventContext } from '../../node_modules/h3/dist/index'
+  import('../../node_modules/h3/dist/index')
   // @ts-ignore
   export type { OAuthAppleConfig, OAuthAppleTokens, OAuthAppleUser } from '../../node_modules/nuxt-auth-utils/dist/runtime/server/lib/oauth/apple.d'
   import('../../node_modules/nuxt-auth-utils/dist/runtime/server/lib/oauth/apple.d')
@@ -362,6 +367,9 @@ declare global {
   export type { SessionHooks } from '../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/session.d'
   import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/session.d')
   // @ts-ignore
+  export type { AuditAction, AuditEntityType } from '../../server/utils/auditLog'
+  import('../../server/utils/auditLog')
+  // @ts-ignore
   export type { FileUploadResult, FileProcessingOptions } from '../../server/utils/fileUploadHandler'
   import('../../server/utils/fileUploadHandler')
 }
@@ -433,6 +441,7 @@ export { hashPassword, verifyPassword, passwordNeedsReHash } from '/home/local_a
 export { sessionHooks, getUserSession, setUserSession, replaceUserSession, clearUserSession, requireUserSession } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-auth-utils/dist/runtime/server/utils/session';
 export { getUserGroups } from '/home/local_adm/Projects/MyPlatform/server/utils/ad';
 export { adCache } from '/home/local_adm/Projects/MyPlatform/server/utils/adCache';
+export { logAudit, computeChangedFields, getActorEmail, getRequestMeta, softDelete } from '/home/local_adm/Projects/MyPlatform/server/utils/auditLog';
 export { handleFileUpload, cleanOldFilesFromDisk, parseDate, updateFilePathsInData } from '/home/local_adm/Projects/MyPlatform/server/utils/fileUploadHandler';
 export { getFullFilePath, fileExists, getFileInfo, deleteUploadedFile } from '/home/local_adm/Projects/MyPlatform/server/utils/fileUtils';
 export { folderNameGenerator } from '/home/local_adm/Projects/MyPlatform/server/utils/folderNameGenerator';

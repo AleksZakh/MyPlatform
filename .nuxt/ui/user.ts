@@ -29,6 +29,10 @@ export default {
     },
     "to": {
       "true": {
+        "root": [
+          "rounded-md outline-primary/25 has-focus-visible:outline-3",
+          "transition"
+        ],
         "name": [
           "text-default peer-hover:text-highlighted peer-focus-visible:text-highlighted",
           "transition-colors"
@@ -37,7 +41,7 @@ export default {
           "peer-hover:text-toned peer-focus-visible:text-toned",
           "transition-colors"
         ],
-        "avatar": "transform transition-transform duration-200 group-hover/user:scale-115 group-has-focus-visible/user:scale-115"
+        "avatar": "transform transition-transform ease-out motion-reduce:transition-none group-hover/user:scale-115 group-has-focus-visible/user:scale-115"
       },
       "false": {
         "name": "text-highlighted",

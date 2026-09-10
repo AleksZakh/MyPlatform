@@ -124,7 +124,8 @@ async function main() {
   const locationCache = new Map<string, Map<string, number>>();
 
   console.log('📋 МАППИНГ ПОЛЕЙ:');
-  console.log('   qualDate ← materialReceiptDate (дата поступления материала)');
+  console.log('   receiptDate ← materialReceiptDate (дата поступления материала)');
+  console.log('   qualDate ← qualDocDate (дата документа о качестве)');
   console.log('   qualDocNumber ← qualDocNumber (очистка от "-")');
   console.log('   qualDocPath ← qualDocPath или qualityDocument');
   console.log('   note ← формируется из объекта, места и акта\n');
@@ -280,26 +281,31 @@ async function main() {
         }
 
         // ========================================
-        // 7. ПОСТУПЛЕНИЕ МАТЕРИАЛА (ИСПРАВЛЕННОЕ!)
+        // 7. ПОСТУПЛЕНИЕ МАТЕРИАЛА
         // ========================================
-        // ВАЖНО: qualDate берем из materialReceiptDate (дата поступления материала)
-        // ВАЖНО: qualDocNumber очищаем от "-"
         const cleanQualDocPath = record.qualDocPath || record.qualityDocument || null;
         const cleanQualDocNumber = cleanDocNumber(record.qualDocNumber);
-        
+
         // Формируем примечание с информацией об объекте, месте и акте
         const receiptNote = `Объект: ${objectName}, Место: ${locationName}, Акт: ${record.samplingActNumber || 'без номера'}`;
 
         const receipt = await prisma.receiptMaterial.create({
           data: {
-            // ← ИСПРАВЛЕНО: используем materialReceiptDate
-            qualDate: record.materialReceiptDate || null,
-            // ← ИСПРАВЛЕНО: очищаем от "-"
+            // ← ДАТА ПОСТУПЛЕНИЯ МАТЕРИАЛА (из materialReceiptDate)
+            receiptDate: record.materialReceiptDate || null,
+            
+            // ← ДАТА ДОКУМЕНТА О КАЧЕСТВЕ (из qualDocDate)
+            qualDate: record.qualDocDate || null,
+            
+            // ← Номер документа (очистка от "-")
             qualDocNumber: cleanQualDocNumber,
-            // ← ИСПРАВЛЕНО: путь к документу
+            
+            // ← Путь к документу
             qualDocPath: cleanQualDocPath,
-            // ← ИСПРАВЛЕНО: примечание с объектом и местом
+            
+            // ← Примечание с объектом и местом
             note: receiptNote,
+            
             materialId: materialId,
             authorEmail: record.authorEmail || 'migration@system',
             createdAt: record.createdAt || new Date(),
@@ -372,6 +378,7 @@ async function main() {
         console.error('   Данные записи:', {
           materialName: record.materialName,
           materialReceiptDate: record.materialReceiptDate,
+          qualDocDate: record.qualDocDate,
           qualDocNumber: record.qualDocNumber,
           qualDocPath: record.qualDocPath,
         });
@@ -423,7 +430,8 @@ async function main() {
   const receiptStats = await prisma.$queryRaw`
     SELECT 
       COUNT(*) as total,
-      COUNT("qualDate") as has_date,
+      COUNT("receiptDate") as has_receipt_date,
+      COUNT("qualDate") as has_qual_date,
       COUNT("qualDocNumber") as has_number,
       COUNT("qualDocPath") as has_path,
       COUNT("note") as has_note
@@ -432,7 +440,8 @@ async function main() {
   
   console.log(`   📥 Поступления материалов:`);
   console.log(`      📊 Всего: ${Number(receiptStats[0].total)}`);
-  console.log(`      📅 С датой поступления: ${Number(receiptStats[0].has_date)}`);
+  console.log(`      📅 С датой поступления: ${Number(receiptStats[0].has_receipt_date)}`);
+  console.log(`      📅 С датой документа о качестве: ${Number(receiptStats[0].has_qual_date)}`);
   console.log(`      🔢 С номером документа: ${Number(receiptStats[0].has_number)}`);
   console.log(`      📄 С путем к документу: ${Number(receiptStats[0].has_path)}`);
   console.log(`      📝 С примечанием: ${Number(receiptStats[0].has_note)}`);
@@ -473,7 +482,8 @@ async function main() {
   for (const sample of samples) {
     const act = sample.samplingTests[0];
     console.log(`   📥 Поступление ID: ${sample.id}`);
-    console.log(`      📅 Дата: ${sample.qualDate ? new Date(sample.qualDate).toLocaleDateString('ru-RU') : 'не указана'}`);
+    console.log(`      📅 Дата поступления: ${sample.receiptDate ? new Date(sample.receiptDate).toLocaleDateString('ru-RU') : 'не указана'}`);
+    console.log(`      📅 Дата документа: ${sample.qualDate ? new Date(sample.qualDate).toLocaleDateString('ru-RU') : 'не указана'}`);
     console.log(`      🔢 Номер документа: ${sample.qualDocNumber || 'не указан'}`);
     console.log(`      📦 Материал: ${sample.material?.name || 'неизвестен'}`);
     console.log(`      📝 Примечание: ${sample.note || 'нет'}`);

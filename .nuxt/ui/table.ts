@@ -17,16 +17,16 @@ const loadingColor = [
 
 export default {
   "slots": {
-    "root": "relative overflow-auto",
+    "root": "relative overflow-auto outline-primary/25 focus-visible:outline-3",
     "base": "min-w-full overflow-clip",
     "caption": "sr-only",
     "thead": "relative",
-    "tbody": "isolate [&>tr]:data-[selectable=true]:hover:bg-elevated/50 [&>tr]:data-[selectable=true]:focus-visible:outline-primary divide-y divide-default",
+    "tbody": "isolate [&>tr]:data-[selectable=true]:hover:bg-elevated/50 [&>tr]:data-[selectable=true]:outline-primary/25 [&>tr]:data-[selectable=true]:focus-visible:outline-3 divide-y divide-default",
     "tfoot": "relative",
     "tr": "data-[selected=true]:bg-elevated/50",
-    "th": "px-4 py-3.5 text-sm text-highlighted text-left rtl:text-right font-semibold [&:has([role=checkbox])]:pe-0",
+    "th": "px-4 py-3.5 text-sm text-highlighted text-start font-semibold [&:has([role=checkbox])]:pe-0",
     "td": "p-4 text-sm text-muted whitespace-nowrap [&:has([role=checkbox])]:pe-0",
-    "separator": "absolute z-1 left-0 w-full h-px bg-(--ui-border-accented)",
+    "separator": "absolute z-1 start-0 w-full h-px bg-(--ui-border-accented)",
     "empty": "py-6 text-center text-sm text-muted",
     "loading": "py-6 text-center"
   },
@@ -39,19 +39,24 @@ export default {
     },
     "sticky": {
       "true": {
-        "thead": "sticky top-0 inset-x-0 bg-default/75 backdrop-blur z-1",
-        "tfoot": "sticky bottom-0 inset-x-0 bg-default/75 backdrop-blur z-1"
+        "thead": "sticky top-0 inset-x-0 bg-default/75 backdrop-blur-sm z-1",
+        "tfoot": "sticky bottom-0 inset-x-0 bg-default/75 backdrop-blur-sm z-1"
       },
       "header": {
-        "thead": "sticky top-0 inset-x-0 bg-default/75 backdrop-blur z-1"
+        "thead": "sticky top-0 inset-x-0 bg-default/75 backdrop-blur-sm z-1"
       },
       "footer": {
-        "tfoot": "sticky bottom-0 inset-x-0 bg-default/75 backdrop-blur z-1"
+        "tfoot": "sticky bottom-0 inset-x-0 bg-default/75 backdrop-blur-sm z-1"
       }
     },
     "loading": {
       "true": {
-        "thead": "after:absolute after:z-1 after:h-px"
+        "thead": "after:absolute after:z-1 after:h-px motion-reduce:after:inset-x-0 motion-reduce:after:animate-pulse"
+      }
+    },
+    "externalScroll": {
+      "true": {
+        "root": "overflow-visible"
       }
     },
     "loadingAnimation": {
@@ -124,28 +129,28 @@ export default {
       "loading": true,
       "loadingAnimation": "carousel" as typeof loadingAnimation[number],
       "class": {
-        "thead": "after:animate-[carousel_2s_ease-in-out_infinite] rtl:after:animate-[carousel-rtl_2s_ease-in-out_infinite]"
+        "thead": "motion-safe:after:animate-[carousel_2s_linear_infinite] motion-safe:rtl:after:animate-[carousel-rtl_2s_linear_infinite]"
       }
     },
     {
       "loading": true,
       "loadingAnimation": "carousel-inverse" as typeof loadingAnimation[number],
       "class": {
-        "thead": "after:animate-[carousel-inverse_2s_ease-in-out_infinite] rtl:after:animate-[carousel-inverse-rtl_2s_ease-in-out_infinite]"
+        "thead": "motion-safe:after:animate-[carousel-inverse_2s_linear_infinite] motion-safe:rtl:after:animate-[carousel-inverse-rtl_2s_linear_infinite]"
       }
     },
     {
       "loading": true,
       "loadingAnimation": "swing" as typeof loadingAnimation[number],
       "class": {
-        "thead": "after:animate-[swing_2s_ease-in-out_infinite]"
+        "thead": "motion-safe:after:animate-[swing_2s_var(--ease-in-out)_infinite]"
       }
     },
     {
       "loading": true,
       "loadingAnimation": "elastic" as typeof loadingAnimation[number],
       "class": {
-        "thead": "after:animate-[elastic_2s_ease-in-out_infinite]"
+        "thead": "motion-safe:after:animate-[elastic_2s_var(--ease-in-out)_infinite]"
       }
     }
   ],

@@ -114,6 +114,7 @@ interface _GlobalComponents {
   UInputDate: typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/InputDate.vue")['default']
   UInputMenu: typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/InputMenu.vue")['default']
   UInputNumber: typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/InputNumber.vue")['default']
+  UInputRating: typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/InputRating.vue")['default']
   UInputTags: typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/InputTags.vue")['default']
   UInputTime: typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/InputTime.vue")['default']
   UKbd: typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/Kbd.vue")['default']
@@ -147,6 +148,7 @@ interface _GlobalComponents {
   UPricingPlans: typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/PricingPlans.vue")['default']
   UPricingTable: typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/PricingTable.vue")['default']
   UProgress: typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/Progress.vue")['default']
+  UProgressGroup: typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/ProgressGroup.vue")['default']
   URadioGroup: typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/RadioGroup.vue")['default']
   UScrollArea: typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/ScrollArea.vue")['default']
   USelect: typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/Select.vue")['default']
@@ -156,6 +158,7 @@ interface _GlobalComponents {
   USkeleton: typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/Skeleton.vue")['default']
   USlideover: typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/Slideover.vue")['default']
   USlider: typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/Slider.vue")['default']
+  USplitter: typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/Splitter.vue")['default']
   UStepper: typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/Stepper.vue")['default']
   USwitch: typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/Switch.vue")['default']
   UTable: typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/Table.vue")['default']
@@ -296,6 +299,7 @@ interface _GlobalComponents {
   LazyUInputDate: LazyComponent<typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/InputDate.vue")['default']>
   LazyUInputMenu: LazyComponent<typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/InputMenu.vue")['default']>
   LazyUInputNumber: LazyComponent<typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/InputNumber.vue")['default']>
+  LazyUInputRating: LazyComponent<typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/InputRating.vue")['default']>
   LazyUInputTags: LazyComponent<typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/InputTags.vue")['default']>
   LazyUInputTime: LazyComponent<typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/InputTime.vue")['default']>
   LazyUKbd: LazyComponent<typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/Kbd.vue")['default']>
@@ -329,6 +333,7 @@ interface _GlobalComponents {
   LazyUPricingPlans: LazyComponent<typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/PricingPlans.vue")['default']>
   LazyUPricingTable: LazyComponent<typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/PricingTable.vue")['default']>
   LazyUProgress: LazyComponent<typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/Progress.vue")['default']>
+  LazyUProgressGroup: LazyComponent<typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/ProgressGroup.vue")['default']>
   LazyURadioGroup: LazyComponent<typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/RadioGroup.vue")['default']>
   LazyUScrollArea: LazyComponent<typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/ScrollArea.vue")['default']>
   LazyUSelect: LazyComponent<typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/Select.vue")['default']>
@@ -338,6 +343,7 @@ interface _GlobalComponents {
   LazyUSkeleton: LazyComponent<typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/Skeleton.vue")['default']>
   LazyUSlideover: LazyComponent<typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/Slideover.vue")['default']>
   LazyUSlider: LazyComponent<typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/Slider.vue")['default']>
+  LazyUSplitter: LazyComponent<typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/Splitter.vue")['default']>
   LazyUStepper: LazyComponent<typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/Stepper.vue")['default']>
   LazyUSwitch: LazyComponent<typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/Switch.vue")['default']>
   LazyUTable: LazyComponent<typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/Table.vue")['default']>

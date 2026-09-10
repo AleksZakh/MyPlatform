@@ -27,7 +27,7 @@ export default {
     "header": "flex",
     "item": "group text-center relative w-full",
     "container": "relative",
-    "trigger": "rounded-full font-medium text-center align-middle flex items-center justify-center font-semibold group-data-[state=completed]:text-inverted group-data-[state=active]:text-inverted text-muted bg-elevated focus-visible:outline-2 focus-visible:outline-offset-2",
+    "trigger": "rounded-full font-medium text-center align-middle flex items-center justify-center font-semibold group-data-[state=completed]:text-inverted group-data-[state=active]:text-inverted text-muted bg-elevated focus-visible:outline-3",
     "indicator": "flex items-center justify-center size-full",
     "icon": "shrink-0",
     "separator": "absolute rounded-full group-data-[disabled]:opacity-75 bg-accented",
@@ -89,31 +89,31 @@ export default {
     },
     "color": {
       "primary": {
-        "trigger": "group-data-[state=completed]:bg-primary group-data-[state=active]:bg-primary focus-visible:outline-primary",
+        "trigger": "group-data-[state=completed]:bg-primary group-data-[state=active]:bg-primary outline-primary/25",
         "separator": "group-data-[state=completed]:bg-primary"
       },
       "secondary": {
-        "trigger": "group-data-[state=completed]:bg-secondary group-data-[state=active]:bg-secondary focus-visible:outline-secondary",
+        "trigger": "group-data-[state=completed]:bg-secondary group-data-[state=active]:bg-secondary outline-secondary/25",
         "separator": "group-data-[state=completed]:bg-secondary"
       },
       "success": {
-        "trigger": "group-data-[state=completed]:bg-success group-data-[state=active]:bg-success focus-visible:outline-success",
+        "trigger": "group-data-[state=completed]:bg-success group-data-[state=active]:bg-success outline-success/25",
         "separator": "group-data-[state=completed]:bg-success"
       },
       "info": {
-        "trigger": "group-data-[state=completed]:bg-info group-data-[state=active]:bg-info focus-visible:outline-info",
+        "trigger": "group-data-[state=completed]:bg-info group-data-[state=active]:bg-info outline-info/25",
         "separator": "group-data-[state=completed]:bg-info"
       },
       "warning": {
-        "trigger": "group-data-[state=completed]:bg-warning group-data-[state=active]:bg-warning focus-visible:outline-warning",
+        "trigger": "group-data-[state=completed]:bg-warning group-data-[state=active]:bg-warning outline-warning/25",
         "separator": "group-data-[state=completed]:bg-warning"
       },
       "error": {
-        "trigger": "group-data-[state=completed]:bg-error group-data-[state=active]:bg-error focus-visible:outline-error",
+        "trigger": "group-data-[state=completed]:bg-error group-data-[state=active]:bg-error outline-error/25",
         "separator": "group-data-[state=completed]:bg-error"
       },
       "neutral": {
-        "trigger": "group-data-[state=completed]:bg-inverted group-data-[state=active]:bg-inverted focus-visible:outline-inverted",
+        "trigger": "group-data-[state=completed]:bg-inverted group-data-[state=active]:bg-inverted outline-inverted/25",
         "separator": "group-data-[state=completed]:bg-inverted"
       }
     }

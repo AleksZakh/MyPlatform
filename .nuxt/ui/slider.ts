@@ -26,37 +26,37 @@ export default {
     "root": "relative flex items-center select-none touch-none",
     "track": "relative bg-accented overflow-hidden rounded-full grow",
     "range": "absolute rounded-full",
-    "thumb": "rounded-full bg-default ring-2 focus-visible:outline-2 focus-visible:outline-offset-2"
+    "thumb": "rounded-full bg-default ring-2 focus-visible:outline-3 focus-visible:outline-offset-2"
   },
   "variants": {
     "color": {
       "primary": {
         "range": "bg-primary",
-        "thumb": "ring-primary focus-visible:outline-primary/50"
+        "thumb": "ring-primary outline-primary/25"
       },
       "secondary": {
         "range": "bg-secondary",
-        "thumb": "ring-secondary focus-visible:outline-secondary/50"
+        "thumb": "ring-secondary outline-secondary/25"
       },
       "success": {
         "range": "bg-success",
-        "thumb": "ring-success focus-visible:outline-success/50"
+        "thumb": "ring-success outline-success/25"
       },
       "info": {
         "range": "bg-info",
-        "thumb": "ring-info focus-visible:outline-info/50"
+        "thumb": "ring-info outline-info/25"
       },
       "warning": {
         "range": "bg-warning",
-        "thumb": "ring-warning focus-visible:outline-warning/50"
+        "thumb": "ring-warning outline-warning/25"
       },
       "error": {
         "range": "bg-error",
-        "thumb": "ring-error focus-visible:outline-error/50"
+        "thumb": "ring-error outline-error/25"
       },
       "neutral": {
         "range": "bg-inverted",
-        "thumb": "ring-inverted focus-visible:outline-inverted/50"
+        "thumb": "ring-inverted outline-inverted/25"
       }
     },
     "size": {

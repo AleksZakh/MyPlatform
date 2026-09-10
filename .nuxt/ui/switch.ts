@@ -20,14 +20,14 @@ export default {
   "slots": {
     "root": "relative flex items-start",
     "base": [
-      "inline-flex items-center shrink-0 rounded-full border-2 border-transparent focus-visible:outline-2 focus-visible:outline-offset-2 data-[state=unchecked]:bg-accented",
-      "transition-[background] duration-200"
+      "inline-flex items-center shrink-0 rounded-full border-2 border-transparent focus-visible:outline-3 data-[state=unchecked]:bg-accented",
+      "transition-[background] duration-200 ease-out"
     ],
     "container": "flex items-center",
-    "thumb": "group pointer-events-none rounded-full bg-default shadow-lg ring-0 transition-transform duration-200 data-[state=unchecked]:translate-x-0 data-[state=unchecked]:rtl:-translate-x-0 flex items-center justify-center",
+    "thumb": "group pointer-events-none rounded-full bg-default shadow-lg ring-0 transition-transform duration-200 ease-out motion-reduce:transition-none data-[state=unchecked]:translate-x-0 data-[state=unchecked]:rtl:-translate-x-0 flex items-center justify-center",
     "icon": [
       "absolute shrink-0 group-data-[state=unchecked]:text-dimmed opacity-0 size-10/12",
-      "transition-[color,opacity] duration-200"
+      "transition-[color,opacity] duration-200 ease-out"
     ],
     "wrapper": "ms-2",
     "label": "block font-medium text-default",
@@ -36,31 +36,31 @@ export default {
   "variants": {
     "color": {
       "primary": {
-        "base": "data-[state=checked]:bg-primary focus-visible:outline-primary",
+        "base": "data-[state=checked]:bg-primary outline-primary/25",
         "icon": "group-data-[state=checked]:text-primary"
       },
       "secondary": {
-        "base": "data-[state=checked]:bg-secondary focus-visible:outline-secondary",
+        "base": "data-[state=checked]:bg-secondary outline-secondary/25",
         "icon": "group-data-[state=checked]:text-secondary"
       },
       "success": {
-        "base": "data-[state=checked]:bg-success focus-visible:outline-success",
+        "base": "data-[state=checked]:bg-success outline-success/25",
         "icon": "group-data-[state=checked]:text-success"
       },
       "info": {
-        "base": "data-[state=checked]:bg-info focus-visible:outline-info",
+        "base": "data-[state=checked]:bg-info outline-info/25",
         "icon": "group-data-[state=checked]:text-info"
       },
       "warning": {
-        "base": "data-[state=checked]:bg-warning focus-visible:outline-warning",
+        "base": "data-[state=checked]:bg-warning outline-warning/25",
         "icon": "group-data-[state=checked]:text-warning"
       },
       "error": {
-        "base": "data-[state=checked]:bg-error focus-visible:outline-error",
+        "base": "data-[state=checked]:bg-error outline-error/25",
         "icon": "group-data-[state=checked]:text-error"
       },
       "neutral": {
-        "base": "data-[state=checked]:bg-inverted focus-visible:outline-inverted",
+        "base": "data-[state=checked]:bg-inverted outline-inverted/25",
         "icon": "group-data-[state=checked]:text-highlighted"
       }
     },

@@ -40,7 +40,6 @@ export default {
       }
     }
   },
-  "compoundVariants": [],
   "defaultVariants": {
     "size": "md" as typeof size[number]
   }

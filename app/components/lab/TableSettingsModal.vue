@@ -202,6 +202,7 @@ async function handleSave() {
      // 👇 ВЫЗЫВАЕМ СОБЫТИЕ ОБНОВЛЕНИЯ ТАБЛИЦЫ
         updateVisibleColumns(tempVisibleColumns.value)
         props.visibleHeaders
+        await nextTick();
         props.reloadData(); 
     
     

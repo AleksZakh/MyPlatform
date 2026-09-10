@@ -84,7 +84,7 @@ export default {
     "to": {
       "true": {
         "root": [
-          "has-focus-visible:ring-2 has-focus-visible:ring-primary",
+          "outline-primary/25 has-[>a:focus-visible]:outline-3",
           "transition"
         ]
       }
@@ -158,6 +158,17 @@ export default {
       "highlight": false,
       "class": {
         "root": "hover:ring-accented"
+      }
+    },
+    {
+      "variant": [
+        "outline" as typeof variant[number],
+        "subtle" as typeof variant[number]
+      ],
+      "to": true,
+      "highlight": false,
+      "class": {
+        "root": "has-[>a:focus-visible]:ring-primary"
       }
     },
     {

@@ -2,6 +2,7 @@
 import { PrismaClient } from '@prisma/client';
 import { defineEventHandler, readMultipartFormData } from 'h3';
 import { handleFileUpload, parseDate } from '~~/server/utils/fileUploadHandler';
+import { logAudit, getActorEmail, getRequestMeta } from '~~/server/utils/auditLog';
 
 const prisma = new PrismaClient();
 
@@ -76,8 +77,11 @@ export default defineEventHandler(async (event) => {
     }
 
     // Проверяем уникальность номера акта
-    const existingAct = await prisma.samplingTest.findUnique({
-      where: { sActNumber: body.sActNumber.trim() },
+    const existingAct = await prisma.samplingTest.findFirst({
+      where: {
+        sActNumber: body.sActNumber.trim(),
+        deletedAt: null,  // ← не считаем удалённые дубликатами
+      },
     });
     if (existingAct) {
       throw createError({
@@ -159,14 +163,25 @@ export default defineEventHandler(async (event) => {
         sActDate: parseDate(body.sActDate) || new Date(),
         sDocPath: fileDbPaths.sDoc || null,
         note: body.note || null,
-        plpId: plpId,
-        inspectorId: inspectorId,
-        testLocationId: testLocationId,
-        testProtocolId: testProtocolId,
-        receiptMaterialId: receiptMaterialId,
-        authorEmail: authorEmail,
+        plpId: parseInt(body.plpId),
+        inspectorId: parseInt(body.inspectorId),
+        testLocationId: parseInt(body.testLocationId),
+        testProtocolId: body.testProtocolId ? parseInt(body.testProtocolId) : null,
+        receiptMaterialId: body.receiptMaterialId ? parseInt(body.receiptMaterialId) : null,
+        authorEmail,
         createdAt: new Date(),
       },
+    });
+
+    // 2. Логируем в AuditLog
+    await logAudit({
+      entityType: 'SamplingTest',
+      entityId: newSamplingTest.id,
+      action: 'CREATE',
+      actorEmail: authorEmail,
+      note: `Создан акт отбора № ${newSamplingTest.sActNumber}`,
+      afterData: newSamplingTest as any,
+      ...getRequestMeta(event),
     });
 
     return {

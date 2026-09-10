@@ -241,7 +241,7 @@
                       Документ о качестве
                     </span>
                     <div
-                      v-if="isMaterialActive && dbResponse && dbResponse['Документ о качестве']"
+                      v-if="isMaterialActive && dbResponse && dbResponse['Документ о качестве'] && dbResponse['Документ о качестве'] !== '-'"
                       class="flex items-center border border-green-600 p-1 bg-green-50 rounded-sm hover:border-gray-200 transition-colors"
                     >
                       <a
@@ -594,10 +594,11 @@ function fillFormWithData(data: any, dbData: any) {
   state.receiptDate = parseDate(data['Дата поступления материала']) || null;
   
   if (dbData) {
+    console.log('dbData ===> ', dbData)
     state.sDoc = dbData.sDocPath || '';
     state.qualDoc = dbData.qualityDocument || '';
     state.protocolDoc = dbData.protocolDocPath || '';
-    state.qualDocDate = parseDate(dbData.qualDocDate);
+    state.qualDocDate = parseDate(dbData.qualDate);
     state.qualDocNumber = dbData.qualDocNumber || '';
   } else {
     state.sDoc = data['Документ отбора проб'] || '';
@@ -622,6 +623,8 @@ watch(
     if (newVal?.action === 'edit' || newVal?.action === 'view') {
       const dbData = await $fetch(`/api/incoming-control/${newVal.ID}`);
       dbResponse.value = dbData.data;
+
+      console.log('dbData.data ===> ', dbData.data)
       
       if (dbData.data['Дата поступления материала'] || dbData.data['Наименование материала']) {
         isMaterialActive.value = true;
@@ -696,6 +699,7 @@ async function handleSubmit(event: FormSubmitEvent<Schema>) {
     
     if (method === 'PUT') {
       formData.append('editorEmail', editorEmail.value || 'noName');
+      // console.log('formData ---> ', formData)
     }
 
     const response = await $fetch<{ success: boolean; error?: string }>(url, {
