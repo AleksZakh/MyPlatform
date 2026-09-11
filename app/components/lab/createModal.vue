@@ -295,7 +295,7 @@
                   :searchable="true"
                   :search-input="{ placeholder: 'Введите производителя...' }"
                   :disabled="!isMaterialActive"
-                  class="w-full"
+                  class="max-w-88"
                 />
               </UFormField>
             </div>
@@ -594,7 +594,7 @@ function fillFormWithData(data: any, dbData: any) {
   state.receiptDate = parseDate(data['Дата поступления материала']) || null;
   
   if (dbData) {
-    console.log('dbData ===> ', dbData)
+    // console.log('dbData ===> ', dbData)
     state.sDoc = dbData.sDocPath || '';
     state.qualDoc = dbData.qualityDocument || '';
     state.protocolDoc = dbData.protocolDocPath || '';
@@ -624,7 +624,7 @@ watch(
       const dbData = await $fetch(`/api/incoming-control/${newVal.ID}`);
       dbResponse.value = dbData.data;
 
-      console.log('dbData.data ===> ', dbData.data)
+      // console.log('dbData.data ===> ', dbData.data)
       
       if (dbData.data['Дата поступления материала'] || dbData.data['Наименование материала']) {
         isMaterialActive.value = true;

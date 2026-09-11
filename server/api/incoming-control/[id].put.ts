@@ -47,6 +47,8 @@ export default defineEventHandler(async (event) => {
       },
     });
 
+    // console.log('beforeSamplingTest ===>', beforeSamplingTest)
+
     if (!beforeSamplingTest) {
       throw createError({ statusCode: 404, statusMessage: `Акт отбора с ID ${id} не найден` });
     }
@@ -174,59 +176,43 @@ export default defineEventHandler(async (event) => {
       }
 
       // ----- 3.2 Обновление ReceiptMaterial -----
+
+      const isFilled = (val: any): boolean => {
+        if (val === undefined || val === null) return false;
+        if (typeof val === 'string' && val.trim() === '') return false;
+        return true;
+      };
+
+
+      const hasReceiptData =
+        isFilled(body.materialId) ||      // ID материала заполнен
+        isFilled(body.material) ||        // или название материала
+        isFilled(body.qualDate) ||        // или дата документа
+        isFilled(body.receiptDate) ||     // или дата поступления
+        isFilled(body.qualDocNumber) ||   // или номер документа
+        isFilled(body.receiptNote) ||     // или примечание
+        !!fileDbPaths.qualDoc;            // или загружен файл
+
       const hasReceiptChanges =
-        body.materialId !== undefined ||
-        body.qualDate !== undefined ||
-        body.qualDocNumber !== undefined ||
-        body.receiptNote !== undefined ||
+        isFilled(body.materialId) ||
+        isFilled(body.material) ||
+        isFilled(body.qualDate) ||
+        isFilled(body.receiptDate) ||
+        isFilled(body.qualDocNumber) ||
+        isFilled(body.receiptNote) ||
         !!fileDbPaths.qualDoc;
 
       let receiptMaterialId = beforeSamplingTest.receiptMaterialId;
 
       if (hasReceiptChanges) {
-        if (!receiptMaterialId) {
-          // Создание нового поступления
-          if (!body.materialId) {
-            throw createError({
-              statusCode: 400,
-              statusMessage: 'Для создания поступления материала нужно указать materialId',
-            });
-          }
-          const materialId = parseInt(body.materialId);
-          if (isNaN(materialId) || materialId <= 0) {
-            throw createError({ statusCode: 400, statusMessage: 'Некорректный ID материала' });
-          }
-          const material = await tx.material.findUnique({ where: { id: materialId } });
-          if (!material) {
-            throw createError({ statusCode: 404, statusMessage: `Материал с ID ${materialId} не найден` });
-          }
-
-          const createdReceipt = await tx.receiptMaterial.create({
-            data: {
-              qualDate: body.qualDocDate ? parseDate(body.qualDocDate) : null,
-              qualDocNumber: body.qualDocNumber || null,
-              qualDocPath: fileDbPaths.qualDoc || null,
-              note: body.receiptNote || null,
-              materialId,
-              authorEmail: editorEmail,
-              createdAt: new Date(),
-            },
-          });
-
-          receiptMaterialId = createdReceipt.id;
-
-          auditEntries.push({
-            entityType: 'ReceiptMaterial',
-            entityId: createdReceipt.id,
-            action: 'CREATE',
-            note: `Создано поступление материала "${material.name}" (акт № ${beforeSamplingTest.sActNumber})`,
-            afterData: createdReceipt,
-          });
-        } else {
-          // Обновление существующего поступления
+        // ==========================================
+        // ЕСЛИ У АКТА УЖЕ ЕСТЬ ПОСТУПЛЕНИЕ — ОБНОВЛЯЕМ
+        // ==========================================
+        if (receiptMaterialId) {
           const receiptUpdateData: any = {};
 
-          if (body.materialId) {
+          // --- Материал ---
+          if (isFilled(body.materialId)) {
             const materialId = parseInt(body.materialId);
             if (isNaN(materialId) || materialId <= 0) {
               throw createError({ statusCode: 400, statusMessage: 'Некорректный ID материала' });
@@ -236,13 +222,23 @@ export default defineEventHandler(async (event) => {
               throw createError({ statusCode: 404, statusMessage: `Материал с ID ${materialId} не найден` });
             }
             receiptUpdateData.materialId = materialId;
+          } else if (isFilled(body.material)) {
+            // Если пришло название материала — ищем по имени
+            const material = await tx.material.findUnique({ where: { name: body.material.trim() } });
+            if (!material) {
+              throw createError({ statusCode: 404, statusMessage: `Материал "${body.material}" не найден` });
+            }
+            receiptUpdateData.materialId = material.id;
           }
 
-          if (body.qualDocDate !== undefined) {
-            receiptUpdateData.qualDate = body.qualDocDate ? parseDate(body.qualDocDate) : null;
+          if (body.receiptDate !== undefined) {
+            receiptUpdateData.receiptDate = body.receiptDate ? parseDate(body.receiptDate) : null;
+          }
+          if (body.qualDate !== undefined) {
+            receiptUpdateData.qualDate = body.qualDate ? parseDate(body.qualDate) : null;
           }
           if (body.qualDocNumber !== undefined) {
-            receiptUpdateData.qualDocNumber = body.qualDocNumber || null;
+            receiptUpdateData.qualDocNumber = body.qualDocNumber?.trim() || null;
           }
           if (body.receiptNote !== undefined) {
             receiptUpdateData.note = body.receiptNote || null;
@@ -260,11 +256,7 @@ export default defineEventHandler(async (event) => {
               data: receiptUpdateData,
             });
 
-            const changedFields = computeChangedFields(
-              beforeReceiptMaterial as any,
-              updatedReceipt as any
-            );
-
+            const changedFields = computeChangedFields(beforeReceiptMaterial as any, updatedReceipt as any);
             if (changedFields.length > 0) {
               auditEntries.push({
                 entityType: 'ReceiptMaterial',
@@ -278,60 +270,93 @@ export default defineEventHandler(async (event) => {
             }
           }
         }
+        // ==========================================
+        // ЕСЛИ У АКТА НЕТ ПОСТУПЛЕНИЯ — СОЗДАЁМ НОВОЕ
+        // НО ТОЛЬКО ЕСЛИ ЕСТЬ РЕАЛЬНЫЕ ДАННЫЕ
+        // ==========================================
+        else if (hasReceiptData) {
+          // Находим materialId
+          let materialId: number | null = null;
 
-        relationUpdates.receiptMaterialId = receiptMaterialId;
-      }
+          if (isFilled(body.materialId)) {
+            materialId = parseInt(body.materialId);
+            if (isNaN(materialId) || materialId <= 0) {
+              throw createError({ statusCode: 400, statusMessage: 'Некорректный ID материала' });
+            }
+          } else if (isFilled(body.material)) {
+            const material = await tx.material.findUnique({ where: { name: body.material.trim() } });
+            if (!material) {
+              throw createError({ statusCode: 404, statusMessage: `Материал "${body.material}" не найден` });
+            }
+            materialId = material.id;
+          }
 
-      // ----- 3.3 Обновление TestProtocol -----
-      const hasProtocolChanges =
-        body.protocolNumber !== undefined ||
-        body.testProtocolDate !== undefined ||
-        body.testResult !== undefined ||
-        body.protocolNote !== undefined ||
-        !!fileDbPaths.protocolDoc;
-
-      let testProtocolId = beforeSamplingTest.testProtocolId;
-
-      if (hasProtocolChanges) {
-        if (!testProtocolId) {
-          // Создание нового протокола
-          if (!receiptMaterialId) {
+          // Материал обязателен для создания поступления
+          if (!materialId) {
             throw createError({
               statusCode: 400,
-              statusMessage: 'Для создания протокола необходимо сначала создать поступление материала',
+              statusMessage: 'Для создания поступления материала нужно указать materialId или material',
             });
           }
 
-          // console.log('body.protocolDate ===> ', body.protocolDate )
-
-          const createdProtocol = await tx.testProtocol.create({
+          const createdReceipt = await tx.receiptMaterial.create({
             data: {
-              protocolNumber: body.testProtocolNumber || `Без номера-${Date.now()}`,
-              protocolDate: body.testProtocolDate ? parseDate(body.testProtocolDate) : null,
-              protocolDocPath: fileDbPaths.protocolDoc || null,
-              testResult: body.testResult || 'Не указан',
-              note: body.protocolNote || null,
-              receiptMaterialId,
+              receiptDate: body.receiptDate ? parseDate(body.receiptDate) : null,
+              qualDate: body.qualDate ? parseDate(body.qualDate) : null,
+              qualDocNumber: body.qualDocNumber || null,
+              qualDocPath: fileDbPaths.qualDoc || null,
+              note: body.receiptNote || null,
+              materialId,
               authorEmail: editorEmail,
               createdAt: new Date(),
             },
           });
 
-          testProtocolId = createdProtocol.id;
+          receiptMaterialId = createdReceipt.id;
 
           auditEntries.push({
-            entityType: 'TestProtocol',
-            entityId: createdProtocol.id,
+            entityType: 'ReceiptMaterial',
+            entityId: createdReceipt.id,
             action: 'CREATE',
-            note: `Создан протокол № ${createdProtocol.protocolNumber} (акт № ${beforeSamplingTest.sActNumber})`,
-            afterData: createdProtocol,
+            note: `Создано поступление материала (акт № ${beforeSamplingTest.sActNumber})`,
+            afterData: createdReceipt,
           });
-        } else {
-          // Обновление существующего протокола
+        }
+
+        // Привязываем поступление к акту (если оно было создано)
+        if (receiptMaterialId) {
+          relationUpdates.receiptMaterialId = receiptMaterialId;
+        }
+      }
+
+      // ----- 3.3 Обновление TestProtocol -----
+      // Определяем, есть ли РЕАЛЬНЫЕ данные для создания протокола
+      const hasProtocolData =
+        isFilled(body.testProtocolNumber) ||
+        isFilled(body.testProtocolDate) ||
+        isFilled(body.testResult) ||
+        isFilled(body.protocolNote) ||
+        !!fileDbPaths.protocolDoc;
+
+      // Проверяем, есть ли изменения в существующем протоколе
+      const hasProtocolChanges =
+        isFilled(body.testProtocolNumber) ||
+        isFilled(body.testProtocolDate) ||
+        isFilled(body.testResult) ||
+        isFilled(body.protocolNote) ||
+        !!fileDbPaths.protocolDoc;
+
+      let testProtocolId = beforeSamplingTest.testProtocolId;
+
+      if (hasProtocolChanges) {
+        // ==========================================
+        // ЕСЛИ У АКТА УЖЕ ЕСТЬ ПРОТОКОЛ — ОБНОВЛЯЕМ
+        // ==========================================
+        if (testProtocolId) {
           const protocolUpdateData: any = {};
 
           if (body.testProtocolNumber !== undefined) {
-            protocolUpdateData.protocolNumber = body.testProtocolNumber || null;
+            protocolUpdateData.protocolNumber = body.testProtocolNumber?.trim() || null;
           }
           if (body.testProtocolDate !== undefined) {
             protocolUpdateData.protocolDate = body.testProtocolDate ? parseDate(body.testProtocolDate) : null;
@@ -355,11 +380,7 @@ export default defineEventHandler(async (event) => {
               data: protocolUpdateData,
             });
 
-            const changedFields = computeChangedFields(
-              beforeTestProtocol as any,
-              updatedProtocol as any
-            );
-
+            const changedFields = computeChangedFields(beforeTestProtocol as any, updatedProtocol as any);
             if (changedFields.length > 0) {
               auditEntries.push({
                 entityType: 'TestProtocol',
@@ -373,16 +394,55 @@ export default defineEventHandler(async (event) => {
             }
           }
         }
+        // ==========================================
+        // ЕСЛИ У АКТА НЕТ ПРОТОКОЛА — СОЗДАЁМ НОВЫЙ
+        // НО ТОЛЬКО ЕСЛИ ЕСТЬ РЕАЛЬНЫЕ ДАННЫЕ
+        // ==========================================
+        else if (hasProtocolData) {
+          // Для создания протокола нужно поступление материала
+          if (!receiptMaterialId) {
+            throw createError({
+              statusCode: 400,
+              statusMessage: 'Для создания протокола необходимо сначала создать поступление материала',
+            });
+          }
 
-        relationUpdates.testProtocolId = testProtocolId;
+          const createdProtocol = await tx.testProtocol.create({
+            data: {
+              protocolNumber: body.protocolNumber?.trim() || `Без номера-${Date.now()}`,
+              protocolDate: body.protocolDate ? parseDate(body.protocolDate) : null,
+              protocolDocPath: fileDbPaths.protocolDoc || null,
+              testResult: body.testResult || 'Не указан',
+              note: body.protocolNote || null,
+              receiptMaterialId,
+              authorEmail: editorEmail,
+              createdAt: new Date(),
+            },
+          });
+
+          testProtocolId = createdProtocol.id;
+
+          auditEntries.push({
+            entityType: 'TestProtocol',
+            entityId: createdProtocol.id,
+            action: 'CREATE',
+            note: `Создан протокол № ${createdProtocol.protocolNumber} (акт № ${beforeSamplingTest.sActNumber})`,
+            afterData: createdProtocol,
+          });
+        }
+
+        // Привязываем протокол к акту (если он был создан)
+        if (testProtocolId) {
+          relationUpdates.testProtocolId = testProtocolId;
+        }
       }
 
       // ----- 3.4 Обновление самой SamplingTest -----
-      if (body.sActDate) {
-        updateSamplingTestData.sActDate = parseDate(body.sActDate);
+      if (body.sDate) {
+        updateSamplingTestData.sActDate = parseDate(body.sDate);
       }
-      if (body.note !== undefined) {
-        updateSamplingTestData.note = body.note || null;
+      if (body.sNote !== undefined) {
+        updateSamplingTestData.note = body.sNote || null;
       }
       if (fileDbPaths.sDoc) {
         updateSamplingTestData.sDocPath = fileDbPaths.sDoc;
@@ -394,6 +454,7 @@ export default defineEventHandler(async (event) => {
         editorEmail,
         editedAt: new Date(),
       };
+      // console.log('finalData =======> ', finalData)
 
       const updatedSamplingTest = await tx.samplingTest.update({
         where: { id },
@@ -420,7 +481,7 @@ export default defineEventHandler(async (event) => {
 
       // ----- 3.6 Запись всех audit-логов внутри транзакции -----
       for (const entry of auditEntries) {
-        console.log('Запись в журнал ==>')
+        // console.log('Запись в журнал ==>')
         await tx.auditLog.create({
           data: {
             entityType: entry.entityType,

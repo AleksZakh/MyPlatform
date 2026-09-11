@@ -118,7 +118,7 @@ export const useLabDataLoader = () => {
 
   // 👇 МЕТОД ДЛЯ ПЕРЕЗАГРУЗКИ ТЕКУЩЕЙ СТРАНИЦЫ
   const reloadCurrentPage = async () => {
-    console.log('Перезагрузка данных ---> ')
+    // console.log('Перезагрузка данных ---> ')
     return await loadData(currentPage.value, pageSize.value);
   };
 
