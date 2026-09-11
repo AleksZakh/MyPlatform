@@ -594,7 +594,7 @@ function fillFormWithData(data: any, dbData: any) {
   state.receiptDate = parseDate(data['Дата поступления материала']) || null;
   
   if (dbData) {
-    console.log('dbData ===> ', dbData)
+    // console.log('dbData ===> ', dbData)
     state.sDoc = dbData.sDocPath || '';
     state.qualDoc = dbData.qualityDocument || '';
     state.protocolDoc = dbData.protocolDocPath || '';

@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
     const editorEmail = body.editorEmail || getActorEmail(event);
     const requestMeta = getRequestMeta(event);
 
-    console.log('body.protocolDate ===> ', body )
+    // console.log('body.protocolDate ===> ', body )
 
     // ========================================
     // 2. ЗАГРУЗКА СОСТОЯНИЯ "ДО" (вне транзакции — только чтение)
