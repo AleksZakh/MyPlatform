@@ -337,7 +337,7 @@ onMounted(async () => {
       if(response.value){
         // console.log('response.value.data ---> ', response.value.data)
         authorInfo.value = await searchUserInAD({'authorEmail':response.value.data['Автор (акт)']})
-        editorInfo.value = await searchUserInAD({'authorEmail':response.value.data['Редактор  (акт)']})
+        editorInfo.value = await searchUserInAD({'authorEmail':response.value.data['Редактор (акт)']})
         dateCreate.value = response.value.data['Дата создания (акт)']
         dateEdit.value = response.value.data['Дата редактирования']
         sDocPath.value = response.value.data['Документ отбора проб']
