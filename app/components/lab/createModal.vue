@@ -594,18 +594,18 @@ function fillFormWithData(data: any, dbData: any) {
   state.receiptDate = parseDate(data['Дата поступления материала']) || null;
   
   if (dbData) {
-    // console.log('dbData ===> ', dbData)
+    console.log('dbData ===> ', dbData)
     state.sDoc = dbData.sDocPath || '';
     state.qualDoc = dbData.qualityDocument || '';
     state.protocolDoc = dbData.protocolDocPath || '';
-    state.qualDocDate = parseDate(dbData.qualDate);
-    state.qualDocNumber = dbData.qualDocNumber || '';
+    state.qualDocDate = parseDate(dbData['Дата документа о качестве']);
+    state.qualDocNumber = dbData['Номер документа о качестве'] || '';
   } else {
     state.sDoc = data['Документ отбора проб'] || '';
     state.qualDoc = data['Документ о качестве'] || '';
     state.protocolDoc = data['Документ протокола'] || '';
     state.qualDocDate = parseDate(data['Дата документа о качестве']);
-    state.qualDocNumber = data['Номер протокола'] || '';
+    state.qualDocNumber = data['Номер документа о качестве'] || '';
   }
   
   state.manufacturer = data['Предприятие-изготовитель'] || '';

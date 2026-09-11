@@ -335,7 +335,7 @@ onMounted(async () => {
       // @ts-ignore
       response.value = await $fetch(`/api/incoming-control/${recordId}`);
       if(response.value){
-        // console.log('response.value.data ---> ', response.value.data)
+        console.log('response.value.data ---> ', response.value.data)
         authorInfo.value = await searchUserInAD({'authorEmail':response.value.data['Автор (акт)']})
         editorInfo.value = await searchUserInAD({'authorEmail':response.value.data['Редактор (акт)']})
         dateCreate.value = response.value.data['Дата создания (акт)']

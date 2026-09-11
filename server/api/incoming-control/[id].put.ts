@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
     const editorEmail = body.editorEmail || getActorEmail(event);
     const requestMeta = getRequestMeta(event);
 
-    // console.log('body.protocolDate ===> ', body )
+    console.log('body.protocolDate ===> ', body )
 
     // ========================================
     // 2. ЗАГРУЗКА СОСТОЯНИЯ "ДО" (вне транзакции — только чтение)
@@ -234,8 +234,8 @@ export default defineEventHandler(async (event) => {
           if (body.receiptDate !== undefined) {
             receiptUpdateData.receiptDate = body.receiptDate ? parseDate(body.receiptDate) : null;
           }
-          if (body.qualDate !== undefined) {
-            receiptUpdateData.qualDate = body.qualDate ? parseDate(body.qualDate) : null;
+          if (body.qualDocDate !== undefined) {
+            receiptUpdateData.qualDate = body.qualDocDate ? parseDate(body.qualDocDate) : null;
           }
           if (body.qualDocNumber !== undefined) {
             receiptUpdateData.qualDocNumber = body.qualDocNumber?.trim() || null;
