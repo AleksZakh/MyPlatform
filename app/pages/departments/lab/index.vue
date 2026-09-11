@@ -29,6 +29,10 @@
 </template>
 
 <script setup lang="ts">
+
+const { user, clear } = useUserSession();
+console.log('user from cookie ===> ', user)
+
 useHead({
   title: 'Лабораторный контроль',
 });
