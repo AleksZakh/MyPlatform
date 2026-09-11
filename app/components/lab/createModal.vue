@@ -295,7 +295,7 @@
                   :searchable="true"
                   :search-input="{ placeholder: 'Введите производителя...' }"
                   :disabled="!isMaterialActive"
-                  class="max-w-88"
+                  class="w-88"
                 />
               </UFormField>
             </div>
