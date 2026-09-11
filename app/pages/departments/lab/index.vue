@@ -31,7 +31,22 @@
 <script setup lang="ts">
 
 const { user, clear } = useUserSession();
+const userStore = useUserStore();
+const { user: adUser } = storeToRefs(userStore);
 console.log('user from cookie ===> ', user)
+watch(
+  adUser,
+  (newUser) => {
+    if (newUser) {
+      console.log('Сессия успешно считана и обновилась:', newUser);
+      // @ts-ignore
+      // userDep.value = newUser.department || '';
+      // @ts-ignore
+      // authType.value = newUser.authType || null;
+    }
+  },
+  { immediate: true }
+);
 
 useHead({
   title: 'Лабораторный контроль',
