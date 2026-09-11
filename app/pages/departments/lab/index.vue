@@ -30,10 +30,10 @@
 
 <script setup lang="ts">
 
-const { user, clear } = useUserSession();
+// const { user, clear } = useUserSession();
 const userStore = useUserStore();
 const { user: adUser } = storeToRefs(userStore);
-console.log('user from cookie ===> ', user)
+// console.log('user from cookie ===> ', user)
 watch(
   adUser,
   (newUser) => {
