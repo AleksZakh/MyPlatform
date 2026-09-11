@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
     // ========================================
     // 1. ПОДГОТОВКА
     // ========================================
-    console.log('Начало обновления')
+    // console.log('Начало обновления')
     const idParam = getRouterParam(event, 'id');
     const id = parseInt(idParam || '', 10);
 

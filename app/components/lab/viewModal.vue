@@ -410,7 +410,7 @@ function getResultDotClass(result: string): string {
 }
 
 function handleEdit() {
-  console.log('редактирование')
+  // console.log('редактирование')
   emit('edit', props.record.id)
   emit('close')
 }

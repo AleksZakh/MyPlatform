@@ -17,7 +17,7 @@
         <template #incomingInspection>
           <LabIncominginspection />
         </template>
-        <template #research>
+        <template #eventsLog>
           <LabResearch />
         </template>
         <template #handbook>
@@ -42,10 +42,10 @@ const tabs = [
     value: 'incomingInspection', // значение для v-model
   },
   {
-    label: 'Исследования',
-    icon: 'marketeq:research',
-    slot: 'research',
-    value: 'research',
+    label: 'Журнал событий',
+    icon: 'tabler:logs',
+    slot: 'eventsLog',
+    value: 'eventsLog',
   },
   {
     label: 'Справочник лаборатории',
