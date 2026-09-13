@@ -18,7 +18,7 @@
           <LabIncominginspection />
         </template>
         <template #eventsLog>
-          <LabResearch />
+          <LabResearch v-if="acceptUserList.includes(LoginUser?.username)" />
         </template>
         <template #handbook>
           <LabHandbook />
@@ -33,12 +33,15 @@
 // const { user, clear } = useUserSession();
 const userStore = useUserStore();
 const { user: adUser } = storeToRefs(userStore);
+const acceptUserList=['Zakharov_AV', 'Golubin_KD'];
 // console.log('user from cookie ===> ', user)
+const LoginUser = ref(); 
 watch(
   adUser,
   (newUser) => {
     if (newUser) {
       console.log('Сессия успешно считана и обновилась:', newUser);
+      LoginUser.value = newUser;
       // @ts-ignore
       // userDep.value = newUser.department || '';
       // @ts-ignore
@@ -53,26 +56,55 @@ useHead({
 });
 
 // Определение структуры вкладок
-const tabs = [
-  {
-    label: 'Реестр входного контроля',
-    icon: 'streamline-freehand-color:disability-blind-read',
-    slot: 'incomingInspection', // этот слот будет отображаться для вкладки
-    value: 'incomingInspection', // значение для v-model
-  },
-  {
-    label: 'Журнал событий',
-    icon: 'tabler:logs',
-    slot: 'eventsLog',
-    value: 'eventsLog',
-  },
-  {
-    label: 'Справочник лаборатории',
-    icon: 'streamline-freehand-color:book-bookmark',
-    slot: 'handbook', // этот слот будет отображаться для вкладки
-    value: 'handbook', // значение для v-model
-  },
-];
+// const tabs = [
+//   {
+//     label: 'Реестр входного контроля',
+//     icon: 'streamline-freehand-color:disability-blind-read',
+//     slot: 'incomingInspection', // этот слот будет отображаться для вкладки
+//     value: 'incomingInspection', // значение для v-model
+//   },
+//   {
+//     label: 'Журнал событий',
+//     icon: 'tabler:logs',
+//     slot: 'eventsLog',
+//     value: 'eventsLog',
+//   },
+//   {
+//     label: 'Справочник лаборатории',
+//     icon: 'streamline-freehand-color:book-bookmark',
+//     slot: 'handbook', // этот слот будет отображаться для вкладки
+//     value: 'handbook', // значение для v-model
+//   },
+// ];
+
+const tabs = computed(() => {
+  const baseTabs = [
+    {
+      label: 'Реестр входного контроля',
+      icon: 'streamline-freehand-color:disability-blind-read',
+      slot: 'incomingInspection',
+      value: 'incomingInspection',
+    },
+    {
+      label: 'Справочник лаборатории',
+      icon: 'streamline-freehand-color:book-bookmark',
+      slot: 'handbook',
+      value: 'handbook',
+    },
+  ];
+
+  // Вставляем "Журнал событий" только для избранных
+  if (acceptUserList.includes(LoginUser?.value?.username)) {
+    baseTabs.splice(1, 0, {
+      label: 'Журнал событий',
+      icon: 'tabler:logs',
+      slot: 'eventsLog',
+      value: 'eventsLog',
+    });
+  }
+
+  return baseTabs;
+});
 
 // Активная вкладка (по умолчанию первая)
 const activeTab = ref('incomingInspection');
