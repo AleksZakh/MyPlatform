@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
     const editorEmail = body.editorEmail || getActorEmail(event);
     const requestMeta = getRequestMeta(event);
 
-    // console.log('body.protocolDate ===> ', body )
+    console.log('body.protocolDate ===> ', body )
 
     // ========================================
     // 2. ЗАГРУЗКА СОСТОЯНИЯ "ДО" (вне транзакции — только чтение)
@@ -117,29 +117,39 @@ export default defineEventHandler(async (event) => {
       }
 
       // --- Проверка/создание TestLocation ---
-      if (body.testObjectId && body.testLocationName?.trim()) {
-        const testObjectId = parseInt(body.testObjectId);
-        if (isNaN(testObjectId) || testObjectId <= 0) {
-          throw createError({ statusCode: 400, statusMessage: 'Некорректный ID объекта' });
-        }
+      if (body.sPlace?.trim() && body.objName?.trim()) {
+        const objectName = body.objName.trim();
+        const locationName = body.sPlace.trim();
 
-        const testObject = await tx.testObject.findUnique({ where: { id: testObjectId } });
-        if (!testObject) {
-          throw createError({ statusCode: 404, statusMessage: `Объект с ID ${testObjectId} не найден` });
-        }
-
-        const locationName = body.testLocationName.trim();
-
-        let testLocation = await tx.testLocation.findUnique({
-          where: { testObjectId_name: { testObjectId, name: locationName } },
+        // 1. Находим объект по имени
+        const testObject = await tx.testObject.findUnique({
+          where: { name: objectName },
         });
 
+        if (!testObject) {
+          throw createError({
+            statusCode: 404,
+            statusMessage: `Объект "${objectName}" не найден`,
+          });
+        }
+
+        // 2. Ищем локацию по паре (testObjectId, name)
+        let testLocation = await tx.testLocation.findUnique({
+          where: { 
+            testObjectId_name: { 
+              testObjectId: testObject.id, 
+              name: locationName 
+            } 
+          },
+        });
+
+        // 3. Если локация не найдена — создаём новую
         if (!testLocation) {
           testLocation = await tx.testLocation.create({
             data: {
               name: locationName,
-              testObjectId,
-              note: `Создано при редактировании акта № ${id}`,
+              testObjectId: testObject.id,
+              note: `Создано при редактировании акта № ${beforeSamplingTest.sActNumber}`,
               authorEmail: editorEmail,
               createdAt: new Date(),
             },
@@ -154,6 +164,7 @@ export default defineEventHandler(async (event) => {
           });
         }
 
+        // 4. Привязываем локацию к акту
         relationUpdates.testLocationId = testLocation.id;
       }
 

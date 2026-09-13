@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
     const pageSize = parseInt(query.pageSize as string) || 10;
     const search = (query.search as string) || '';
     const sortKey = (query.sortKey as string) || 'sActNumber';
-    const sortOrder = (query.sortOrder as string) || 'asc';
+    const sortOrder = (query.sortOrder as string) || 'desc';
 
     // Формируем условия поиска
     const where: any = {};

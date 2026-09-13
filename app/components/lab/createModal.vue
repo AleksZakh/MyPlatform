@@ -69,7 +69,7 @@
                   :items="objName_items"
                   :searchable="true"
                   :search-input="{ placeholder: 'Введите название...' }"                 
-                  class="w-full shadow-sm"
+                  class="w-88 shadow-sm"
                 />
               </UFormField>
 
@@ -413,6 +413,7 @@
               variant="outline"
               color="primary"
               label="Сохранить"
+              :disabled="isSaved"
             />
           </div>
         </div>
@@ -476,6 +477,7 @@ const minDate = new CalendarDate(2000, 1, 1);
 const maxDate = getToday();
 const authorEmail = ref();
 const editorEmail = ref();
+const isSaved = ref(false);
 
 // Данные для выпадающих списков
 const plp_items = ref<string[]>([]);
@@ -662,67 +664,74 @@ watch(
 // ОТПРАВКА ФОРМЫ
 // ============================================
 async function handleSubmit(event: FormSubmitEvent<Schema>) {
-  // Преобразуем даты
-  const sDateStr = event.data.sDate ? dateToISOString(event.data.sDate) : null;
-  const receiptDateStr = event.data.receiptDate ? dateToISOString(event.data.receiptDate) : null;
-  const qualDocDateStr = event.data.qualDocDate ? dateToISOString(event.data.qualDocDate) : null;
-  const testProtocolDateStr = event.data.testProtocolDate ? dateToISOString(event.data.testProtocolDate) : null;
-
-  const formData = new FormData();
-  formData.append('authorEmail', authorEmail.value || 'noName');
-
-  // Заполняем FormData
-  Object.keys(event.data).forEach((key) => {
-    const value = event.data[key as keyof Schema];
-    
-    if (key === 'sDate' && sDateStr) {
-      formData.append(key, sDateStr);
-    } else if (key === 'receiptDate' && receiptDateStr) {
-      formData.append(key, receiptDateStr);
-    } else if (key === 'qualDocDate' && qualDocDateStr) {
-      formData.append(key, qualDocDateStr);
-    } else if (key === 'testProtocolDate' && testProtocolDateStr) {
-      formData.append(key, testProtocolDateStr);
-    } else if (value instanceof File) {
-      formData.append(key, value);
-    } else if (value !== undefined && value !== null) {
-      formData.append(key, String(value));
-    }
-  });
-
-  try {
-    const url = props.selectedRecord?.action === 'edit'
-      ? `/api/incoming-control/${props.selectedRecord.ID}`
-      : '/api/incoming-control';
-    
-    const method = props.selectedRecord?.action === 'edit' ? 'PUT' : 'POST';
-    
-    if (method === 'PUT') {
-      formData.append('editorEmail', editorEmail.value || 'noName');
-      // console.log('formData ---> ', formData)
-    }
-
-    const response = await $fetch<{ success: boolean; error?: string }>(url, {
-      method,
-      body: formData,
+  if(!isSaved.value) {
+    isSaved.value = true;
+    // Преобразуем даты
+    const sDateStr = event.data.sDate ? dateToISOString(event.data.sDate) : null;
+    const receiptDateStr = event.data.receiptDate ? dateToISOString(event.data.receiptDate) : null;
+    const qualDocDateStr = event.data.qualDocDate ? dateToISOString(event.data.qualDocDate) : null;
+    const testProtocolDateStr = event.data.testProtocolDate ? dateToISOString(event.data.testProtocolDate) : null;
+  
+    const formData = new FormData();
+    formData.append('authorEmail', authorEmail.value || 'noName');
+  
+    // Заполняем FormData
+    Object.keys(event.data).forEach((key) => {
+      const value = event.data[key as keyof Schema];
+      
+      if (key === 'sDate' && sDateStr) {
+        formData.append(key, sDateStr);
+      } else if (key === 'receiptDate' && receiptDateStr) {
+        formData.append(key, receiptDateStr);
+      } else if (key === 'qualDocDate' && qualDocDateStr) {
+        formData.append(key, qualDocDateStr);
+      } else if (key === 'testProtocolDate' && testProtocolDateStr) {
+        formData.append(key, testProtocolDateStr);
+      } else if (value instanceof File) {
+        formData.append(key, value);
+      } else if (value !== undefined && value !== null) {
+        formData.append(key, String(value));
+      }
     });
-
-    if (response.success) {
-      props.reloadData();
-      showTost(
-        'Успех!',
-        `Данные записи успешно ${method === 'PUT' ? 'обновлены' : 'сохранены'}`,
-        'success',
-        'streamline-freehand-color:form-validation-check-double',
-        3000
-      );
-      emit('close', true);
-    } else {
-      showTost('Ошибка!', response.error || 'Не удалось сохранить данные', 'error', 'fxemoji:warningsign', 5000);
+  
+    try {
+      const url = props.selectedRecord?.action === 'edit'
+        ? `/api/incoming-control/${props.selectedRecord.ID}`
+        : '/api/incoming-control';
+      
+      const method = props.selectedRecord?.action === 'edit' ? 'PUT' : 'POST';
+      
+      if (method === 'PUT') {
+        formData.append('editorEmail', editorEmail.value || 'noName');
+        // console.log('formData ---> ', formData)
+      }
+  
+      const response = await $fetch<{ success: boolean; error?: string }>(url, {
+        method,
+        body: formData,
+      });
+  
+      if (response.success) {
+        props.reloadData();
+        showTost(
+          'Успех!',
+          `Данные записи успешно ${method === 'PUT' ? 'обновлены' : 'сохранены'}`,
+          'success',
+          'streamline-freehand-color:form-validation-check-double',
+          3000
+        );
+        emit('close', true);
+        isSaved.value = false;
+      } else {
+        showTost('Ошибка!', response.error || 'Не удалось сохранить данные', 'error', 'fxemoji:warningsign', 5000);
+      }
+    } catch (error) {
+      console.error('Ошибка сохранения:', error);
+      showTost('Ошибка!', `Не удалось сохранить данные: ${error}`, 'error', 'fxemoji:warningsign', 5000);
     }
-  } catch (error) {
-    console.error('Ошибка сохранения:', error);
-    showTost('Ошибка!', `Не удалось сохранить данные: ${error}`, 'error', 'fxemoji:warningsign', 5000);
+  } else {
+    showTost('Внимание!', 'Данные уже отправляются. Пожалуйста, подождите.', 'warning', 'fxemoji:hourglass', 3000);
+    return;
   }
 }
 

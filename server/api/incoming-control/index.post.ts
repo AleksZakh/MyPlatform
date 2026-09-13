@@ -33,6 +33,7 @@ export default defineEventHandler(async (event) => {
     const hasReceiptData = body.material?.trim() || 
                           body.qualDocNumber?.trim() || 
                           body.qualDocDate ||
+                          body.receiptDate ||
                           fileDbPaths.qualDoc;
 
     // Выполняем все операции в одной транзакции
@@ -167,6 +168,7 @@ export default defineEventHandler(async (event) => {
         receiptMaterial = await tx.receiptMaterial.create({
           data: {
             qualDate: parseDate(body.qualDocDate),
+            receiptDate: parseDate(body.receiptDate),
             qualDocNumber: body.qualDocNumber || '',
             qualDocPath: qualDocPath,
             materialId: material.id,
@@ -191,7 +193,7 @@ export default defineEventHandler(async (event) => {
         testProtocol = await tx.testProtocol.create({
           data: {
             protocolNumber: body.testProtocolNumber || `Без номера-${Date.now()}`,
-            protocolDate: parseDate(body.protocolDate),
+            protocolDate: parseDate(body.testProtocolDate),
             protocolDocPath: protocolDocPath,
             testResult: body.testResult || 'Не указан',
             note: body.protocolNote || null,
@@ -217,6 +219,7 @@ export default defineEventHandler(async (event) => {
           const emptyReceipt = await tx.receiptMaterial.create({
             data: {
               qualDate: null,
+              receiptDate: null,
               qualDocNumber: '',
               qualDocPath: null,
               materialId: defaultMaterial.id,
@@ -231,7 +234,7 @@ export default defineEventHandler(async (event) => {
           testProtocol = await tx.testProtocol.create({
             data: {
               protocolNumber: body.testProtocolNumber || `Без номера-${Date.now()}`,
-              protocolDate: parseDate(body.protocolDate),
+              protocolDate: parseDate(body.testProtocolDate),
               protocolDocPath: protocolDocPath,
               testResult: body.testResult || 'Не указан',
               note: body.protocolNote || null,
@@ -298,6 +301,7 @@ export default defineEventHandler(async (event) => {
           },
         },
       });
+      timeout: 15000;
     });
 
     return {
