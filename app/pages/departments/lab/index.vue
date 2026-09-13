@@ -40,7 +40,7 @@ watch(
   adUser,
   (newUser) => {
     if (newUser) {
-      console.log('Сессия успешно считана и обновилась:', newUser);
+      // console.log('Сессия успешно считана и обновилась:', newUser);
       LoginUser.value = newUser;
       // @ts-ignore
       // userDep.value = newUser.department || '';
@@ -108,6 +108,9 @@ const tabs = computed(() => {
 
 // Активная вкладка (по умолчанию первая)
 const activeTab = ref('incomingInspection');
+definePageMeta({
+  breadcrumb: 'Блог'
+})
 </script>
 
 <style scoped>

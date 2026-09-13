@@ -1,5 +1,6 @@
 <template>
   <nav class="flex bg-sky-100">
+    <!-- <NuxtCrumbs />  -->
     <div class="flex items-center px-5 w-fit">
       <div class="flex justify-center m-auto">
         <NuxtImg src="/logo_eng.svg" width="200" height="40" alt="Logo" />

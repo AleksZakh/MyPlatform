@@ -104,9 +104,20 @@
                   </div>
                 </template>
                 <UInput
+                  v-model="sDocInput"
                   @change="(e: Event) => sDocChange((e.target as HTMLInputElement).files!)"
                   type="file"
                   class="w-full shadow-sm"
+                />
+                <UButton
+                  v-if="sDocFile"
+                  icon="i-heroicons-x-mark"
+                  color="neutral"
+                  variant="ghost"
+                  size="sm"
+                  title="Очистить файл"
+                  @click="clearQualDoc('sDoc')"
+                  class="absolute top-1.5 right-1 bg-gray-100 text-red-400 hover:text-red-600 transition-colors"
                 />
               </UFormField>
 
@@ -255,10 +266,21 @@
                   </div>
                 </template>
                 <UInput
+                  v-model="qualDocInput"
                   @change="(e: Event) => qualDocChange((e.target as HTMLInputElement).files!)"
                   type="file"
                   class="w-full"
                   :disabled="!isMaterialActive"
+                />
+                <UButton
+                  v-if="qualDocFile"
+                  icon="i-heroicons-x-mark"
+                  color="neutral"
+                  variant="ghost"
+                  size="sm"
+                  title="Очистить файл"
+                  @click="clearQualDoc('qualDoc')"
+                  class="absolute top-1.5 right-1 bg-gray-100 text-red-400 hover:text-red-600 transition-colors"
                 />
               </UFormField>
 
@@ -353,10 +375,21 @@
                   </div>
                 </template>
                 <UInput
+                  v-model="protocolDocInput"
                   @change="(e: Event) => protocolDocChange((e.target as HTMLInputElement).files!)"
                   type="file"
                   class="w-full"
                   :disabled="!isTestActive"
+                />
+                <UButton
+                  v-if="protocolDocFile"
+                  icon="i-heroicons-x-mark"
+                  color="neutral"
+                  variant="ghost"
+                  size="sm"
+                  title="Очистить файл"
+                  @click="clearQualDoc('protocolDoc')"
+                  class="absolute top-1.5 right-1 bg-gray-100 text-red-400 hover:text-red-600 transition-colors"
                 />
               </UFormField>
 
@@ -478,6 +511,12 @@ const maxDate = getToday();
 const authorEmail = ref();
 const editorEmail = ref();
 const isSaved = ref(false);
+const sDocFile = ref<File | null>(null);
+const qualDocFile = ref<File | null>(null);
+const protocolDocFile = ref<File | null>(null);
+const sDocInput = ref(null);
+const qualDocInput = ref(null);
+const protocolDocInput = ref(null);
 
 // Данные для выпадающих списков
 const plp_items = ref<string[]>([]);
@@ -551,16 +590,48 @@ const state = reactive<Schema>(getInitialState());
 // МЕТОДЫ ДЛЯ ФАЙЛОВ
 // ============================================
 const sDocChange = (files: FileList) => {
-  if (files && files.length) state.sDoc = files[0] ?? null;
+  if (files && files.length) {
+    state.sDoc = files[0] ?? null;
+    sDocFile.value = files[0] ?? null;
+  }
 };
 
 const qualDocChange = (files: FileList) => {
-  if (files && files.length) state.qualDoc = files[0] ?? null;
+  if (files && files.length) {
+    state.qualDoc = files[0] ?? null;
+    qualDocFile.value = files[0] ?? null;
+  }
 };
 
 const protocolDocChange = (files: FileList) => {
-  if (files && files.length) state.protocolDoc = files[0] ?? null;
+  if (files && files.length) {
+    state.protocolDoc = files[0] ?? null;
+    protocolDocFile.value = files[0] ?? null;
+  }
 };
+
+// Очистка файла
+function clearQualDoc(docType: 'sDoc' | 'qualDoc' | 'protocolDoc') {
+  if (docType === 'sDoc') {
+    state.sDoc = null;
+    sDocFile.value = null;
+    if (sDocInput.value) {
+      sDocInput.value = null; // сбрасываем input
+    }
+  } else if (docType === 'qualDoc') {
+    state.qualDoc = null;
+    qualDocFile.value = null;
+    if (qualDocInput.value) {
+      qualDocInput.value = null; // сбрасываем input
+    }
+  } else if (docType === 'protocolDoc') {
+    state.protocolDoc = null;
+    protocolDocFile.value = null;
+    if (protocolDocInput.value) {
+      protocolDocInput.value = null; // сбрасываем input
+    }
+  }
+}
 
 // ============================================
 // ЗАГРУЗКА СПРАВОЧНИКОВ

@@ -166,13 +166,18 @@
             Всего: <span>{{ totalCount }}</span>
           </span>
         </div>
-        <div>
+        <div class="flex items-center gap-4">
           <span class="flex items-center gap-1">
             <Icon
               :name="'streamline-freehand-color:app-window-user'"
               size="20"
             />На экране: {{ originalData.length }}
           </span>
+          <USelect
+            v-model="countRecords"
+            :items="[10, 25, 50, 100]"
+            @update:model-value="onPageSizeChange"
+          />
         </div>
         
       </div>
@@ -231,6 +236,7 @@ const {
 const { tableSettings, getVisibleColumns, getAllAvailableColumns } = useTableSettings();
 const { deleteRecordWithRefresh } = useRecordDelete();
 const filterStore = useTableFilterStore()
+const countRecords = ref(25);
 
 const selectedRecord = ref<any>(null);
 const count = ref(0);
@@ -271,6 +277,14 @@ const onPageChange = async (page: number) => {
   rowSelectedId.value = null;
   selectedRecord.value = null;
 };
+
+const onPageSizeChange = (size: number) => {
+  // ВАЖНО: при смене pageSize нужно сбросить страницу на первую
+  currentPage.value = 1
+  pageSize.value = size
+  // Перезагружаем данные с новым размером
+  loadData()
+}
 
 // Открытие настроек таблицы
 const openTableSettings = () => {
