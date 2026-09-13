@@ -1214,6 +1214,277 @@ export default defineAppConfig({
         variant: 'outline',
         position: 'popper'
       }
+    },
+    calendar: {
+      slots: {
+        root: '',
+        header: 'flex items-center justify-between',
+        body: 'flex flex-col space-y-4 pt-4 sm:flex-row sm:space-x-4 sm:space-y-0',
+        heading: 'flex-1 min-w-0 text-center',
+        headingLabel: 'font-medium block truncate p-1.5',
+        grid: 'w-full border-collapse select-none space-y-1 focus:outline-none',
+        gridRow: 'grid',
+        gridWeekDaysRow: 'mb-1 grid w-full grid-cols-7',
+        gridBody: 'grid',
+        headCell: 'rounded-md',
+        headCellWeek: 'rounded-md text-muted',
+        cell: 'relative text-center',
+        cellTrigger: [
+          'm-0.5 relative flex items-center justify-center whitespace-nowrap focus-visible:outline-3 data-disabled:text-muted data-unavailable:line-through data-unavailable:text-muted data-unavailable:pointer-events-none data-today:font-semibold',
+          'transition'
+        ],
+        cellWeek: 'relative text-center text-muted'
+      },
+      variants: {
+        color: {
+          primary: {
+            headCell: 'text-primary',
+            cellTrigger: 'outline-primary/25'
+          },
+          secondary: {
+            headCell: 'text-secondary',
+            cellTrigger: 'outline-secondary/25'
+          },
+          success: {
+            headCell: 'text-success',
+            cellTrigger: 'outline-success/25'
+          },
+          info: {
+            headCell: 'text-info',
+            cellTrigger: 'outline-info/25'
+          },
+          warning: {
+            headCell: 'text-warning',
+            cellTrigger: 'outline-warning/25'
+          },
+          error: {
+            headCell: 'text-error',
+            cellTrigger: 'outline-error/25'
+          },
+          neutral: {
+            headCell: 'text-highlighted',
+            cellTrigger: 'outline-inverted/25'
+          }
+        },
+        variant: {
+          solid: '',
+          outline: '',
+          soft: '',
+          subtle: ''
+        },
+        size: {
+          xs: {
+            headingLabel: 'text-xs',
+            cell: 'text-xs',
+            cellWeek: 'text-xs',
+            headCell: 'text-[10px]',
+            headCellWeek: 'text-[10px]',
+            body: 'space-y-2 pt-2'
+          },
+          sm: {
+            headingLabel: 'text-xs',
+            headCell: 'text-xs',
+            headCellWeek: 'text-xs',
+            cellWeek: 'text-xs',
+            cell: 'text-xs'
+          },
+          md: {
+            headingLabel: 'text-sm',
+            headCell: 'text-xs',
+            headCellWeek: 'text-xs',
+            cellWeek: 'text-xs',
+            cell: 'text-sm'
+          },
+          lg: {
+            headingLabel: 'text-base',
+            headCell: 'text-base',
+            headCellWeek: 'text-base',
+            cellWeek: 'text-base',
+            cell: 'text-base'
+          },
+          xl: {
+            headingLabel: 'text-lg',
+            headCell: 'text-lg',
+            headCellWeek: 'text-lg',
+            cellWeek: 'text-lg',
+            cell: 'text-lg'
+          }
+        },
+        view: {
+          day: {
+            gridRow: 'grid-cols-7 place-items-center',
+            cellTrigger: 'rounded-full data-outside-view:text-muted'
+          },
+          month: {
+            gridRow: 'grid-cols-4',
+            cellTrigger: 'rounded-md'
+          },
+          year: {
+            gridRow: 'grid-cols-4',
+            cellTrigger: 'rounded-md'
+          }
+        },
+        weekNumbers: {
+          true: ''
+        }
+      },
+      compoundVariants: [
+        {
+          color: 'primary',
+          variant: 'solid',
+          class: {
+            cellTrigger: 'data-selected:bg-primary data-selected:text-inverted data-today:not-data-selected:text-primary data-highlighted:bg-primary/20 hover:not-data-selected:bg-primary/20'
+          }
+        },
+        {
+          color: 'primary',
+          variant: 'outline',
+          class: {
+            cellTrigger: 'data-selected:ring data-selected:ring-inset data-selected:ring-primary/50 data-selected:text-primary data-selected:focus-visible:ring-primary data-today:not-data-selected:text-primary data-highlighted:bg-primary/10 hover:not-data-selected:bg-primary/10'
+          }
+        },
+        {
+          color: 'primary',
+          variant: 'soft',
+          class: {
+            cellTrigger: 'data-selected:bg-primary/10 data-selected:text-primary data-today:not-data-selected:text-primary data-highlighted:bg-primary/20 hover:not-data-selected:bg-primary/20'
+          }
+        },
+        {
+          color: 'primary',
+          variant: 'subtle',
+          class: {
+            cellTrigger: 'data-selected:bg-primary/10 data-selected:text-primary data-selected:ring data-selected:ring-inset data-selected:ring-primary/25 data-selected:focus-visible:ring-primary data-today:not-data-selected:text-primary data-highlighted:bg-primary/20 hover:not-data-selected:bg-primary/20'
+          }
+        },
+        {
+          color: 'neutral',
+          variant: 'solid',
+          class: {
+            cellTrigger: 'data-selected:bg-inverted data-selected:text-inverted data-today:not-data-selected:text-highlighted data-highlighted:bg-inverted/20 hover:not-data-selected:bg-inverted/10'
+          }
+        },
+        {
+          color: 'neutral',
+          variant: 'outline',
+          class: {
+            cellTrigger: 'data-selected:ring data-selected:ring-inset data-selected:ring-accented data-selected:text-default data-selected:bg-default data-selected:focus-visible:ring-inverted data-today:not-data-selected:text-highlighted data-highlighted:bg-inverted/10 hover:not-data-selected:bg-inverted/10'
+          }
+        },
+        {
+          color: 'neutral',
+          variant: 'soft',
+          class: {
+            cellTrigger: 'data-selected:bg-elevated data-selected:text-default data-today:not-data-selected:text-highlighted data-highlighted:bg-inverted/20 hover:not-data-selected:bg-inverted/10'
+          }
+        },
+        {
+          color: 'neutral',
+          variant: 'subtle',
+          class: {
+            cellTrigger: 'data-selected:bg-elevated data-selected:text-default data-selected:ring data-selected:ring-inset data-selected:ring-accented data-selected:focus-visible:ring-inverted data-today:not-data-selected:text-highlighted data-highlighted:bg-inverted/20 hover:not-data-selected:bg-inverted/10'
+          }
+        },
+        {
+          size: 'xs',
+          view: 'day',
+          class: {
+            cellTrigger: 'size-6'
+          }
+        },
+        {
+          size: 'sm',
+          view: 'day',
+          class: {
+            cellTrigger: 'size-7'
+          }
+        },
+        {
+          size: 'md',
+          view: 'day',
+          class: {
+            cellTrigger: 'size-8'
+          }
+        },
+        {
+          size: 'lg',
+          view: 'day',
+          class: {
+            cellTrigger: 'size-9'
+          }
+        },
+        {
+          size: 'xl',
+          view: 'day',
+          class: {
+            cellTrigger: 'size-10'
+          }
+        },
+        {
+          size: 'xs',
+          view: [
+            'month',
+            'year'
+          ],
+          class: {
+            cellTrigger: 'h-6 px-2'
+          }
+        },
+        {
+          size: 'sm',
+          view: [
+            'month',
+            'year'
+          ],
+          class: {
+            cellTrigger: 'h-7 px-2'
+          }
+        },
+        {
+          size: 'md',
+          view: [
+            'month',
+            'year'
+          ],
+          class: {
+            cellTrigger: 'h-8 px-3'
+          }
+        },
+        {
+          size: 'lg',
+          view: [
+            'month',
+            'year'
+          ],
+          class: {
+            cellTrigger: 'h-9 px-4'
+          }
+        },
+        {
+          size: 'xl',
+          view: [
+            'month',
+            'year'
+          ],
+          class: {
+            cellTrigger: 'h-10 px-5'
+          }
+        },
+        {
+          view: 'day',
+          weekNumbers: true,
+          class: {
+            gridRow: 'grid-cols-8',
+            gridWeekDaysRow: 'grid-cols-8 [&>*:first-child]:col-start-2'
+          }
+        }
+      ],
+      defaultVariants: {
+        size: 'md',
+        color: 'primary',
+        variant: 'solid',
+        view: 'day'
+      }
     }
   }
 })
