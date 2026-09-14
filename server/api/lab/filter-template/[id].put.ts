@@ -13,13 +13,18 @@ export default defineEventHandler(async (event) => {
     }
 
     const body = await readBody(event);
+    // console.log('Получен запрос на обновление шаблона фильтра с ID:', id, 'с данными:', body);
+
+
     const currentUserEmail = getActorEmail(event);
     const requestMeta = getRequestMeta(event);
+    
 
     // ========================================
     // ЗАГРУЗКА СОСТОЯНИЯ "ДО"
     // ========================================
     const before = await prisma.filterTemplate.findUnique({ where: { id } });
+    // console.log('Состояние шаблона ДО обновления:', before);
     if (!before || before.deletedAt) {
       throw createError({ statusCode: 404, statusMessage: 'Шаблон не найден' });
     }
@@ -42,6 +47,7 @@ export default defineEventHandler(async (event) => {
 
     // Проверка уникальности имени (если изменилось)
     if (body.name && body.name.trim() !== before.name) {
+      
       const duplicate = await prisma.filterTemplate.findFirst({
         where: {
           authorEmail: currentUserEmail,
@@ -56,6 +62,8 @@ export default defineEventHandler(async (event) => {
           statusMessage: `Шаблон с названием "${body.name}" уже существует`,
         });
       }
+    } else {
+      // console.log('Проверка уникальности имени шаблона:', body);
     }
 
     // ========================================
@@ -86,6 +94,8 @@ export default defineEventHandler(async (event) => {
           editedAt: new Date(),
         },
       });
+
+      // console.log('Шаблон фильтра успешно обновлён:', updated);
 
       // Логируем
       const changedFields = computeChangedFields(before as any, updated as any);

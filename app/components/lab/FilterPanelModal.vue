@@ -330,9 +330,10 @@
             </template>
             <USelectMenu
               v-model="filterTemplate"
-              :items="filterTemplatesList"
+              :items="filterTemplatesNameList"
               :searchable="true"
               :search-input="{ placeholder: 'Введите шаблон...' }"
+              @update:model-value="applyTemplate(filterTemplate)"
               class="shadow-sm min-w-50 "
             />
             <UCheckbox color="info" v-model="onlyMine" label="только мои" />
@@ -347,7 +348,13 @@
           >
             <Icon name="system-uicons:reset" size="24" /> Сбросить всё
           </UButton>
-          <LabFilterSavePopover />
+          <LabFilterSavePopover 
+            :filters="localFilters"
+            :author-email="currentUser?.email || 'anonymous'"
+            :template-id="filters?.id"
+            :template-name="filterTemplate"
+            :is-default="filters?.isDefault"
+          />
           <UButton
             @click="applyFilters"
             type="submit"
@@ -370,6 +377,15 @@ import { reactive, onMounted } from 'vue' // ИСПРАВЛЕНО: Добавл�
 import type { ITableFilter } from '@@/types/tableFilter' // ИСПРАВЛЕНО: Изменен путь с @@ на нормальный ~/
 import { useTableFilterStore } from '~/stores/tableFilter'
 
+interface FilterTemplate {
+  id: number;
+  name: string;
+  authorEmail: string;
+  filters: Partial<ITableFilter>;
+  isDefault: boolean;
+  timestamp: string;
+}
+
 // Инициализируем хранилище Pinia
 const filterStore = useTableFilterStore()
 
@@ -384,10 +400,14 @@ const materials_items = ref<string[]>([]);
 const manufacturer_items = ref<string[]>([]);
 const testResultItems = ref(['Соответствует', 'Не соответствует']);
 const isLoading = ref(false);
-const filterTemplatesList = ref<string[]>([]);
+const filterTemplatesNameList = ref<string[]>([]);
+const filterTemplatesList = ref<FilterTemplate[]>([]);
 const filterTemplate = ref<string | undefined>(undefined);
+  const currentUser = ref<any>(null);
 const onlyMine = ref(true); // Флаг для фильтрации только своих шаблонов
 const userStore = useUserStore();
+const filters = ref();
+
 const { user } = storeToRefs(userStore);
 
 const props = defineProps<{
@@ -407,25 +427,75 @@ async function loadReferenceData() {
   
 }
 
+// === Загружаем список шаблонов фильтров из базы данных ===
 async function loadTemplates() {
   const response = await $fetch('/api/lab/filter-template', {
     params: { onlyMine: onlyMine.value },
   });
   if (response?.success) {
-    console.log('Шаблоны фильтров успешно загружены:', response.data);
+    // console.log('Шаблоны фильтров успешно загружены:', response.data);
+    filterTemplatesList.value = response.data as FilterTemplate[];
     for (const template of response.data) {
       if (template.name) {
-        filterTemplatesList.value.push(template.name);
+        filterTemplatesNameList.value.push(template.name);
       } 
     }
   }
+}
+
+// Применение шаблона
+function applyTemplate(template: any) {
+  
+  // console.log('filterTemplate ===> ', template)
+  for(let i=0; i<filterTemplatesList.value.length; i++){
+    // console.log('filterTemplatesList.value[i] ===> ', filterTemplatesList.value[i])
+    if(filterTemplatesList.value[i]?.name === template){
+      // console.log('Применение шаблона фильтра:', filterTemplatesList.value[i]);
+      // Проверяем, что объект существует
+      filters.value = filterTemplatesList.value[i];
+      if (!filters) {
+        console.warn(`Шаблон с индексом ${i} не найден`);
+        return;
+      }
+      
+    // // Подставляем значения с fallback на null
+      Object.assign(localFilters, {
+        plp: filters.value.filters.plp ?? null,
+        objName: filters.value.filters.objName ?? null,
+        samplActNumber: filters.value.filters.samplActNumber ?? null,
+        sDateStart: filters.value.filters.sDateStart ?? null,
+        sDateEnd: filters.value.filters.sDateEnd ?? null,
+        sPlace: filters.value.filters.sPlace ?? null,
+        sProvaider: filters.value.filters.sProvaider ?? null,
+        receiveDateStart: filters.value.filters.receiveDateStart ?? null,
+        receiveDateEnd: filters.value.filters.receiveDateEnd ?? null,
+        materialName: filters.value.filters.materialName ?? null,
+        qualiDateStart: filters.value.filters.qualiDateStart ?? null,
+        qualiDateEnd: filters.value.filters.qualiDateEnd ?? null,
+        qualiDocNumber: filters.value.filters.qualiDocNumber ?? null,
+        manufacturer: filters.value.filters.manufacturer ?? null,
+        testReportDataStart: filters.value.filters.testReportDataStart ?? null,
+        testReportDataEnd: filters.value.filters.testReportDataEnd ?? null,
+        testResult: filters.value.filters.testResult ?? null,
+        testProtocolNumber: filters.value.filters.testProtocolNumber ?? null,
+        // ... остальные поля
+      });
+      // localFilters.filterName = filters.name ?? null; // Подставляем имя шаблона
+      // console.log('Состояние фильтров после применения шаблона:', localFilters);
+      break;
+    }
+  }
+  // console.log('Применение шаблона фильтра:', filterTemplatesNameList.value.find(t => t.name === filterTemplate.value));
+
+  
 }
 
 watch(
   user,
   (newUser) => {
     if (newUser) {
-      console.log('Сессия успешно считана и обновилась:', newUser);
+      // console.log('Сессия успешно считана и обновилась:', newUser);
+      currentUser.value = newUser;
     }
   },
   { immediate: true }
@@ -452,7 +522,7 @@ const localFilters = reactive<ITableFilter>({
   testReportDataStart: null,
   testReportDataEnd: null,
   testResult: null,
-  testProtocolNumber: null
+  testProtocolNumber: null,
 })
 
 // Функция очистки пустых строк перед сохранением в Pinia
@@ -474,7 +544,13 @@ onMounted(() => {
   // }  
   // Синхронизируем: переносим данные из Pinia в инпуты нашей формы
   Object.assign(localFilters, filterStore.filter)
-  loadTemplates()
+  loadTemplates();
+  // Автоматически применяем дефолтный шаблон (если есть)
+  const defaultTemplate = filterTemplatesList.value.find(t => t.isDefault);
+  if (defaultTemplate) {
+    filterTemplate.value = defaultTemplate.name;
+    applyTemplate(defaultTemplate);
+  }
 })
 loadReferenceData()
 
@@ -507,6 +583,7 @@ const resetFilters = () => {
   filterStore.resetFilter()
   // Стираем значения из инпутов на форме, заменяя их на чистые дефолтные null из стора
   Object.assign(localFilters, filterStore.filter)
+  filterTemplate.value = undefined
   // 3. Посылаем сигнал родителю, чтобы таблица сразу обновилась
   emit('reset')
   // emit('close')

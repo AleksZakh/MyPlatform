@@ -8,6 +8,7 @@ const prisma = new PrismaClient();
 export default defineEventHandler(async (event) => {
   try {
     const query = getQuery(event);
+    // console.log('Получен запрос на получение шаблонов фильтров с параметрами:', query);
     const onlyMine = query.onlyMine === 'true'; // флаг "Только мои"
     const currentUserEmail = getActorEmail(event);
 

@@ -83,7 +83,14 @@ export default defineEventHandler(async (event) => {
       });
 
       return template;
-    });
+      
+    },
+    {
+      timeout: 15000, // ✅ вот сюда — во второй аргумент
+    }
+  
+  );
+    
 
     return {
       success: true,
