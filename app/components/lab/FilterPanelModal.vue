@@ -329,7 +329,7 @@
               </span>
             </template>
             <USelectMenu
-              v-model="filterTemplate as any"
+              v-model="filterTemplate"
               :items="filterTemplatesList"
               :searchable="true"
               :search-input="{ placeholder: 'Введите шаблон...' }"
@@ -385,7 +385,7 @@ const manufacturer_items = ref<string[]>([]);
 const testResultItems = ref(['Соответствует', 'Не соответствует']);
 const isLoading = ref(false);
 const filterTemplatesList = ref<string[]>([]);
-const filterTemplate = ref<string | null>(null);
+const filterTemplate = ref<string | undefined>(undefined);
 const onlyMine = ref(true); // Флаг для фильтрации только своих шаблонов
 const userStore = useUserStore();
 const { user } = storeToRefs(userStore);
