@@ -355,3 +355,42 @@ model AuditLog {
   @@index([action])
   @@map("audit_logs")
 }
+
+// ============================================
+// ШАБЛОНЫ ФИЛЬТРОВ ДЛЯ ТАБЛИЦЫ ОТБОРОВ ПРОБ
+// ============================================
+model FilterTemplate {
+  id          Int      @id @default(autoincrement())
+  
+  // Уникальный идентификатор (дата создания в мс) — для сортировки и ссылок
+  timestamp   BigInt   @unique
+  
+  // Название шаблона
+  name        String   @db.VarChar(255)
+  
+  // Автор шаблона (email из сессии)
+  authorEmail String   @db.VarChar(255)
+  
+  // Сам фильтр в виде JSON
+  // Структура: { plp, objName, samplActNumber, sDateStart, ... }
+  filters     Json
+  
+  // Признак "по умолчанию" — один на пользователя (проверяется в API)
+  isDefault   Boolean  @default(false)
+  
+  // Системные поля
+  createdAt   DateTime @default(now())
+  editedAt    DateTime? @updatedAt
+  editorEmail String?  @db.VarChar(255)
+  
+  // Мягкое удаление
+  deletedAt   DateTime? @db.Date
+  deletedBy   String?   @db.VarChar(255)
+  
+  // Уникальность: один автор не может иметь два шаблона с одинаковым именем
+  @@unique([authorEmail, name])
+  @@index([authorEmail])
+  @@index([isDefault])
+  @@index([timestamp])
+  @@map("filter_templates")
+}

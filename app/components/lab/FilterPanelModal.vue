@@ -317,7 +317,11 @@
       <!-- Кнопки действий -->
       <div class="flex justify-between w-full">
         <div class="flex items-end">
-          <UFormField name="filterTemplate" class="flex items-center gap-2">
+          <UFormField name="filterTemplate" class="flex items-center gap-2"
+          :ui="{
+            container: 'flex items-center gap-2'
+          }"
+          >
             <template #label>
               <span class="flex gap-1 mt-1">
                 <UIcon name="octicon:repo-template-24" size="24" class="text-blue-600" />
@@ -325,12 +329,13 @@
               </span>
             </template>
             <USelectMenu
-              v-model="localFilters.materialName as any"
-              :items="filterTemplates"
+              v-model="filterTemplate as any"
+              :items="filterTemplatesList"
               :searchable="true"
               :search-input="{ placeholder: 'Введите шаблон...' }"
               class="shadow-sm min-w-50 "
-/>
+            />
+            <UCheckbox color="info" v-model="onlyMine" label="только мои" />
           </UFormField>
         </div>
         <div class="flex gap-3 " >
@@ -379,7 +384,11 @@ const materials_items = ref<string[]>([]);
 const manufacturer_items = ref<string[]>([]);
 const testResultItems = ref(['Соответствует', 'Не соответствует']);
 const isLoading = ref(false);
-const filterTemplates = ref();
+const filterTemplatesList = ref<string[]>([]);
+const filterTemplate = ref<string | null>(null);
+const onlyMine = ref(true); // Флаг для фильтрации только своих шаблонов
+const userStore = useUserStore();
+const { user } = storeToRefs(userStore);
 
 const props = defineProps<{
   onApply?: () => void
@@ -397,6 +406,30 @@ async function loadReferenceData() {
   }
   
 }
+
+async function loadTemplates() {
+  const response = await $fetch('/api/lab/filter-template', {
+    params: { onlyMine: onlyMine.value },
+  });
+  if (response?.success) {
+    console.log('Шаблоны фильтров успешно загружены:', response.data);
+    for (const template of response.data) {
+      if (template.name) {
+        filterTemplatesList.value.push(template.name);
+      } 
+    }
+  }
+}
+
+watch(
+  user,
+  (newUser) => {
+    if (newUser) {
+      console.log('Сессия успешно считана и обновилась:', newUser);
+    }
+  },
+  { immediate: true }
+);
 
 // Локальное реактивное состояние формы (черновик)
 const localFilters = reactive<ITableFilter>({
@@ -441,8 +474,10 @@ onMounted(() => {
   // }  
   // Синхронизируем: переносим данные из Pinia в инпуты нашей формы
   Object.assign(localFilters, filterStore.filter)
+  loadTemplates()
 })
 loadReferenceData()
+
 // ======= СОБЫТИЯ (EMITS) =======
 const emit = defineEmits<{
   (e: 'apply'): void    

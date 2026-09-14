@@ -108,6 +108,7 @@
                   @change="(e: Event) => sDocChange((e.target as HTMLInputElement).files!)"
                   type="file"
                   class="w-full shadow-sm"
+                  :class="{ 'border rounded-md border-green-500': sDocFile}"
                 />
                 <UButton
                   v-if="sDocFile"
@@ -271,6 +272,7 @@
                   type="file"
                   class="w-full"
                   :disabled="!isMaterialActive"
+                  :class="{ 'border rounded-md border-green-500': qualDocFile }"
                 />
                 <UButton
                   v-if="qualDocFile"
@@ -380,6 +382,7 @@
                   type="file"
                   class="w-full"
                   :disabled="!isTestActive"
+                  :class="{ 'border rounded-md border-green-500': protocolDocFile }"
                 />
                 <UButton
                   v-if="protocolDocFile"

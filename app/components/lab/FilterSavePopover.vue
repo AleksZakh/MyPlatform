@@ -16,10 +16,11 @@
                     <label class="font-normal flex items-center gap-2 min-w-32 text-gray-700 text-sm" >
                     <Icon name="streamline-freehand-color:content-paper-edit" size="18" /> Укажите имя шаблона:</label>
                   </template>
-                  <UInput v-model="filterTmpName" class="w-full mb-3" size="sm"/>
+                  <UInput v-model="filterTmpName" class="w-full mb-1" size="sm"/>
+                  <UCheckbox color="neutral" v-model="useAsDefault" label="Использовать по умолчанию" />
                 </UFormField>
                 
-                <div class="flex justify-center">
+                <div class="flex justify-center mt-1">
                     <UButton variant="outline" size="sm" color="info" type="submit" @click="saveFilterTemplite(close)">Сохранить</UButton>
                 </div>            
             </fieldset>
@@ -33,6 +34,7 @@
 <script setup lang="ts">
 const { showTost } = useAppToasts();
 const filterTmpName = ref();
+const useAsDefault = ref(false);
 
 async function saveFilterTemplite(closePopover: () => void) {
     // console.log('Начало сохранения...');
