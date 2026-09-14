@@ -336,7 +336,7 @@
               @update:model-value="applyTemplate(filterTemplate)"
               class="shadow-sm min-w-50 "
             />
-            <UCheckbox color="info" v-model="onlyMine" label="только мои" />
+            <UCheckbox color="info" v-model="onlyMine" label="только мои" @change="loadTemplates"/>
           </UFormField>
         </div>
         <div class="flex gap-3 " >
@@ -435,6 +435,7 @@ async function loadTemplates() {
   if (response?.success) {
     // console.log('Шаблоны фильтров успешно загружены:', response.data);
     filterTemplatesList.value = response.data as FilterTemplate[];
+    filterTemplatesNameList.value = []; // Очищаем список перед заполнением
     for (const template of response.data) {
       if (template.name) {
         filterTemplatesNameList.value.push(template.name);
