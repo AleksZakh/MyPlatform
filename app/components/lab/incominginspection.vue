@@ -271,7 +271,7 @@ const globalFilter = ref('');
 const visibleHeaders = computed(() => {
 
   const visibleColumns = getVisibleColumns();
-  console.log('visibleColumns ===> ', visibleColumns)
+  // console.log('visibleColumns ===> ', visibleColumns)
   return headers.value.filter(header => 
     visibleColumns.includes(header)
   );

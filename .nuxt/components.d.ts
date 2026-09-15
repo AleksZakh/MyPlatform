@@ -18,6 +18,7 @@ export const ConfirmDialog: typeof import("../app/components/ConfirmDialog.vue")
 export const CustomDateInput: typeof import("../app/components/CustomDateInput.vue")['default']
 export const DepartmentCard: typeof import("../app/components/DepartmentCard.vue")['default']
 export const Footer: typeof import("../app/components/Footer.vue")['default']
+export const ResizableTable: typeof import("../app/components/ResizableTable.vue")['default']
 export const Toast: typeof import("../app/components/Toast.vue")['default']
 export const LabExportRecordsModal: typeof import("../app/components/lab/ExportRecordsModal.vue")['default']
 export const LabFileSystem: typeof import("../app/components/lab/FileSystem.vue")['default']
@@ -204,6 +205,7 @@ export const LazyConfirmDialog: LazyComponent<typeof import("../app/components/C
 export const LazyCustomDateInput: LazyComponent<typeof import("../app/components/CustomDateInput.vue")['default']>
 export const LazyDepartmentCard: LazyComponent<typeof import("../app/components/DepartmentCard.vue")['default']>
 export const LazyFooter: LazyComponent<typeof import("../app/components/Footer.vue")['default']>
+export const LazyResizableTable: LazyComponent<typeof import("../app/components/ResizableTable.vue")['default']>
 export const LazyToast: LazyComponent<typeof import("../app/components/Toast.vue")['default']>
 export const LazyLabExportRecordsModal: LazyComponent<typeof import("../app/components/lab/ExportRecordsModal.vue")['default']>
 export const LazyLabFileSystem: LazyComponent<typeof import("../app/components/lab/FileSystem.vue")['default']>

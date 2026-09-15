@@ -18,6 +18,7 @@ interface _GlobalComponents {
   CustomDateInput: typeof import("../../app/components/CustomDateInput.vue")['default']
   DepartmentCard: typeof import("../../app/components/DepartmentCard.vue")['default']
   Footer: typeof import("../../app/components/Footer.vue")['default']
+  ResizableTable: typeof import("../../app/components/ResizableTable.vue")['default']
   Toast: typeof import("../../app/components/Toast.vue")['default']
   LabExportRecordsModal: typeof import("../../app/components/lab/ExportRecordsModal.vue")['default']
   LabFileSystem: typeof import("../../app/components/lab/FileSystem.vue")['default']
@@ -204,6 +205,7 @@ interface _GlobalComponents {
   LazyCustomDateInput: LazyComponent<typeof import("../../app/components/CustomDateInput.vue")['default']>
   LazyDepartmentCard: LazyComponent<typeof import("../../app/components/DepartmentCard.vue")['default']>
   LazyFooter: LazyComponent<typeof import("../../app/components/Footer.vue")['default']>
+  LazyResizableTable: LazyComponent<typeof import("../../app/components/ResizableTable.vue")['default']>
   LazyToast: LazyComponent<typeof import("../../app/components/Toast.vue")['default']>
   LazyLabExportRecordsModal: LazyComponent<typeof import("../../app/components/lab/ExportRecordsModal.vue")['default']>
   LazyLabFileSystem: LazyComponent<typeof import("../../app/components/lab/FileSystem.vue")['default']>

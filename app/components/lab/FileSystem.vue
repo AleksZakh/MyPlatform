@@ -2,6 +2,7 @@
     <div>
         <div class="file_sistem_header">
             <h3>Файловая система</h3>
+            <ResizableTable />
         </div>
         
     </div>
