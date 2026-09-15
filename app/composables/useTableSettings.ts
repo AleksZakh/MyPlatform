@@ -89,15 +89,17 @@ export const useTableSettings = () => {
 
   // Получение видимых колонок
   const getVisibleColumns = () => {
-    const jsonString = localStorage.getItem('tableSettings');
-    if (jsonString) {
-      try {
-        const parsed = JSON.parse(jsonString);
-        if (parsed && Array.isArray(parsed.visibleColumns)) {
-          return parsed.visibleColumns;
+    if (import.meta.client) { // Код выполнится только в браузере
+      const jsonString = localStorage.getItem('tableSettings');
+      if (jsonString) {
+        try {
+          const parsed = JSON.parse(jsonString);
+          if (parsed && Array.isArray(parsed.visibleColumns)) {
+            return parsed.visibleColumns;
+          }
+        } catch (error) {
+          console.error('Ошибка парсинга настроек из localStorage:', error);
         }
-      } catch (error) {
-        console.error('Ошибка парсинга настроек из localStorage:', error);
       }
     }
 
