@@ -9,6 +9,21 @@
       </div>
       <div class="flex gap-2">
         <div>
+          <UTooltip text="настройка полей таблицы">
+            <UButton
+              @click="tableSettingsOpen"
+              class="px-3 py-1 bg-white border text-lg text-black font-normal border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+            >
+              <Icon
+                :name="'material-symbols-light:table-view-outline-rounded'"
+                size="24"
+              />
+              Настройка полей таблицы
+            </UButton>
+            
+          </UTooltip>
+        </div>
+        <div>
           <UTooltip text="Патаметры фильтра">
             <UButton     
               class="px-3 py-1 bg-white border text-lg text-black font-normal border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
@@ -229,8 +244,7 @@ const {
   pageSize,
   loadData, 
   changePage,
-  reloadCurrentPage,
-  refreshTableData
+  reloadCurrentPage
 } = useLabDataLoader();
 
 const { tableSettings, getVisibleColumns, getAllAvailableColumns } = useTableSettings();
@@ -255,8 +269,9 @@ const globalFilter = ref('');
 
 // Вычисляем видимые заголовки (на основе настроек)
 const visibleHeaders = computed(() => {
+
   const visibleColumns = getVisibleColumns();
-  // console.log('visibleColumns ===> ', visibleColumns)
+  console.log('visibleColumns ===> ', visibleColumns)
   return headers.value.filter(header => 
     visibleColumns.includes(header)
   );
@@ -301,7 +316,8 @@ const hendleFilterPanel = () => {
   // console.log('Открываем панель настройки фильтра')
   modalFilterPanel.open({
     onApply: () => {
-      refreshTableData()
+      reloadCurrentPage()
+      // refreshTableData()
     }
   })
 }

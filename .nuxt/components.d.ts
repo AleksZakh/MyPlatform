@@ -20,6 +20,7 @@ export const DepartmentCard: typeof import("../app/components/DepartmentCard.vue
 export const Footer: typeof import("../app/components/Footer.vue")['default']
 export const Toast: typeof import("../app/components/Toast.vue")['default']
 export const LabExportRecordsModal: typeof import("../app/components/lab/ExportRecordsModal.vue")['default']
+export const LabFileSystem: typeof import("../app/components/lab/FileSystem.vue")['default']
 export const LabFileViewerModal: typeof import("../app/components/lab/FileViewerModal.vue")['default']
 export const LabFilterPanelModal: typeof import("../app/components/lab/FilterPanelModal.vue")['default']
 export const LabFilterSavePopover: typeof import("../app/components/lab/FilterSavePopover.vue")['default']
@@ -205,6 +206,7 @@ export const LazyDepartmentCard: LazyComponent<typeof import("../app/components/
 export const LazyFooter: LazyComponent<typeof import("../app/components/Footer.vue")['default']>
 export const LazyToast: LazyComponent<typeof import("../app/components/Toast.vue")['default']>
 export const LazyLabExportRecordsModal: LazyComponent<typeof import("../app/components/lab/ExportRecordsModal.vue")['default']>
+export const LazyLabFileSystem: LazyComponent<typeof import("../app/components/lab/FileSystem.vue")['default']>
 export const LazyLabFileViewerModal: LazyComponent<typeof import("../app/components/lab/FileViewerModal.vue")['default']>
 export const LazyLabFilterPanelModal: LazyComponent<typeof import("../app/components/lab/FilterPanelModal.vue")['default']>
 export const LazyLabFilterSavePopover: LazyComponent<typeof import("../app/components/lab/FilterSavePopover.vue")['default']>

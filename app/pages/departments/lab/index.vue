@@ -18,10 +18,14 @@
           <LabIncominginspection />
         </template>
         <template #eventsLog>
-          <LabResearch v-if="acceptUserList.includes(LoginUser?.username)" />
+          <LabResearch  />
+          <!-- <LabResearch v-if="acceptUserList.includes(LoginUser?.username)" /> -->
         </template>
         <template #handbook>
           <LabHandbook />
+        </template>
+        <template #file_system>
+          <LabFileSystem />
         </template>
       </UTabs>
     </UCard>
@@ -91,17 +95,23 @@ const tabs = computed(() => {
       slot: 'handbook',
       value: 'handbook',
     },
-  ];
-
-  // Вставляем "Журнал событий" только для избранных
-  if (acceptUserList.includes(LoginUser?.value?.username)) {
-    baseTabs.splice(1, 0, {
+    {
       label: 'Журнал событий',
       icon: 'tabler:logs',
       slot: 'eventsLog',
       value: 'eventsLog',
-    });
-  }
+    }
+  ];
+
+  // Вставляем "Журнал событий" только для избранных
+  // if (acceptUserList.includes(LoginUser?.value?.username)) {
+  //   baseTabs.splice(1, 0, {
+  //     label: 'Журнал событий',
+  //     icon: 'tabler:logs',
+  //     slot: 'eventsLog',
+  //     value: 'eventsLog',
+  //   });
+  // }
 
   return baseTabs;
 });

@@ -30,6 +30,10 @@
       <LabTestReportForm />
     </template>
 
+    <!-- Слот для вкладки "Файловая система" -->
+    <template #file_system>
+      <LabFileSystem />
+    </template>
   </UTabs>
 </template>
 
@@ -49,6 +53,11 @@ const items = [
     label: 'Протоколы испытаний',
     icon: 'streamline-ultimate:laboratory-drug-file',
     slot: 'test_report'
+  },
+  {
+    label: 'Файловая система',
+    icon: 'streamline-freehand-color:organization-files',
+    slot: 'file_system'
   }
 ];
 </script>

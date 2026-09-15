@@ -89,7 +89,20 @@ export const useTableSettings = () => {
 
   // Получение видимых колонок
   const getVisibleColumns = () => {
+    const jsonString = localStorage.getItem('tableSettings');
+    if (jsonString) {
+      try {
+        const parsed = JSON.parse(jsonString);
+        if (parsed && Array.isArray(parsed.visibleColumns)) {
+          return parsed.visibleColumns;
+        }
+      } catch (error) {
+        console.error('Ошибка парсинга настроек из localStorage:', error);
+      }
+    }
 
+    // Если нет сохранённых настроек, возвращаем текущие видимые колонки
+    // console.log('Возвращаем текущие видимые колонки ===> ', tableSettings.value.visibleColumns)
     return tableSettings.value.visibleColumns;
   };
 

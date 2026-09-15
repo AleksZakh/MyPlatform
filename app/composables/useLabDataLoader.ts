@@ -138,6 +138,5 @@ export const useLabDataLoader = () => {
     changePage,
     changePageSize,
     reloadCurrentPage,
-    refreshTableData: loadData
   };
 };
