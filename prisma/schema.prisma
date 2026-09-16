@@ -394,3 +394,139 @@ model FilterTemplate {
   @@index([timestamp])
   @@map("filter_templates")
 }
+
+// ============================================================
+// ПОДРАЗДЕЛЕНИЯ SPACE
+// ============================================================
+
+model Department {
+  id Int @id @default(autoincrement())
+
+  // Стабильный программный ключ.
+  // Например:
+  // laboratory-control
+  // diagnostics
+  // supply
+  // it
+  // hr
+  // transport
+  key String @unique @db.VarChar(100)
+
+  // Отображаемое название
+  name String @unique @db.VarChar(255)
+
+  description String? @db.Text
+
+  // Можно ли использовать подразделение в системе
+  isActive Boolean @default(true)
+
+  // Порядок отображения
+  sortOrder Int @default(0)
+
+  // Связанные ресурсы
+  resources DepartmentResource[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([sortOrder])
+
+  @@map("departments")
+}
+
+
+// ============================================================
+// РЕСУРСЫ SPACE, НА КОТОРЫЕ МОЖНО ВЫДАВАТЬ ПРАВА
+// ============================================================
+
+model AccessResource {
+  id Int @id @default(autoincrement())
+
+  // Стабильный программный ключ.
+  //
+  // Например:
+  // lab.sampling-tests
+  // lab.materials
+  // lab.test-protocols
+  key String @unique @db.VarChar(150)
+
+  // Название для UI
+  name String @db.VarChar(255)
+
+  description String? @db.Text
+
+  // Тип ресурса
+  type AccessResourceType @default(TABLE)
+
+  // Доступен ли ресурс в системе прав
+  isActive Boolean @default(true)
+
+  // Порядок отображения
+  sortOrder Int @default(0)
+
+  // Подразделения, использующие этот ресурс
+  departments DepartmentResource[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([type])
+  @@index([sortOrder])
+
+  @@map("access_resources")
+}
+
+
+// ============================================================
+// СВЯЗЬ ПОДРАЗДЕЛЕНИЙ С РЕСУРСАМИ
+// ============================================================
+//
+// many-to-many:
+//
+// одно подразделение имеет много ресурсов,
+// один ресурс может использоваться несколькими подразделениями.
+//
+
+
+model DepartmentResource {
+  departmentId Int
+  resourceId   Int
+
+  department Department     @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  resource   AccessResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  // Является ли подразделение владельцем ресурса.
+  //
+  // Например:
+  // "Материалы" принадлежат Лабораторному контролю,
+  // но позже могут быть доступны и другим подразделениям.
+
+  isOwner Boolean @default(false)
+
+  @@id([departmentId, resourceId])
+  @@index([resourceId])
+
+  @@map("department_resources")
+}
+
+
+
+  
+  
+
+// ============================================================
+// ТИПЫ РЕСУРСОВ
+// ============================================================
+
+enum AccessResourceType {
+  // Таблица / набор данных
+  TABLE
+
+  // Целый функциональный раздел приложения
+  SECTION
+
+  // Отдельная функция системы
+  FEATURE
+}
