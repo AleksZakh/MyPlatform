@@ -84,9 +84,10 @@ export default defineEventHandler(async (event) => {
    * но оставляем исключение и здесь.
    */
   const isNuxtAsset =
-    path.startsWith('/_nuxt/') ||
-    path.startsWith('/_nuxt_icon/') ||
-    path.startsWith('/_ipx/');
+  path.startsWith('/_nuxt/') ||
+  path.startsWith('/_nuxt_icon/') ||
+  path.startsWith('/api/_nuxt_icon/') ||
+  path.startsWith('/_ipx/');
 
   /**
    * Общие публичные файлы.
