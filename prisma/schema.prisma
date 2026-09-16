@@ -173,29 +173,29 @@ model Material {
 // 5. Поступление материала
 // ============================================
 model ReceiptMaterial {
-  id            Int       @id @default(autoincrement())
-  
+  id Int @id @default(autoincrement())
+
   // ДВЕ РАЗНЫЕ ДАТЫ
-  receiptDate   DateTime? @db.Date   // ← НОВОЕ: дата поступления материала
-  qualDate      DateTime? @db.Date   // ← дата документа о качестве
-  
-  qualDocNumber String?   @db.VarChar(255)
-  qualDocPath   String?   @db.Text
-  note          String?   @db.Text
-  
-  materialId    Int
-  material      Material  @relation(fields: [materialId], references: [id])
-  
+  receiptDate DateTime? @db.Date // ← НОВОЕ: дата поступления материала
+  qualDate    DateTime? @db.Date // ← дата документа о качестве
+
+  qualDocNumber String? @db.VarChar(255)
+  qualDocPath   String? @db.Text
+  note          String? @db.Text
+
+  materialId Int
+  material   Material @relation(fields: [materialId], references: [id])
+
   // Системные поля
-  createdAt   DateTime @default(now())
-  authorEmail String?  @db.VarChar(255)
+  createdAt   DateTime  @default(now())
+  authorEmail String?   @db.VarChar(255)
   editedAt    DateTime? @updatedAt
-  editorEmail String?  @db.VarChar(255)
-  
+  editorEmail String?   @db.VarChar(255)
+
   // Мягкое удаление
-  deletedAt   DateTime? @db.Date
-  deletedBy   String?   @db.VarChar(255)
-  
+  deletedAt DateTime? @db.Date
+  deletedBy String?   @db.VarChar(255)
+
   testProtocols TestProtocol[]
   samplingTests SamplingTest[]
 
@@ -338,7 +338,7 @@ model AuditLog {
   // Кто и когда выполнил действие
   actorEmail String   @db.VarChar(255) // Email пользователя
   timestamp  DateTime @default(now()) // Когда выполнено
-  note         String?  @db.Text
+  note       String?  @db.Text
 
   // Снимки данных (JSON)
   beforeData    Json? // Состояние до изменения
@@ -360,33 +360,33 @@ model AuditLog {
 // ШАБЛОНЫ ФИЛЬТРОВ ДЛЯ ТАБЛИЦЫ ОТБОРОВ ПРОБ
 // ============================================
 model FilterTemplate {
-  id          Int      @id @default(autoincrement())
-  
+  id Int @id @default(autoincrement())
+
   // Уникальный идентификатор (дата создания в мс) — для сортировки и ссылок
-  timestamp   BigInt   @unique
-  
+  timestamp BigInt @unique
+
   // Название шаблона
-  name        String   @db.VarChar(255)
-  
+  name String @db.VarChar(255)
+
   // Автор шаблона (email из сессии)
-  authorEmail String   @db.VarChar(255)
-  
+  authorEmail String @db.VarChar(255)
+
   // Сам фильтр в виде JSON
   // Структура: { plp, objName, samplActNumber, sDateStart, ... }
-  filters     Json
-  
+  filters Json
+
   // Признак "по умолчанию" — один на пользователя (проверяется в API)
-  isDefault   Boolean  @default(false)
-  
+  isDefault Boolean @default(false)
+
   // Системные поля
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
   editedAt    DateTime? @updatedAt
-  editorEmail String?  @db.VarChar(255)
-  
+  editorEmail String?   @db.VarChar(255)
+
   // Мягкое удаление
-  deletedAt   DateTime? @db.Date
-  deletedBy   String?   @db.VarChar(255)
-  
+  deletedAt DateTime? @db.Date
+  deletedBy String?   @db.VarChar(255)
+
   // Уникальность: один автор не может иметь два шаблона с одинаковым именем
   @@unique([authorEmail, name])
   @@index([authorEmail])
@@ -431,10 +431,8 @@ model Department {
 
   @@index([isActive])
   @@index([sortOrder])
-
   @@map("departments")
 }
-
 
 // ============================================================
 // РЕСУРСЫ SPACE, НА КОТОРЫЕ МОЖНО ВЫДАВАТЬ ПРАВА
@@ -468,16 +466,16 @@ model AccessResource {
   // Подразделения, использующие этот ресурс
   departments DepartmentResource[]
 
+  registrationRequests RegistrationRequestResource[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([isActive])
   @@index([type])
   @@index([sortOrder])
-
   @@map("access_resources")
 }
-
 
 // ============================================================
 // СВЯЗЬ ПОДРАЗДЕЛЕНИЙ С РЕСУРСАМИ
@@ -488,7 +486,6 @@ model AccessResource {
 // одно подразделение имеет много ресурсов,
 // один ресурс может использоваться несколькими подразделениями.
 //
-
 
 model DepartmentResource {
   departmentId Int
@@ -507,14 +504,8 @@ model DepartmentResource {
 
   @@id([departmentId, resourceId])
   @@index([resourceId])
-
   @@map("department_resources")
 }
-
-
-
-  
-  
 
 // ============================================================
 // ТИПЫ РЕСУРСОВ
@@ -529,4 +520,107 @@ enum AccessResourceType {
 
   // Отдельная функция системы
   FEATURE
+}
+
+// ============================================================
+// ЗАЯВКИ НА РЕГИСТРАЦИЮ
+// ============================================================
+
+model RegistrationRequest {
+  id Int @id @default(autoincrement())
+
+  // Данные заявителя
+  fullName     String @db.VarChar(255)
+  organization String @db.VarChar(255)
+  position     String @db.VarChar(255)
+  email        String @db.VarChar(255)
+
+  // Можно будет добавить в форму чуть позже
+  accessReason String? @db.Text
+
+  // Состояние заявки
+  status RegistrationRequestStatus @default(EMAIL_PENDING)
+
+  // Подтверждение электронной почты
+  emailVerifiedAt DateTime?
+
+  // Храним SHA-256 hash токена, а не сам токен
+  verificationTokenHash String? @unique @db.VarChar(64)
+
+  verificationExpiresAt DateTime?
+  verificationSentAt    DateTime?
+
+  // Рассмотрение заявки
+  reviewedAt      DateTime?
+  reviewedByLogin String?   @db.VarChar(255)
+  adminComment    String?   @db.Text
+
+  // Какие ресурсы запросил пользователь
+  requestedResources RegistrationRequestResource[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
+  @@index([email, status])
+  @@map("registration_requests")
+}
+
+// ============================================================
+// РЕСУРСЫ, ЗАПРОШЕННЫЕ В ЗАЯВКЕ
+// ============================================================
+
+model RegistrationRequestResource {
+  id Int @id @default(autoincrement())
+
+  registrationRequestId Int
+  resourceId            Int
+
+  registrationRequest RegistrationRequest @relation(fields: [registrationRequestId], references: [id], onDelete: Cascade)
+  resource            AccessResource      @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  // null  -> администратор ещё не рассмотрел
+  // true  -> доступ к ресурсу одобрен
+  // false -> доступ к ресурсу отклонён
+  approved Boolean?
+
+  // При желании администратор сможет оставить
+  // комментарий по конкретному ресурсу
+  adminComment String? @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@unique([registrationRequestId, resourceId])
+  @@index([registrationRequestId])
+  @@index([resourceId])
+  @@map("registration_request_resources")
+}
+
+// ============================================================
+// СОСТОЯНИЯ ЗАЯВКИ
+// ============================================================
+
+enum RegistrationRequestStatus {
+  // Ждём подтверждения email
+  EMAIL_PENDING
+
+  // Email подтверждён, ждём рассмотрения
+  PENDING_REVIEW
+
+  // Все запрошенные ресурсы одобрены
+  APPROVED
+
+  // Одобрена только часть ресурсов
+  PARTIALLY_APPROVED
+
+  // Заявка отклонена
+  REJECTED
+
+  // Истёк срок подтверждения email
+  EXPIRED
+
+  // Пользователь создан, регистрация завершена
+  COMPLETED
 }
