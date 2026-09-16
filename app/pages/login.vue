@@ -1,269 +1,745 @@
 <template>
-  <div v-if="!adUserLogin" class="mx-auto w-1/2 p-4">
+  <div class="mx-auto w-1/2 p-4">
+
+    <!-- =====================================================
+         Проверяем возможность автоматического Kerberos-входа
+         ===================================================== -->
+
     <div
-      class="flex flex-col gap-2 bg-white w-full p-4 border border-gray-200 rounded-lg mb-4"
+      v-if="isKerberosChecking"
+      class="flex flex-col gap-3 bg-white w-full p-6 border border-gray-200 rounded-lg"
     >
-      <!-- <div class="">
-                <input v-model="userName" type="text" placeholder="name" class="border border-gray-200 p-4 rounded-lg w-full">
-            </div> -->
-      <div class="">
-        <input
-          v-model="userLogin"
-          type="text"
-          placeholder="login"
-          class="border border-gray-200 p-4 rounded-lg w-full"
-        />
+      <div class="text-gray-700">
+        Выполняется проверка доменной авторизации...
       </div>
-      <!-- <div class="">
-                <input v-model="userEmail" placeholder="email" class="border border-gray-200 rounded-lg w-full p-4">
-            </div> -->
-      <div class="mb-4">
-        <input
-          v-model="passwordRef"
-          type="password"
-          placeholder="password"
-          class="border border-gray-200 p-4 rounded-lg w-full"
-        />
-      </div>
-      <div class="flex justify-between">
-        <a
-          @click="authUser"
-          href="#"
-          class="inline-block text-sm text-white px-3 py-2 bg-emerald-400 border border-emerald-700 rounded-sm hover:shadow-lg active:shadow-sm"
-          >Войти</a
-        >
-        <a
-          href="#"
-          class="isDisabled inline-block text-sm text-gray-200 px-3 py-2 bg-sky-500 border border-emerald-700 rounded-sm"
-          >Зарегистрироваться</a
-        >
+
+      <div class="text-sm text-gray-400">
+        Если вы авторизованы в домене, вход будет выполнен автоматически.
       </div>
     </div>
+
+
+    <!-- =====================================================
+         Обычная авторизация login/password
+         ===================================================== -->
+
+    <form
+      v-else
+      class="flex flex-col gap-2 bg-white w-full p-4 border border-gray-200 rounded-lg mb-4"
+      @submit.prevent="authUser"
+    >
+
+      <div>
+        <input
+          v-model.trim="userLogin"
+          type="text"
+          autocomplete="username"
+          placeholder="Логин"
+          class="border border-gray-200 p-4 rounded-lg w-full"
+        />
+      </div>
+
+
+      <div class="mb-2">
+        <input
+          v-model="password"
+          type="password"
+          autocomplete="current-password"
+          placeholder="Пароль"
+          class="border border-gray-200 p-4 rounded-lg w-full"
+        />
+      </div>
+
+
+      <!-- Ошибка обычной авторизации -->
+
+      <div
+        v-if="loginError"
+        class="text-sm text-red-600 mb-2"
+      >
+        {{ loginError }}
+      </div>
+
+
+      <div class="flex justify-between">
+
+        <button
+          type="submit"
+          :disabled="isSubmitting"
+          class="
+            inline-block
+            text-sm
+            text-white
+            px-3
+            py-2
+            bg-emerald-400
+            border
+            border-emerald-700
+            rounded-sm
+            hover:shadow-lg
+            active:shadow-sm
+            disabled:opacity-50
+            disabled:cursor-not-allowed
+          "
+        >
+          {{ isSubmitting ? 'Вход...' : 'Войти' }}
+        </button>
+
+
+        <button
+          type="button"
+          disabled
+          class="
+            inline-block
+            text-sm
+            text-gray-200
+            px-3
+            py-2
+            bg-sky-500
+            border
+            border-emerald-700
+            rounded-sm
+            opacity-50
+            cursor-not-allowed
+          "
+        >
+          Зарегистрироваться
+        </button>
+
+      </div>
+
+    </form>
+
   </div>
 </template>
 
-<script lang="ts" setup>
-import { v4 as uuidv4 } from 'uuid';
-import Swal from 'sweetalert2';
-import { ref } from 'vue';
-import { useToastStore } from '../stores/toast.store';
-import bcrypt from 'bcryptjs';
-// import  showToast  from "../../utils/showToast";
-import axios, { AxiosError } from 'axios';
-import { el } from 'zod/v4/locales';
 
-const { encryptPassword } = securePW();
-const userName = ref('');
-const userLogin = ref('');
-const userEmail = ref('');
-const adUserLogin = ref('');
+<script setup lang="ts">
+
+import { computed, nextTick, onMounted, ref } from 'vue';
+import { v4 as uuidv4 } from 'uuid';
+
+
+/**
+ * ============================================================
+ * Страница публичная
+ * ============================================================
+ */
 
 definePageMeta({
-  public: true, // ✅ Указываем, что страница публичная
+  public: true,
 });
+
+
 useSeoMeta({
   title: 'Авторизация',
   description: 'Страница авторизации для доступа к системе.',
 });
-const isLoadingStore = useIsLoadingStore();
-const authStore = useAuthStore();
-const { fetch: refreshSession } = useUserSession();
 
-//    const { data: user, error } = await useFetch<{ name?: string }>('/api/auth/me')
-// console.log(user.value?.username, error)
 
-const toastStore = useToastStore();
-const toastId = Math.random().toString();
+/**
+ * ============================================================
+ * Router
+ * ============================================================
+ */
 
 const router = useRouter();
-// 1. Создаем реактивные переменные для полей ввода
+const route = useRoute();
 
-const passwordRef = ref('');
-const sessionId = ref('');
-const adUsers = ref([]);
-const { findUser, isUserExists } = useADUsers();
 
-// Composables
-const { login, register, isLoading, error: authError } = useAuth(); // ✅ Импортируем функцию login и register из композабла
-const { data: user, error } = await useFetch('/api/auth/me');
-adUserLogin.value = user.value?.username;
+/**
+ * ============================================================
+ * Stores / composables
+ * ============================================================
+ */
 
-let encrypted = false; // Флаг, что пароль зашифрован. По умолчанию выключен.
+const authStore = useAuthStore();
+const toastStore = useToastStore();
 
-// const error = ref<string | null>(null);
-// const isLoading = isLoadingStore.isLoading;
-// const showRegistrationPrompt = ref(false);
-// const registrationPromptMessage = ref('');
 
-// =================== Функция для отображения уведомлений
-const showToast = (content: string, typeMsg: string) => {
-  const toastStore = useToastStore();
-  const toastId = Math.random().toString();
+/**
+ * Ваш существующий composable обычной авторизации.
+ *
+ * login() должен обращаться к /api/auth/login,
+ * проверять login/password и на сервере вызывать
+ * setUserSession().
+ */
+const {
+  login,
+} = useAuth();
+
+
+/**
+ * nuxt-auth-utils
+ */
+const {
+  loggedIn,
+  user,
+  fetch: refreshSession,
+} = useUserSession();
+
+
+/**
+ * ============================================================
+ * State
+ * ============================================================
+ */
+
+const userLogin = ref('');
+const password = ref('');
+
+const isKerberosChecking = ref(true);
+const isSubmitting = ref(false);
+
+const loginError = ref('');
+
+
+/**
+ * ============================================================
+ * Toast
+ * ============================================================
+ */
+
+const showToast = (
+  content: string,
+  typeMsg: string,
+) => {
+
   toastStore.addToast({
-    id: toastId,
+    id: crypto.randomUUID(),
     title: 'Уведомление!',
     description: content,
     type: typeMsg,
   });
 };
 
-//================ 2. Следим за изменениями в полях ввода и проверяем, готовы ли мы к авторизации
-watch([userLogin, userEmail, passwordRef], () => {
-  if (userLogin.value && passwordRef.value) {
-    // console.log("Пользователь готов к авторизации");
-    // userData = useCookie('user_data', {
-    //     default: () => ({}),
-    //     maxAge: 60 * 60 * 24 * 7, // Кука будет жить 1 неделю
-    //     sameSite: 'lax', // Защита от CSRF
-    // });
-  } else {
-    // console.log("Пожалуйста, заполните все поля");
+
+/**
+ * ============================================================
+ * Куда отправить пользователя после авторизации
+ * ============================================================
+ *
+ * Например:
+ *
+ * /login?redirect=/documents/125
+ *
+ * После входа:
+ *
+ * /documents/125
+ */
+
+const redirectAfterLogin = computed(() => {
+
+  const redirect =
+    route.query.redirect;
+
+
+  if (
+    typeof redirect === 'string' &&
+    redirect.startsWith('/') &&
+    !redirect.startsWith('//') &&
+    !redirect.startsWith('/login')
+  ) {
+    return redirect;
   }
+
+
+  return '/';
 });
 
-// =================== 3. Функция для авторизации пользователя на странице авторизации /login =======
-const authUser = async (adUserLogin: any = '') => {
-  const sessionId = uuidv4(); // Генерируем уникальный sessionId для текущей сессии
-  // console.log(
-  //   'adUserLogin == ',
-  //   adUserLogin.type,
-  //   '; ',
-  //   'userLogin.value == ',
-  //   userLogin.value
-  // );
 
-  const loginValue =
-    adUserLogin.type != 'click'
-      ? adUserLogin.value
-      : loginNormal(userLogin.value); // Получаем часть до '@' для поиска в AD
-  // console.log('Авторизация пользователя = ', loginValue)
+/**
+ * ============================================================
+ * Завершение авторизации
+ * ============================================================
+ *
+ * Общая функция для:
+ *
+ *   Kerberos
+ *
+ * и
+ *
+ *   login/password
+ *
+ *
+ * К моменту её вызова SERVER уже должен создать session
+ * посредством setUserSession().
+ */
 
-  const exists = isUserExists(adUsers.value, loginValue); // Проверяем, существует ли пользователь в списке пользователей, полученном из AD
+const finishLogin = async (
+  authMethod: 'kerberos' | 'password',
+  profile?: any,
+) => {
 
-  const user = findUser(adUsers.value, loginValue); // Ищем информацию о пользователе в списке пользователей, полученном из AD
+  /**
+   * Получаем свежую session с сервера.
+   */
+  await refreshSession();
 
-  // console.log(`Пользователь ${user.user?.sAMAccountName || loginValue} ${exists ? 'найден' : 'не найден'}`, user.user?.cn);
-  if (exists && Object.keys(user).length) {
-    let passwordValue = '';
-    if (passwordRef.value == '') {
-      passwordValue = 'adPassword';
-    } else {
-      // passwordValue = encryptPassword(passwordRef.value);
-      passwordValue = passwordRef.value;
-      encrypted = true;
-    }
 
-    let result: any = '';
-    try {
-      // if(!adUserLogin && passwordValue != 'adPassword'){
-      result = await login({
-        login: loginValue,
-        password: passwordValue,
-        sessionId: sessionId,
-        encrypted: encrypted,
-      });
-      // console.log('---result : ', result);
-      // }
+  /**
+   * Session должна существовать.
+   */
+  if (!loggedIn.value) {
 
-      if (result.success || adUserLogin) {
-        await refreshSession();
-        // console.log('Успешный вход:', user); //result.data.user.name
-        authStore.set({
-          fName: user.user?.name || '',
-          dep: user.user?.department || '',
-          email: user.user?.mail || '',
-          name: loginValue,
-          sessionId: sessionId,
-          status: true, // Устанавливаем статус в true, чтобы isAuth стал истиной
-          authMetod: '',
-        });
-        // Добавьте небольшую задержку для обновления состояния
-        setTimeout(async () => {
-          await nextTick();
-          await router.push('/'); // Используйте router.push вместо navigateTo
-
-          showToast(`Пользователь ${user.user?.cn} - авторизован`, 'success');
-        }, 300);
-        // await refreshSession();
-        // console.log('Успешный вход:', result);
-        // navigateTo('/edit'); // Перенаправляем на защищенную страницу после успешного входа
-      } else {
-        const result = await Swal.fire({
-          title: 'Пользователь не найден',
-          text: 'Зарегистрировать нового пользователя?',
-          icon: 'question',
-          showCancelButton: true,
-          confirmButtonText: 'Зарегистрировать',
-          cancelButtonText: 'Отмена',
-        });
-
-        if (result.isConfirmed) {
-          newUser();
-        } else if (result.isDismissed) {
-          console.log('Отмена');
-        }
-      }
-      // ✅ refreshSession() обновляет клиентскую сессию после успешного входа
-    } catch (err) {
-      console.error('Ошибка при входе:', err);
-      // Здесь можно обработать ошибку, например, показать уведомление пользователю
-    }
-  } else {
-    // console.log('Пользователь не авторизован, необходимо авторизоваться.');
+    throw new Error(
+      'После авторизации пользовательская сессия не была создана.',
+    );
   }
+
+
+  const sessionUser: any =
+    user.value;
+
+
+  /**
+   * Заполняем ваш существующий Pinia authStore.
+   *
+   * В дальнейшем его можно будет упростить,
+   * поскольку большая часть информации уже находится
+   * в useUserSession().
+   */
+  authStore.set({
+
+    fName:
+      profile?.name ||
+      sessionUser?.name ||
+      '',
+
+    dep:
+      profile?.department ||
+      sessionUser?.department ||
+      '',
+
+    email:
+      profile?.email ||
+      profile?.mail ||
+      sessionUser?.email ||
+      '',
+
+    name:
+      profile?.username ||
+      profile?.login ||
+      sessionUser?.username ||
+      sessionUser?.login ||
+      userLogin.value,
+
+    sessionId:
+      uuidv4(),
+
+    status:
+      true,
+
+    /**
+     * Оставляю ваше существующее название поля.
+     */
+    authMetod:
+      authMethod as any,
+  });
+
+
+  await nextTick();
+
+
+  /**
+   * replace(), а не push().
+   *
+   * Чтобы кнопка браузера "Назад"
+   * не возвращала пользователя снова на /login.
+   */
+  await router.replace(
+    redirectAfterLogin.value,
+  );
 };
 
-const newUser = async () => {
-  const sessionId = uuidv4(); // Генерируем уникальный sessionId для текущей сессии
+
+/**
+ * ============================================================
+ * KERBEROS LOGIN
+ * ============================================================
+ *
+ * Эта функция вызывается автоматически ОДИН РАЗ
+ * после открытия /login.
+ */
+
+const tryKerberosLogin = async () => {
+
+  isKerberosChecking.value = true;
+
+
   try {
-    const result = await register({
-      name: userName.value,
-      login: userLogin.value,
-      email: userEmail.value,
-      password: passwordRef.value,
-      sessionId: uuidv4(), // Генерируем уникальный sessionId для текущей сессии
-    });
-    if (result.success) {
-      console.log('Успешная регистрация:', result);
-      await refreshSession();
-      // authStore.set({
-      //     email: userEmail.value,
-      //     name: userName.value,
-      //     sessionId: sessionId,
-      //     status: true // Устанавливаем статус в true, чтобы isAuth стал истиной
-      // });
-      await nextTick();
-      await router.push('/');
-      showToast(`Пользователь ${userName.value} - зарегистрирован`, 'success');
+
+    /**
+     * ========================================================
+     * ВОТ ЗДЕСЬ происходит обращение к:
+     *
+     * server/api/auth/kerberos.post.ts
+     * ========================================================
+     *
+     * Но сначала запрос проходит через nginx:
+     *
+     * location = /api/auth/kerberos {
+     *
+     *     auth_gss on;
+     *
+     *     ...
+     *
+     * }
+     *
+     *
+     * Если Kerberos успешен:
+     *
+     * nginx
+     *   ↓
+     * X-Remote-User
+     *   ↓
+     * kerberos.post.ts
+     *   ↓
+     * AD
+     *   ↓
+     * setUserSession()
+     *
+     *
+     * Если Kerberos неуспешен:
+     *
+     * nginx
+     *   ↓
+     * 401 / 403
+     *
+     * kerberos.post.ts в таком случае
+     * может вообще НЕ выполниться.
+     */
+
+    const result =
+      await $fetch<{
+        success: boolean;
+        user?: any;
+      }>(
+        '/api/auth/kerberos',
+        {
+          method: 'POST',
+          credentials: 'include',
+        },
+      );
+
+
+    /**
+     * Endpoint отработал,
+     * но почему-то не сообщил success.
+     */
+    if (!result?.success) {
+
+      throw new Error(
+        'Kerberos authentication failed',
+      );
     }
-    // console.log('Успешная регистрация:', result);
-    // navigateTo('/edit'); // Перенаправляем на защищенную страницу после успешной регистрации
-    // console.log('Зарегистрировать')
-  } catch (error) {
-    console.error('Ошибка при регистрации:', error);
+
+
+    /**
+     * Kerberos endpoint уже создал session.
+     */
+    await finishLogin(
+      'kerberos',
+      result.user,
+    );
+
+
+    showToast(
+      `Пользователь ${result.user?.name || result.user?.username || ''} авторизован через доменную учётную запись`,
+      'success',
+    );
+
   }
-  // console.log('Зарегистрировать')
+  catch (error: any) {
+
+    /**
+     * --------------------------------------------------------
+     * Это НОРМАЛЬНЫЙ сценарий для недоменного пользователя.
+     * --------------------------------------------------------
+     *
+     * Если Kerberos не сработал, мы ничего больше автоматически
+     * не делаем.
+     *
+     * Просто завершаем проверку и показываем форму login/password.
+     */
+
+    const status =
+      error?.statusCode ||
+      error?.status ||
+      error?.response?.status;
+
+
+    if (
+      status !== 401 &&
+      status !== 403
+    ) {
+
+      /**
+       * 401/403 ожидаемы.
+       *
+       * Остальные ошибки полезно видеть в console.
+       */
+      console.error(
+        'Ошибка Kerberos-авторизации:',
+        error,
+      );
+    }
+
+  }
+  finally {
+
+    /**
+     * После этого v-if переключит страницу
+     * с сообщения "Проверка..."
+     * на обычную форму.
+     */
+    isKerberosChecking.value =
+      false;
+  }
 };
-onMounted(async () => {
-  const response = await fetch('/api/ad/get-users-shared');
-  // console.log('###---> response ===== ', response);
-  const data = await response.json();
 
-  if (user.value != null) {
-    adUserLogin.value = user.value?.username;
-    setTimeout(() => {
-      authUser(adUserLogin);
-    }, 2000);
+
+/**
+ * ============================================================
+ * LOGIN + PASSWORD
+ * ============================================================
+ *
+ * Эту функцию пользователь вызывает вручную
+ * нажатием кнопки "Войти".
+ *
+ * Она НЕ обращается к kerberos.post.ts.
+ */
+
+const authUser = async () => {
+
+  loginError.value = '';
+
+
+  /**
+   * Проверяем форму.
+   */
+
+  if (!userLogin.value) {
+
+    loginError.value =
+      'Введите логин';
+
+    return;
   }
-  adUsers.value = data.users; // Сохраняем пользователей в реактивной переменной
-  // console.log('Загружено:', adUsers.value)
-});
-</script>
 
-<style scoped>
-.isDisabled {
-  pointer-events: none;
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-</style>
+
+  if (!password.value) {
+
+    loginError.value =
+      'Введите пароль';
+
+    return;
+  }
+
+
+  isSubmitting.value = true;
+
+
+  try {
+
+    const sessionId =
+      uuidv4();
+
+
+    /**
+     * ========================================================
+     * ОБЫЧНАЯ АВТОРИЗАЦИЯ
+     * ========================================================
+     *
+     * Этот login() должен обращаться к:
+     *
+     *     /api/auth/login
+     *
+     * а НЕ:
+     *
+     *     /api/auth/kerberos
+     *
+     *
+     * Именно /api/auth/login должен проверить пароль
+     * и вызвать:
+     *
+     *     setUserSession()
+     */
+
+    const result: any =
+      await login({
+
+        login:
+          loginNormal(
+            userLogin.value,
+          ),
+
+        password:
+          password.value,
+
+        sessionId,
+
+        encrypted:
+          false,
+      });
+
+
+    /**
+     * Авторизация неуспешна.
+     */
+    if (!result?.success) {
+
+      loginError.value =
+        result?.message ||
+        'Неверный логин или пароль';
+
+      return;
+    }
+
+
+    /**
+     * /api/auth/login уже создал Nuxt session.
+     */
+
+    const profile =
+      result?.data?.user ||
+      result?.user;
+
+
+    await finishLogin(
+      'password',
+      profile,
+    );
+
+
+    showToast(
+      `Пользователь ${profile?.name || userLogin.value} авторизован`,
+      'success',
+    );
+
+  }
+  catch (error: any) {
+
+    console.error(
+      'Ошибка обычной авторизации:',
+      error,
+    );
+
+
+    const status =
+      error?.statusCode ||
+      error?.status ||
+      error?.response?.status;
+
+
+    if (
+      status === 401 ||
+      status === 403
+    ) {
+
+      loginError.value =
+        'Неверный логин или пароль';
+
+    }
+    else {
+
+      loginError.value =
+        'Не удалось выполнить авторизацию. Попробуйте ещё раз.';
+    }
+
+  }
+  finally {
+
+    isSubmitting.value =
+      false;
+  }
+};
+
+
+/**
+ * ============================================================
+ * ИНИЦИАЛИЗАЦИЯ /login
+ * ============================================================
+ */
+
+onMounted(async () => {
+
+  try {
+
+    /**
+     * --------------------------------------------------------
+     * ШАГ 1
+     *
+     * Сначала проверяем, нет ли уже готовой Nuxt session.
+     * --------------------------------------------------------
+     *
+     * Например пользователь уже авторизован,
+     * но вручную открыл:
+     *
+     * /login
+     */
+
+    await refreshSession();
+
+
+    if (loggedIn.value) {
+
+      /**
+       * Пользователь уже авторизован.
+       *
+       * Kerberos повторно НЕ вызываем.
+       */
+
+      await router.replace(
+        redirectAfterLogin.value,
+      );
+
+      return;
+    }
+
+
+    /**
+     * --------------------------------------------------------
+     * ШАГ 2
+     *
+     * Session нет.
+     *
+     * Только теперь ОДИН РАЗ пробуем Kerberos.
+     * --------------------------------------------------------
+     */
+    /**
+     * Если пользователь только что сам нажал Logout,
+     * автоматический Kerberos-login НЕ выполняем.
+     *
+     * Иначе доменный пользователь сразу войдёт обратно.
+     */
+
+    if (route.query.logout === '1') {
+
+      isKerberosChecking.value = false;
+
+      return;
+    }
+
+    await tryKerberosLogin();
+
+  }
+  catch (error) {
+
+    console.error(
+      'Ошибка инициализации страницы авторизации:',
+      error,
+    );
+
+
+    /**
+     * В любом случае пользователь должен получить
+     * возможность войти вручную.
+     */
+
+    isKerberosChecking.value =
+      false;
+  }
+});
+
+</script>

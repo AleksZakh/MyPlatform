@@ -181,16 +181,12 @@
             <legend class="flex items-center gap-2 text-xl font-normal px-2">
               <Icon name="streamline-freehand-color:module-building-blocks" />
               Поступление материала
-              <USwitch color="info" v-model="isMaterialActive" size="xs"/>
             </legend>
-            <div class="flex flex-col gap-4" :class="{'opacity-50': !isMaterialActive}">
+            <div class="flex flex-col gap-4" >
               <!-- Материал -->
-              <UFormField name="material" :disabled="isMaterialActive" required>
+              <UFormField name="material"  required>
                 <template #label>
-                  <span class="font-medium uppercase" :class="{
-                    'text-gray-900': isMaterialActive,
-                    'text-gray-400': !isMaterialActive
-                  }">
+                  <span class="font-medium uppercase" >
                     Материал
                   </span>
                 </template>
@@ -199,7 +195,6 @@
                   :items="materials_items"
                   :searchable="true"
                   :search-input="{ placeholder: 'Введите материал...' }"
-                  :disabled="!isMaterialActive"
                   class="w-full"
                 />
               </UFormField>
@@ -207,10 +202,7 @@
               <!-- Дата поступления -->
               <UFormField name="receiptDate" required>
                 <template #label>
-                  <span class="font-medium uppercase" :class="{
-                    'text-gray-900': isMaterialActive,
-                    'text-gray-400': !isMaterialActive
-                  }">
+                  <span class="font-medium uppercase" >
                     Дата поступления
                   </span>
                 </template>
@@ -219,17 +211,13 @@
                   :required="true"
                   :min-value="minDate"
                   :max-value="maxDate"
-                  :disabled="!isMaterialActive"
                 />
               </UFormField>
 
               <!-- Дата документа о качестве -->
               <UFormField name="qualDocDate">
                 <template #label>
-                  <span class="font-medium uppercase" :class="{
-                    'text-gray-900': isMaterialActive,
-                    'text-gray-400': !isMaterialActive
-                  }">
+                  <span class="font-medium uppercase" >
                     Дата документа о качестве
                   </span>
                 </template>
@@ -238,7 +226,6 @@
                   :required="false"
                   :min-value="minDate"
                   :max-value="maxDate"
-                  :disabled="!isMaterialActive"
                 />
               </UFormField>
 
@@ -246,14 +233,11 @@
               <UFormField name="qualDoc">
                 <template #label>
                   <div class="flex items-end gap-2">
-                    <span class="font-medium uppercase" :class="{
-                      'text-gray-900': isMaterialActive,
-                      'text-gray-400': !isMaterialActive
-                    }">
+                    <span class="font-medium uppercase" >
                       Документ о качестве
                     </span>
                     <div
-                      v-if="isMaterialActive && dbResponse && dbResponse['Документ о качестве'] && dbResponse['Документ о качестве'] !== '-'"
+                      v-if="dbResponse && dbResponse['Документ о качестве'] && dbResponse['Документ о качестве'] !== '-'"
                       class="flex items-center border border-green-600 p-1 bg-green-50 rounded-sm hover:border-gray-200 transition-colors"
                     >
                       <a
@@ -271,7 +255,6 @@
                   @change="(e: Event) => qualDocChange((e.target as HTMLInputElement).files!)"
                   type="file"
                   class="w-full"
-                  :disabled="!isMaterialActive"
                   :class="{ 'border rounded-md border-green-500': qualDocFile }"
                 />
                 <UButton
@@ -289,27 +272,20 @@
               <!-- Номер документа о качестве -->
               <UFormField name="qualDocNumber">
                 <template #label>
-                  <span class="font-medium uppercase" :class="{
-                    'text-gray-900': isMaterialActive,
-                    'text-gray-400': !isMaterialActive
-                  }">
+                  <span class="font-medium uppercase" >
                     Номер документа о качестве
                   </span>
                 </template>
                 <UInput
                   v-model="state.qualDocNumber"
                   class="w-full"
-                  :disabled="!isMaterialActive"
                 />
               </UFormField>
 
               <!-- Предприятие изготовитель -->
               <UFormField name="manufacturer">
                 <template #label>
-                  <span class="font-medium uppercase" :class="{
-                    'text-gray-900': isMaterialActive,
-                    'text-gray-400': !isMaterialActive
-                  }">
+                  <span class="font-medium uppercase" >
                     Предприятие изготовитель
                   </span>
                 </template>
@@ -318,7 +294,6 @@
                   :items="manufacturer_items.slice(0, 200)"
                   :searchable="true"
                   :search-input="{ placeholder: 'Введите производителя...' }"
-                  :disabled="!isMaterialActive"
                   class="w-88"
                 />
               </UFormField>
@@ -418,8 +393,8 @@
               <UFormField name="testProtocolNumber" required>
                 <template #label>
                   <span class="font-medium uppercase" :class="{
-                    'text-gray-900': isMaterialActive,
-                    'text-gray-400': !isMaterialActive
+                    'text-gray-900': isTestActive,
+                    'text-gray-400': !isTestActive
                   }">
                     Номер
                   </span>

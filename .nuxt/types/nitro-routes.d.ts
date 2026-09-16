@@ -15,6 +15,9 @@ declare module "nitropack/types" {
     '/api/ad/search': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ad/search.get').default>>>>
     }
+    '/api/auth/kerberos': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/auth/kerberos.post').default>>>>
+    }
     '/api/auth/login': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/auth/login.post').default>>>>
     }

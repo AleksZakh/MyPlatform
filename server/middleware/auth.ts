@@ -1,150 +1,215 @@
-import ActiveDirectory from 'activedirectory2';
+// server/middleware/auth.ts
+
 import { logger } from '../utils/logger';
 
-interface ADConfig {
-  url: string
-  baseDN: string
-  username: string
-  password: string
-}
 /**
- * Получает расширенные данные пользователя из Active Directory
- * @param sAMAccountName Логин пользователя (без домена)
- * @param config Настройки подключения к AD из Runtime Config
+ * Серверный middleware авторизации.
+ *
+ * Его задача:
+ *
+ * 1. Пропустить публичные страницы и auth-endpoints.
+ * 2. Проверить существующую Nuxt user session.
+ * 3. Для неавторизованного API вернуть HTTP 401.
+ * 4. Для неавторизованной страницы перенаправить на:
+ *
+ *      /login?redirect=<исходный URL>
+ *
+ *
+ * ВАЖНО:
+ *
+ * Kerberos-аутентификация здесь НЕ выполняется.
+ *
+ * Kerberos работает только через:
+ *
+ *      POST /api/auth/kerberos
+ *
+ * Этот endpoint защищён auth_gss непосредственно в nginx.
+ *
+ * Обычная авторизация работает через:
+ *
+ *      POST /api/auth/login
+ *
+ * Оба endpoint после успешного входа должны вызывать
+ * setUserSession().
  */
-function getUserFromAD(sAMAccountName: string, config: ADConfig): Promise<any> {
-  return new Promise((resolve) => {
-    // 1. Создаем экземпляр ActiveDirectory. 
-    // Передаем техническую учетную запись прямо в конфигурацию.
-    const ad = new ActiveDirectory({
-      url: config.url,
-      baseDN: config.baseDN,
-      username: config.username,
-      password: config.password
-    })
-
-    // 2. Формируем опции поиска по вашей схеме
-    const searchOptions = {
-      filter: `(&(objectClass=user)(sAMAccountName=${sAMAccountName}))`,
-      scope: 'sub' as const,
-      attributes: [
-        'cn',
-        'sn',
-        'givenName',
-        'mail',
-        'sAMAccountName',
-        'department',
-        'title'
-      ],
-      // В activedirectory2 эти параметры управляют парсингом групп (если понадобятся)
-      includeMembership: [], 
-      includeDeleted: false,
-      includeDerivedMembership: [],
-    }
-
-    // 3. Выполняем поиск пользователя
-    // @ts-ignore
-    ad.findUsers(searchOptions, (findErr, users) => {
-      // Если произошла ошибка или пользователь не найден в домене
-      if (findErr || !users || users.length === 0) {
-        console.warn(
-          `⚠️ Не удалось найти дополнительные данные в AD для ${sAMAccountName}.`
-        )
-        // Возвращаем null, чтобы вызывающий код (middleware) знал, 
-        // что расширенных данных нет, и мог применить свой fallback/обработку
-        return resolve(null)
-      }
-
-      // 4. Пользователь успешно найден. activedirectory2 уже распарсила 
-      // LDAP-ответ в удобный плоский JavaScript-объект.
-      const fullUserData = users[0]
-      console.log(`📦 Данные пользователя ${sAMAccountName} успешно загружены из AD.`)
-
-      // Формируем чистый объект с данными для приложения
-      
-      const userInfo = {
-        // @ts-ignore
-        login: fullUserData.sAMAccountName,
-        // @ts-ignore
-        name: fullUserData.cn || `${fullUserData.givenName} ${fullUserData.sn}`.trim(),
-        // @ts-ignore
-        email: fullUserData.mail || null,
-        // @ts-ignore
-        department: fullUserData.department || null,
-        // @ts-ignore
-        title: fullUserData.title || null, // Добавили должность, так как она есть в вашем списке attributes
-        authType: 'Basic'
-      }
-
-      resolve(userInfo)
-    })
-  })
-}
-
 export default defineEventHandler(async (event) => {
-  // 1. Пропускаем эндпоинты авторизации (если они есть)
-  if (event.path.startsWith('/login') || event.path.startsWith('/api/auth/login')) {
-    return
+  const url = getRequestURL(event);
+  const path = url.pathname;
+
+  /**
+   * ============================================================
+   * 1. ПУБЛИЧНЫЕ ROUTES
+   * ============================================================
+   *
+   * Эти запросы должны работать даже без пользовательской session.
+   */
+
+  const isLoginPage =
+    path === '/login' ||
+    path.startsWith('/login/');
+
+  /**
+   * Обычная авторизация по login/password.
+   */
+  const isPasswordLogin =
+    path === '/api/auth/login' ||
+    path.startsWith('/api/auth/login/');
+
+  /**
+   * Kerberos endpoint.
+   *
+   * В Nitro мы его пропускаем без session,
+   * но на уровне nginx именно этот URL защищён auth_gss.
+   *
+   * Поэтому фактически он НЕ является публичным с точки зрения сети.
+   */
+  const isKerberosLogin =
+    path === '/api/auth/kerberos' ||
+    path.startsWith('/api/auth/kerberos/');
+
+  /**
+   * Служебные endpoint'ы nuxt-auth-utils.
+   *
+   * В частности useUserSession().fetch() должен иметь возможность
+   * проверить session даже тогда, когда пользователя ещё нет.
+   */
+  const isNuxtAuthUtils =
+    path === '/api/_auth/session' ||
+    path.startsWith('/api/_auth/');
+
+  /**
+   * Ресурсы Nuxt.
+   *
+   * Значительная часть этих URL обычно обрабатывается nginx раньше,
+   * но оставляем исключение и здесь.
+   */
+  const isNuxtAsset =
+    path.startsWith('/_nuxt/') ||
+    path.startsWith('/_nuxt_icon/') ||
+    path.startsWith('/_ipx/');
+
+  /**
+   * Общие публичные файлы.
+   */
+  const isPublicFile =
+    path === '/favicon.ico' ||
+    path === '/robots.txt' ||
+    path === '/apple-touch-icon.png';
+
+  const isPublicRoute =
+    isLoginPage ||
+    isPasswordLogin ||
+    isKerberosLogin ||
+    isNuxtAuthUtils ||
+    isNuxtAsset ||
+    isPublicFile;
+
+  if (isPublicRoute) {
+    return;
   }
 
-  // 2. Проверяем, существует ли уже валидная сессия куки
-  const session = await getUserSession(event)
-  
-  if (session.user) {
-    // Сессия есть! Перекладываем данные в контекст запроса, чтобы они были доступны в приложении
-    event.context.user = session.user
-    return 
-  }
 
-  // 3. Сессии нет. Проверяем заголовок от Nginx (доменный ПК)
-  const xUser = getHeader(event, 'x-remote-user') || getHeader(event, 'remote-user');
+  /**
+   * ============================================================
+   * 2. ПРОВЕРЯЕМ СУЩЕСТВУЮЩУЮ USER SESSION
+   * ============================================================
+   */
 
-  if (!xUser) {
-    // Нет ни сессии, ни заголовка — значит это недоменный ПК (гость)
-    logger.info('Входящий запрос без заголовка x-remote-user. Перенаправление на гостя.')
-    event.context.user = null
-    return
-  }
+  try {
+    const session = await getUserSession(event);
 
-  const [username] = xUser.split('@')
-  if (!username) return
+    /**
+     * Авторизованный пользователь.
+     */
+    if (session?.user) {
+      event.context.user = session.user;
 
-  const config = useRuntimeConfig(event)
-  const adConfig = {
-    url: config.ad.url,
-    baseDN: config.ad.baseDN,
-    username: config.ad.username,
-    password: config.ad.password,
-  }
-
-  // 4. Запрашиваем данные из AD через нашу функцию на activedirectory2
-  logger.debug(`Попытка обогатить данные для пользователя: ${username}`);
-  const adUser = await getUserFromAD(username, adConfig);
-  let finalUser: any = null
-
-  if (adUser) {
-    // Данные успешно получены
-    logger.info(`Пользователь ${username} успешно авторизован. Отдел: ${adUser.department}`);
-    finalUser = {
-      username: adUser.login,
-      name: adUser.name,
-      department: adUser.department,
-      email: adUser.email || xUser,
-      title: adUser.title,
-      authType: adUser.authType
+      return;
     }
-    
-  } else {
-    // Fallback: В AD произошел сбой, но Nginx пользователя пустил
-    finalUser = { username: username, fallback: true }
+  }
+  catch (error) {
+    /**
+     * Ошибка чтения session не должна приводить
+     * к автоматическому доступу пользователя.
+     *
+     * Считаем такую session недействительной.
+     */
+
+    logger.error(
+      'Ошибка чтения пользовательской session',
+      error,
+    );
   }
 
-  // 5.Записываем данные в зашифрованную сессию nuxt-auth-utils
-  // и автоматически создаём защищенную Cookie у пользователя в браузере
-  await setUserSession(event, {
-    user: finalUser,
-    loggedInAt: new Date().toISOString()
-  })
-  // Также дублируем в контекст текущего запроса
-  event.context.user = finalUser
-})
+
+  /**
+   * ============================================================
+   * 3. ПОЛЬЗОВАТЕЛЬ НЕ АВТОРИЗОВАН
+   * ============================================================
+   */
+
+  event.context.user = null;
+
+
+  /**
+   * ============================================================
+   * 4. API REQUEST
+   * ============================================================
+   *
+   * API никогда не перенаправляем на HTML-страницу /login.
+   *
+   * Клиент должен получить нормальный HTTP 401.
+   */
+
+  if (path.startsWith('/api/')) {
+    logger.info(
+      `Неавторизованный API-запрос: ${path}`,
+    );
+
+    throw createError({
+      statusCode: 401,
+      statusMessage: 'Authentication required',
+      message: 'Для выполнения запроса необходимо авторизоваться.',
+    });
+  }
+
+
+  /**
+   * ============================================================
+   * 5. ОБЫЧНАЯ СТРАНИЦА
+   * ============================================================
+   *
+   * Пользователь попытался открыть защищённую страницу,
+   * но session отсутствует.
+   *
+   * Сохраняем страницу назначения:
+   *
+   * /documents/123?tab=files
+   *
+   * ->
+   *
+   * /login?redirect=%2Fdocuments%2F123%3Ftab%3Dfiles
+   */
+
+  const originalUrl = `${path}${url.search}`;
+
+  const loginUrl =
+    `/login?redirect=${encodeURIComponent(originalUrl)}`;
+
+
+  logger.info(
+    `Неавторизованный запрос: ${originalUrl}. ` +
+    `Перенаправление: ${loginUrl}`,
+  );
+
+
+  /**
+   * 302 здесь подходит, поскольку речь идёт
+   * об обычном GET-запросе страницы.
+   */
+  return sendRedirect(
+    event,
+    loginUrl,
+    302,
+  );
+});

@@ -1,18 +1,28 @@
 // middleware/auth.global.ts
-export default defineNuxtRouteMiddleware(async (to, from) => {
-  // ✅ Загружаем сессию с сервера
-  const { data } = await useFetch('/api/auth/session')
-  
-  const loggedIn = data.value?.loggedIn || false
-  
-  if (to.path === '/login') {
-    if (loggedIn) return navigateTo('/')
+
+export default defineNuxtRouteMiddleware(async (to) => {
+  if (to.meta.public) {
     return
   }
 
-  if (to.meta.public === true) return
+  const {
+    loggedIn,
+    ready,
+    fetch,
+  } = useUserSession()
 
-  if (!loggedIn) {
-    return navigateTo('/login')
+
+  if (!ready.value) {
+    await fetch()
+  }
+
+
+  if (!loggedIn.value) {
+    return navigateTo({
+      path: '/login',
+      query: {
+        redirect: to.fullPath,
+      },
+    })
   }
 })
