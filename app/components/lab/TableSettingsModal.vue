@@ -3,7 +3,7 @@
   <UModal
     :close="{ onClick: () => emit('close') }"
     class="custom-modal"
-    :ui="{ content: 'sm:max-w-none w-max' }"
+    :ui="{ content: 'h-fit' }"
   >
     <template #header>
       <div class="flex items-center gap-3">
@@ -22,12 +22,12 @@
     </template>
 
     <template #body>
-      <div class="space-y-4 relative">
+      <div class="relative p-2">
         <!-- Контейнер для настроек -->
-        <div class="space-y-4 space-x-0 px-2 -my-6 -mx-6 bg-gray-50 parent">
+        <div class="  ">
           
           <!-- ===== БЛОК: Настройка колонок ===== -->
-          <fieldset class="border-2 border-gray-200 mx-4 px-2 py-1 rounded-md bg-white/80">
+          <fieldset class="border-2 border-gray-200  px-2  rounded-md bg-white/80">
             <legend class="text-xl font-normal px-2 flex items-center gap-2 bg-transparent">
               <span>
                 <Icon name="streamline-freehand-color:tablet-application" size="24" />
@@ -96,7 +96,7 @@
           </fieldset>
 
           <!-- Дополнительная информация -->
-          <div class="text-xs text-gray-400 px-2 pb-1 flex justify-between">
+          <div class="text-xs text-gray-400 px-2 mt-2 flex justify-between">
             <span>Всего доступно колонок: {{ allAvailableColumns.length }}</span>
             <span>Выбрано для отображения: {{ tempVisibleColumns.length }}</span>
           </div>

@@ -83,31 +83,49 @@
       >
         <UContextMenu :items="itemHead" :ui="{ content: 'w-50' }">
           <thead class="bg-gray-100 sticky top-0 z-10">
-            <tr v-for="headerGroup in table.getHeaderGroups()" :key="headerGroup.id" class="divide-x-3 divide-solid divide-gray-200">
-              <th
-                v-for="header in headerGroup.headers"
-                :key="header.id"
-                :style="{ width: `${header.getSize()}px` }"
-                class="relative px-2 py-3 text-left text-sm font-medium text-gray-600 uppercase tracking-wider group overflow-hidden select-none"
-              >
-                <div class="flex items-center gap-2">
-                  <FlexRender
-                    :render="header.column.columnDef.header"
-                    :props="header.getContext()"
-                  />
-                </div>
+            <draggable
+              v-model="columnOrder"
+              item-key="id"
+              tag="tr"
+              class="divide-x-3 divide-solid divide-gray-200"
+              ghost-class="opacity-40"
+              drag-class="cursor-grabbing"
+              @end="onDragEnd"
+            >
+              <template #item="{ element: columnId }">
+                <th
+                  :key="columnId"
+                  :style="{
+                    width: `${getHeaderByColumnId(headerGroupRef, columnId)?.getSize() ?? 180}px`,
+                  }"
+                  class="relative px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider group select-none cursor-grab"
+                >
+                  <div class="flex items-center gap-2">
+                    <FlexRender
+                      v-if="getHeaderByColumnId(headerGroupRef, columnId)"
+                      :render="getHeaderByColumnId(headerGroupRef, columnId)!.column.columnDef.header"
+                      :props="getHeaderByColumnId(headerGroupRef, columnId)!.getContext()"
+                    />
+                  </div>
 
-                <!-- Ползунок для ресайза -->
-                <div
-                  :class="[
-                    'absolute right-0 top-0 h-full w-1 cursor-col-resize bg-gray-300 opacity-0 group-hover:opacity-100 transition-opacity z-20',
-                    header.column.getIsResizing() ? 'bg-blue-500 opacity-100' : '',
-                  ]"
-                  @mousedown="header.getResizeHandler()($event)"
-                  @touchstart="header.getResizeHandler()($event)"
-                />
-              </th>
-            </tr>
+                  <!-- Ползунок ресайза -->
+                  <div
+                    :class="[
+                      'absolute right-0 top-0 h-full w-1 cursor-col-resize bg-gray-300 opacity-0 group-hover:opacity-100 transition-opacity z-20',
+                      getHeaderByColumnId(headerGroupRef, columnId)?.column.getIsResizing()
+                        ? 'bg-blue-500 opacity-100'
+                        : '',
+                    ]"
+                    @mousedown.stop="
+                      getHeaderByColumnId(headerGroupRef, columnId)?.getResizeHandler()($event)
+                    "
+                    @touchstart.stop="
+                      getHeaderByColumnId(headerGroupRef, columnId)?.getResizeHandler()($event)
+                    "
+                  />
+                </th>
+              </template>
+            </draggable>
           </thead>
         </UContextMenu>
 
@@ -191,13 +209,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, h } from 'vue'
+import { ref, computed, onMounted, watch, h } from 'vue'
 import {
   useVueTable,
   getCoreRowModel,
   FlexRender,
   createColumnHelper,
 } from '@tanstack/vue-table'
+import draggable from 'vuedraggable'
 import createModal from '~/components/lab/createModal.vue'
 import viewModal from '~/components/lab/viewModal.vue'
 import ExportRecordsModal from './ExportRecordsModal.vue'
@@ -247,8 +266,13 @@ const rowSelectedId = ref<number | null>(null)
 const showSettingsModal = ref(false)
 const globalFilter = ref('')
 
+const headerGroupRef = computed(() => table.getHeaderGroups()[0])
+
 // ✅ Кэш ширин колонок между перерисовками
 const columnSizes = ref<Record<string, number>>({})
+
+// ✅ Порядок колонок (для drag-and-drop)
+const columnOrder = ref<string[]>([])
 
 // Начальные ширины для известных колонок
 const DEFAULT_SIZES: Record<string, number> = {
@@ -272,7 +296,17 @@ const DEFAULT_SIZES: Record<string, number> = {
 // Видимые заголовки
 const visibleHeaders = computed(() => {
   const visibleColumns = getVisibleColumns()
-  return headers.value.filter((header) => visibleColumns.includes(header))
+  const filtered = headers.value.filter((header) => visibleColumns.includes(header))
+
+  // ✅ Учитываем порядок из columnOrder, если он задан
+  if (columnOrder.value.length === 0) return filtered
+
+  const orderIndex = new Map(columnOrder.value.map((id, i) => [id, i]))
+  return [...filtered].sort((a, b) => {
+    const ia = orderIndex.get(a) ?? 999
+    const ib = orderIndex.get(b) ?? 999
+    return ia - ib
+  })
 })
 
 const activeFiltersCount = computed(() => filterStore.getActiveFiltersCount)
@@ -320,6 +354,9 @@ const table = useVueTable({
     get columnSizing() {
       return columnSizes.value
     },
+    get columnOrder() {
+      return columnOrder.value
+    },
   },
   onColumnSizingChange: (updater) => {
     if (typeof updater === 'function') {
@@ -328,7 +365,55 @@ const table = useVueTable({
       columnSizes.value = updater
     }
   },
+  onColumnOrderChange: (updater) => {
+    if (typeof updater === 'function') {
+      columnOrder.value = updater(columnOrder.value)
+    } else {
+      columnOrder.value = updater
+    }
+  },
 })
+
+// ✅ Хелпер: находим header по id колонки
+function getHeaderByColumnId(headerGroup: any, columnId: string) {
+  return headerGroup.headers.find((h: any) => h.column.id === columnId)
+}
+
+// ✅ Инициализация columnOrder при первом появлении видимых заголовков
+watch(
+  visibleHeaders,
+  (newHeaders) => {
+    if (newHeaders.length === 0) return
+
+    // Если порядок ещё не задан — берём порядок из headers
+    if (columnOrder.value.length === 0) {
+      columnOrder.value = [...newHeaders]
+      return
+    }
+
+    // Если появились новые колонки — добавляем их в конец
+    const known = new Set(columnOrder.value)
+    const missing = newHeaders.filter((h) => !known.has(h))
+    if (missing.length > 0) {
+      columnOrder.value = [...columnOrder.value, ...missing]
+    }
+
+    // Убираем из порядка те, которых больше нет в видимых
+    const visibleSet = new Set(newHeaders)
+    const cleaned = columnOrder.value.filter((id) => visibleSet.has(id))
+    if (cleaned.length !== columnOrder.value.length) {
+      columnOrder.value = cleaned
+    }
+  },
+  { immediate: true }
+)
+
+// ✅ Обновление порядка после drag-and-drop
+function onDragEnd() {
+  // v-model уже обновил columnOrder, дополнительно синхронизируем
+  // порядок с TanStack (на случай, если нужен явный вызов)
+  table.setColumnOrder([...columnOrder.value])
+}
 
 // 👇 Обработчики пагинации
 const onPageChange = async (page: number) => {
@@ -520,9 +605,6 @@ function formatCellValue(
   contekst = ''
 ): string {
   if (!value) return '—'
-  if (value.length > 15 && contekst != 'title') {
-    return value.substring(0, 25) + '…'
-  }
   return value
 }
 </script>
@@ -540,8 +622,17 @@ function formatCellValue(
   min-height: 0;
 }
 
-/* Аккуратный курсор при ресайзе */
+/* Курсор для ресайза */
 .cursor-col-resize {
   user-select: none;
+}
+
+/* Стили для ghost-класса при перетаскивании */
+.opacity-40 {
+  opacity: 0.4;
+}
+
+.cursor-grabbing {
+  cursor: grabbing;
 }
 </style>
