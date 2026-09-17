@@ -44,6 +44,9 @@ export default defineEventHandler(async (event) => {
    * Эти запросы должны работать даже без пользовательской session.
    */
 
+
+  const isPublicApi = path.startsWith('/api/public/');
+
   const isLoginPage =
     path === '/login' ||
     path.startsWith('/login/');
@@ -66,6 +69,18 @@ export default defineEventHandler(async (event) => {
   const isKerberosLogin =
     path === '/api/auth/kerberos' ||
     path.startsWith('/api/auth/kerberos/');
+
+
+  /**
+   * Регистрация и подтверждение email.
+   *
+   * Эти endpoint'ы должны быть доступны без session,
+   * чтобы пользователь мог зарегистрироваться и подтвердить email.
+   * После подтверждения email пользователь может войти в систему.
+   */
+  const isRegistration =
+  path === '/api/auth/register-request' ||
+  path.startsWith('/api/auth/verify-email');
 
   /**
    * Служебные endpoint'ы nuxt-auth-utils.
@@ -101,6 +116,8 @@ export default defineEventHandler(async (event) => {
     isLoginPage ||
     isPasswordLogin ||
     isKerberosLogin ||
+    isPublicApi ||
+    isRegistration ||
     isNuxtAuthUtils ||
     isNuxtAsset ||
     isPublicFile;
