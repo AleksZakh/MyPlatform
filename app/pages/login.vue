@@ -24,7 +24,7 @@
          ===================================================== -->
 
     <form
-      v-else
+      v-else-if="mode === 'login'"
       class="flex flex-col gap-2 bg-white w-full p-4 border border-gray-200 rounded-lg mb-4"
       @submit.prevent="authUser"
     >
@@ -88,20 +88,8 @@
 
         <button
           type="button"
-          disabled
-          class="
-            inline-block
-            text-sm
-            text-gray-200
-            px-3
-            py-2
-            bg-sky-500
-            border
-            border-emerald-700
-            rounded-sm
-            opacity-50
-            cursor-not-allowed
-          "
+          class=" inline-block text-sm text-white px-3 py-2 bg-sky-500 border border-sky-700 rounded-sm hover:shadow-lg active:shadow-sm "
+          @click="openRegistration"
         >
           Зарегистрироваться
         </button>
@@ -109,6 +97,10 @@
       </div>
 
     </form>
+    <AuthRegistrationRequestForm
+      v-else
+      @back="closeRegistration"
+    />
 
   </div>
 </template>
@@ -136,6 +128,18 @@ useSeoMeta({
   title: 'Авторизация',
   description: 'Страница авторизации для доступа к системе.',
 });
+
+const mode =
+  ref<'login' | 'register'>('login');
+
+const openRegistration = () => {
+  loginError.value = '';
+  mode.value = 'register';
+};
+
+const closeRegistration = () => {
+  mode.value = 'login';
+};
 
 
 /**
@@ -420,6 +424,7 @@ const tryKerberosLogin = async () => {
         {
           method: 'POST',
           credentials: 'include',
+          ignoreResponseError: true,
         },
       );
 

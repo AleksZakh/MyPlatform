@@ -27,11 +27,17 @@ declare module "nitropack/types" {
     '/api/auth/me': {
       'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/auth/me').default>>>>
     }
+    '/api/auth/register-request': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/auth/register-request.post').default>>>>
+    }
     '/api/auth/register': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/auth/register.post').default>>>>
     }
     '/api/auth/session': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/auth/session.get').default>>>>
+    }
+    '/api/auth/verify-email': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/auth/verify-email.post').default>>>>
     }
     '/api/convert': {
       'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/convert').default>>>>
@@ -161,6 +167,9 @@ declare module "nitropack/types" {
     '/api/lab/test-protocol': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/test-protocol/index.get').default>>>>
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/test-protocol/index.post').default>>>>
+    }
+    '/api/public/registration-resources': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/public/registration-resources.get').default>>>>
     }
     '/api/test/domain-connection': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/test/domain-connection.get').default>>>>
