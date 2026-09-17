@@ -70,6 +70,10 @@ export default defineEventHandler(async (event) => {
     path === '/api/auth/kerberos' ||
     path.startsWith('/api/auth/kerberos/');
 
+  const isDevTestEmail =
+    path === '/api/dev/test-email' ||
+    path.startsWith('/api/dev/test-email/');
+
 
   /**
    * Регистрация и подтверждение email.
@@ -80,7 +84,23 @@ export default defineEventHandler(async (event) => {
    */
   const isRegistration =
   path === '/api/auth/register-request' ||
-  path.startsWith('/api/auth/verify-email');
+  path.startsWith(
+    '/api/auth/verify-email',
+  ) ||
+  path.startsWith(
+    '/api/auth/activate-account',
+  );
+
+  const isActivateAccountPage =
+  path === '/activate-account';
+
+  const isVerifyEmailPage =
+  path === '/verify-email';
+
+  const isExternalLogin =
+  path === '/api/auth/external-login';
+
+  
 
   /**
    * Служебные endpoint'ы nuxt-auth-utils.
@@ -120,8 +140,18 @@ export default defineEventHandler(async (event) => {
     isRegistration ||
     isNuxtAuthUtils ||
     isNuxtAsset ||
-    isPublicFile;
-
+    isPublicFile ||
+    isDevTestEmail ||
+    isActivateAccountPage ||
+    isExternalLogin ||
+    isVerifyEmailPage
+    ;
+// console.log('[AUTH MIDDLEWARE]', {
+//   path,
+//   isVerifyEmailPage,
+//   isActivateAccountPage,
+//   isPublicRoute,
+// });
   if (isPublicRoute) {
     return;
   }

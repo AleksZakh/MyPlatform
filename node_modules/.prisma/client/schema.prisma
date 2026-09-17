@@ -426,6 +426,8 @@ model Department {
   // Связанные ресурсы
   resources DepartmentResource[]
 
+  users User[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -467,6 +469,8 @@ model AccessResource {
   departments DepartmentResource[]
 
   registrationRequests RegistrationRequestResource[]
+
+  permissions UserPermission[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -558,6 +562,8 @@ model RegistrationRequest {
   // Какие ресурсы запросил пользователь
   requestedResources RegistrationRequestResource[]
 
+  createdUser User?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -623,4 +629,87 @@ enum RegistrationRequestStatus {
 
   // Пользователь создан, регистрация завершена
   COMPLETED
+}
+
+enum UserAuthType {
+  DOMAIN
+  EXTERNAL
+}
+
+enum UserStatus {
+  PENDING_ACTIVATION
+  ACTIVE
+  BLOCKED
+  DISABLED
+}
+
+enum AccessAction {
+  VIEW
+  CREATE
+  UPDATE
+  DELETE
+}
+
+model User {
+  id Int @id @default(autoincrement())
+
+  authType UserAuthType
+  status   UserStatus   @default(PENDING_ACTIVATION)
+
+  // Для DOMAIN
+  login String? @unique @db.VarChar(255)
+
+  // objectGUID / другой стабильный ID каталога
+  directoryObjectId String? @unique @db.VarChar(255)
+
+  // Для EXTERNAL и как возможный кэш для DOMAIN
+  email        String? @unique @db.VarChar(255)
+  fullName     String? @db.VarChar(255)
+  organization String? @db.VarChar(255)
+  position     String? @db.VarChar(255)
+
+  // Только EXTERNAL
+  passwordHash        String?   @db.VarChar(255)
+  activationTokenHash String?   @unique @db.VarChar(64)
+  activationExpiresAt DateTime?
+  activationSentAt    DateTime?
+  activatedAt         DateTime?
+
+  departmentId Int?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  registrationRequestId Int?                 @unique
+  registrationRequest   RegistrationRequest? @relation(fields: [registrationRequestId], references: [id], onDelete: SetNull)
+
+  permissions UserPermission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([authType])
+  @@index([departmentId])
+  @@map("app_users")
+}
+
+model UserPermission {
+  id Int @id @default(autoincrement())
+
+  userId     Int
+  resourceId Int
+  action     AccessAction
+
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resource AccessResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  grantedByLogin String? @db.VarChar(255)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, resourceId, action])
+  @@index([userId])
+  @@index([resourceId])
+  @@index([action])
+  @@map("user_permissions")
 }

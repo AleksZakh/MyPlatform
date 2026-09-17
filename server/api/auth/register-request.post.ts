@@ -1,5 +1,6 @@
 import { PrismaClient, RegistrationRequestStatus } from '@prisma/client';
 import { createHash, randomBytes } from 'node:crypto';
+import { sendVerificationEmail } from '../../utils/mailer';
 
 const prisma = new PrismaClient();
 
@@ -420,6 +421,57 @@ export default defineEventHandler(async (event) => {
         },
       });
 
+      // ==========================================================
+      // 8. Отправляем письмо подтверждения
+      // ==========================================================
+
+      try {
+        await sendVerificationEmail({
+          email,
+          fullName,
+          token: verificationToken,
+        });
+
+        // Письмо успешно передано SMTP-серверу.
+        await prisma.registrationRequest.update({
+          where: {
+            id: registrationRequest.id,
+          },
+
+          data: {
+            verificationSentAt: new Date(),
+          },
+        });
+        
+      }
+      catch (mailError) {
+        console.error(
+          'Заявка создана, но письмо подтверждения не отправлено:',
+          {
+            requestId: registrationRequest.id,
+            email,
+            error: mailError,
+          },
+        );
+
+        /**
+         * Заявку НЕ удаляем.
+         *
+         * Она остаётся EMAIL_PENDING,
+         * token/hash остаются действительными.
+         *
+         * Следующим шагом мы сделаем отдельный
+         * resend-verification endpoint.
+         */
+        throw createError({
+          statusCode: 503,
+          statusMessage:
+            'Verification email unavailable',
+          message:
+            'Заявка создана, но письмо подтверждения временно не удалось отправить. Попробуйте повторить отправку письма позже.',
+        });
+      }
+
     // const savedRequest =
     //   await prisma.registrationRequest.findUnique({
     //     where: {
@@ -461,7 +513,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // ==========================================================
-    // 8. Возвращаем безопасный ответ клиенту
+    // 9. Возвращаем безопасный ответ клиенту
     // ==========================================================
 
     return {
@@ -480,8 +532,10 @@ export default defineEventHandler(async (event) => {
       createdAt:
         registrationRequest.createdAt,
 
+      emailVerificationRequired: true,
+
       message:
-        'Заявка на регистрацию успешно создана.',
+        'Заявка создана. На указанный адрес электронной почты отправлена ссылка для подтверждения.',
     };
   }
   catch (error: any) {

@@ -140,7 +140,7 @@ declare global {
   const handleCacheHeaders: typeof import('../../node_modules/h3/dist/index').handleCacheHeaders
   const handleCors: typeof import('../../node_modules/h3/dist/index').handleCors
   const handleFileUpload: typeof import('../../server/utils/fileUploadHandler').handleFileUpload
-  const hashPassword: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/password').hashPassword
+  const hashPassword: typeof import('../../server/utils/password').hashPassword
   const isCorsOriginAllowed: typeof import('../../node_modules/h3/dist/index').isCorsOriginAllowed
   const isError: typeof import('../../node_modules/h3/dist/index').isError
   const isEvent: typeof import('../../node_modules/h3/dist/index').isEvent
@@ -168,6 +168,7 @@ declare global {
   const readValidatedBody: typeof import('../../node_modules/h3/dist/index').readValidatedBody
   const removeResponseHeader: typeof import('../../node_modules/h3/dist/index').removeResponseHeader
   const replaceUserSession: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/session').replaceUserSession
+  const requireAdmin: typeof import('../../server/utils/require-admin').requireAdmin
   const requireUserSession: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/session').requireUserSession
   const resolveAndEnsureInside: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/path-safety').resolveAndEnsureInside
   const retrieveFileLocally: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/storage').retrieveFileLocally
@@ -176,12 +177,14 @@ declare global {
   const sanitizeStatusMessage: typeof import('../../node_modules/h3/dist/index').sanitizeStatusMessage
   const sealSession: typeof import('../../node_modules/h3/dist/index').sealSession
   const send: typeof import('../../node_modules/h3/dist/index').send
+  const sendActivationEmail: typeof import('../../server/utils/mailer').sendActivationEmail
   const sendError: typeof import('../../node_modules/h3/dist/index').sendError
   const sendIterable: typeof import('../../node_modules/h3/dist/index').sendIterable
   const sendNoContent: typeof import('../../node_modules/h3/dist/index').sendNoContent
   const sendProxy: typeof import('../../node_modules/h3/dist/index').sendProxy
   const sendRedirect: typeof import('../../node_modules/h3/dist/index').sendRedirect
   const sendStream: typeof import('../../node_modules/h3/dist/index').sendStream
+  const sendVerificationEmail: typeof import('../../server/utils/mailer').sendVerificationEmail
   const sendWebResponse: typeof import('../../node_modules/h3/dist/index').sendWebResponse
   const serveStatic: typeof import('../../node_modules/h3/dist/index').serveStatic
   const sessionHooks: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/session').sessionHooks
@@ -211,7 +214,7 @@ declare global {
   const useRuntimeConfig: typeof import('../../node_modules/nitropack/dist/runtime/internal/config').useRuntimeConfig
   const useSession: typeof import('../../node_modules/h3/dist/index').useSession
   const useStorage: typeof import('../../node_modules/nitropack/dist/runtime/internal/storage').useStorage
-  const verifyPassword: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/password').verifyPassword
+  const verifyPassword: typeof import('../../server/utils/password').verifyPassword
   const writeEarlyHints: typeof import('../../node_modules/h3/dist/index').writeEarlyHints
 }
 // for type re-export
@@ -437,7 +440,7 @@ export { defineOAuthXSUAAEventHandler } from '/home/local_adm/Projects/MyPlatfor
 export { defineOAuthYandexEventHandler } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-auth-utils/dist/runtime/server/lib/oauth/yandex';
 export { defineOAuthZitadelEventHandler } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-auth-utils/dist/runtime/server/lib/oauth/zitadel';
 export { getAtprotoClientMetadata } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-auth-utils/dist/runtime/server/utils/atproto';
-export { hashPassword, verifyPassword, passwordNeedsReHash } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-auth-utils/dist/runtime/server/utils/password';
+export { passwordNeedsReHash } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-auth-utils/dist/runtime/server/utils/password';
 export { sessionHooks, getUserSession, setUserSession, replaceUserSession, clearUserSession, requireUserSession } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-auth-utils/dist/runtime/server/utils/session';
 export { getUserGroups } from '/home/local_adm/Projects/MyPlatform/server/utils/ad';
 export { adCache } from '/home/local_adm/Projects/MyPlatform/server/utils/adCache';
@@ -446,5 +449,8 @@ export { handleFileUpload, cleanOldFilesFromDisk, parseDate, updateFilePathsInDa
 export { getFullFilePath, fileExists, getFileInfo, deleteUploadedFile } from '/home/local_adm/Projects/MyPlatform/server/utils/fileUtils';
 export { folderNameGenerator } from '/home/local_adm/Projects/MyPlatform/server/utils/folderNameGenerator';
 export { logger } from '/home/local_adm/Projects/MyPlatform/server/utils/logger';
+export { sendActivationEmail, sendVerificationEmail } from '/home/local_adm/Projects/MyPlatform/server/utils/mailer';
+export { hashPassword, verifyPassword } from '/home/local_adm/Projects/MyPlatform/server/utils/password';
+export { requireAdmin } from '/home/local_adm/Projects/MyPlatform/server/utils/require-admin';
 export { normalizeRelative, isSafeBasename, ensureSafeBasename, containsPathTraversal, resolveAndEnsureInside } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-file-storage/dist/runtime/server/utils/path-safety';
 export { storeFileLocally, getFileLocally, getFilesLocally, deleteFile, parseDataUrl, retrieveFileLocally } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-file-storage/dist/runtime/server/utils/storage';

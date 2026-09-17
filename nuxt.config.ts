@@ -33,6 +33,16 @@ export default defineNuxtConfig({
       timeout: parseInt(process.env.AD_TIMEOUT || '5000'),
       databaseUrl: process.env.DATABASE_URL,
     },
+    adminLogins: process.env.NUXT_ADMIN_LOGINS || '',
+    smtp: {
+      host: '',
+      port: 587,
+      secure: false,
+      user: '',
+      password: '',
+      from: '',
+    },
+    siteUrl: '',
     public: {
       cryptoKey: '',
     },

@@ -15,6 +15,24 @@ declare module "nitropack/types" {
     '/api/ad/search': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ad/search.get').default>>>>
     }
+    '/api/admin/registration-requests/:id': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/registration-requests/[id].get').default>>>>
+    }
+    '/api/admin/registration-requests/:id/provision': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/registration-requests/[id]/provision.post').default>>>>
+    }
+    '/api/admin/registration-requests/:id/review': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/registration-requests/[id]/review.post').default>>>>
+    }
+    '/api/admin/registration-requests': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/registration-requests/index.get').default>>>>
+    }
+    '/api/auth/activate-account': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/auth/activate-account.post').default>>>>
+    }
+    '/api/auth/external-login': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/auth/external-login.post').default>>>>
+    }
     '/api/auth/kerberos': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/auth/kerberos.post').default>>>>
     }
@@ -44,6 +62,9 @@ declare module "nitropack/types" {
     }
     '/api/departments': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/departments.get').default>>>>
+    }
+    '/api/dev/test-email': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/dev/test-email.post').default>>>>
     }
     '/api/incoming-control/_index_': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/_index_.get').default>>>>

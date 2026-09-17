@@ -1,7 +1,17 @@
-// middleware/auth.global.ts
+// app/middleware/auth.global.ts
 
 export default defineNuxtRouteMiddleware(async (to) => {
-  if (to.meta.public) {
+  const publicPages = [
+    '/login',
+    '/verify-email',
+    '/activate-account',
+  ]
+
+  const isPublicPage =
+    to.meta.public === true ||
+    publicPages.includes(to.path)
+
+  if (isPublicPage) {
     return
   }
 
@@ -11,11 +21,9 @@ export default defineNuxtRouteMiddleware(async (to) => {
     fetch,
   } = useUserSession()
 
-
   if (!ready.value) {
     await fetch()
   }
-
 
   if (!loggedIn.value) {
     return navigateTo({

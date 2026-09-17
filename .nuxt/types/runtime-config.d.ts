@@ -24,6 +24,24 @@ import { RuntimeConfig as UserRuntimeConfig, PublicRuntimeConfig as UserPublicRu
       databaseUrl: string,
    },
 
+   adminLogins: string,
+
+   smtp: {
+      host: string,
+
+      port: number,
+
+      secure: boolean,
+
+      user: string,
+
+      password: string,
+
+      from: string,
+   },
+
+   siteUrl: string,
+
    session: {
       name: string,
 
