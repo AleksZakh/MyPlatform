@@ -898,7 +898,7 @@ const tryKerberosLogin = async () => {
         {
           method: 'POST',
           credentials: 'include',
-          ignoreResponseError: true,
+          // ignoreResponseError: true,
         },
       );
 
@@ -931,41 +931,59 @@ const tryKerberosLogin = async () => {
 
   }
   catch (error: any) {
+    console.error(
+      'Ошибка Kerberos-авторизации:',
+      error,
+    );
 
-    /**
-     * --------------------------------------------------------
-     * Это НОРМАЛЬНЫЙ сценарий для недоменного пользователя.
-     * --------------------------------------------------------
-     *
-     * Если Kerberos не сработал, мы ничего больше автоматически
-     * не делаем.
-     *
-     * Просто завершаем проверку и показываем форму login/password.
-     */
-
-    const status =
+    console.error(
+      'STATUS:',
       error?.statusCode ||
       error?.status ||
-      error?.response?.status;
+      error?.response?.status,
+    );
 
-
-    if (
-      status !== 401 &&
-      status !== 403
-    ) {
-
-      /**
-       * 401/403 ожидаемы.
-       *
-       * Остальные ошибки полезно видеть в console.
-       */
-      console.error(
-        'Ошибка Kerberos-авторизации:',
-        error,
-      );
-    }
-
+    console.error(
+      'DATA:',
+      error?.data,
+    );
   }
+  // catch (error: any) {
+
+  //   /**
+  //    * --------------------------------------------------------
+  //    * Это НОРМАЛЬНЫЙ сценарий для недоменного пользователя.
+  //    * --------------------------------------------------------
+  //    *
+  //    * Если Kerberos не сработал, мы ничего больше автоматически
+  //    * не делаем.
+  //    *
+  //    * Просто завершаем проверку и показываем форму login/password.
+  //    */
+
+  //   const status =
+  //     error?.statusCode ||
+  //     error?.status ||
+  //     error?.response?.status;
+
+
+  //   if (
+  //     status !== 401 &&
+  //     status !== 403
+  //   ) {
+
+  //     /**
+  //      * 401/403 ожидаемы.
+  //      *
+  //      * Остальные ошибки полезно видеть в console.
+  //      */
+  //     console.error(
+  //       'Ошибка Kerberos-авторизации:',
+  //       error,
+  //     );
+  //   }
+
+  // }
   finally {
 
     /**
