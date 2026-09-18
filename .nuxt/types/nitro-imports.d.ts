@@ -159,6 +159,7 @@ declare global {
   const parseDataUrl: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/storage').parseDataUrl
   const parseDate: typeof import('../../server/utils/fileUploadHandler').parseDate
   const passwordNeedsReHash: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/password').passwordNeedsReHash
+  const prisma: typeof import('../../server/utils/prisma').prisma
   const promisifyNodeListener: typeof import('../../node_modules/h3/dist/index').promisifyNodeListener
   const proxyRequest: typeof import('../../node_modules/h3/dist/index').proxyRequest
   const readBody: typeof import('../../node_modules/h3/dist/index').readBody
@@ -451,6 +452,7 @@ export { folderNameGenerator } from '/home/local_adm/Projects/MyPlatform/server/
 export { logger } from '/home/local_adm/Projects/MyPlatform/server/utils/logger';
 export { sendActivationEmail, sendVerificationEmail } from '/home/local_adm/Projects/MyPlatform/server/utils/mailer';
 export { hashPassword, verifyPassword } from '/home/local_adm/Projects/MyPlatform/server/utils/password';
+export { prisma } from '/home/local_adm/Projects/MyPlatform/server/utils/prisma';
 export { requireAdmin } from '/home/local_adm/Projects/MyPlatform/server/utils/require-admin';
 export { normalizeRelative, isSafeBasename, ensureSafeBasename, containsPathTraversal, resolveAndEnsureInside } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-file-storage/dist/runtime/server/utils/path-safety';
 export { storeFileLocally, getFileLocally, getFilesLocally, deleteFile, parseDataUrl, retrieveFileLocally } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-file-storage/dist/runtime/server/utils/storage';

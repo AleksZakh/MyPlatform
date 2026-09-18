@@ -63,6 +63,9 @@ declare module "nitropack/types" {
     '/api/departments': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/departments.get').default>>>>
     }
+    '/api/dev/refresh-ad-cache': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/dev/refresh-ad-cache.post').default>>>>
+    }
     '/api/dev/test-email': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/dev/test-email.post').default>>>>
     }

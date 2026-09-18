@@ -1,148 +1,15 @@
 // server/api/auth/kerberos.post.ts
 
-import ActiveDirectory from 'activedirectory2';
 import { logger } from '../../utils/logger';
 
+import {
+  findDomainUser,
+} from '../../services/ad-directory.service';
 
-/**
- * Данные пользователя, которые нас интересуют в Active Directory.
- */
-interface ADUser {
-  sAMAccountName?: string;
-  cn?: string;
-  displayName?: string;
-  givenName?: string;
-  sn?: string;
-  mail?: string;
-  department?: string;
-  title?: string;
-}
-
-
-/**
- * Приводим Kerberos principal к обычному login.
- *
- * Возможные варианты:
- *
- *   ivanov@CORP.AVTODOR-ENG.RU
- *   CORP\ivanov
- *   ivanov
- *
- * Результат:
- *
- *   ivanov
- */
-function normalizeKerberosLogin(remoteUser: string): string {
-  let login = remoteUser.trim();
-
-  /**
-   * DOMAIN\username
-   */
-  if (login.includes('\\')) {
-    const parts = login.split('\\');
-    login = parts[parts.length - 1] || '';
-  }
-
-  /**
-   * username@REALM
-   */
-  if (login.includes('@')) {
-    login = login.split('@')[0] || '';
-  }
-
-  return login
-    .trim()
-    .toLowerCase();
-}
-
-
-/**
- * Получаем пользователя из Active Directory.
- *
- * ВАЖНО:
- * используем findUser(), а не собираем LDAP filter вручную.
- */
-function getUserFromAD(
-  username: string,
-  config: {
-    url: string;
-    baseDN: string;
-    username: string;
-    password: string;
-  },
-): Promise<ADUser | null> {
-  return new Promise((resolve, reject) => {
-    /**
-     * Указываем дополнительные атрибуты пользователя,
-     * которые нужны приложению.
-     */
-    const ad = new ActiveDirectory({
-      url: config.url,
-      baseDN: config.baseDN,
-      username: config.username,
-      password: config.password,
-
-      attributes: {
-        user: [
-          'cn',
-          'displayName',
-          'givenName',
-          'sn',
-          'mail',
-          'sAMAccountName',
-          'department',
-          'title',
-          'userPrincipalName',
-        ],
-
-        group: [
-          'dn',
-          'cn',
-          'description',
-          'distinguishedName',
-          'objectCategory',
-        ],
-      } as any,
-    });
-
-
-    /**
-     * findUser умеет искать в том числе по sAMAccountName.
-     */
-    ad.findUser(
-      username,
-
-      (
-        error: any,
-        user: ADUser | undefined,
-      ) => {
-        /**
-         * Ошибка соединения / LDAP / AD.
-         *
-         * Это НЕ означает "пользователь не существует".
-         * Поэтому ошибку передаём наверх отдельно.
-         */
-        if (error) {
-          reject(error);
-          return;
-        }
-
-
-        /**
-         * Запрос к AD успешен,
-         * но пользователь не найден.
-         */
-        if (!user) {
-          resolve(null);
-          return;
-        }
-
-
-        resolve(user);
-      },
-    );
-  });
-}
+import {
+  ensureDomainUser,
+  assertDomainUserCanLogin,
+} from '../../services/domain-user.service';
 
 
 /**
@@ -150,43 +17,40 @@ function getUserFromAD(
  * POST /api/auth/kerberos
  * ============================================================
  *
- * Этот endpoint должен быть защищён nginx:
+ * Kerberos-аутентификация выполняется nginx.
  *
- * location = /api/auth/kerberos {
- *     auth_gss on;
- *     ...
+ * nginx:
  *
- *     proxy_set_header X-Remote-User $remote_user;
- *     proxy_set_header Remote-User   $remote_user;
+ *   auth_gss on;
+ *        ↓
+ *   X-Remote-User
+ *        ↓
+ *   этот endpoint
  *
- *     proxy_pass http://127.0.0.1:3000;
- * }
- *
- *
- * Поэтому endpoint НЕ проверяет пароль.
- *
- * Факт появления X-Remote-User означает, что nginx
- * уже выполнил Kerberos/SPNEGO-аутентификацию.
+ * Сам endpoint пароль НЕ проверяет.
  */
 export default defineEventHandler(async (event) => {
+
   /**
-   * ------------------------------------------------------------
+   * ----------------------------------------------------------
    * 1. Получаем пользователя, подтверждённого nginx/Kerberos
-   * ------------------------------------------------------------
+   * ----------------------------------------------------------
    */
-
   const remoteUser =
-    getRequestHeader(event, 'x-remote-user') ||
-    getRequestHeader(event, 'remote-user') ||
-    getRequestHeader(event, 'x-forwarded-user');
+    getRequestHeader(
+      event,
+      'x-remote-user',
+    ) ||
+    getRequestHeader(
+      event,
+      'remote-user',
+    ) ||
+    getRequestHeader(
+      event,
+      'x-forwarded-user',
+    );
 
 
-  /**
-   * В нормальной конфигурации сюда вообще не должны попасть
-   * без Kerberos-заголовка:
-   *
-   * nginx должен остановить такой запрос раньше.
-   */
   if (!remoteUser) {
     logger.warn(
       'Kerberos endpoint вызван без X-Remote-User.',
@@ -194,124 +58,61 @@ export default defineEventHandler(async (event) => {
 
     throw createError({
       statusCode: 401,
-      statusMessage: 'Kerberos authentication required',
+
+      statusMessage:
+        'Kerberos authentication required',
+
       message:
         'Не удалось определить пользователя Kerberos.',
     });
   }
 
 
-  /**
-   * ------------------------------------------------------------
-   * 2. Нормализуем Kerberos principal
-   * ------------------------------------------------------------
-   */
-
-  const login =
-    normalizeKerberosLogin(remoteUser);
-
-
-  if (!login) {
-    logger.warn(
-      `Получено некорректное имя Kerberos-пользователя: ${remoteUser}`,
-    );
-
-    throw createError({
-      statusCode: 401,
-      statusMessage: 'Invalid Kerberos user',
-      message:
-        'Получено некорректное имя пользователя Kerberos.',
-    });
-  }
-
-
   logger.info(
-    `Kerberos подтвердил пользователя: ${login}`,
+    `Kerberos подтвердил пользователя: ${remoteUser}`,
   );
 
 
   /**
-   * ------------------------------------------------------------
-   * 3. Получаем конфигурацию Active Directory
-   * ------------------------------------------------------------
+   * ----------------------------------------------------------
+   * 2. Получаем нормализованный профиль из Active Directory
+   * ----------------------------------------------------------
+   *
+   * Нормализация login, objectGUID и других полей
+   * выполняется внутри ad-directory.service.ts.
    */
-
-  const config =
-    useRuntimeConfig(event);
-
-
-  if (
-    !config.ad?.url ||
-    !config.ad?.baseDN ||
-    !config.ad?.username ||
-    !config.ad?.password
-  ) {
-    logger.error(
-      'Не заполнена конфигурация Active Directory.',
-    );
-
-    throw createError({
-      statusCode: 500,
-      statusMessage:
-        'Active Directory configuration error',
-    });
-  }
-
-
-  const adConfig = {
-    url: String(config.ad.url),
-    baseDN: String(config.ad.baseDN),
-    username: String(config.ad.username),
-    password: String(config.ad.password),
-  };
-
-
-  /**
-   * ------------------------------------------------------------
-   * 4. Получаем профиль пользователя из AD
-   * ------------------------------------------------------------
-   */
-
-  let adUser: ADUser | null;
+  let directoryUser;
 
 
   try {
-    logger.debug(
-      `Получение данных пользователя ${login} из Active Directory.`,
-    );
-
-
-    adUser = await getUserFromAD(
-      login,
-      adConfig,
-    );
+    directoryUser =
+      await findDomainUser(
+        remoteUser,
+        event,
+      );
   }
   catch (error: any) {
-    /**
-     * Очень важно:
-     *
-     * если AD недоступен, НЕ создаём fallback-session.
-     *
-     * Раньше ваш middleware делал:
-     *
-     * finalUser = {
-     *     username,
-     *     fallback: true
-     * }
-     *
-     * Теперь такого поведения нет.
-     */
-
     logger.error(
-      `Ошибка обращения к Active Directory для ${login}: ` +
+      `Ошибка получения DOMAIN-пользователя ${remoteUser}: ` +
       `${error?.message || String(error)}`,
     );
 
 
+    /**
+     * Если service уже сформировал осмысленную H3-ошибку,
+     * не затираем её.
+     */
+    if (error?.statusCode) {
+      throw error;
+    }
+
+
     throw createError({
       statusCode: 503,
+
       statusMessage:
         'Active Directory unavailable',
+
       message:
         'Не удалось получить данные пользователя из Active Directory.',
     });
@@ -319,20 +120,22 @@ export default defineEventHandler(async (event) => {
 
 
   /**
-   * ------------------------------------------------------------
-   * 5. Kerberos пользователь есть, но в AD он не найден
-   * ------------------------------------------------------------
+   * ----------------------------------------------------------
+   * 3. Пользователь Kerberos не найден в AD
+   * ----------------------------------------------------------
    */
-
-  if (!adUser) {
+  if (!directoryUser) {
     logger.warn(
-      `Kerberos-пользователь ${login} не найден в Active Directory.`,
+      `Kerberos-пользователь ${remoteUser} не найден в Active Directory.`,
     );
 
 
     throw createError({
       statusCode: 403,
-      statusMessage: 'User not found',
+
+      statusMessage:
+        'User not found',
+
       message:
         'Пользователь не найден в Active Directory.',
     });
@@ -340,110 +143,138 @@ export default defineEventHandler(async (event) => {
 
 
   /**
-   * ------------------------------------------------------------
-   * 6. Дополнительная проверка полученного пользователя
-   * ------------------------------------------------------------
+   * ----------------------------------------------------------
+   * 4. Создаём / синхронизируем локального app_users
+   * ----------------------------------------------------------
+   *
+   * Первый вход:
+   *
+   * AD
+   *  ↓
+   * CREATE app_users
+   *
+   * Следующие входы:
+   *
+   * AD
+   *  ↓
+   * UPDATE только AD-полей
+   *
+   * status / departmentId / permissions здесь не меняются.
    */
-
-  const adLogin =
-    adUser.sAMAccountName
-      ?.trim()
-      .toLowerCase();
-
-
-  if (!adLogin) {
-    logger.error(
-      `AD вернул пользователя ${login} без sAMAccountName.`,
+  const appUser =
+    await ensureDomainUser(
+      directoryUser,
     );
 
 
-    throw createError({
-      statusCode: 403,
-      statusMessage:
-        'Invalid Active Directory user',
-    });
-  }
-
-
   /**
-   * ------------------------------------------------------------
-   * 7. Формируем единую структуру пользователя приложения
-   * ------------------------------------------------------------
+   * ----------------------------------------------------------
+   * 5. Проверяем возможность входа
+   * ----------------------------------------------------------
    *
-   * Я оставляю username для совместимости с вашим старым кодом
-   * и добавляю login для новой схемы.
+   * Здесь проверяем:
+   *
+   * - accountDisabled в AD;
+   * - ACTIVE / BLOCKED / DISABLED в Space.
    */
-
-  const user = {
-    login: adLogin,
-
-    username: adLogin,
-
-    name:
-      adUser.cn ||
-      adUser.displayName ||
-      `${adUser.givenName || ''} ${adUser.sn || ''}`.trim() ||
-      adLogin,
-
-    department:
-      adUser.department || null,
-
-    email:
-      adUser.mail || null,
-
-    title:
-      adUser.title || null,
-
-    authType:
-      'Kerberos',
-  };
-
-
-  /**
-   * ------------------------------------------------------------
-   * 8. Создаём Nuxt session
-   * ------------------------------------------------------------
-   *
-   * После этого Kerberos больше не нужен для каждого запроса.
-   *
-   * Пользователь работает так же, как пользователь,
-   * вошедший по login/password:
-   *
-   * browser
-   *    ↓
-   * nuxt-session cookie
-   *    ↓
-   * server/middleware/auth.ts
-   *    ↓
-   * session.user
-   */
-
-  await setUserSession(event, {
-    user,
-
-    loggedInAt:
-      new Date().toISOString(),
-  });
-
-
-  /**
-   * Также помещаем пользователя в context
-   * текущего запроса.
-   */
-  event.context.user = user;
-
-
-  logger.info(
-    `Kerberos-авторизация завершена успешно: ${user.username}`,
+  assertDomainUserCanLogin(
+    directoryUser,
+    appUser,
   );
 
 
   /**
-   * ------------------------------------------------------------
-   * 9. Ответ login.vue
-   * ------------------------------------------------------------
+   * ----------------------------------------------------------
+   * 6. Формируем пользователя для Nuxt session
+   * ----------------------------------------------------------
+   *
+   * ВАЖНО:
+   *
+   * id — теперь это реальный app_users.id.
+   *
+   * Именно его позднее будет использовать
+   * requirePermission().
+   *
+   * username/name/department/title пока сохраняем
+   * для совместимости со старым frontend.
    */
+  const user = {
+  id:
+    appUser.id,
 
+  login:
+    appUser.login ||
+    directoryUser.login,
+
+  fullName:
+    appUser.fullName ||
+    directoryUser.fullName,
+
+  email:
+    appUser.email ??
+    undefined,
+
+  authType:
+    'DOMAIN' as const,
+
+  authMethod:
+    'KERBEROS' as const,
+
+  username:
+    appUser.login ||
+    directoryUser.login,
+
+  name:
+    appUser.fullName ||
+    directoryUser.fullName ||
+    directoryUser.login,
+
+  department:
+    directoryUser.department ??
+    undefined,
+
+  title:
+    appUser.position ??
+    directoryUser.position ??
+    undefined,
+};
+
+
+  /**
+   * ----------------------------------------------------------
+   * 7. Создаём Nuxt session
+   * ----------------------------------------------------------
+   */
+  await setUserSession(
+    event,
+    {
+      user,
+
+      loggedInAt:
+        new Date()
+          .toISOString(),
+    },
+  );
+
+
+  /**
+   * Делаем пользователя доступным текущему request.
+   */
+  event.context.user =
+    user;
+
+
+  logger.info(
+    `Kerberos-авторизация завершена успешно: ` +
+    `${user.login}, appUserId=${appUser.id}`,
+  );
+
+
+  /**
+   * ----------------------------------------------------------
+   * 8. Ответ login.vue
+   * ----------------------------------------------------------
+   */
   return {
     success: true,
 

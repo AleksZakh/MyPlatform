@@ -1,76 +1,116 @@
-// server/tasks/refresh-ad-cache.ts
-import ActiveDirectory from 'activedirectory2';
+// server/tasks/ad/refresh-ad-cache.ts
+
+import {
+  listDomainUsers,
+} from '../../services/ad-directory.service';
+
 
 export default defineTask({
   meta: {
-    name: 'ad:refresh-ad-cache',
-    description: 'Обновление кэша пользователей Active Directory',
-    // removed unsupported "version" property — TaskMeta does not include it
+    name:
+      'ad:refresh-ad-cache',
+
+    description:
+      'Обновление кэша пользователей Active Directory',
   },
 
-  async run(payload) {
-    const startTime = Date.now();
+
+  async run() {
+    const startTime =
+      Date.now();
+
     console.log(
-      `🔄 [TASK] Запуск обновления кэша AD в ${new Date().toISOString()}`
+      `🔄 [TASK] Запуск обновления кэша AD в ${new Date().toISOString()}`,
     );
 
+
     try {
-      const config = useRuntimeConfig();
+      /**
+       * ========================================================
+       * 1. Получаем нормализованный список DOMAIN-пользователей
+       * ========================================================
+       *
+       * Работа с Active Directory теперь полностью вынесена
+       * в ad-directory.service.ts.
+       */
+      const users =
+        await listDomainUsers();
 
-      const adConfig = {
-        url: config.ad.url,
-        baseDN: config.ad.baseDN,
-        username: config.ad.username,
-        password: config.ad.password,
-        timeout: config.ad.timeout || 30000,
-      };
 
-      const ad = new ActiveDirectory(adConfig);
+      /**
+       * ========================================================
+       * 2. Сохраняем пользователей в AD cache
+       * ========================================================
+       */
+      const {
+        adCache,
+      } =
+        await import(
+          '../../utils/adCache'
+        );
 
-      // Загружаем пользователей из AD
-      const users = await new Promise((resolve, reject) => {
-        const searchOptions = {
-          filter: '(objectClass=user)',
-          scope: 'sub',
-          sizeLimit: 2000,
-          timeLimit: 60,
-          attributes: [],
-          includeMembership: [],
-          includeDeleted: false,
-          includeDerivedMembership: [],
-        };
 
-        ad.findUsers(searchOptions as any, (err: any, users: any[]) => {
-          if (err) reject(err);
-          else resolve(users || []);
-        });
-      });
-
-      // Сохраняем в кэш (используя adCache)
-      const { adCache } = await import('../../utils/adCache');
-      await adCache.set(users as any[]);
-
-      const duration = Date.now() - startTime;
-      console.log(
-        `✅ [TASK] Кэш AD обновлён: ${(users as any[]).length} пользователей за ${duration}ms`
+      await adCache.set(
+        users,
       );
 
-      return {
-        result: 'success',
-        data: {
-          userCount: (users as any[]).length,
-          durationMs: duration,
-          timestamp: new Date().toISOString(),
-        },
-      };
-    } catch (error: any) {
-      const duration = Date.now() - startTime;
-      console.error(`❌ [TASK] Ошибка обновления кэша AD: ${error.message}`);
+
+      /**
+       * ========================================================
+       * 3. Статистика выполнения
+       * ========================================================
+       */
+      const duration =
+        Date.now() -
+        startTime;
+
+
+      console.log(
+        `✅ [TASK] Кэш AD обновлён: ${users.length} пользователей за ${duration}ms`,
+      );
+
 
       return {
-        result: 'error',
-        error: error.message,
-        durationMs: duration,
+        result:
+          'success',
+
+        data: {
+          userCount:
+            users.length,
+
+          durationMs:
+            duration,
+
+          timestamp:
+            new Date()
+              .toISOString(),
+        },
+      };
+    }
+    catch (error: any) {
+      const duration =
+        Date.now() -
+        startTime;
+
+
+      console.error(
+        `❌ [TASK] Ошибка обновления кэша AD: ${
+          error?.message ||
+          String(error)
+        }`,
+      );
+
+
+      return {
+        result:
+          'error',
+
+        error:
+          error?.message ||
+          String(error),
+
+        durationMs:
+          duration,
       };
     }
   },

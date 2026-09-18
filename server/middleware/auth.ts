@@ -74,6 +74,12 @@ export default defineEventHandler(async (event) => {
     path === '/api/dev/test-email' ||
     path.startsWith('/api/dev/test-email/');
 
+  const isDevRefreshAdCache =
+  process.env.NODE_ENV ===
+    'development' &&
+  path ===
+    '/api/dev/refresh-ad-cache';
+
 
   /**
    * Регистрация и подтверждение email.
@@ -144,6 +150,7 @@ export default defineEventHandler(async (event) => {
     isDevTestEmail ||
     isActivateAccountPage ||
     isExternalLogin ||
+    isDevRefreshAdCache ||
     isVerifyEmailPage
     ;
 // console.log('[AUTH MIDDLEWARE]', {
