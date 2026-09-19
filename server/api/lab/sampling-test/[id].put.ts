@@ -2,6 +2,11 @@
 import { PrismaClient } from '@prisma/client';
 import { defineEventHandler, getRouterParam, readMultipartFormData } from 'h3';
 import { handleFileUpload, parseDate } from '~~/server/utils/fileUploadHandler';
+import { AccessAction,} from '@prisma/client';
+import {
+  requirePermission,
+} from '../../../services/access-control.service';
+
 import {
   logAudit,
   computeChangedFields,
@@ -12,6 +17,11 @@ import {
 const prisma = new PrismaClient();
 
 export default defineEventHandler(async (event) => {
+  await requirePermission(
+    event,
+    'lab.sampling-tests',
+    AccessAction.UPDATE,
+  );
   try {
     // ========================================
     // 1. ПОДГОТОВКА

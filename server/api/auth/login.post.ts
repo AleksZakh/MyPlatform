@@ -1,7 +1,16 @@
 // server/api/auth/login.post.ts
 
-import ActiveDirectory from 'activedirectory2';
 import { logger } from '../../utils/logger';
+
+import {
+  authenticateDomainUser,
+  findDomainUser,
+} from '../../services/ad-directory.service';
+
+import {
+  ensureDomainUser,
+  assertDomainUserCanLogin,
+} from '../../services/domain-user.service';
 
 
 interface LoginBody {
@@ -11,142 +20,20 @@ interface LoginBody {
 }
 
 
-interface ADUser {
-  sAMAccountName?: string;
-  userPrincipalName?: string;
-  cn?: string;
-  displayName?: string;
-  givenName?: string;
-  sn?: string;
-  mail?: string;
-  department?: string;
-  title?: string;
-}
-
-
-/**
- * Получаем обычный sAMAccountName.
- *
- * Поддерживаем:
- *
- * ibanov_II
- * ibanov_II@corp.avtodor-eng.ru
- * CORP\ibanov_II
- */
-function normalizeLogin(value: string): string {
-  let login = value.trim();
-
-  if (login.includes('\\')) {
-    const parts = login.split('\\');
-    login = parts[parts.length - 1] || '';
-  }
-
-  if (login.includes('@')) {
-    login = login.split('@')[0] || '';
-  }
-
-  return login.trim();
-}
-
-
-/**
- * Получаем DNS-домен из baseDN.
- *
- * Например:
- *
- * DC=corp,DC=avtodor-eng,DC=ru
- *
- * ->
- *
- * corp.avtodor-eng.ru
- */
-function domainFromBaseDN(baseDN: string): string {
-  return baseDN
-    .split(',')
-    .map((part) => part.trim())
-    .filter((part) => /^DC=/i.test(part))
-    .map((part) => part.replace(/^DC=/i, ''))
-    .filter(Boolean)
-    .join('.');
-}
-
-
-/**
- * Проверяем login/password непосредственно в Active Directory.
- */
-function authenticateUser(
-  ad: ActiveDirectory,
-  username: string,
-  password: string,
-): Promise<boolean> {
-  return new Promise((resolve, reject) => {
-    ad.authenticate(
-      username,
-      password,
-
-      (error: any, authenticated: boolean) => {
-        if (error) {
-          /**
-           * LDAP error 49 = invalid credentials.
-           *
-           * В зависимости от ldapjs/activedirectory2
-           * ошибка может приходить немного по-разному.
-           */
-          const invalidCredentials =
-            error?.code === 49 ||
-            error?.name === 'InvalidCredentialsError' ||
-            String(error?.message || '')
-              .toLowerCase()
-              .includes('invalid credentials');
-
-          if (invalidCredentials) {
-            resolve(false);
-            return;
-          }
-
-          reject(error);
-          return;
-        }
-
-        resolve(Boolean(authenticated));
-      },
-    );
-  });
-}
-
-
-/**
- * Получаем данные пользователя из AD после успешной
- * проверки пароля.
- */
-function findUser(
-  ad: ActiveDirectory,
-  username: string,
-): Promise<ADUser | null> {
-  return new Promise((resolve, reject) => {
-    ad.findUser(
-      username,
-
-      (error: any, user: ADUser | undefined) => {
-        if (error) {
-          reject(error);
-          return;
-        }
-
-        resolve(user || null);
-      },
-    );
-  });
-}
-
-
 /**
  * ============================================================
  * POST /api/auth/login
  * ============================================================
  *
- * Ручная авторизация пользователя по доменному
- * login/password.
+ * Ручная DOMAIN-авторизация:
+ *
+ * login/password
+ *      ↓
+ * Active Directory
+ *      ↓
+ * app_users
+ *      ↓
+ * Nuxt session
  *
  * Kerberos здесь НЕ используется.
  */
@@ -154,41 +41,50 @@ export default defineEventHandler(async (event) => {
 
   /**
    * ----------------------------------------------------------
-   * 1. Получаем login/password
+   * 1. Получаем credentials
    * ----------------------------------------------------------
    */
-
   const body =
-    await readBody<LoginBody>(event);
+    await readBody<LoginBody>(
+      event,
+    );
 
 
   const rawLogin =
     body?.login?.trim() || '';
 
+  /**
+   * Пароль намеренно НЕ trim().
+   *
+   * Пробел может быть частью реального пароля.
+   */
   const password =
     body?.password || '';
 
   const sessionId =
-    body?.sessionId || crypto.randomUUID();
+    body?.sessionId ||
+    crypto.randomUUID();
 
 
   /**
-   * Никогда не логируем body целиком,
-   * потому что там находится пароль.
+   * Никогда не логируем body:
+   * внутри находится пароль.
    */
-
-  if (!rawLogin || !password) {
+  if (
+    !rawLogin ||
+    !password
+  ) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'Login and password required',
-      message: 'Введите логин и пароль.',
+
+      statusMessage:
+        'Login and password required',
+
+      message:
+        'Введите логин и пароль.',
     });
   }
 
-
-  /**
-   * Дополнительная базовая защита от явно некорректных данных.
-   */
 
   if (
     rawLogin.length > 256 ||
@@ -196,209 +92,52 @@ export default defineEventHandler(async (event) => {
   ) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'Invalid credentials format',
-    });
-  }
 
-
-  const login =
-    normalizeLogin(rawLogin);
-
-
-  if (!login) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Invalid login',
-      message: 'Некорректный логин.',
-    });
-  }
-
-
-  /**
-   * ----------------------------------------------------------
-   * 2. Конфигурация Active Directory
-   * ----------------------------------------------------------
-   */
-
-  const config =
-    useRuntimeConfig(event);
-
-
-  if (
-    !config.ad?.url ||
-    !config.ad?.baseDN ||
-    !config.ad?.username ||
-    !config.ad?.password
-  ) {
-    logger.error(
-      'Не заполнена конфигурация Active Directory.',
-    );
-
-    throw createError({
-      statusCode: 500,
       statusMessage:
-        'Active Directory configuration error',
-    });
-  }
-
-
-  const baseDN =
-    String(config.ad.baseDN);
-
-
-  /**
-   * Предпочтительный вариант:
-   *
-   * runtimeConfig.ad.userPrincipalSuffix
-   *
-   * Например:
-   *
-   * corp.avtodor-eng.ru
-   *
-   * Если параметра пока нет, пробуем получить его
-   * из baseDN.
-   */
-
-  const configuredSuffix =
-    (config.ad as { userPrincipalSuffix?: string })
-      .userPrincipalSuffix
-      ? String(
-        (config.ad as { userPrincipalSuffix?: string })
-          .userPrincipalSuffix,
-      )
-      : '';
-
-
-  const domain =
-    configuredSuffix ||
-    domainFromBaseDN(baseDN);
-
-
-  if (!domain) {
-    logger.error(
-      'Не удалось определить UPN suffix Active Directory.',
-    );
-
-    throw createError({
-      statusCode: 500,
-      statusMessage:
-        'Active Directory domain configuration error',
+        'Invalid credentials format',
     });
   }
 
 
   /**
-   * Если пользователь написал:
-   *
-   * user@domain
-   *
-   * или:
-   *
-   * DOMAIN\user
-   *
-   * используем введённое значение.
-   *
-   * Если только:
-   *
-   * ibanov_II
-   *
-   * превращаем в:
-   *
-   * ibanov_II@corp.avtodor-eng.ru
-   */
-
-  const bindUsername =
-    rawLogin.includes('@') ||
-    rawLogin.includes('\\')
-      ? rawLogin
-      : `${login}@${domain}`;
-
-
-  /**
    * ----------------------------------------------------------
-   * 3. Создаём AD client
-   * ----------------------------------------------------------
-   *
-   * Техническая учётка используется для поиска пользователя
-   * и получения его дополнительных атрибутов.
-   */
-
-  const ad =
-    new ActiveDirectory({
-      url:
-        String(config.ad.url),
-
-      baseDN,
-
-      username:
-        String(config.ad.username),
-
-      password:
-        String(config.ad.password),
-
-      attributes: {
-        user: [
-          'dn',
-          'distinguishedName',
-          'userPrincipalName',
-          'sAMAccountName',
-          'cn',
-          'displayName',
-          'givenName',
-          'sn',
-          'mail',
-          'department',
-          'title',
-        ] as any,
-
-        group: [
-          'dn',
-          'cn',
-          'description',
-          'distinguishedName',
-          'objectCategory',
-        ],
-      },
-    });
-
-
-  /**
-   * ----------------------------------------------------------
-   * 4. Проверяем пароль пользователя
+   * 2. Проверяем пароль непосредственно в AD
    * ----------------------------------------------------------
    */
-
-  let authenticated = false;
+  let authenticated:
+    boolean;
 
 
   try {
     logger.info(
-      `Попытка password-авторизации пользователя ${login}`,
+      `Попытка DOMAIN password-авторизации пользователя ${rawLogin}`,
     );
 
 
     authenticated =
-      await authenticateUser(
-        ad,
-        bindUsername,
+      await authenticateDomainUser(
+        rawLogin,
         password,
+        event,
       );
   }
   catch (error: any) {
-    /**
-     * Ошибка соединения с AD != неправильный пароль.
-     */
-
     logger.error(
-      `Ошибка Active Directory при авторизации ${login}: ` +
+      `Ошибка Active Directory при авторизации ${rawLogin}: ` +
       `${error?.message || String(error)}`,
     );
 
 
+    /**
+     * LDAP/network error не выдаём за
+     * неправильный пароль.
+     */
     throw createError({
       statusCode: 503,
+
       statusMessage:
         'Active Directory unavailable',
+
       message:
         'Служба авторизации временно недоступна.',
     });
@@ -406,18 +145,20 @@ export default defineEventHandler(async (event) => {
 
 
   /**
-   * Пароль неправильный.
+   * Неверный login/password.
    */
-
   if (!authenticated) {
     logger.warn(
-      `Неудачная попытка авторизации пользователя ${login}`,
+      `Неудачная DOMAIN password-авторизация: ${rawLogin}`,
     );
 
 
     throw createError({
       statusCode: 401,
-      statusMessage: 'Invalid credentials',
+
+      statusMessage:
+        'Invalid credentials',
+
       message:
         'Неверный логин или пароль.',
     });
@@ -426,48 +167,56 @@ export default defineEventHandler(async (event) => {
 
   /**
    * ----------------------------------------------------------
-   * 5. Пароль правильный.
-   *
-   * Получаем профиль пользователя.
+   * 3. Получаем нормализованный профиль пользователя из AD
    * ----------------------------------------------------------
    */
-
-  let adUser: ADUser | null;
+  let directoryUser;
 
 
   try {
-    adUser =
-      await findUser(
-        ad,
-        login,
+    directoryUser =
+      await findDomainUser(
+        rawLogin,
+        event,
       );
   }
   catch (error: any) {
     logger.error(
-      `Ошибка получения профиля AD ${login}: ` +
+      `Ошибка получения DOMAIN-профиля ${rawLogin}: ` +
       `${error?.message || String(error)}`,
     );
 
 
+    if (error?.statusCode) {
+      throw error;
+    }
+
+
     throw createError({
       statusCode: 503,
+
       statusMessage:
         'Active Directory unavailable',
+
       message:
-        'Не удалось получить данные пользователя.',
+        'Не удалось получить данные пользователя из Active Directory.',
     });
   }
 
 
-  if (!adUser) {
+  if (!directoryUser) {
     logger.warn(
-      `Авторизованный пользователь ${login} не найден при поиске в AD.`,
+      `Пользователь ${rawLogin} успешно прошёл authentication, ` +
+      'но не найден при чтении профиля AD.',
     );
 
 
     throw createError({
       statusCode: 403,
-      statusMessage: 'User not found',
+
+      statusMessage:
+        'User not found',
+
       message:
         'Пользователь не найден в Active Directory.',
     });
@@ -476,45 +225,86 @@ export default defineEventHandler(async (event) => {
 
   /**
    * ----------------------------------------------------------
-   * 6. Формируем пользователя приложения
+   * 4. Получаем локального пользователя Space
    * ----------------------------------------------------------
    *
-   * Структура специально совпадает с той,
-   * которую мы используем в kerberos.post.ts.
+   * Если DOMAIN-пользователь уже заходил через Kerberos,
+   * здесь будет найдена ТА ЖЕ запись app_users
+   * по directoryObjectId.
    */
+  const appUser =
+    await ensureDomainUser(
+      directoryUser,
+    );
 
-  const username =
-    adUser.sAMAccountName?.trim() ||
-    login;
+
+  /**
+   * ----------------------------------------------------------
+   * 5. Проверяем статус учётной записи
+   * ----------------------------------------------------------
+   */
+  assertDomainUserCanLogin(
+    directoryUser,
+    appUser,
+  );
 
 
+  /**
+   * ----------------------------------------------------------
+   * 6. Формируем session user
+   * ----------------------------------------------------------
+   *
+   * Структура максимально совпадает
+   * с kerberos.post.ts.
+   *
+   * Разница только:
+   *
+   * authMethod = AD_PASSWORD
+   */
   const user = {
+    id:
+      appUser.id,
+
+
     login:
-      username,
+      appUser.login ||
+      directoryUser.login,
 
-    username:
-      username,
-
-    name:
-      adUser.cn ||
-      adUser.displayName ||
-      `${adUser.givenName || ''} ${adUser.sn || ''}`.trim() ||
-      username,
-
-    department:
-      adUser.department || null,
+    fullName:
+      appUser.fullName ||
+      directoryUser.fullName,
 
     email:
-      adUser.mail || null,
+      appUser.email ??
+      undefined,
 
-    title:
-      adUser.title || null,
+    authType:
+      'DOMAIN' as const,
+
+    authMethod:
+      'AD_PASSWORD' as const,
+
 
     /**
-     * Отличается только способ авторизации.
+     * Compatibility fields для старого frontend.
      */
-    authType:
-      'Password',
+    username:
+      appUser.login ||
+      directoryUser.login,
+
+    name:
+      appUser.fullName ||
+      directoryUser.fullName ||
+      directoryUser.login,
+
+    department:
+      directoryUser.department ??
+      undefined,
+
+    title:
+      appUser.position ??
+      directoryUser.position ??
+      undefined,
 
     sessionId,
   };
@@ -522,16 +312,19 @@ export default defineEventHandler(async (event) => {
 
   /**
    * ----------------------------------------------------------
-   * 7. Создаём nuxt-auth-utils session
+   * 7. Создаём Nuxt session
    * ----------------------------------------------------------
    */
+  await setUserSession(
+    event,
+    {
+      user,
 
-  await setUserSession(event, {
-    user,
-
-    loggedInAt:
-      new Date().toISOString(),
-  });
+      loggedInAt:
+        new Date()
+          .toISOString(),
+    },
+  );
 
 
   event.context.user =
@@ -539,16 +332,16 @@ export default defineEventHandler(async (event) => {
 
 
   logger.info(
-    `Пользователь ${username} успешно авторизован по login/password.`,
+    `DOMAIN password-авторизация завершена успешно: ` +
+    `${user.login}, appUserId=${appUser.id}`,
   );
 
 
   /**
    * ----------------------------------------------------------
-   * 8. Отвечаем login.vue
+   * 8. Ответ frontend
    * ----------------------------------------------------------
    */
-
   return {
     success: true,
 

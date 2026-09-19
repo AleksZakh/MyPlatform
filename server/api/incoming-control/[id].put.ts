@@ -2,16 +2,24 @@
 import { PrismaClient } from '@prisma/client';
 import { defineEventHandler, getRouterParam, readMultipartFormData } from 'h3';
 import { handleFileUpload, parseDate } from '~~/server/utils/fileUploadHandler';
+import { AccessAction,} from '@prisma/client';
+import {requirePermission,} from '../../services/access-control.service';
 import {
-  logAudit,
-  computeChangedFields,
+  auditDataChange,
+  computeAuditDelta,
+  buildCreateAuditDelta,
+  AuditDelta,
   getActorEmail,
-  getRequestMeta,
 } from '~~/server/utils/auditLog';
 
 const prisma = new PrismaClient();
 
 export default defineEventHandler(async (event) => {
+  await requirePermission(
+    event,
+    'lab.sampling-tests',
+    AccessAction.UPDATE,
+  );
   try {
     // ========================================
     // 1. ПОДГОТОВКА
@@ -31,7 +39,7 @@ export default defineEventHandler(async (event) => {
 
     const { body, fileDbPaths } = await handleFileUpload(multipartData);
     const editorEmail = body.editorEmail || getActorEmail(event);
-    const requestMeta = getRequestMeta(event);
+    
 
     // console.log('body.protocolDate ===> ', body )
 
@@ -79,11 +87,15 @@ export default defineEventHandler(async (event) => {
       const auditEntries: Array<{
         entityType: string;
         entityId: number;
-        action: 'CREATE' | 'UPDATE' | 'DELETE';
+
+        action:
+          'CREATE'
+          | 'UPDATE'
+          | 'DELETE';
+
         note: string;
-        beforeData?: any;
-        afterData?: any;
-        changedFields?: string[];
+
+        changes?: AuditDelta;
       }> = [];
 
       // ----- 3.1 Подготовка данных для SamplingTest -----
@@ -156,11 +168,30 @@ export default defineEventHandler(async (event) => {
           });
 
           auditEntries.push({
-            entityType: 'TestLocation',
-            entityId: testLocation.id,
-            action: 'CREATE',
-            note: `Создана новая локация "${locationName}" (объект: ${testObject.name})`,
-            afterData: testLocation,
+            entityType:
+              'TestLocation',
+
+            entityId:
+              testLocation.id,
+
+            action:
+              'CREATE',
+
+            note:
+              `Создана новая локация "${locationName}" ` +
+              `(объект: ${testObject.name})`,
+
+            changes:
+              buildCreateAuditDelta(
+                testLocation as
+                  unknown as
+                  Record<string, unknown>,
+
+                [
+                  'name',
+                  'testObjectId',
+                ],
+              ),
           });
         }
 
@@ -267,16 +298,29 @@ export default defineEventHandler(async (event) => {
               data: receiptUpdateData,
             });
 
-            const changedFields = computeChangedFields(beforeReceiptMaterial as any, updatedReceipt as any);
-            if (changedFields.length > 0) {
+            const changes =
+              computeAuditDelta(
+                beforeReceiptMaterial as any,
+                updatedReceipt as any,
+              );
+
+            if (
+              Object.keys(changes).length > 0
+            ) {
               auditEntries.push({
-                entityType: 'ReceiptMaterial',
-                entityId: receiptMaterialId,
-                action: 'UPDATE',
-                note: `Изменено поступление материала. Поля: ${changedFields.join(', ')}`,
-                beforeData: beforeReceiptMaterial,
-                afterData: updatedReceipt,
-                changedFields,
+                entityType:
+                  'ReceiptMaterial',
+
+                entityId:
+                  receiptMaterialId,
+
+                action:
+                  'UPDATE',
+
+                note:
+                  'Изменено поступление материала',
+
+                changes,
               });
             }
           }
@@ -326,11 +370,32 @@ export default defineEventHandler(async (event) => {
           receiptMaterialId = createdReceipt.id;
 
           auditEntries.push({
-            entityType: 'ReceiptMaterial',
-            entityId: createdReceipt.id,
-            action: 'CREATE',
-            note: `Создано поступление материала (акт № ${beforeSamplingTest.sActNumber})`,
-            afterData: createdReceipt,
+            entityType:
+              'ReceiptMaterial',
+
+            entityId:
+              createdReceipt.id,
+
+            action:
+              'CREATE',
+
+            note:
+              `Создано поступление материала ` +
+              `(акт № ${beforeSamplingTest.sActNumber})`,
+
+            changes:
+              buildCreateAuditDelta(
+                createdReceipt as
+                  unknown as
+                  Record<string, unknown>,
+
+                [
+                  'materialId',
+                  'receiptDate',
+                  'qualDate',
+                  'qualDocNumber',
+                ],
+              ),
           });
         }
 
@@ -391,16 +456,29 @@ export default defineEventHandler(async (event) => {
               data: protocolUpdateData,
             });
 
-            const changedFields = computeChangedFields(beforeTestProtocol as any, updatedProtocol as any);
-            if (changedFields.length > 0) {
+            const changes =
+              computeAuditDelta(
+                beforeTestProtocol as any,
+                updatedProtocol as any,
+              );
+
+            if (
+              Object.keys(changes).length > 0
+            ) {
               auditEntries.push({
-                entityType: 'TestProtocol',
-                entityId: testProtocolId,
-                action: 'UPDATE',
-                note: `Изменён протокол испытаний. Поля: ${changedFields.join(', ')}`,
-                beforeData: beforeTestProtocol,
-                afterData: updatedProtocol,
-                changedFields,
+                entityType:
+                  'TestProtocol',
+
+                entityId:
+                  testProtocolId,
+
+                action:
+                  'UPDATE',
+
+                note:
+                  'Изменён протокол испытаний',
+
+                changes,
               });
             }
           }
@@ -434,11 +512,32 @@ export default defineEventHandler(async (event) => {
           testProtocolId = createdProtocol.id;
 
           auditEntries.push({
-            entityType: 'TestProtocol',
-            entityId: createdProtocol.id,
-            action: 'CREATE',
-            note: `Создан протокол № ${createdProtocol.protocolNumber} (акт № ${beforeSamplingTest.sActNumber})`,
-            afterData: createdProtocol,
+            entityType:
+              'TestProtocol',
+
+            entityId:
+              createdProtocol.id,
+
+            action:
+              'CREATE',
+
+            note:
+              `Создан протокол № ${createdProtocol.protocolNumber} ` +
+              `(акт № ${beforeSamplingTest.sActNumber})`,
+
+            changes:
+              buildCreateAuditDelta(
+                createdProtocol as
+                  unknown as
+                  Record<string, unknown>,
+
+                [
+                  'protocolNumber',
+                  'protocolDate',
+                  'testResult',
+                  'receiptMaterialId',
+                ],
+              ),
           });
         }
 
@@ -473,46 +572,72 @@ export default defineEventHandler(async (event) => {
       });
 
       // ----- 3.5 Логирование изменений SamplingTest -----
-      const samplingChangedFields = computeChangedFields(
-        beforeSamplingTest as any,
-        updatedSamplingTest as any
-      );
+      const samplingChanges =
+        computeAuditDelta(
+          beforeSamplingTest as any,
+          updatedSamplingTest as any,
+        );
 
-      if (samplingChangedFields.length > 0) {
+      if (
+        Object.keys(samplingChanges)
+          .length > 0
+      ) {
         auditEntries.push({
-          entityType: 'SamplingTest',
-          entityId: id,
-          action: 'UPDATE',
-          note: `Изменён акт отбора. Поля: ${samplingChangedFields.join(', ')}`,
-          beforeData: beforeSamplingTest,
-          afterData: updatedSamplingTest,
-          changedFields: samplingChangedFields,
+          entityType:
+            'SamplingTest',
+
+          entityId:
+            id,
+
+          action:
+            'UPDATE',
+
+          note:
+            'Изменён акт отбора',
+
+          changes:
+            samplingChanges,
         });
       }
 
       // ----- 3.6 Запись всех audit-логов внутри транзакции -----
-      for (const entry of auditEntries) {
-        // console.log('Запись в журнал ==>')
-        await tx.auditLog.create({
-          data: {
-            entityType: entry.entityType,
-            entityId: entry.entityId,
-            action: entry.action,
-            actorEmail: editorEmail,
-            note: entry.note,
-            beforeData: entry.beforeData ?? undefined,
-            afterData: entry.afterData ?? undefined,
-            changedFields: entry.changedFields ?? undefined,
-            ipAddress: requestMeta.ipAddress ?? null,
-            userAgent: requestMeta.userAgent ?? null,
-          },
+      for (
+        const entry
+        of auditEntries
+      ) {
+        await auditDataChange({
+          event,
+
+          db:
+            tx,
+
+          resourceKey:
+            'lab.sampling-tests',
+
+          entityType:
+            entry.entityType,
+
+          entityId:
+            entry.entityId,
+
+          action:
+            entry.action,
+
+          note:
+            entry.note,
+
+          changes:
+            entry.changes,
+
+          actorEmail:
+            editorEmail,
         });
       }
 
       // ----- Возвращаем результат транзакции -----
       return {
         updatedSamplingTest,
-        samplingChangedFields,
+        samplingChanges,
         auditEntries,
       };
     }, {
@@ -528,7 +653,7 @@ export default defineEventHandler(async (event) => {
       data: result.updatedSamplingTest,
       message: 'Акт отбора успешно обновлён',
       meta: {
-        changedFields: result.samplingChangedFields,
+        changedFields: Object.keys( result.samplingChanges, ),
         auditEntriesCount: result.auditEntries.length,
         auditEntries: result.auditEntries.map(e => ({
           entityType: e.entityType,

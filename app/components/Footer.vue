@@ -10,7 +10,7 @@
         <p>{{ new Date().getFullYear() }}</p>
       </div>
       <div class="ml-8 flex items-center gap-1 hover:underline ">
-        <Icon name="streamline-freehand-color:settings-wrench-double"/>
+        <Icon name="streamline-freehand-color:help-headphones-customer-support-human"/>
         <a class="hover:decoration-solid" href="mailto:a.zakharov@avtodor-eng.ru">Техническая поддержка</a>
       </div>
     </template>

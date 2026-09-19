@@ -328,31 +328,57 @@ model SamplingTest {
 model AuditLog {
   id Int @id @default(autoincrement())
 
-  // К какой сущности относится запись
-  entityType String @db.VarChar(50) // 'SamplingTest', 'ReceiptMaterial', 'TestProtocol', 'Material', ...
-  entityId   Int // ID записи в исходной таблице
+  // Старые поля.
+  // Для ACCESS/AUTH событий сущности БД может не быть.
+  entityType String? @db.VarChar(50)
+  entityId   Int?
 
-  // Тип действия
-  action String @db.VarChar(20) // 'CREATE', 'UPDATE', 'DELETE', 'RESTORE'
+  // Что пытались сделать:
+  // CREATE / UPDATE / DELETE / VIEW / LOGIN / ...
+  action String @db.VarChar(20)
 
-  // Кто и когда выполнил действие
-  actorEmail String   @db.VarChar(255) // Email пользователя
-  timestamp  DateTime @default(now()) // Когда выполнено
-  note       String?  @db.Text
+  // Новый Event Log
+  category    String? @db.VarChar(20)
+  result      String? @db.VarChar(20)
+  resourceKey String? @db.VarChar(150)
 
-  // Снимки данных (JSON)
-  beforeData    Json? // Состояние до изменения
-  afterData     Json? // Состояние после изменения
-  changedFields Json? // Список изменённых полей (для UPDATE)
+  actorUserId   Int?
+  actorLogin    String? @db.VarChar(255)
+  actorAuthType String? @db.VarChar(30)
 
-  // Метаданные запроса
-  ipAddress String? @db.VarChar(45) // IPv4 или IPv6
-  userAgent String? @db.Text // User-Agent браузера
+  targetUserId Int?
+
+  requestId String? @db.VarChar(100)
+  method    String? @db.VarChar(10)
+  route     String? @db.VarChar(500)
+
+  // Старое поле пока сохраняем
+  actorEmail String @db.VarChar(255)
+
+  timestamp DateTime @default(now())
+
+  note          String? @db.Text
+  beforeData    Json?
+  afterData     Json?
+  changedFields Json?
+  changes Json?
+
+  ipAddress String? @db.VarChar(45)
+  userAgent String? @db.Text
+
 
   @@index([entityType, entityId])
   @@index([timestamp])
   @@index([actorEmail])
   @@index([action])
+
+  // Новые индексы
+  @@index([category])
+  @@index([result])
+  @@index([resourceKey])
+  @@index([actorUserId])
+  @@index([targetUserId])
+
   @@map("audit_logs")
 }
 

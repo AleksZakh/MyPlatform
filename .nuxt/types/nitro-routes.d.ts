@@ -15,6 +15,9 @@ declare module "nitropack/types" {
     '/api/ad/search': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ad/search.get').default>>>>
     }
+    '/api/admin/audit-log': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/audit-log/index.get').default>>>>
+    }
     '/api/admin/registration-requests/:id': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/registration-requests/[id].get').default>>>>
     }

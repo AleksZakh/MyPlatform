@@ -1,10 +1,20 @@
 // server/api/lab/sampling-test/index.get.ts
 import { PrismaClient } from '@prisma/client';
 import { defineEventHandler, getQuery } from 'h3';
+import { AccessAction,} from '@prisma/client';
+
+import {
+  requirePermission,
+} from '../../../services/access-control.service';
 
 const prisma = new PrismaClient();
 
 export default defineEventHandler(async (event) => {
+  await requirePermission(
+    event,
+    'lab.sampling-tests',
+    AccessAction.VIEW,
+  );
   try {
     const query = getQuery(event);
     const page = parseInt(query.page as string) || 1;

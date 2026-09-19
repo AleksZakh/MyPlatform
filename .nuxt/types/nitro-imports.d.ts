@@ -11,6 +11,9 @@ declare global {
   const appendResponseHeader: typeof import('../../node_modules/h3/dist/index').appendResponseHeader
   const appendResponseHeaders: typeof import('../../node_modules/h3/dist/index').appendResponseHeaders
   const assertMethod: typeof import('../../node_modules/h3/dist/index').assertMethod
+  const auditDataChange: typeof import('../../server/utils/auditLog').auditDataChange
+  const auditDenied: typeof import('../../server/utils/auditLog').auditDenied
+  const buildCreateAuditDelta: typeof import('../../server/utils/auditLog').buildCreateAuditDelta
   const cachedEventHandler: typeof import('../../node_modules/nitropack/dist/runtime/internal/cache').cachedEventHandler
   const cachedFunction: typeof import('../../node_modules/nitropack/dist/runtime/internal/cache').cachedFunction
   const callNodeListener: typeof import('../../node_modules/h3/dist/index').callNodeListener
@@ -18,6 +21,7 @@ declare global {
   const clearResponseHeaders: typeof import('../../node_modules/h3/dist/index').clearResponseHeaders
   const clearSession: typeof import('../../node_modules/h3/dist/index').clearSession
   const clearUserSession: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/session').clearUserSession
+  const computeAuditDelta: typeof import('../../server/utils/auditLog').computeAuditDelta
   const computeChangedFields: typeof import('../../server/utils/auditLog').computeChangedFields
   const containsPathTraversal: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/path-safety').containsPathTraversal
   const createApp: typeof import('../../node_modules/h3/dist/index').createApp
@@ -216,6 +220,7 @@ declare global {
   const useSession: typeof import('../../node_modules/h3/dist/index').useSession
   const useStorage: typeof import('../../node_modules/nitropack/dist/runtime/internal/storage').useStorage
   const verifyPassword: typeof import('../../server/utils/password').verifyPassword
+  const writeAuditEvent: typeof import('../../server/utils/auditLog').writeAuditEvent
   const writeEarlyHints: typeof import('../../node_modules/h3/dist/index').writeEarlyHints
 }
 // for type re-export
@@ -371,7 +376,7 @@ declare global {
   export type { SessionHooks } from '../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/session.d'
   import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/session.d')
   // @ts-ignore
-  export type { AuditAction, AuditEntityType } from '../../server/utils/auditLog'
+  export type { AuditAction, AuditEntityType, LogAccessDeniedParams, AuditDelta } from '../../server/utils/auditLog'
   import('../../server/utils/auditLog')
   // @ts-ignore
   export type { FileUploadResult, FileProcessingOptions } from '../../server/utils/fileUploadHandler'
@@ -445,7 +450,7 @@ export { passwordNeedsReHash } from '/home/local_adm/Projects/MyPlatform/node_mo
 export { sessionHooks, getUserSession, setUserSession, replaceUserSession, clearUserSession, requireUserSession } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-auth-utils/dist/runtime/server/utils/session';
 export { getUserGroups } from '/home/local_adm/Projects/MyPlatform/server/utils/ad';
 export { adCache } from '/home/local_adm/Projects/MyPlatform/server/utils/adCache';
-export { logAudit, computeChangedFields, getActorEmail, getRequestMeta, softDelete } from '/home/local_adm/Projects/MyPlatform/server/utils/auditLog';
+export { logAudit, computeChangedFields, getActorEmail, getRequestMeta, softDelete, buildCreateAuditDelta, computeAuditDelta, writeAuditEvent, auditDataChange, auditDenied } from '/home/local_adm/Projects/MyPlatform/server/utils/auditLog';
 export { handleFileUpload, cleanOldFilesFromDisk, parseDate, updateFilePathsInData } from '/home/local_adm/Projects/MyPlatform/server/utils/fileUploadHandler';
 export { getFullFilePath, fileExists, getFileInfo, deleteUploadedFile } from '/home/local_adm/Projects/MyPlatform/server/utils/fileUtils';
 export { folderNameGenerator } from '/home/local_adm/Projects/MyPlatform/server/utils/folderNameGenerator';

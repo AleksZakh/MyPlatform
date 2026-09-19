@@ -1,10 +1,19 @@
 // server/api/lab/sampling-test/[id].get.ts
 import { PrismaClient } from '@prisma/client';
 import { defineEventHandler, getRouterParam } from 'h3';
+import { AccessAction,} from '@prisma/client';
+import {
+  requirePermission,
+} from '../../../services/access-control.service';
 
 const prisma = new PrismaClient();
 
 export default defineEventHandler(async (event) => {
+  await requirePermission(
+    event,
+    'lab.sampling-tests',
+    AccessAction.VIEW,
+  );
   try {
     const idParam = getRouterParam(event, 'id');
     const id = parseInt(idParam || '', 10);

@@ -3,10 +3,20 @@ import { PrismaClient } from '@prisma/client';
 import { defineEventHandler, readMultipartFormData } from 'h3';
 import { handleFileUpload, parseDate } from '~~/server/utils/fileUploadHandler';
 import { logAudit, getActorEmail, getRequestMeta } from '~~/server/utils/auditLog';
+import { AccessAction,} from '@prisma/client';
+
+import {
+  requirePermission,
+} from '../../../services/access-control.service';
 
 const prisma = new PrismaClient();
 
 export default defineEventHandler(async (event) => {
+  await requirePermission(
+    event,
+    'lab.sampling-tests',
+    AccessAction.CREATE,
+  );
   try {
     const multipartData = await readMultipartFormData(event);
 

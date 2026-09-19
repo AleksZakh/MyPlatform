@@ -47,6 +47,44 @@ const isValidEmail = (email: string): boolean => {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 };
 
+/**
+ * Корпоративные email-домены.
+ *
+ * Пользователи с такими адресами должны входить
+ * как DOMAIN-пользователи, а не создавать
+ * внешние учётные записи.
+ */
+const CORPORATE_EMAIL_DOMAINS =
+  new Set([
+    'avtodor-eng.ru',
+  ]);
+
+
+/**
+ * Проверяем, относится ли email
+ * к корпоративному домену.
+ */
+const isCorporateEmail = (
+  email: string,
+): boolean => {
+  const atIndex =
+    email.lastIndexOf('@');
+
+  if (atIndex < 0) {
+    return false;
+  }
+
+  const domain =
+    email
+      .slice(atIndex + 1)
+      .trim()
+      .toLowerCase();
+
+  return CORPORATE_EMAIL_DOMAINS.has(
+    domain,
+  );
+};
+
 export default defineEventHandler(async (event) => {
   // ============================================================
   // 1. Читаем тело запроса
@@ -143,6 +181,29 @@ export default defineEventHandler(async (event) => {
       statusMessage: 'Validation error',
       message:
         'Укажите корректный адрес электронной почты.',
+    });
+  }
+
+  /**
+   * Корпоративный пользователь не должен
+   * регистрироваться как EXTERNAL.
+   */
+  if (
+    isCorporateEmail(email)
+  ) {
+    throw createError({
+      statusCode: 400,
+
+      statusMessage:
+        'Corporate email is not allowed',
+
+      message:
+        'Для корпоративной учётной записи используйте доменный вход. Регистрация внешней учётной записи с корпоративным адресом недоступна.',
+
+      data: {
+        code:
+          'CORPORATE_EMAIL_NOT_ALLOWED',
+      },
     });
   }
 

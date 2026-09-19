@@ -1,3 +1,4 @@
+<!-- /app/components/sidebar/menu.vue -->
 <template>
   <aside class="sidebar p-2 relative">
 
@@ -33,6 +34,7 @@
           py-1
           px-3
           text-lg
+          text-balance
           rounded-lg
           w-full
           transition-all
