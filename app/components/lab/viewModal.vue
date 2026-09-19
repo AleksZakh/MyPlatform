@@ -1,282 +1,428 @@
-<!-- components/lab/RecordViewModal.vue -->
 <template>
   <UModal
-    class="custom-modal "
-    :ui="{ content: 'sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl w-full bg-gray-100' }"
+    class="custom-modal"
+    :ui="{
+      content:
+        'sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl w-full bg-gray-100',
+    }"
   >
     <template #header>
-      <div class="flex items-center justify-between w-full">
-        <div class="flex items-center gap-3">
-          <div class="text-2xl text-blue-500">
-            <Icon name="streamline-freehand-color:book-bookmark" size="28" />
+      <div
+        class="flex items-center justify-between w-full"
+      >
+        <div
+          class="flex items-center gap-3"
+        >
+          <div
+            class="text-2xl text-blue-500"
+          >
+            <Icon
+              name="streamline-freehand-color:book-bookmark"
+              size="28"
+            />
           </div>
+
           <div>
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-              Просмотр записи - Акт №{{ record?.['Номер акта отбора проб'] || '' }}
+            <h3
+              class="text-lg font-semibold text-gray-900 dark:text-white"
+            >
+              Просмотр записи — Акт №
+              {{ data?.samplingActNumber || '—' }}
             </h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
+
+            <p
+              class="text-sm text-gray-500 dark:text-gray-400"
+            >
               Просмотр данных записи
             </p>
           </div>
         </div>
+
         <UButton
-            variant="ghost"
-            color="neutral"
-            icon="i-heroicons-x-mark-20-solid"
-            class="rounded-full hover:bg-gray-100 transition-colors"
-            @click="emit('close')"
+          variant="ghost"
+          color="neutral"
+          icon="i-heroicons-x-mark-20-solid"
+          class="rounded-full hover:bg-gray-100 transition-colors"
+          @click="emit('close')"
         />
       </div>
     </template>
 
+
     <template #body>
-      <div class="flex flex-col w-full bg-white">
-        <!-- Контейнер для полей -->
-        <div class="grid grid-cols-2">
+      <div
+        v-if="loading"
+        class="py-16 text-center text-gray-500"
+      >
+        Загрузка записи...
+      </div>
 
-        </div>
-        <div class="flex    parent">
-          
-          <!-- ===== БЛОК 1: Отбор проб ===== -->
-          <fieldset class="border-2 border-gray-200 mx-4 px-2 py-1 rounded-md bg-white/80">
-            <legend class="text-xl font-normal px-2 flex items-center gap-2 bg-transparent">
-              <span><Icon name="streamline-freehand-color:business-product-supplier-1" size="24"/> Отбор проб</span>
-              <span class="text-xs text-gray-400 font-light">(информация)</span>
+
+      <div
+        v-else-if="!data"
+        class="py-16 text-center text-gray-500"
+      >
+        Не удалось загрузить запись
+      </div>
+
+
+      <div
+        v-else
+        class="flex flex-col w-full bg-white"
+      >
+        <div
+          class="flex parent"
+        >
+          <!-- ================================= -->
+          <!-- ОТБОР ПРОБ -->
+          <!-- ================================= -->
+          <fieldset
+            class="border-2 border-gray-200 mx-4 px-2 py-1 rounded-md bg-white/80"
+          >
+            <legend
+              class="text-xl font-normal px-2 flex items-center gap-2"
+            >
+              <Icon
+                name="streamline-freehand-color:business-product-supplier-1"
+                size="24"
+              />
+              Отбор проб
             </legend>
-            
-            <div class="flex flex-col gap-x-6 gap-y-3 p-2">
-              <!-- ПЛП -->
-              <div class="flex flex-col">
-                <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">ПЛП</label>
-                <div class="mt-1 px-2 shadow-sm rounded-sm text-lg text-gray-800 min-w-70 bg-gray-50 font-medium">
-                  {{ record?.['ПЛП'] || '—' }}
-                </div>
-              </div>
-              
-              <!-- Наименование объекта -->
-              <div class="flex flex-col">
-                <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Наименование объекта</label>
-                <div class="mt-1 px-2 shadow-sm rounded-sm text-lg text-gray-800 min-w-70 bg-gray-50">
-                  {{ record?.['Наименование объекта'] || '—' }}
-                </div>
-              </div>
-              
-              <!-- Номер акта отбора проб -->
-              <div class="flex flex-col">
-                <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Номер акта отбора проб</label>
-                <div class="mt-1 px-2 shadow-sm rounded-sm text-lg text-gray-800 min-w-70 bg-gray-50 font-mono">
-                  {{ record?.['Номер акта отбора проб'] || '—' }}
-                </div>
-              </div>
-              
-              <!-- Документ отбора проб (ФАЙЛ) -->
-              <div class="flex flex-col">
-                <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Документ отбора проб</label>
-                <div class="mt-1">
-                  <!-- ✅ КНОПКА ДЛЯ ОТКРЫТИЯ ВЛОЖЕННОЙ МОДАЛКИ -->
-                  <UButton
-                    v-if="record?.['Документ отбора проб']"
-                    variant="ghost"
-                    color="primary"
-                    size="sm"
-                    class="px-0"
-                    @click="fileViewerOpen(record?.['Документ отбора проб'])"
-                  >
-                    <Icon name="i-heroicons-document-text" class="mr-1" />
-                    {{ getFileName(record?.['Документ отбора проб']) }}
-                    <Icon name="i-heroicons-arrow-top-right-on-square" class="ml-1 w-4 h-4" />
-                  </UButton>
-                  <span v-else class="text-md text-gray-400">—</span>
-                </div>
-              </div>
-              
-              <!-- Дата отбора проб -->
-              <div class="flex flex-col">
-                <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Дата отбора проб</label>
-                <div class="mt-1 px-2 shadow-sm rounded-sm text-lg text-gray-800 min-w-70 bg-gray-50">
-                  {{ record?.['Дата отбора проб'] || '—' }}
-                </div>
-              </div>
-              
-              <!-- Место отбора проб -->
-              <div class="flex flex-col">
-                <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Место отбора проб</label>
-                <div class="mt-1 px-2 shadow-sm rounded-sm text-lg text-gray-800 min-w-70 bg-gray-50">
-                  {{ record?.['Место отбора проб'] || '—' }}
-                </div>
-              </div>
-              
-              <!-- Лицо, предоставившее пробу -->
-              <div class="flex flex-col md:col-span-2">
-                <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Лицо, предоставившее пробу</label>
-                <div class="mt-1 px-2 shadow-sm rounded-sm text-lg text-gray-800 min-w-70 bg-gray-50">
-                  {{ record?.['Лицо, предоставившее пробу'] || '—' }}
-                </div>
-              </div>
-              
-              <!-- Примечание -->
-              <div class="flex flex-col md:col-span-2">
-                <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Примечание</label>
-                <div class="mt-1 px-2 shadow-sm text-lg text-gray-800 min-w-70 bg-gray-100/50 p-2 rounded-md whitespace-pre-wrap max-h-24 overflow-y-auto">
-                  {{ record?.['Примечание (акт)'] || '—' }}
-                </div>
-              </div>
+
+
+            <div
+              class="flex flex-col gap-y-3 p-2"
+            >
+              <InfoValue
+                label="ПЛП"
+                :value="
+                  data.plp?.name
+                "
+              />
+
+              <InfoValue
+                label="Наименование объекта"
+                :value="
+                  data.testLocation
+                    ?.testObject
+                    ?.name
+                "
+              />
+
+              <InfoValue
+                label="Номер акта отбора проб"
+                :value="
+                  data.samplingActNumber
+                "
+                mono
+              />
+
+              <FileValue
+                label="Документ отбора проб"
+                :path="
+                  data.samplingDocumentPath
+                "
+                @open="
+                  fileViewerOpen
+                "
+              />
+
+              <InfoValue
+                label="Дата отбора проб"
+                :value="
+                  formatDate(
+                    data.samplingDate,
+                  )
+                "
+              />
+
+              <InfoValue
+                label="Место отбора проб"
+                :value="
+                  data.testLocation?.name
+                "
+              />
+
+              <InfoValue
+                label="Лицо, предоставившее пробу"
+                :value="
+                  data.inspector?.name
+                "
+              />
+
+              <InfoValue
+                label="Примечание"
+                :value="
+                  data.note
+                "
+                multiline
+              />
             </div>
           </fieldset>
 
-          <!-- ===== БЛОК 2: Поступление материала ===== -->
-          <fieldset class="border-2 border-gray-200 mx-4 px-2 py-1 rounded-md bg-white/80">
-            <legend class="text-xl font-normal px-2 flex items-center gap-2 bg-transparent">
-              <span><Icon name="streamline-freehand-color:module-building-blocks" /> Материал</span>
-              <span class="text-xs text-gray-400 font-light">(информация)</span>
+
+          <!-- ================================= -->
+          <!-- ПОСТУПЛЕНИЕ МАТЕРИАЛА -->
+          <!-- ================================= -->
+          <fieldset
+            class="border-2 border-gray-200 mx-4 px-2 py-1 rounded-md bg-white/80"
+          >
+            <legend
+              class="text-xl font-normal px-2 flex items-center gap-2"
+            >
+              <Icon
+                name="streamline-freehand-color:module-building-blocks"
+              />
+              Поступление материала
             </legend>
-            
-            <div class="flex flex-col gap-x-6 gap-y-3 p-2">
-              <!-- Материал -->
-              <div class="flex flex-col">
-                <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Материал</label>
-                <div class="mt-1 px-2 shadow-sm rounded-sm text-lg text-gray-800 min-w-70 bg-gray-50">
-                  {{ record?.['Наименование материала'] || '—' }}
-                </div>
-              </div>
-              
-              <!-- Дата поступления -->
-              <div class="flex flex-col">
-                <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Дата поступления</label>
-                <div class="mt-1 px-2 shadow-sm rounded-sm text-lg text-gray-800 min-w-70 bg-gray-50">
-                  {{ record?.['Дата поступления материала'] || '—' }}
-                </div>
-              </div>
-              
-              <!-- Дата документа о качестве -->
-              <div class="flex flex-col">
-                <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Дата документа о качестве</label>
-                <div class="mt-1 px-2 shadow-sm rounded-sm text-lg text-gray-800 min-w-70 bg-gray-50">
-                  {{ qualDocDate || '—' }}
-                </div>
-              </div>
-              
-              <!-- Документ о качестве (ФАЙЛ) -->
-              <div class="flex flex-col">
-                <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Документ о качестве</label>
-                <div class="mt-1">
-                  <UButton
-                    v-if="qualDocPath && qualDocPath !== '-'"
-                    variant="ghost"
-                    color="primary"
-                    size="md"
-                    class="p-1"
-                    @click="fileViewerOpen(qualDocPath)"
-                  >
-                    <Icon name="i-heroicons-document-text" class="mr-1" />
-                    {{ getFileName(qualDocPath) }}
-                    <Icon name="i-heroicons-arrow-top-right-on-square" class="ml-1 w-4 h-4" />
-                  </UButton>
-                  <span v-else class="text-md text-gray-400">—</span>
-                </div>
-              </div>
-              
-              <!-- Номер документа о качестве -->
-              <div class="flex flex-col">
-                <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Номер документа о качестве</label>
-                <div class="mt-1 px-2 shadow-sm rounded-sm text-lg text-gray-800 min-w-70 bg-gray-50 font-mono">
-                  {{ qualDocNumber || '—' }}
-                </div>
-              </div>
-              
-              <!-- Предприятие-изготовитель -->
-              <div class="flex flex-col">
-                <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Предприятие-изготовитель</label>
-                <div class="mt-1 px-2 shadow-sm rounded-sm text-lg text-gray-800 min-w-70 bg-gray-50">
-                  {{ record?.['Предприятие-изготовитель'] || '—' }}
-                </div>
-              </div>
+
+
+            <div
+              class="flex flex-col gap-y-3 p-2"
+            >
+              <InfoValue
+                label="Материал"
+                :value="
+                  data.receiptMaterial
+                    ?.material
+                    ?.name
+                "
+              />
+
+              <InfoValue
+                label="Дата поступления"
+                :value="
+                  formatDate(
+                    data.receiptMaterial
+                      ?.receiptDate,
+                  )
+                "
+              />
+
+              <InfoValue
+                label="Дата документа о качестве"
+                :value="
+                  formatDate(
+                    data.receiptMaterial
+                      ?.qualityDocumentDate,
+                  )
+                "
+              />
+
+              <FileValue
+                label="Документ о качестве"
+                :path="
+                  data.receiptMaterial
+                    ?.qualityDocumentPath
+                "
+                @open="
+                  fileViewerOpen
+                "
+              />
+
+              <InfoValue
+                label="Номер документа о качестве"
+                :value="
+                  data.receiptMaterial
+                    ?.qualityDocumentNumber
+                "
+                mono
+              />
+
+              <InfoValue
+                label="Предприятие-изготовитель"
+                :value="
+                  data.receiptMaterial
+                    ?.manufacturer
+                    ?.name
+                "
+              />
+
+              <InfoValue
+                label="Примечание"
+                :value="
+                  data.receiptMaterial
+                    ?.note
+                "
+                multiline
+              />
             </div>
           </fieldset>
 
-          <!-- ===== БЛОК 3: Протокол испытаний ===== -->
-          <fieldset class="border-2 border-gray-200 mx-4 px-2 py-1 rounded-md bg-white/80">
-            <legend class="text-xl font-normal px-2 flex items-center gap-2 bg-transparent">
-              <span>
-                <Icon name="streamline-freehand-color:task-list-pen" />
-                Протокол испытаний
-              </span>
-              <span class="text-xs text-gray-400 font-light">(информация)</span>
+
+          <!-- ================================= -->
+          <!-- ПРОТОКОЛ -->
+          <!-- ================================= -->
+          <fieldset
+            class="border-2 border-gray-200 mx-4 px-2 py-1 rounded-md bg-white/80"
+          >
+            <legend
+              class="text-xl font-normal px-2 flex items-center gap-2"
+            >
+              <Icon
+                name="streamline-freehand-color:task-list-pen"
+              />
+              Протокол испытаний
             </legend>
-            
-            <div class="flex flex-col gap-x-6 gap-y-3 p-2">
-              <!-- Дата -->
-              <div class="flex flex-col">
-                <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Дата протокола</label>
-                <div class="mt-1 px-2 shadow-sm rounded-sm text-lg text-gray-800 min-w-70 bg-gray-50">
-                  {{ record?.['Дата протокола'] || '—' }}
-                </div>
-              </div>
-              
-              <!-- Документ протокола (ФАЙЛ) -->
-              <div class="flex flex-col">
-                <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Документ протокола</label>
-                <div class="mt-1">
-                  <UButton
-                    v-if="protocolDocPath"
-                    variant="ghost"
-                    color="primary"
-                    size="sm"
-                    class="px-0"
-                    @click="fileViewerOpen(protocolDocPath)"
-                  >
-                    <Icon name="i-heroicons-document-text" class="mr-1" />
-                    {{ getFileName(protocolDocPath) }}
-                    <Icon name="i-heroicons-arrow-top-right-on-square" class="ml-1 w-4 h-4" />
-                  </UButton>
-                  <span v-else class="text-md text-gray-400">—</span>
-                </div>
-              </div>
-              
-              <!-- Результат испытаний -->
-              <div class="flex flex-col">
-                <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Результат испытаний</label>
-                <div class="mt-1">
-                  <span 
+
+
+            <div
+              v-if="data.testProtocol"
+              class="flex flex-col gap-y-3 p-2"
+            >
+              <InfoValue
+                label="Дата протокола"
+                :value="
+                  formatDate(
+                    data.testProtocol
+                      .protocolDate,
+                  )
+                "
+              />
+
+              <FileValue
+                label="Документ протокола"
+                :path="
+                  data.testProtocol
+                    .protocolDocumentPath
+                "
+                @open="
+                  fileViewerOpen
+                "
+              />
+
+              <div
+                class="flex flex-col"
+              >
+                <label
+                  class="text-xs font-medium text-gray-400 uppercase tracking-wider"
+                >
+                  Результат испытаний
+                </label>
+
+                <div
+                  class="mt-1"
+                >
+                  <span
                     class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-md font-medium"
-                    :class="getResultBadgeClass(record?.['Результат испытаний'])"
+                    :class="
+                      getResultBadgeClass(
+                        data.testProtocol
+                          .testResult,
+                      )
+                    "
                   >
-                    <span 
+                    <span
                       class="w-2 h-2 rounded-full"
-                      :class="getResultDotClass(record?.['Результат испытаний'])"
-                    ></span>
-                    {{ record?.['Результат испытаний'] || '—' }}
+                      :class="
+                        getResultDotClass(
+                          data.testProtocol
+                            .testResult,
+                        )
+                      "
+                    />
+
+                    {{
+                      data.testProtocol
+                        .testResult ||
+                      '—'
+                    }}
                   </span>
                 </div>
               </div>
-              
-              <!-- Номер протокола -->
-              <div class="flex flex-col">
-                <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">Номер протокола</label>
-                <div class="mt-1 px-2 shadow-sm rounded-sm text-lg text-gray-800 min-w-70 bg-gray-50 font-mono">
-                  {{ record?.['Номер протокола'] || '—' }}
-                </div>
-              </div>
+
+              <InfoValue
+                label="Номер протокола"
+                :value="
+                  data.testProtocol
+                    .protocolNumber
+                "
+                mono
+              />
+
+              <InfoValue
+                label="Примечание"
+                :value="
+                  data.testProtocol
+                    .note
+                "
+                multiline
+              />
+            </div>
+
+
+            <div
+              v-else
+              class="p-4 text-gray-400"
+            >
+              Протокол пока не создан.
             </div>
           </fieldset>
         </div>
-        <!-- Дополнительная информация -->
-        <div class="  text-gray-400 p-2  flex justify-center gap-70">
-          <div class="flex items-center gap-2">
-            <span class="text-xs">Создано: </span>
-            <span class="text-sm text-gray-600">{{ authorInfo?.shortName || autorEmail || '—' }} {{ dateCreate|| '—' }}</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="text-xs">Обновлено: </span>
-            <span class="text-sm text-gray-600">{{ editorInfo?.shortName || editorEmail || '—' }} {{ dateEdit || '—' }}</span>
 
+
+        <div
+          class="text-gray-400 p-2 flex justify-center gap-16"
+        >
+          <div
+            class="flex items-center gap-2"
+          >
+            <span
+              class="text-xs"
+            >
+              Создано:
+            </span>
+
+            <span
+              class="text-sm text-gray-600"
+            >
+              {{
+                authorInfo?.shortName ||
+                data.authorEmail ||
+                '—'
+              }}
+              {{
+                formatDateTime(
+                  data.createdAt,
+                )
+              }}
+            </span>
+          </div>
+
+
+          <div
+            class="flex items-center gap-2"
+          >
+            <span
+              class="text-xs"
+            >
+              Обновлено:
+            </span>
+
+            <span
+              class="text-sm text-gray-600"
+            >
+              {{
+                editorInfo?.shortName ||
+                data.editorEmail ||
+                '—'
+              }}
+              {{
+                formatDateTime(
+                  data.editedAt,
+                )
+              }}
+            </span>
           </div>
         </div>
       </div>
     </template>
 
+
     <template #footer>
-      <div class="flex w-full gap-4 justify-end pt-2">
+      <div
+        class="flex w-full gap-4 justify-end pt-2"
+      >
         <UButton
           type="button"
           variant="outline"
@@ -284,7 +430,9 @@
           label="Закрыть"
           @click="emit('close')"
         />
+
         <UButton
+          v-if="data"
           type="button"
           color="neutral"
           variant="outline"
@@ -293,165 +441,464 @@
         />
       </div>
     </template>
-
-    
   </UModal>
 </template>
 
+
 <script setup lang="ts">
-// ======= ИМПОРТЫ =======
-import { ref, computed } from 'vue';
-import fViewerModal from '~/components/lab/FileViewerModal.vue';
+import {
+  defineComponent,
+  h,
+  onMounted,
+  ref,
+  resolveComponent,
+} from 'vue'
 
-// ======= ПРОПСЫ =======
-const props = defineProps<{
-  record: any
-}>()
-const response = ref();
-const authorInfo = ref();
-const editorInfo = ref();
-const dateCreate = ref();
-const dateEdit = ref();
-const sDocPath = ref();
-const qualDocPath = ref();
-const qualDocDate = ref();
-const qualDocNumber = ref();
-const protocolDocPath = ref();
-const objName = ref();
-const autorEmail = ref();
-const editorEmail = ref();
+import fViewerModal from '~/components/lab/FileViewerModal.vue'
 
-const overlay = useOverlay();
-const modalFViewer = overlay.create(fViewerModal);
+import type {
+  IncomingControlRecord,
+} from '~/composables/useLabDataLoader'
 
 
-onMounted(async () => {
-  // console.log('Данные пользователя на клиенте === ', props.record);
-  
-  if (props.record.action === 'view') {
-    try {
-      // Добавляем await для ожидания ответа и проверяем регистр ID (id или ID)
-      const recordId = props.record.id || props.record.ID || props.record.index;
-      // @ts-ignore
-      response.value = await $fetch(`/api/incoming-control/${recordId}`);
-      if(response.value){
-        // console.log('response.value.data ---> ', response.value.data)
-        authorInfo.value = await searchUserInAD({'authorEmail':response.value.data['Автор (акт)']})
-        editorInfo.value = await searchUserInAD({'authorEmail':response.value.data['Редактор (акт)']})
-        dateCreate.value = response.value.data['Дата создания (акт)']
-        dateEdit.value = response.value.data['Дата редактирования']
-        sDocPath.value = response.value.data['Документ отбора проб']
-        qualDocPath.value = response.value.data['Документ о качестве']
-        qualDocDate.value = response.value.data['Дата документа о качестве']
-        qualDocNumber.value = response.value.data['Номер документа о качестве']
-        protocolDocPath.value = response.value.data['Документ протокола']
-        objName.value = response.value.data['Наименование объекта']
-        autorEmail.value = response.value.data['Автор (акт)']
-        editorEmail.value = response.value.data['Редактор (акт)'] !== 'undefined' ? response.value.data['Редактор (акт)'] : '-'
-        dateEdit.value = response.value.data['Дата редактирования (акт)']
-        // console.log('authorInfo ====> ', authorInfo.value)
-        // console.log('response.value ====> ', response.value)
+type DetailResponse = {
+  success: boolean
+  data: IncomingControlRecord
+}
+
+
+const props =
+  defineProps<{
+    record:
+      Partial<IncomingControlRecord> & {
+        action?: string
       }
-    } catch (error) {
-      console.error('Ошибка при загрузке данных:', error);
-    }
-  }
-  
-  // console.log('ответ от сервера response ===> ', response);
-});
+  }>()
 
 
+const emit =
+  defineEmits<{
+    close: []
+    edit: [id: number]
+  }>()
 
-// ======= СОБЫТИЯ =======
-const emit = defineEmits<{
-  (e: 'close'): void
-  (e: 'edit', id: number): void   // ← передаем id
-}>()
 
-// ======= СОСТОЯНИЯ ДЛЯ ВЛОЖЕННОЙ МОДАЛКИ =======
-const showFileViewer = ref(false)
-const viewerFilePath = ref('')
-const viewerFileName = ref('')
-const viewerError = ref('')
+const loading =
+  ref(false)
 
-// ======= МЕТОДЫ ======
+const data =
+  ref<IncomingControlRecord | null>(
+    null,
+  )
 
-function formatDateTime(date: string | Date | null): string {
-  if (!date) return '—'
-  try {
-    return new Date(date).toLocaleDateString('ru-RU')
-  } catch {
+const authorInfo =
+  ref<any>(null)
+
+const editorInfo =
+  ref<any>(null)
+
+
+const overlay =
+  useOverlay()
+
+const modalFViewer =
+  overlay.create(
+    fViewerModal,
+  )
+
+
+const InfoValue =
+  defineComponent({
+    props: {
+      label: {
+        type: String,
+        required: true,
+      },
+
+      value: {
+        type: [
+          String,
+          Number,
+        ],
+        default: null,
+      },
+
+      mono: {
+        type: Boolean,
+        default: false,
+      },
+
+      multiline: {
+        type: Boolean,
+        default: false,
+      },
+    },
+
+    setup(componentProps) {
+      return () =>
+        h(
+          'div',
+          {
+            class:
+              'flex flex-col',
+          },
+          [
+            h(
+              'label',
+              {
+                class:
+                  'text-xs font-medium text-gray-400 uppercase tracking-wider',
+              },
+              componentProps.label,
+            ),
+
+            h(
+              'div',
+              {
+                class: [
+                  'mt-1 px-2 shadow-sm rounded-sm text-lg text-gray-800 min-w-70 bg-gray-50',
+
+                  componentProps.mono
+                    ? 'font-mono'
+                    : '',
+
+                  componentProps.multiline
+                    ? 'whitespace-pre-wrap max-h-24 overflow-y-auto p-2'
+                    : '',
+                ],
+              },
+              componentProps.value ||
+                '—',
+            ),
+          ],
+        )
+    },
+  })
+
+
+const FileValue =
+  defineComponent({
+    emits: [
+      'open',
+    ],
+
+    props: {
+      label: {
+        type: String,
+        required: true,
+      },
+
+      path: {
+        type: String,
+        default: null,
+      },
+    },
+
+    setup(
+      componentProps,
+      {
+        emit:
+          emitComponent,
+      },
+    ) {
+      return () =>
+        h(
+          'div',
+          {
+            class:
+              'flex flex-col',
+          },
+          [
+            h(
+              'label',
+              {
+                class:
+                  'text-xs font-medium text-gray-400 uppercase tracking-wider',
+              },
+              componentProps.label,
+            ),
+
+            componentProps.path
+              ? h(
+                  resolveComponent(
+                    'UButton',
+                  ),
+                  {
+                    variant:
+                      'ghost',
+                    color:
+                      'primary',
+                    size:
+                      'sm',
+                    class:
+                      'px-0 w-fit',
+                    onClick:
+                      () =>
+                        emitComponent(
+                          'open',
+                          componentProps.path,
+                        ),
+                  },
+                  {
+                    default:
+                      () =>
+                        getFileName(
+                          componentProps.path!,
+                        ),
+                  },
+                )
+              : h(
+                  'span',
+                  {
+                    class:
+                      'text-md text-gray-400 mt-1',
+                  },
+                  '—',
+                ),
+          ],
+        )
+    },
+  })
+
+
+function formatDate(
+  value:
+    | string
+    | null
+    | undefined,
+): string {
+  if (!value) {
     return '—'
   }
-}
 
-function getFileName(path: string): string {
-  if (!path) return '—'
-  const parts = path.split('/')
-  return parts[parts.length - 1] || path
-}
+  const date =
+    new Date(value)
 
-function getResultBadgeClass(result: string): string {
-  if (!result) return 'bg-gray-100 text-gray-600'
-  if (result.toLowerCase().includes('не соответствует')) {
-    return 'bg-red-100 text-red-700'
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
+    return value
   }
-  if (result.toLowerCase().includes('соответствует')) {
-    return 'bg-green-100 text-green-700'
-  }
-  return 'bg-gray-100 text-gray-600'
+
+  return new Intl.DateTimeFormat(
+    'ru-RU',
+    {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      timeZone: 'UTC',
+    },
+  ).format(date)
 }
 
-function getResultDotClass(result: string): string {
-  if (!result) return 'bg-gray-400'
-  if (result.toLowerCase().includes('не соответствует')) return 'bg-red-500'
-  if (result.toLowerCase().includes('соответствует')) return 'bg-green-500'
+
+function formatDateTime(
+  value:
+    | string
+    | null
+    | undefined,
+): string {
+  if (!value) {
+    return ''
+  }
+
+  const date =
+    new Date(value)
+
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
+    return ''
+  }
+
+  return date.toLocaleString(
+    'ru-RU',
+  )
+}
+
+
+function getFileName(
+  path: string,
+): string {
+  return (
+    path
+      .split('/')
+      .filter(Boolean)
+      .at(-1) ||
+    path
+  )
+}
+
+
+function getResultBadgeClass(
+  result:
+    | string
+    | null
+    | undefined,
+): string {
+  const normalized =
+    result
+      ?.toLowerCase()
+      .trim() ?? ''
+
+  if (
+    normalized.includes(
+      'не соответствует',
+    )
+  ) {
+    return (
+      'bg-red-100 text-red-700'
+    )
+  }
+
+  if (
+    normalized.includes(
+      'соответствует',
+    )
+  ) {
+    return (
+      'bg-green-100 text-green-700'
+    )
+  }
+
+  return (
+    'bg-gray-100 text-gray-600'
+  )
+}
+
+
+function getResultDotClass(
+  result:
+    | string
+    | null
+    | undefined,
+): string {
+  const normalized =
+    result
+      ?.toLowerCase()
+      .trim() ?? ''
+
+  if (
+    normalized.includes(
+      'не соответствует',
+    )
+  ) {
+    return 'bg-red-500'
+  }
+
+  if (
+    normalized.includes(
+      'соответствует',
+    )
+  ) {
+    return 'bg-green-500'
+  }
+
   return 'bg-gray-400'
 }
 
+
 function handleEdit() {
-  // console.log('редактирование')
-  emit('edit', props.record.id)
+  if (!data.value) {
+    return
+  }
+
+  emit(
+    'edit',
+    data.value.id,
+  )
+
   emit('close')
 }
 
-function fileViewerOpen(path: string) {
-  if (!path) return
-  modalFViewer.open({
-    path: path
 
+function fileViewerOpen(
+  path: string,
+) {
+  if (!path) {
+    return
+  }
+
+  modalFViewer.open({
+    path,
   })
 }
 
 
+onMounted(
+  async () => {
+    const recordId =
+      props.record.id
+
+    if (!recordId) {
+      return
+    }
+
+    loading.value = true
+
+    try {
+      const response =
+        await $fetch<DetailResponse>(
+          `/api/incoming-control/${recordId}`,
+        )
+
+      data.value =
+        response.data
+
+
+      if (
+        data.value.authorEmail
+      ) {
+        try {
+          authorInfo.value =
+            await searchUserInAD({
+              authorEmail:
+                data.value.authorEmail,
+            })
+        } catch {
+          authorInfo.value = null
+        }
+      }
+
+
+      if (
+        data.value.editorEmail
+      ) {
+        try {
+          editorInfo.value =
+            await searchUserInAD({
+              authorEmail:
+                data.value.editorEmail,
+            })
+        } catch {
+          editorInfo.value = null
+        }
+      }
+
+    } catch (error) {
+      console.error(
+        'Ошибка загрузки записи:',
+        error,
+      )
+
+      data.value = null
+
+    } finally {
+      loading.value = false
+    }
+  },
+)
 </script>
 
+
 <style scoped>
-
-/* Контейнер-обертка с прокруткой, если страниц много */
-.pdf-viewer-wrapper {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-}
-
-/* Глубокий селектор (deep), чтобы добраться до canvas внутри библиотеки */
-.pdf-canvas-stretched :deep(canvas) {
-  width: 100% !important;
-  height: auto !important;
-  display: block;
-}
-
-/* Стили для внутренней обертки самой библиотеки */
-.pdf-canvas-stretched :deep(.vue-pdf-embed__page) {
-  width: 100% !important;
-  margin-bottom: 16px; /* Небольшой отступ между страницами, если они идут друг за другом */
-}
-
-/* Стили для легенд */
 legend {
-  background: transparent !important;
+  background:
+    transparent !important;
 }
 
 .parent {
@@ -460,7 +907,8 @@ legend {
 }
 
 fieldset {
-  transition: all 0.2s ease;
+  transition:
+    all 0.2s ease;
 }
 
 fieldset:hover {

@@ -21,6 +21,7 @@ export const Footer: typeof import("../app/components/Footer.vue")['default']
 export const ResizableTable: typeof import("../app/components/ResizableTable.vue")['default']
 export const Toast: typeof import("../app/components/Toast.vue")['default']
 export const AuthRegistrationRequestForm: typeof import("../app/components/auth/RegistrationRequestForm.vue")['default']
+export const LabDocumentUploadField: typeof import("../app/components/lab/DocumentUploadField.vue")['default']
 export const LabExportRecordsModal: typeof import("../app/components/lab/ExportRecordsModal.vue")['default']
 export const LabFileSystem: typeof import("../app/components/lab/FileSystem.vue")['default']
 export const LabFileViewerModal: typeof import("../app/components/lab/FileViewerModal.vue")['default']
@@ -209,6 +210,7 @@ export const LazyFooter: LazyComponent<typeof import("../app/components/Footer.v
 export const LazyResizableTable: LazyComponent<typeof import("../app/components/ResizableTable.vue")['default']>
 export const LazyToast: LazyComponent<typeof import("../app/components/Toast.vue")['default']>
 export const LazyAuthRegistrationRequestForm: LazyComponent<typeof import("../app/components/auth/RegistrationRequestForm.vue")['default']>
+export const LazyLabDocumentUploadField: LazyComponent<typeof import("../app/components/lab/DocumentUploadField.vue")['default']>
 export const LazyLabExportRecordsModal: LazyComponent<typeof import("../app/components/lab/ExportRecordsModal.vue")['default']>
 export const LazyLabFileSystem: LazyComponent<typeof import("../app/components/lab/FileSystem.vue")['default']>
 export const LazyLabFileViewerModal: LazyComponent<typeof import("../app/components/lab/FileViewerModal.vue")['default']>

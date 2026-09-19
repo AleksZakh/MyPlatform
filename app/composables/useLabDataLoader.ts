@@ -1,142 +1,250 @@
-// composables/useLabDataLoader.ts
+// app/composables/useLabDataLoader.ts
+
+export interface IncomingControlReference {
+  id: number
+  name: string
+}
+
+export interface IncomingControlRecord {
+  id: number
+
+  samplingActNumber: string
+  samplingDate: string
+  samplingDocumentPath: string | null
+  note: string | null
+
+  plpId: number
+  inspectorId: number
+  testLocationId: number
+  receiptMaterialId: number
+  testProtocolId: number | null
+
+  businessRulesVersion: number
+  importSource: string | null
+  importRowNumber: number | null
+
+  createdAt: string
+  editedAt: string | null
+  authorEmail: string | null
+  editorEmail: string | null
+
+  plp: IncomingControlReference
+  inspector: IncomingControlReference
+
+  testLocation: IncomingControlReference & {
+    testObject: IncomingControlReference
+  }
+
+  receiptMaterial: {
+    id: number
+    receiptDate: string
+    qualityDocumentDate: string | null
+    qualityDocumentNumber: string | null
+    qualityDocumentPath: string | null
+    note: string | null
+    materialId: number
+    manufacturerId: number | null
+
+    material: IncomingControlReference
+    manufacturer: IncomingControlReference | null
+  }
+
+  testProtocol: {
+    id: number
+    protocolNumber: string | null
+    protocolDate: string | null
+    protocolDocumentPath: string | null
+    testResult: string | null
+    note: string | null
+  } | null
+}
+
+interface IncomingControlListResponse {
+  success: boolean
+  data: IncomingControlRecord[]
+  error?: string
+  pagination: {
+    currentPage: number
+    pageSize: number
+    totalCount: number
+    totalPages: number
+    hasNext: boolean
+    hasPrev: boolean
+  }
+}
+
 export const useLabDataLoader = () => {
-  const tableData = ref<any>(null)
+  const loading = ref(false)
   const isLoading = ref(false)
 
-  const loading = ref(false);
-  const originalData = ref<Record<string, string>[]>([]);
-  const headers = ref<string[]>([]);
-  const totalCount = ref(0);
-  const loadingToastId = ref<string | number | null>(null);
-  const {showTost, removeToast} = useAppToasts();
-  const filterStore = useTableFilterStore() // Наш стор
-  
-  // 👇 ПАРАМЕТРЫ ПАГИНАЦИИ
-  const currentPage = ref(1);
-  const pageSize = ref(25);
-  const totalPages = ref(0);
+  const originalData = ref<IncomingControlRecord[]>([])
 
-  const loadData = async (page: number = currentPage.value, size: number = pageSize.value) => {
-    if (isLoading.value) return;
-    // console.log(`📥 Загрузка данных: страница ${page}, размер ${size}`);    
-    const toastId = showTost(`📥 Загрузка данных...`, 'Пожалуйста, подождите', 'info', 'heroicons:arrow-path-rounded-square-solid', 1000);    
+  const totalCount = ref(0)
+  const totalPages = ref(0)
+  const currentPage = ref(1)
+  const pageSize = ref(25)
 
-    loading.value = true;
-    loadingToastId.value = toastId.id;
+  const search = ref('')
+
+  const loadingToastId = ref<string | number | null>(null)
+
+  const {
+    showTost,
+    removeToast,
+  } = useAppToasts()
+
+
+  const loadData = async (
+    page: number = currentPage.value,
+    size: number = pageSize.value,
+  ) => {
+    if (isLoading.value) {
+      return
+    }
+
+    isLoading.value = true
+    loading.value = true
+
+    const toastId = showTost(
+      '📥 Загрузка данных...',
+      'Пожалуйста, подождите',
+      'info',
+      'heroicons:arrow-path-rounded-square-solid',
+      1000,
+    )
+
+    loadingToastId.value = toastId.id
 
     try {
-      const params = new URLSearchParams({
-        page: String(page),
-        pageSize: String(size),
-      });
+      const result =
+        await $fetch<IncomingControlListResponse>(
+          '/api/incoming-control',
+          {
+            query: {
+              page,
+              pageSize: size,
+              search:
+                search.value.trim() || undefined,
+            },
+          },
+        )
 
-      const response = await fetch(`/api/incoming-control/?${params}`);
-      const result = await response.json();
-      // console.log('result ======> ', result);
-      
+      if (!result.success) {
+        throw new Error(
+          result.error ||
+          'Не удалось загрузить данные',
+        )
+      }
 
-      if (result.success) {
-        removeToast(loadingToastId.value);
-        originalData.value = result.data;
+      originalData.value = result.data
 
-        if (originalData.value.length > 0 && originalData.value[0]) {
-          headers.value = Object.keys(originalData.value[0]);
-        } else {
-          headers.value = [];
-        }
+      totalCount.value =
+        result.pagination.totalCount
 
-        if (result.pagination) {
-          totalCount.value = result.pagination.totalCount;
-          totalPages.value = result.pagination.totalPages || Math.ceil(totalCount.value / pageSize.value);
-          currentPage.value = page;
-          pageSize.value = size;
-        }
+      totalPages.value =
+        result.pagination.totalPages
 
-        return {
-          success: true,
-          data: originalData.value,
-          headers: headers.value,
-          totalCount: totalCount.value,
-          totalPages: totalPages.value,
-          currentPage: currentPage.value,
-        };
-      } else {
-        console.error('❌ Ошибка загрузки:', result.error);
-        removeToast(loadingToastId.value);
+      currentPage.value =
+        result.pagination.currentPage
 
-        showTost( '❌ Ошибка загрузки', `${result.error || 'Не удалось загрузить данные'}`, 'error', 'i-heroicons-exclamation-triangle', 5000);
+      pageSize.value =
+        result.pagination.pageSize
 
-        return {
-          success: false,
-          error: result.error || 'Не удалось загрузить данные',
-        };
+      return {
+        success: true,
+        data: originalData.value,
+        totalCount: totalCount.value,
+        totalPages: totalPages.value,
+        currentPage: currentPage.value,
       }
     } catch (error) {
-      console.error('❌ Ошибка:', error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Неизвестная ошибка'
 
-      showTost('❌ Ошибка', `${error instanceof Error ? error.message : 'Неизвестная ошибка'}`, 'error','i-heroicons-exclamation-triangle',5000);
+      console.error(
+        '[useLabDataLoader] Ошибка загрузки:',
+        error,
+      )
+
+      showTost(
+        '❌ Ошибка загрузки',
+        message,
+        'error',
+        'i-heroicons-exclamation-triangle',
+        5000,
+      )
 
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
-      };
+        error: message,
+      }
     } finally {
-      loading.value = false;
-    }
-  };
+      if (loadingToastId.value !== null) {
+        removeToast(loadingToastId.value)
+      }
 
-  async function refreshTableData() {
-    isLoading.value = true
-    try {
-      // ... ваша логика сборки параметров и fetch запроса
-    } catch (error) {
-      console.error(error)
-    } finally {
+      loadingToastId.value = null
+      loading.value = false
       isLoading.value = false
     }
   }
 
-  // watch(
-  //   () => filterStore.filter,
-  //   () => {
-  //     refreshTableData()
-  //   },
-  //   { deep: true }
-  // )
 
-  // 👇 МЕТОД ДЛЯ СМЕНЫ СТРАНИЦЫ
-  const changePage = async (page: number) => {
-    if (page < 1 || page > totalPages.value) return;
-    return await loadData(page, pageSize.value);
-  };
+  const changePage = async (
+    page: number,
+  ) => {
+    if (
+      page < 1 ||
+      page > totalPages.value
+    ) {
+      return
+    }
 
-  // 👇 МЕТОД ДЛЯ СМЕНЫ РАЗМЕРА СТРАНИЦЫ
-  const changePageSize = async (size: number) => {
-    if (size < 1) return;
-    return await loadData(1, size);
-  };
+    return await loadData(
+      page,
+      pageSize.value,
+    )
+  }
 
-  // 👇 МЕТОД ДЛЯ ПЕРЕЗАГРУЗКИ ТЕКУЩЕЙ СТРАНИЦЫ
+
+  const changePageSize = async (
+    size: number,
+  ) => {
+    if (size < 1) {
+      return
+    }
+
+    return await loadData(
+      1,
+      size,
+    )
+  }
+
+
   const reloadCurrentPage = async () => {
-    // console.log('Перезагрузка данных ---> ')
-    return await loadData(currentPage.value, pageSize.value);
-  };
+    return await loadData(
+      currentPage.value,
+      pageSize.value,
+    )
+  }
+
 
   return {
-    // Состояния
     loading,
     originalData,
-    headers,
+
     totalCount,
     totalPages,
     currentPage,
     pageSize,
-    loadingToastId,
 
-    // Методы
+    search,
+
     loadData,
     changePage,
     changePageSize,
     reloadCurrentPage,
-  };
-};
+  }
+}

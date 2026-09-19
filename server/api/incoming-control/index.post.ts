@@ -1,323 +1,696 @@
-// server/api/sampling-tests/index.post.ts
-import { PrismaClient } from '@prisma/client';
-import { defineEventHandler, readMultipartFormData } from 'h3';
-import { handleFileUpload, parseDate } from '~~/server/utils/fileUploadHandler';
+// server/api/incoming-control/index.post.ts
 
-const prisma = new PrismaClient();
+import fs from 'node:fs'
 
-export default defineEventHandler(async (event) => {
+import {
+  AccessAction,
+} from '@prisma/client'
+
+import {
+  createError,
+  defineEventHandler,
+  readMultipartFormData,
+} from 'h3'
+
+import {
+  prisma,
+} from '~~/server/utils/prisma'
+
+import {
+  handleFileUpload,
+} from '~~/server/utils/fileUploadHandler'
+
+import {
+  requirePermission,
+} from '~~/server/services/access-control.service'
+
+import {
+  auditDataChange,
+  buildCreateAuditDelta,
+} from '~~/server/utils/auditLog'
+
+import {
+  assertBaseChronology,
+  getPayloadDates,
+  parseIncomingControlPayload,
+} from '~~/server/services/lab/incoming-control-rules.service'
+
+
+const RESOURCE_KEY =
+  'lab.sampling-tests'
+
+
+const FILE_FIELDS = [
+  'samplingDocumentFile',
+  'qualityDocumentFile',
+  'protocolDocumentFile',
+]
+
+
+function hasMultipartFile(
+  multipartData: any[],
+  fieldName: string,
+): boolean {
+  return multipartData.some(
+    item =>
+      item?.name === fieldName &&
+      !!item?.filename &&
+      item?.data?.length > 0,
+  )
+}
+
+
+function getMultipartText(
+  multipartData: any[],
+  fieldName: string,
+): string | undefined {
+  const item =
+    multipartData.find(
+      entry =>
+        entry?.name === fieldName &&
+        !entry?.filename,
+    )
+
+  return item?.data
+    ?.toString(
+      'utf-8',
+    )
+}
+
+
+function cleanupDirectory(
+  targetDir:
+    | string
+    | null,
+) {
+  if (!targetDir) {
+    return
+  }
+
   try {
-    const multipartData = await readMultipartFormData(event);
+    fs.rmSync(
+      targetDir,
+      {
+        recursive: true,
+        force: true,
+      },
+    )
+  } catch (error) {
+    console.error(
+      '[incoming-control POST] Не удалось очистить временный каталог загрузки:',
+      error,
+    )
+  }
+}
 
-    if (!multipartData) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Bad Request: Данные не найдены',
-      });
-    }
 
-    // Используем универсальный обработчик файлов
-    const { body, fileDbPaths } = await handleFileUpload(multipartData);
+export default defineEventHandler(
+  async event => {
+    const permission =
+      await requirePermission(
+        event,
+        RESOURCE_KEY,
+        AccessAction.CREATE,
+      )
 
-    // Получаем email автора (из сессии или из формы)
-    const authorEmail = body.authorEmail || 'system@user';
-    const editorEmail = body.editorEmail || authorEmail;
 
-    // Проверяем, есть ли данные для создания протокола
-    const hasProtocolData = body.testProtocolNumber?.trim() || 
-                          body.testResult?.trim() || 
-                          body.protocolDate ||
-                          fileDbPaths.protocolDoc;
+    let uploadDirectory:
+      string | null = null
 
-    // Проверяем, есть ли данные для создания поступления
-    const hasReceiptData = body.material?.trim() || 
-                          body.qualDocNumber?.trim() || 
-                          body.qualDocDate ||
-                          body.receiptDate ||
-                          fileDbPaths.qualDoc;
 
-    // Выполняем все операции в одной транзакции
-    const result = await prisma.$transaction(async (tx) => {
-      // ========================================
-      // 1. ПОЛУЧАЕМ ИДЕНТИФИКАТОРЫ ИЗ СПРАВОЧНИКОВ
-      // ========================================
+    try {
+      const multipartData =
+        await readMultipartFormData(
+          event,
+        )
 
-      // 1.1 ПЛП - получаем по имени
-      const plpName = body.plp?.trim() || 'Не указан';
-      let plp = await tx.plp.findUnique({
-        where: { name: plpName },
-      });
-      
-      // Если ПЛП не найден, но это обязательное поле, возвращаем ошибку
-      if (!plp) {
+
+      if (!multipartData) {
         throw createError({
           statusCode: 400,
-          statusMessage: `ПЛП "${plpName}" не найден в справочнике`,
-        });
+          statusMessage:
+            'Данные формы не найдены',
+        })
       }
 
-      // 1.2 Инспектор - получаем по имени
-      const inspectorName = body.sPerson?.trim() || 'Не указан';
-      let inspector = await tx.inspector.findUnique({
-        where: { name: inspectorName },
-      });
-      
-      if (!inspector) {
+
+      // Сначала валидируем DTO.
+      // Файлы на диск ещё НЕ записываем.
+      const payload =
+        parseIncomingControlPayload(
+          getMultipartText(
+            multipartData,
+            'payload',
+          ),
+        )
+
+
+      const hasSamplingDocument =
+        hasMultipartFile(
+          multipartData,
+          'samplingDocumentFile',
+        )
+
+
+      const hasProtocolDocument =
+        hasMultipartFile(
+          multipartData,
+          'protocolDocumentFile',
+        )
+
+
+      if (!hasSamplingDocument) {
         throw createError({
           statusCode: 400,
-          statusMessage: `Инспектор "${inspectorName}" не найден в справочнике`,
-        });
+          statusMessage:
+            'Для новой записи обязателен документ отбора проб',
+        })
       }
 
-      // 1.3 Объект испытаний - получаем по имени
-      const objectName = body.objName?.trim() || 'Неизвестный объект';
-      let testObject = await tx.testObject.findUnique({
-        where: { name: objectName },
-      });
-      
-      if (!testObject) {
+
+      /**
+       * Главное правило CREATE:
+       * протокол на первом сохранении существовать не может.
+       */
+      if (
+        payload.testProtocol !== null ||
+        hasProtocolDocument
+      ) {
         throw createError({
           statusCode: 400,
-          statusMessage: `Объект "${objectName}" не найден в справочнике`,
-        });
+          statusMessage:
+            'Протокол испытаний нельзя создавать одновременно с записью Реестра',
+        })
       }
 
-      // ========================================
-      // 2. СОЗДАЕМ/ПОЛУЧАЕМ МЕСТО ОТБОРА
-      // ========================================
-      const locationName = body.sPlace?.trim() || 'Неизвестное место';
-      
-      let testLocation = await tx.testLocation.findUnique({
-        where: {
-          testObjectId_name: {
-            testObjectId: testObject.id,
-            name: locationName,
-          },
-        },
-      });
 
-      if (!testLocation) {
-        // Создаем новое место отбора
-        testLocation = await tx.testLocation.create({
-          data: {
-            name: locationName,
-            testObjectId: testObject.id,
-            note: `Создано при добавлении записи ${body.actNumber}`,
-            authorEmail,
-            createdAt: new Date(),
+      const dates =
+        getPayloadDates(
+          payload,
+        )
+
+
+      assertBaseChronology(
+        dates,
+      )
+
+
+      // DTO валиден — теперь сохраняем файлы.
+      const upload =
+        await handleFileUpload(
+          multipartData,
+          {
+            fileFields:
+              FILE_FIELDS,
           },
-        });
+        )
+
+
+      uploadDirectory =
+        upload.targetDir
+
+
+      const samplingDocumentPath =
+        upload.fileDbPaths
+          .samplingDocumentFile ||
+        null
+
+
+      const qualityDocumentPath =
+        upload.fileDbPaths
+          .qualityDocumentFile ||
+        null
+
+
+      if (!samplingDocumentPath) {
+        throw createError({
+          statusCode: 400,
+          statusMessage:
+            'Не удалось сохранить документ отбора проб',
+        })
       }
 
-      // ========================================
-      // 3. СОЗДАЕМ ПОСТУПЛЕНИЕ МАТЕРИАЛА (ЕСЛИ ЕСТЬ ДАННЫЕ)
-      // ========================================
-      let receiptMaterial = null;
-      let receiptMaterialId: number | null = null;
 
-      if (hasReceiptData) {
-        // 3.1 Получаем производителя (если указан)
-        let manufacturer = null;
-        if (body.manufacturer?.trim()) {
-          manufacturer = await tx.manufacturer.findUnique({
-            where: { name: body.manufacturer.trim() },
-          });
-          // Если производитель не найден, не блокируем создание
-        }
-
-        // 3.2 Получаем материал
-        const materialName = body.material?.trim();
-        let material = null;
-        
-        if (materialName) {
-          material = await tx.material.findUnique({
-            where: { name: materialName },
-          });
-          
-          if (!material) {
-            throw createError({
-              statusCode: 400,
-              statusMessage: `Материал "${materialName}" не найден в справочнике`,
-            });
-          }
-        } else {
-          // Если материал не указан, но есть другие данные по поступлению
-          // создаем запись с "Неизвестным материалом"
-          const defaultMaterial = await tx.material.findUnique({
-            where: { name: 'Неизвестный материал' },
-          });
-          
-          if (defaultMaterial) {
-            material = defaultMaterial;
-          } else {
-            // Создаем дефолтный материал, если его нет
-            material = await tx.material.create({
-              data: {
-                name: 'Неизвестный материал',
-                note: 'Создан автоматически для незаполненных поступлений',
-                authorEmail,
-                createdAt: new Date(),
-              },
-            });
-          }
-        }
-
-        // 3.3 Создаем поступление
-        const qualDocPath = fileDbPaths.qualDoc || body.qualDocPath || null;
-        
-        receiptMaterial = await tx.receiptMaterial.create({
-          data: {
-            qualDate: parseDate(body.qualDocDate),
-            receiptDate: parseDate(body.receiptDate),
-            qualDocNumber: body.qualDocNumber || '',
-            qualDocPath: qualDocPath,
-            materialId: material.id,
-            authorEmail,
-            createdAt: new Date(),
+      const actor =
+        await prisma.user.findUnique({
+          where: {
+            id:
+              permission.userId,
           },
-        });
-        
-        receiptMaterialId = receiptMaterial.id;
-      }
 
-      // ========================================
-      // 4. СОЗДАЕМ ПРОТОКОЛ ИСПЫТАНИЙ (ЕСЛИ ЕСТЬ ДАННЫЕ)
-      // ========================================
-      let testProtocol = null;
-      let testProtocolId: number | null = null;
-
-      if (hasProtocolData && receiptMaterialId) {
-        // Протокол может быть создан только если есть поступление
-        const protocolDocPath = fileDbPaths.protocolDoc || body.protocolDocPath || null;
-        
-        testProtocol = await tx.testProtocol.create({
-          data: {
-            protocolNumber: body.testProtocolNumber || `Без номера-${Date.now()}`,
-            protocolDate: parseDate(body.testProtocolDate),
-            protocolDocPath: protocolDocPath,
-            testResult: body.testResult || 'Не указан',
-            note: body.protocolNote || null,
-            receiptMaterialId: receiptMaterialId,
-            authorEmail,
-            createdAt: new Date(),
-            editorEmail: editorEmail,
-            editedAt: new Date(),
+          select: {
+            email: true,
+            login: true,
           },
-        });
-        
-        testProtocolId = testProtocol.id;
-      } else if (hasProtocolData && !receiptMaterialId) {
-        // Если есть данные протокола, но нет поступления - создаем протокол без поступления?
-        // В текущей схеме это невозможно, так как receiptMaterialId обязателен
-        // Можно создать "пустое" поступление
-        const defaultMaterial = await tx.material.findUnique({
-          where: { name: 'Неизвестный материал' },
-        });
+        })
 
-        if (defaultMaterial) {
-          // Создаем "пустое" поступление
-          const emptyReceipt = await tx.receiptMaterial.create({
-            data: {
-              qualDate: null,
-              receiptDate: null,
-              qualDocNumber: '',
-              qualDocPath: null,
-              materialId: defaultMaterial.id,
-              authorEmail,
-              createdAt: new Date(),
-            },
-          });
 
-          // Создаем протокол с этим поступлением
-          const protocolDocPath = fileDbPaths.protocolDoc || body.protocolDocPath || null;
-          
-          testProtocol = await tx.testProtocol.create({
-            data: {
-              protocolNumber: body.testProtocolNumber || `Без номера-${Date.now()}`,
-              protocolDate: parseDate(body.testProtocolDate),
-              protocolDocPath: protocolDocPath,
-              testResult: body.testResult || 'Не указан',
-              note: body.protocolNote || null,
-              receiptMaterialId: emptyReceipt.id,
-              authorEmail,
-              createdAt: new Date(),
-              editorEmail: editorEmail,
-              editedAt: new Date(),
-            },
-          });
-          
-          testProtocolId = testProtocol.id;
-        }
-      }
+      const actorEmail =
+        actor?.email ||
+        actor?.login ||
+        `user:${permission.userId}`
 
-      // ========================================
-      // 5. СОЗДАЕМ ГЛАВНУЮ ЗАПИСЬ - АКТ ОТБОРА ПРОБ
-      // ========================================
-      const sDocPath = fileDbPaths.sDoc || body.sDocPath || null;
-      
-      const samplingTest = await tx.samplingTest.create({
-        data: {
-          sActNumber: body.actNumber || `Без номера-${Date.now()}`,
-          sActDate: parseDate(body.sDate) || new Date(),
-          sDocPath: sDocPath,
-          note: body.sNote || null,
-          plpId: plp.id,
-          inspectorId: inspector.id,
-          testLocationId: testLocation.id,
-          // testProtocolId может быть null, если протокол не создан
-          testProtocolId: testProtocolId,
-          authorEmail,
-          createdAt: new Date(),
-          editorEmail: editorEmail,
-          editedAt: new Date(),
-        },
-      });
 
-      // ========================================
-      // 6. ВОЗВРАЩАЕМ СОЗДАННУЮ ЗАПИСЬ СО ВСЕМИ СВЯЗЯМИ
-      // ========================================
-      return await tx.samplingTest.findUnique({
-        where: { id: samplingTest.id },
-        include: {
-          plp: true,
-          inspector: true,
-          testLocation: {
-            include: {
-              testObject: true,
-            },
-          },
-          testProtocol: {
-            include: {
-              receiptMaterial: {
-                include: {
-                  material: {
-                    include: {
-                      manufacturer: true,
+      const result =
+        await prisma.$transaction(
+          async tx => {
+            const [
+              plp,
+              inspector,
+              testObject,
+              material,
+            ] =
+              await Promise.all([
+                tx.plp.findUnique({
+                  where: {
+                    name:
+                      payload
+                        .samplingTest
+                        .plpName,
+                  },
+                }),
+
+                tx.inspector.findUnique({
+                  where: {
+                    name:
+                      payload
+                        .samplingTest
+                        .inspectorName,
+                  },
+                }),
+
+                tx.testObject.findUnique({
+                  where: {
+                    name:
+                      payload
+                        .samplingTest
+                        .testObjectName,
+                  },
+                }),
+
+                tx.material.findUnique({
+                  where: {
+                    name:
+                      payload
+                        .receiptMaterial
+                        .materialName,
+                  },
+                }),
+              ])
+
+
+            if (!plp || plp.deletedAt) {
+              throw createError({
+                statusCode: 400,
+                statusMessage:
+                  `ПЛП "${payload.samplingTest.plpName}" не найден`,
+              })
+            }
+
+
+            if (
+              !inspector ||
+              inspector.deletedAt
+            ) {
+              throw createError({
+                statusCode: 400,
+                statusMessage:
+                  `Лицо "${payload.samplingTest.inspectorName}" не найдено в справочнике`,
+              })
+            }
+
+
+            if (
+              !testObject ||
+              testObject.deletedAt
+            ) {
+              throw createError({
+                statusCode: 400,
+                statusMessage:
+                  `Объект "${payload.samplingTest.testObjectName}" не найден`,
+              })
+            }
+
+
+            if (
+              !material ||
+              material.deletedAt
+            ) {
+              throw createError({
+                statusCode: 400,
+                statusMessage:
+                  `Материал "${payload.receiptMaterial.materialName}" не найден`,
+              })
+            }
+
+
+            let manufacturer:
+              Awaited<
+                ReturnType<
+                  typeof tx.manufacturer.findUnique
+                >
+              > =
+                null
+
+
+            const manufacturerName =
+              payload
+                .receiptMaterial
+                .manufacturerName
+
+
+            if (manufacturerName) {
+              manufacturer =
+                await tx.manufacturer
+                  .findUnique({
+                    where: {
+                      name:
+                        manufacturerName,
+                    },
+                  })
+
+
+              if (
+                !manufacturer ||
+                manufacturer.deletedAt
+              ) {
+                throw createError({
+                  statusCode: 400,
+                  statusMessage:
+                    `Производитель "${manufacturerName}" не найден`,
+                })
+              }
+            }
+
+
+            const testLocation =
+              await tx.testLocation
+                .upsert({
+                  where: {
+                    testObjectId_name: {
+                      testObjectId:
+                        testObject.id,
+
+                      name:
+                        payload
+                          .samplingTest
+                          .testLocationName,
                     },
                   },
-                },
-              },
-            },
+
+                  update: {
+                    deletedAt: null,
+                    deletedBy: null,
+                    editorEmail:
+                      actorEmail,
+                  },
+
+                  create: {
+                    name:
+                      payload
+                        .samplingTest
+                        .testLocationName,
+
+                    testObject: {
+                      connect: {
+                        id:
+                          testObject.id,
+                      },
+                    },
+
+                    authorEmail:
+                      actorEmail,
+                  },
+                })
+
+
+            const created =
+              await tx.samplingTest
+                .create({
+                  data: {
+                    samplingActNumber:
+                      payload
+                        .samplingTest
+                        .samplingActNumber,
+
+                    samplingDate:
+                      dates.samplingDate,
+
+                    samplingDocumentPath,
+
+                    note:
+                      payload
+                        .samplingTest
+                        .note ||
+                      null,
+
+                    businessRulesVersion:
+                      1,
+
+                    authorEmail:
+                      actorEmail,
+
+                    editorEmail:
+                      actorEmail,
+
+
+                    plp: {
+                      connect: {
+                        id:
+                          plp.id,
+                      },
+                    },
+
+                    inspector: {
+                      connect: {
+                        id:
+                          inspector.id,
+                      },
+                    },
+
+                    testLocation: {
+                      connect: {
+                        id:
+                          testLocation.id,
+                      },
+                    },
+
+
+                    receiptMaterial: {
+                      create: {
+                        receiptDate:
+                          dates.receiptDate,
+
+                        qualityDocumentDate:
+                          dates
+                            .qualityDocumentDate,
+
+                        qualityDocumentNumber:
+                          payload
+                            .receiptMaterial
+                            .qualityDocumentNumber,
+
+                        qualityDocumentPath,
+
+                        note:
+                          payload
+                            .receiptMaterial
+                            .note ||
+                          null,
+
+                        authorEmail:
+                          actorEmail,
+
+                        editorEmail:
+                          actorEmail,
+
+                        material: {
+                          connect: {
+                            id:
+                              material.id,
+                          },
+                        },
+
+                        ...(manufacturer
+                          ? {
+                              manufacturer: {
+                                connect: {
+                                  id:
+                                    manufacturer.id,
+                                },
+                              },
+                            }
+                          : {}),
+                      },
+                    },
+                  },
+
+                  include: {
+                    plp: true,
+                    inspector: true,
+
+                    testLocation: {
+                      include: {
+                        testObject: true,
+                      },
+                    },
+
+                    receiptMaterial: {
+                      include: {
+                        material: true,
+                        manufacturer: true,
+                      },
+                    },
+
+                    testProtocol:
+                      true,
+                  },
+                })
+
+
+            await auditDataChange({
+              event,
+              db:
+                tx,
+
+              resourceKey:
+                RESOURCE_KEY,
+
+              entityType:
+                'SamplingTest',
+
+              entityId:
+                created.id,
+
+              action:
+                'CREATE',
+
+              note:
+                'Создана запись Реестра входного контроля',
+
+              changes:
+                buildCreateAuditDelta(
+                  created as
+                    unknown as
+                    Record<
+                      string,
+                      unknown
+                    >,
+
+                  [
+                    'samplingActNumber',
+                    'samplingDate',
+                    'samplingDocumentPath',
+                    'note',
+                    'plpId',
+                    'inspectorId',
+                    'testLocationId',
+                    'receiptMaterialId',
+                    'businessRulesVersion',
+                  ],
+                ),
+
+              actorEmail,
+            })
+
+
+            await auditDataChange({
+              event,
+              db:
+                tx,
+
+              resourceKey:
+                RESOURCE_KEY,
+
+              entityType:
+                'ReceiptMaterial',
+
+              entityId:
+                created
+                  .receiptMaterial
+                  .id,
+
+              action:
+                'CREATE',
+
+              note:
+                'Создано поступление материала',
+
+              changes:
+                buildCreateAuditDelta(
+                  created
+                    .receiptMaterial as
+                    unknown as
+                    Record<
+                      string,
+                      unknown
+                    >,
+
+                  [
+                    'receiptDate',
+                    'qualityDocumentDate',
+                    'qualityDocumentNumber',
+                    'qualityDocumentPath',
+                    'note',
+                    'materialId',
+                    'manufacturerId',
+                  ],
+                ),
+
+              actorEmail,
+            })
+
+
+            return created
           },
-        },
-      });
-      timeout: 15000;
-    });
 
-    return {
-      success: true,
-      data: result,
-      message: 'Запись успешно создана',
-    };
+          {
+            maxWait: 5_000,
+            timeout: 15_000,
+          },
+        )
 
-  } catch (error: any) {
-    console.error('Server Error:', error);
-    
-    if (error.statusCode) throw error;
 
-    throw createError({
-      statusCode: 500,
-      statusMessage: `Internal Server Error: ${error.message || 'Ошибка сервера'}`,
-    });
-  }
-});
+      return {
+        success: true,
+        data:
+          result,
+
+        message:
+          'Запись успешно создана',
+      }
+
+    } catch (error: any) {
+      /**
+       * Если БД отклонила операцию,
+       * новые файлы не должны оставаться сиротами.
+       */
+      cleanupDirectory(
+        uploadDirectory,
+      )
+
+
+      if (error?.statusCode) {
+        throw error
+      }
+
+
+      console.error(
+        '[incoming-control POST] Ошибка:',
+        error,
+      )
+
+
+      throw createError({
+        statusCode: 500,
+        statusMessage:
+          'Ошибка при создании записи Реестра',
+
+        data:
+          error instanceof Error
+            ? error.message
+            : undefined,
+      })
+    }
+  },
+)

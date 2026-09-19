@@ -310,8 +310,6 @@ model SamplingTest {
   inspectorId Int
   inspector   Inspector @relation(fields: [inspectorId], references: [id])
 
-  // Место отбора обязательно. Объект определяется через TestLocation.testObjectId.
-  // testObjectId здесь намеренно НЕ дублируем.
   testLocationId Int
   testLocation   TestLocation @relation(fields: [testLocationId], references: [id])
 
@@ -341,7 +339,6 @@ model SamplingTest {
   @@unique([importSource, importRowNumber])
   @@index([samplingActNumber])
   @@index([samplingDate])
-  @@index([testLocationId])
   @@map("sampling_tests")
 }
 

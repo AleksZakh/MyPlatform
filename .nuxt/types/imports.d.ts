@@ -2,6 +2,7 @@
 export {}
 declare global {
   const $fetch: typeof import('../fetch.mjs').$fetch
+  const LAB_TABLE_COLUMNS: typeof import('../../app/composables/useTableSettings').LAB_TABLE_COLUMNS
   const abortNavigation: typeof import('../../node_modules/nuxt/dist/app/composables/router').abortNavigation
   const acceptHMRUpdate: typeof import('../../node_modules/@pinia/nuxt/dist/runtime/composables').acceptHMRUpdate
   const actions: typeof import('../../app/stores/auth.store').actions
@@ -216,7 +217,7 @@ declare global {
   const useSlots: typeof import('vue').useSlots
   const useState: typeof import('../../node_modules/nuxt/dist/app/composables/state').useState
   const useTableFilterStore: typeof import('../../app/stores/tableFilter').useTableFilterStore
-  const useTableSettings: typeof import('../../app/composables/useTableSettings').useTableSettings
+  const useTableSettings: typeof import('../../app/composables/useTableSettings__').useTableSettings
   const useTemplateRef: typeof import('vue').useTemplateRef
   const useToast: typeof import('../../node_modules/@nuxt/ui/dist/runtime/composables/useToast').useToast
   const useToastStore: typeof import('../../app/stores/toast.store').useToastStore
@@ -248,17 +249,24 @@ declare global {
   export type { Filters } from '../../app/composables/useFilters'
   import('../../app/composables/useFilters')
   // @ts-ignore
+  export type { IncomingControlReference, IncomingControlRecord } from '../../app/composables/useLabDataLoader'
+  import('../../app/composables/useLabDataLoader')
+  // @ts-ignore
   export type { DeleteOptions } from '../../app/composables/useRecordDelete'
   import('../../app/composables/useRecordDelete')
   // @ts-ignore
   export type { UpdateOptions } from '../../app/composables/useRecordUpdate'
   import('../../app/composables/useRecordUpdate')
+  // @ts-ignore
+  export type { LabTableColumnDefinition } from '../../app/composables/useTableSettings'
+  import('../../app/composables/useTableSettings')
 }
 // for vue template auto import
 import { UnwrapRef } from 'vue'
 declare module 'vue' {
   interface ComponentCustomProperties {
     readonly $fetch: UnwrapRef<typeof import('../fetch.mjs')['$fetch']>
+    readonly LAB_TABLE_COLUMNS: UnwrapRef<typeof import('../../app/composables/useTableSettings')['LAB_TABLE_COLUMNS']>
     readonly abortNavigation: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/router')['abortNavigation']>
     readonly acceptHMRUpdate: UnwrapRef<typeof import('../../node_modules/@pinia/nuxt/dist/runtime/composables')['acceptHMRUpdate']>
     readonly actions: UnwrapRef<typeof import('../../app/stores/auth.store')['actions']>
@@ -473,7 +481,7 @@ declare module 'vue' {
     readonly useSlots: UnwrapRef<typeof import('vue')['useSlots']>
     readonly useState: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/state')['useState']>
     readonly useTableFilterStore: UnwrapRef<typeof import('../../app/stores/tableFilter')['useTableFilterStore']>
-    readonly useTableSettings: UnwrapRef<typeof import('../../app/composables/useTableSettings')['useTableSettings']>
+    readonly useTableSettings: UnwrapRef<typeof import('../../app/composables/useTableSettings__')['useTableSettings']>
     readonly useTemplateRef: UnwrapRef<typeof import('vue')['useTemplateRef']>
     readonly useToast: UnwrapRef<typeof import('../../node_modules/@nuxt/ui/dist/runtime/composables/useToast')['useToast']>
     readonly useToastStore: UnwrapRef<typeof import('../../app/stores/toast.store')['useToastStore']>

@@ -128,19 +128,19 @@ model Manufacturer {
   name String  @unique @db.Text
   note String? @db.Text
 
-  // Один производитель может встречаться во многих поступлениях материалов
-  receipts ReceiptMaterial[]
-
   // Системные поля
   createdAt   DateTime  @default(now())
   authorEmail String?   @db.VarChar(255)
   editedAt    DateTime? @updatedAt
   editorEmail String?   @db.VarChar(255)
 
-  // Мягкое удаление
+  // Поля для мягкого удаления
   deletedAt DateTime? @db.Date
   deletedBy String?   @db.VarChar(255)
 
+  materials Material[]
+
+  @@index([name])
   @@map("manufacturers")
 }
 
@@ -150,9 +150,8 @@ model Material {
   name String  @unique @db.Text
   note String? @db.Text
 
-  // Материал не закреплён за одним производителем.
-  // Производитель хранится в конкретном ReceiptMaterial.
-  receipts ReceiptMaterial[]
+  manufacturerId Int?
+  manufacturer   Manufacturer? @relation(fields: [manufacturerId], references: [id])
 
   // Системные поля
   createdAt   DateTime  @default(now())
@@ -160,10 +159,13 @@ model Material {
   editedAt    DateTime? @updatedAt
   editorEmail String?   @db.VarChar(255)
 
-  // Мягкое удаление
+  // Поля для мягкого удаления
   deletedAt DateTime? @db.Date
   deletedBy String?   @db.VarChar(255)
 
+  receipts ReceiptMaterial[]
+
+  @@index([name])
   @@map("materials")
 }
 
@@ -173,27 +175,16 @@ model Material {
 model ReceiptMaterial {
   id Int @id @default(autoincrement())
 
-  // Поступление материала
-  // Nullable в БД для корректного хранения исторических данных.
-  // Для новых записей обязательность проверяет API.
-  receiptDate DateTime? @db.Date
+  // ДВЕ РАЗНЫЕ ДАТЫ
+  receiptDate DateTime? @db.Date // ← НОВОЕ: дата поступления материала
+  qualDate    DateTime? @db.Date // ← дата документа о качестве
 
-  // Документ о качестве может отсутствовать полностью
-  qualityDocumentDate   DateTime? @db.Date
-  qualityDocumentNumber String?   @db.VarChar(255)
-  qualityDocumentPath   String?   @db.Text
-
-  note String? @db.Text
+  qualDocNumber String? @db.VarChar(255)
+  qualDocPath   String? @db.Text
+  note          String? @db.Text
 
   materialId Int
   material   Material @relation(fields: [materialId], references: [id])
-
-  // Производитель относится к конкретному поступлению, а не к виду материала
-  manufacturerId Int?
-  manufacturer   Manufacturer? @relation(fields: [manufacturerId], references: [id])
-
-  // Обратная сторона связи 1:1 с записью Реестра
-  samplingTest SamplingTest?
 
   // Системные поля
   createdAt   DateTime  @default(now())
@@ -205,10 +196,9 @@ model ReceiptMaterial {
   deletedAt DateTime? @db.Date
   deletedBy String?   @db.VarChar(255)
 
-  @@index([receiptDate])
-  @@index([qualityDocumentDate])
-  @@index([materialId])
-  @@index([manufacturerId])
+  testProtocols TestProtocol[]
+  samplingTests SamplingTest[]
+
   @@map("receipt_materials")
 }
 
@@ -262,19 +252,15 @@ model TestLocation {
 
 // 8. Протокол испытаний
 model TestProtocol {
-  id Int @id @default(autoincrement())
+  id              Int       @id @default(autoincrement())
+  protocolNumber  String    @db.VarChar(255)
+  protocolDate    DateTime? @db.Date
+  protocolDocPath String?   @db.Text
+  testResult      String    @db.Text
+  note            String?   @db.Text
 
-  // Nullable в БД ради честного хранения исторических данных.
-  // Для новых протоколов обязательность проверяет API.
-  protocolNumber       String?   @db.VarChar(255)
-  protocolDate         DateTime? @db.Date
-  protocolDocumentPath String?   @db.Text
-  testResult           String?   @db.Text
-  note                 String?   @db.Text
-
-  // Протокол относится к записи Реестра напрямую через SamplingTest.
-  // Связи TestProtocol -> ReceiptMaterial больше нет.
-  samplingTest SamplingTest?
+  receiptMaterialId Int
+  receiptMaterial   ReceiptMaterial @relation(fields: [receiptMaterialId], references: [id])
 
   // Системные поля
   createdAt   DateTime  @default(now())
@@ -282,9 +268,11 @@ model TestProtocol {
   editedAt    DateTime? @updatedAt
   editorEmail String?   @db.VarChar(255)
 
-  // Мягкое удаление
+  // Поля для мягкого удаления
   deletedAt DateTime? @db.Date
   deletedBy String?   @db.VarChar(255)
+
+  samplingTests SamplingTest[]
 
   @@index([protocolNumber])
   @@index([protocolDate])
@@ -295,38 +283,29 @@ model TestProtocol {
 // ГЛАВНАЯ ТАБЛИЦА - АКТЫ ОТБОРА ПРОБ
 // ============================================
 model SamplingTest {
-  id Int @id @default(autoincrement())
+  id         Int      @id @default(autoincrement())
+  sActNumber String   @db.VarChar(255)
+  sActDate   DateTime @db.Date
+  sDocPath   String?  @db.Text
+  note       String?  @db.Text
 
-  // Отбор проб
-  samplingActNumber    String   @db.VarChar(255)
-  samplingDate         DateTime @db.Date
-  samplingDocumentPath String?  @db.Text
-  note                 String?  @db.Text
-
-  // Справочники
+  // Внешние ключи на справочники
   plpId Int
   plp   Plp @relation(fields: [plpId], references: [id])
 
   inspectorId Int
   inspector   Inspector @relation(fields: [inspectorId], references: [id])
 
-  // Место отбора обязательно. Объект определяется через TestLocation.testObjectId.
-  // testObjectId здесь намеренно НЕ дублируем.
   testLocationId Int
   testLocation   TestLocation @relation(fields: [testLocationId], references: [id])
 
-  // Одно поступление материала на одну запись Реестра
-  receiptMaterialId Int             @unique
-  receiptMaterial   ReceiptMaterial @relation(fields: [receiptMaterialId], references: [id])
-
-  // Один протокол максимум; до проведения испытания его может не быть
-  testProtocolId Int?          @unique
+  // Связь с протоколом (опционально)
+  testProtocolId Int?
   testProtocol   TestProtocol? @relation(fields: [testProtocolId], references: [id])
 
-  // Версия бизнес-правил и источник исторического импорта
-  businessRulesVersion Int     @default(1)
-  importSource         String? @db.VarChar(255)
-  importRowNumber      Int?
+  // ПРЯМАЯ СВЯЗЬ С ПОСТУПЛЕНИЕМ МАТЕРИАЛА (добавлено!)
+  receiptMaterialId Int?
+  receiptMaterial   ReceiptMaterial? @relation(fields: [receiptMaterialId], references: [id])
 
   // Системные поля
   createdAt   DateTime  @default(now())
@@ -334,14 +313,12 @@ model SamplingTest {
   editedAt    DateTime? @updatedAt
   editorEmail String?   @db.VarChar(255)
 
-  // Мягкое удаление
+  // Поля для мягкого удаления
   deletedAt DateTime? @db.Date
   deletedBy String?   @db.VarChar(255)
 
-  @@unique([importSource, importRowNumber])
-  @@index([samplingActNumber])
-  @@index([samplingDate])
-  @@index([testLocationId])
+  @@index([sActNumber])
+  @@index([sActDate])
   @@map("sampling_tests")
 }
 
@@ -384,21 +361,24 @@ model AuditLog {
   beforeData    Json?
   afterData     Json?
   changedFields Json?
-  changes       Json?
+  changes Json?
 
   ipAddress String? @db.VarChar(45)
   userAgent String? @db.Text
+
 
   @@index([entityType, entityId])
   @@index([timestamp])
   @@index([actorEmail])
   @@index([action])
+
   // Новые индексы
   @@index([category])
   @@index([result])
   @@index([resourceKey])
   @@index([actorUserId])
   @@index([targetUserId])
+
   @@map("audit_logs")
 }
 

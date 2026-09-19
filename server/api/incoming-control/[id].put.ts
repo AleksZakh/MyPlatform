@@ -1,676 +1,1639 @@
-// server/api/lab/sampling-test/[id].put.ts
-import { PrismaClient } from '@prisma/client';
-import { defineEventHandler, getRouterParam, readMultipartFormData } from 'h3';
-import { handleFileUpload, parseDate } from '~~/server/utils/fileUploadHandler';
-import { AccessAction,} from '@prisma/client';
-import {requirePermission,} from '../../services/access-control.service';
+// server/api/incoming-control/[id].put.ts
+
+import fs from 'node:fs'
+
+import {
+  AccessAction,
+} from '@prisma/client'
+
+import {
+  createError,
+  defineEventHandler,
+  getRouterParam,
+  readMultipartFormData,
+} from 'h3'
+
+import {
+  prisma,
+} from '~~/server/utils/prisma'
+
+import {
+  handleFileUpload,
+} from '~~/server/utils/fileUploadHandler'
+
+import {
+  requirePermission,
+} from '~~/server/services/access-control.service'
+
 import {
   auditDataChange,
-  computeAuditDelta,
   buildCreateAuditDelta,
-  AuditDelta,
-  getActorEmail,
-} from '~~/server/utils/auditLog';
+  computeAuditDelta,
+} from '~~/server/utils/auditLog'
 
-const prisma = new PrismaClient();
+import {
+  assertBaseChronology,
+  assertFullChronology,
+  assertNewProtocolComplete,
+  getPayloadDates,
+  parseIncomingControlPayload,
+  sameBusinessDate,
+} from '~~/server/services/lab/incoming-control-rules.service'
 
-export default defineEventHandler(async (event) => {
-  await requirePermission(
-    event,
-    'lab.sampling-tests',
-    AccessAction.UPDATE,
-  );
+import {
+  assertBaseEditWindow,
+  assertProtocolEditWindow,
+  hasIncomingControlEditLockOverride,
+  isEditWindowExpired,
+} from '~~/server/services/lab/incoming-control-edit-lock.service'
+
+
+const RESOURCE_KEY =
+  'lab.sampling-tests'
+
+
+const FILE_FIELDS = [
+  'samplingDocumentFile',
+  'qualityDocumentFile',
+  'protocolDocumentFile',
+]
+
+
+interface UploadFlags {
+  samplingDocument: boolean
+  qualityDocument: boolean
+  protocolDocument: boolean
+}
+
+
+function hasMultipartFile(
+  multipartData: any[],
+  fieldName: string,
+): boolean {
+  return multipartData.some(
+    item =>
+      item?.name === fieldName &&
+      !!item?.filename &&
+      item?.data?.length > 0,
+  )
+}
+
+
+function getMultipartText(
+  multipartData: any[],
+  fieldName: string,
+): string | undefined {
+  const item =
+    multipartData.find(
+      entry =>
+        entry?.name === fieldName &&
+        !entry?.filename,
+    )
+
+  return item?.data
+    ?.toString(
+      'utf-8',
+    )
+}
+
+
+function cleanupDirectory(
+  targetDir:
+    | string
+    | null,
+) {
+  if (!targetDir) {
+    return
+  }
+
   try {
-    // ========================================
-    // 1. ПОДГОТОВКА
-    // ========================================
-    // console.log('Начало обновления')
-    const idParam = getRouterParam(event, 'id');
-    const id = parseInt(idParam || '', 10);
-
-    if (isNaN(id) || id <= 0) {
-      throw createError({ statusCode: 400, statusMessage: 'Некорректный ID акта отбора' });
-    }
-
-    const multipartData = await readMultipartFormData(event);
-    if (!multipartData) {
-      throw createError({ statusCode: 400, statusMessage: 'Форма не содержит данных' });
-    }
-
-    const { body, fileDbPaths } = await handleFileUpload(multipartData);
-    const editorEmail = body.editorEmail || getActorEmail(event);
-    
-
-    // console.log('body.protocolDate ===> ', body )
-
-    // ========================================
-    // 2. ЗАГРУЗКА СОСТОЯНИЯ "ДО" (вне транзакции — только чтение)
-    // ========================================
-    const beforeSamplingTest = await prisma.samplingTest.findUnique({
-      where: { id },
-      include: {
-        receiptMaterial: true,
-        testProtocol: true,
-        testLocation: true,
+    fs.rmSync(
+      targetDir,
+      {
+        recursive: true,
+        force: true,
       },
-    });
+    )
+  } catch (error) {
+    console.error(
+      '[incoming-control PUT] Не удалось очистить каталог загрузки:',
+      error,
+    )
+  }
+}
 
-    // console.log('beforeSamplingTest ===>', beforeSamplingTest)
 
-    if (!beforeSamplingTest) {
-      throw createError({ statusCode: 404, statusMessage: `Акт отбора с ID ${id} не найден` });
+function normalizeText(
+  value: unknown,
+): string | null {
+  if (
+    value === null ||
+    value === undefined
+  ) {
+    return null
+  }
+
+  const normalized =
+    String(value)
+      .trim()
+
+  return normalized || null
+}
+
+
+function sameText(
+  left: unknown,
+  right: unknown,
+): boolean {
+  return (
+    normalizeText(left) ===
+    normalizeText(right)
+  )
+}
+
+
+function samplingAuditShape(
+  value: any,
+) {
+  return {
+    samplingActNumber:
+      value.samplingActNumber,
+
+    samplingDate:
+      value.samplingDate,
+
+    samplingDocumentPath:
+      value.samplingDocumentPath,
+
+    note:
+      value.note,
+
+    plpId:
+      value.plpId,
+
+    inspectorId:
+      value.inspectorId,
+
+    testLocationId:
+      value.testLocationId,
+
+    receiptMaterialId:
+      value.receiptMaterialId,
+
+    testProtocolId:
+      value.testProtocolId,
+
+    businessRulesVersion:
+      value.businessRulesVersion,
+  }
+}
+
+
+function receiptAuditShape(
+  value: any,
+) {
+  return {
+    receiptDate:
+      value.receiptDate,
+
+    qualityDocumentDate:
+      value.qualityDocumentDate,
+
+    qualityDocumentNumber:
+      value.qualityDocumentNumber,
+
+    qualityDocumentPath:
+      value.qualityDocumentPath,
+
+    note:
+      value.note,
+
+    materialId:
+      value.materialId,
+
+    manufacturerId:
+      value.manufacturerId,
+  }
+}
+
+
+function protocolAuditShape(
+  value: any,
+) {
+  return {
+    protocolNumber:
+      value.protocolNumber,
+
+    protocolDate:
+      value.protocolDate,
+
+    protocolDocumentPath:
+      value.protocolDocumentPath,
+
+    testResult:
+      value.testResult,
+
+    note:
+      value.note,
+  }
+}
+
+
+function detectEditIntent(
+  current: any,
+  payload: any,
+  dates: any,
+  files: UploadFlags,
+) {
+  const hasExistingProtocol =
+    !!current.testProtocol
+
+  const wantsProtocol =
+    payload.testProtocol !==
+    null
+
+  const createsNewProtocol =
+    !hasExistingProtocol &&
+    wantsProtocol
+
+
+  const baseDatesChanged =
+    !sameBusinessDate(
+      current.samplingDate,
+      dates.samplingDate,
+    ) ||
+    !sameBusinessDate(
+      current
+        .receiptMaterial
+        .receiptDate,
+      dates.receiptDate,
+    ) ||
+    !sameBusinessDate(
+      current
+        .receiptMaterial
+        .qualityDocumentDate,
+      dates.qualityDocumentDate,
+    )
+
+
+  const baseChanged =
+    baseDatesChanged ||
+
+    files.samplingDocument ||
+    files.qualityDocument ||
+
+    !sameText(
+      current.samplingActNumber,
+      payload
+        .samplingTest
+        .samplingActNumber,
+    ) ||
+
+    !sameText(
+      current.note,
+      payload
+        .samplingTest
+        .note,
+    ) ||
+
+    !sameText(
+      current.plp?.name,
+      payload
+        .samplingTest
+        .plpName,
+    ) ||
+
+    !sameText(
+      current.inspector?.name,
+      payload
+        .samplingTest
+        .inspectorName,
+    ) ||
+
+    !sameText(
+      current
+        .testLocation
+        ?.name,
+      payload
+        .samplingTest
+        .testLocationName,
+    ) ||
+
+    !sameText(
+      current
+        .testLocation
+        ?.testObject
+        ?.name,
+      payload
+        .samplingTest
+        .testObjectName,
+    ) ||
+
+    !sameText(
+      current
+        .receiptMaterial
+        .material
+        ?.name,
+      payload
+        .receiptMaterial
+        .materialName,
+    ) ||
+
+    !sameText(
+      current
+        .receiptMaterial
+        .manufacturer
+        ?.name,
+      payload
+        .receiptMaterial
+        .manufacturerName,
+    ) ||
+
+    !sameText(
+      current
+        .receiptMaterial
+        .qualityDocumentNumber,
+      payload
+        .receiptMaterial
+        .qualityDocumentNumber,
+    ) ||
+
+    !sameText(
+      current
+        .receiptMaterial
+        .note,
+      payload
+        .receiptMaterial
+        .note,
+    )
+
+
+  const protocolDateChanged =
+    hasExistingProtocol &&
+    wantsProtocol
+      ? !sameBusinessDate(
+          current
+            .testProtocol
+            .protocolDate,
+          dates.protocolDate,
+        )
+      : false
+
+
+  const existingProtocolChanged =
+    hasExistingProtocol &&
+    wantsProtocol
+      ? (
+          protocolDateChanged ||
+
+          files.protocolDocument ||
+
+          !sameText(
+            current
+              .testProtocol
+              .protocolNumber,
+            payload
+              .testProtocol
+              .protocolNumber,
+          ) ||
+
+          !sameText(
+            current
+              .testProtocol
+              .testResult,
+            payload
+              .testProtocol
+              .testResult,
+          ) ||
+
+          !sameText(
+            current
+              .testProtocol
+              .note,
+            payload
+              .testProtocol
+              .note,
+          )
+        )
+      : false
+
+
+  return {
+    hasExistingProtocol,
+    wantsProtocol,
+    createsNewProtocol,
+
+    baseDatesChanged,
+    baseChanged,
+
+    protocolDateChanged,
+
+    protocolChanged:
+      createsNewProtocol ||
+      existingProtocolChanged,
+  }
+}
+
+
+function validateBusinessRules(
+  current: any,
+  payload: any,
+  dates: any,
+  files: UploadFlags,
+  canOverride: boolean,
+  now = new Date(),
+) {
+  const intent =
+    detectEditIntent(
+      current,
+      payload,
+      dates,
+      files,
+    )
+
+
+  if (
+    intent.hasExistingProtocol &&
+    !intent.wantsProtocol
+  ) {
+    throw createError({
+      statusCode: 400,
+
+      statusMessage:
+        'Существующий протокол нельзя удалить через форму Реестра',
+    })
+  }
+
+
+  /**
+   * ДВЕ НЕЗАВИСИМЫЕ БЛОКИРОВКИ.
+   *
+   * Добавление НОВОГО протокола не зависит от возраста
+   * SamplingTest. Его собственные 10 минут начнутся
+   * только после первого сохранения TestProtocol.
+   */
+  assertBaseEditWindow({
+    changed:
+      intent.baseChanged,
+
+    createdAt:
+      current.createdAt,
+
+    canOverride,
+
+    now,
+  })
+
+
+  assertProtocolEditWindow({
+    changed:
+      intent.protocolChanged,
+
+    protocolCreatedAt:
+      current.testProtocol
+        ?.createdAt ??
+      null,
+
+    canOverride,
+
+    now,
+  })
+
+
+  if (
+    intent.createsNewProtocol
+  ) {
+    assertNewProtocolComplete(
+      payload,
+      files.protocolDocument,
+    )
+
+    assertFullChronology(
+      dates,
+    )
+
+  } else if (
+    intent.hasExistingProtocol &&
+    payload.testProtocol
+  ) {
+    /**
+     * Старую историческую хронологию не заставляем
+     * исправлять при изменении текста/примечаний.
+     *
+     * Но любое изменение даты переводит итоговую
+     * цепочку под современные правила.
+     */
+    if (
+      intent.baseDatesChanged ||
+      intent.protocolDateChanged
+    ) {
+      assertFullChronology(
+        dates,
+      )
     }
 
-    if (beforeSamplingTest.deletedAt) {
-      throw createError({ statusCode: 400, statusMessage: 'Нельзя редактировать удалённую запись' });
+  } else if (
+    intent.baseDatesChanged
+  ) {
+    assertBaseChronology(
+      dates,
+    )
+  }
+
+
+  return intent
+}
+
+
+export default defineEventHandler(
+  async event => {
+    const permission =
+      await requirePermission(
+        event,
+        RESOURCE_KEY,
+        AccessAction.UPDATE,
+      )
+
+
+    const id =
+      Number.parseInt(
+        getRouterParam(
+          event,
+          'id',
+        ) ?? '',
+        10,
+      )
+
+
+    if (
+      !Number.isInteger(id) ||
+      id <= 0
+    ) {
+      throw createError({
+        statusCode: 400,
+
+        statusMessage:
+          'Некорректный ID записи',
+      })
     }
 
-    // Загружаем beforeData для связанных сущностей
-    const beforeReceiptMaterial = beforeSamplingTest.receiptMaterialId
-      ? await prisma.receiptMaterial.findUnique({
-          where: { id: beforeSamplingTest.receiptMaterialId },
-          include: { material: true },
+
+    let uploadDirectory:
+      string | null = null
+
+
+    try {
+      const multipartData =
+        await readMultipartFormData(
+          event,
+        )
+
+
+      if (!multipartData) {
+        throw createError({
+          statusCode: 400,
+
+          statusMessage:
+            'Данные формы не найдены',
         })
-      : null;
-
-    const beforeTestProtocol = beforeSamplingTest.testProtocolId
-      ? await prisma.testProtocol.findUnique({
-          where: { id: beforeSamplingTest.testProtocolId },
-        })
-      : null;
-
-    // ========================================
-    // 3. ТРАНЗАКЦИЯ
-    // ========================================
-    const result = await prisma.$transaction(async (tx) => {
-      // ----- Локальные переменные для результата -----
-      const auditEntries: Array<{
-        entityType: string;
-        entityId: number;
-
-        action:
-          'CREATE'
-          | 'UPDATE'
-          | 'DELETE';
-
-        note: string;
-
-        changes?: AuditDelta;
-      }> = [];
-
-      // ----- 3.1 Подготовка данных для SamplingTest -----
-      const updateSamplingTestData: any = {};
-      const relationUpdates: any = {};
-
-      // --- Проверка ПЛП ---
-      if (body.plpId) {
-        const plpId = parseInt(body.plpId);
-        if (isNaN(plpId) || plpId <= 0) {
-          throw createError({ statusCode: 400, statusMessage: 'Некорректный ID ПЛП' });
-        }
-        const plp = await tx.plp.findUnique({ where: { id: plpId } });
-        if (!plp) {
-          throw createError({ statusCode: 404, statusMessage: `ПЛП с ID ${plpId} не найден` });
-        }
-        relationUpdates.plpId = plpId;
       }
 
-      // --- Проверка Инспектора ---
-      if (body.inspectorId) {
-        const inspectorId = parseInt(body.inspectorId);
-        if (isNaN(inspectorId) || inspectorId <= 0) {
-          throw createError({ statusCode: 400, statusMessage: 'Некорректный ID Инспектора' });
-        }
-        const inspector = await tx.inspector.findUnique({ where: { id: inspectorId } });
-        if (!inspector) {
-          throw createError({ statusCode: 404, statusMessage: `Инспектор с ID ${inspectorId} не найден` });
-        }
-        relationUpdates.inspectorId = inspectorId;
+
+      const payload =
+        parseIncomingControlPayload(
+          getMultipartText(
+            multipartData,
+            'payload',
+          ),
+        )
+
+
+      const files: UploadFlags = {
+        samplingDocument:
+          hasMultipartFile(
+            multipartData,
+            'samplingDocumentFile',
+          ),
+
+        qualityDocument:
+          hasMultipartFile(
+            multipartData,
+            'qualityDocumentFile',
+          ),
+
+        protocolDocument:
+          hasMultipartFile(
+            multipartData,
+            'protocolDocumentFile',
+          ),
       }
 
-      // --- Проверка/создание TestLocation ---
-      if (body.sPlace?.trim() && body.objName?.trim()) {
-        const objectName = body.objName.trim();
-        const locationName = body.sPlace.trim();
 
-        // 1. Находим объект по имени
-        const testObject = await tx.testObject.findUnique({
-          where: { name: objectName },
-        });
+      const dates =
+        getPayloadDates(
+          payload,
+        )
 
-        if (!testObject) {
-          throw createError({
-            statusCode: 404,
-            statusMessage: `Объект "${objectName}" не найден`,
-          });
-        }
 
-        // 2. Ищем локацию по паре (testObjectId, name)
-        let testLocation = await tx.testLocation.findUnique({
-          where: { 
-            testObjectId_name: { 
-              testObjectId: testObject.id, 
-              name: locationName 
-            } 
-          },
-        });
-
-        // 3. Если локация не найдена — создаём новую
-        if (!testLocation) {
-          testLocation = await tx.testLocation.create({
-            data: {
-              name: locationName,
-              testObjectId: testObject.id,
-              note: `Создано при редактировании акта № ${beforeSamplingTest.sActNumber}`,
-              authorEmail: editorEmail,
-              createdAt: new Date(),
+      /**
+       * Читаем связи целиком, чтобы определить ФАКТИЧЕСКИЕ
+       * изменения. Полный payload сам по себе не означает,
+       * что пользователь изменяет все три раздела.
+       */
+      const before =
+        await prisma.samplingTest
+          .findFirst({
+            where: {
+              id,
+              deletedAt: null,
             },
-          });
 
-          auditEntries.push({
-            entityType:
-              'TestLocation',
+            include: {
+              plp: true,
+              inspector: true,
 
-            entityId:
-              testLocation.id,
+              testLocation: {
+                include: {
+                  testObject: true,
+                },
+              },
 
-            action:
-              'CREATE',
+              receiptMaterial: {
+                include: {
+                  material: true,
+                  manufacturer: true,
+                },
+              },
 
-            note:
-              `Создана новая локация "${locationName}" ` +
-              `(объект: ${testObject.name})`,
+              testProtocol:
+                true,
+            },
+          })
 
-            changes:
-              buildCreateAuditDelta(
-                testLocation as
-                  unknown as
-                  Record<string, unknown>,
 
-                [
-                  'name',
-                  'testObjectId',
-                ],
-              ),
-          });
-        }
+      if (!before) {
+        throw createError({
+          statusCode: 404,
 
-        // 4. Привязываем локацию к акту
-        relationUpdates.testLocationId = testLocation.id;
+          statusMessage:
+            `Запись с ID ${id} не найдена`,
+        })
       }
 
-      // --- Проверка уникальности номера акта ---
-      if (body.sActNumber?.trim() && body.sActNumber.trim() !== beforeSamplingTest.sActNumber) {
-        const duplicate = await tx.samplingTest.findFirst({
-          where: {
-            sActNumber: body.sActNumber.trim(),
-            deletedAt: null,
-            id: { not: id },
+
+      const canOverride =
+        await hasIncomingControlEditLockOverride(
+          permission.userId,
+        )
+
+
+      /**
+       * До сохранения файлов проверяем:
+       * - временные окна;
+       * - создание/удаление протокола;
+       * - хронологию.
+       *
+       * Ошибка здесь не оставит на диске лишние файлы.
+       */
+      validateBusinessRules(
+        before,
+        payload,
+        dates,
+        files,
+        canOverride,
+      )
+
+
+      const upload =
+        await handleFileUpload(
+          multipartData,
+          {
+            fileFields:
+              FILE_FIELDS,
           },
-        });
-        if (duplicate) {
-          throw createError({
-            statusCode: 400,
-            statusMessage: `Акт с номером "${body.sActNumber}" уже существует`,
-          });
-        }
-        updateSamplingTestData.sActNumber = body.sActNumber.trim();
-      }
-
-      // ----- 3.2 Обновление ReceiptMaterial -----
-
-      const isFilled = (val: any): boolean => {
-        if (val === undefined || val === null) return false;
-        if (typeof val === 'string' && val.trim() === '') return false;
-        return true;
-      };
+        )
 
 
-      const hasReceiptData =
-        isFilled(body.materialId) ||      // ID материала заполнен
-        isFilled(body.material) ||        // или название материала
-        isFilled(body.qualDate) ||        // или дата документа
-        isFilled(body.receiptDate) ||     // или дата поступления
-        isFilled(body.qualDocNumber) ||   // или номер документа
-        isFilled(body.receiptNote) ||     // или примечание
-        !!fileDbPaths.qualDoc;            // или загружен файл
+      uploadDirectory =
+        upload.targetDir
 
-      const hasReceiptChanges =
-        isFilled(body.materialId) ||
-        isFilled(body.material) ||
-        isFilled(body.qualDate) ||
-        isFilled(body.receiptDate) ||
-        isFilled(body.qualDocNumber) ||
-        isFilled(body.receiptNote) ||
-        !!fileDbPaths.qualDoc;
 
-      let receiptMaterialId = beforeSamplingTest.receiptMaterialId;
+      const samplingDocumentPath =
+        upload.fileDbPaths
+          .samplingDocumentFile ||
+        null
 
-      if (hasReceiptChanges) {
-        // ==========================================
-        // ЕСЛИ У АКТА УЖЕ ЕСТЬ ПОСТУПЛЕНИЕ — ОБНОВЛЯЕМ
-        // ==========================================
-        if (receiptMaterialId) {
-          const receiptUpdateData: any = {};
 
-          // --- Материал ---
-          if (isFilled(body.materialId)) {
-            const materialId = parseInt(body.materialId);
-            if (isNaN(materialId) || materialId <= 0) {
-              throw createError({ statusCode: 400, statusMessage: 'Некорректный ID материала' });
+      const qualityDocumentPath =
+        upload.fileDbPaths
+          .qualityDocumentFile ||
+        null
+
+
+      const protocolDocumentPath =
+        upload.fileDbPaths
+          .protocolDocumentFile ||
+        null
+
+
+      const hasAnyUploadedFile =
+        !!(
+          samplingDocumentPath ||
+          qualityDocumentPath ||
+          protocolDocumentPath
+        )
+
+
+      const actor =
+        await prisma.user
+          .findUnique({
+            where: {
+              id:
+                permission.userId,
+            },
+
+            select: {
+              email: true,
+              login: true,
+            },
+          })
+
+
+      const actorEmail =
+        actor?.email ||
+        actor?.login ||
+        `user:${permission.userId}`
+
+
+      const result =
+        await prisma.$transaction(
+          async tx => {
+            /**
+             * Повторная проверка внутри транзакции защищает
+             * от ситуации, когда 10 минут закончились между
+             * открытием формы и фактическим UPDATE.
+             */
+            const current =
+              await tx.samplingTest
+                .findFirst({
+                  where: {
+                    id,
+                    deletedAt: null,
+                  },
+
+                  include: {
+                    plp: true,
+                    inspector: true,
+
+                    testLocation: {
+                      include: {
+                        testObject:
+                          true,
+                      },
+                    },
+
+                    receiptMaterial: {
+                      include: {
+                        material:
+                          true,
+
+                        manufacturer:
+                          true,
+                      },
+                    },
+
+                    testProtocol:
+                      true,
+                  },
+                })
+
+
+            if (!current) {
+              throw createError({
+                statusCode: 404,
+
+                statusMessage:
+                  `Запись с ID ${id} не найдена`,
+              })
             }
-            const material = await tx.material.findUnique({ where: { id: materialId } });
-            if (!material) {
-              throw createError({ statusCode: 404, statusMessage: `Материал с ID ${materialId} не найден` });
+
+
+            const now =
+              new Date()
+
+
+            const intent =
+              validateBusinessRules(
+                current,
+                payload,
+                dates,
+                files,
+                canOverride,
+                now,
+              )
+
+
+            const baseOverrideUsed =
+              canOverride &&
+              intent.baseChanged &&
+              isEditWindowExpired(
+                current.createdAt,
+                now,
+              )
+
+
+            const protocolOverrideUsed =
+              canOverride &&
+              !!current.testProtocol &&
+              intent.protocolChanged &&
+              isEditWindowExpired(
+                current
+                  .testProtocol
+                  .createdAt,
+                now,
+              )
+
+
+            let updatedReceipt =
+              current.receiptMaterial
+
+            let updatedProtocol =
+              current.testProtocol
+
+            let updatedSamplingTest:
+              any =
+                current
+
+
+            let plp:
+              any = null
+
+            let inspector:
+              any = null
+
+            let testLocation:
+              any = null
+
+            let material:
+              any = null
+
+            let manufacturer:
+              any = null
+
+
+            /**
+             * Первые два раздела обновляем ТОЛЬКО если
+             * они реально изменились.
+             *
+             * Поэтому protocol-only PUT не "трогает"
+             * закрытый SamplingTest/ReceiptMaterial.
+             */
+            if (
+              intent.baseChanged
+            ) {
+              const [
+                foundPlp,
+                foundInspector,
+                testObject,
+                foundMaterial,
+              ] =
+                await Promise.all([
+                  tx.plp.findUnique({
+                    where: {
+                      name:
+                        payload
+                          .samplingTest
+                          .plpName,
+                    },
+                  }),
+
+                  tx.inspector.findUnique({
+                    where: {
+                      name:
+                        payload
+                          .samplingTest
+                          .inspectorName,
+                    },
+                  }),
+
+                  tx.testObject.findUnique({
+                    where: {
+                      name:
+                        payload
+                          .samplingTest
+                          .testObjectName,
+                    },
+                  }),
+
+                  tx.material.findUnique({
+                    where: {
+                      name:
+                        payload
+                          .receiptMaterial
+                          .materialName,
+                    },
+                  }),
+                ])
+
+
+              if (
+                !foundPlp ||
+                foundPlp.deletedAt
+              ) {
+                throw createError({
+                  statusCode: 400,
+
+                  statusMessage:
+                    `ПЛП "${payload.samplingTest.plpName}" не найден`,
+                })
+              }
+
+
+              if (
+                !foundInspector ||
+                foundInspector.deletedAt
+              ) {
+                throw createError({
+                  statusCode: 400,
+
+                  statusMessage:
+                    `Лицо "${payload.samplingTest.inspectorName}" не найдено в справочнике`,
+                })
+              }
+
+
+              if (
+                !testObject ||
+                testObject.deletedAt
+              ) {
+                throw createError({
+                  statusCode: 400,
+
+                  statusMessage:
+                    `Объект "${payload.samplingTest.testObjectName}" не найден`,
+                })
+              }
+
+
+              if (
+                !foundMaterial ||
+                foundMaterial.deletedAt
+              ) {
+                throw createError({
+                  statusCode: 400,
+
+                  statusMessage:
+                    `Материал "${payload.receiptMaterial.materialName}" не найден`,
+                })
+              }
+
+
+              plp =
+                foundPlp
+
+              inspector =
+                foundInspector
+
+              material =
+                foundMaterial
+
+
+              const manufacturerName =
+                payload
+                  .receiptMaterial
+                  .manufacturerName
+
+
+              if (manufacturerName) {
+                manufacturer =
+                  await tx.manufacturer
+                    .findUnique({
+                      where: {
+                        name:
+                          manufacturerName,
+                      },
+                    })
+
+
+                if (
+                  !manufacturer ||
+                  manufacturer.deletedAt
+                ) {
+                  throw createError({
+                    statusCode: 400,
+
+                    statusMessage:
+                      `Производитель "${manufacturerName}" не найден`,
+                  })
+                }
+              }
+
+
+              testLocation =
+                await tx.testLocation
+                  .upsert({
+                    where: {
+                      testObjectId_name: {
+                        testObjectId:
+                          testObject.id,
+
+                        name:
+                          payload
+                            .samplingTest
+                            .testLocationName,
+                      },
+                    },
+
+                    update: {
+                      deletedAt: null,
+                      deletedBy: null,
+
+                      editorEmail:
+                        actorEmail,
+                    },
+
+                    create: {
+                      name:
+                        payload
+                          .samplingTest
+                          .testLocationName,
+
+                      testObject: {
+                        connect: {
+                          id:
+                            testObject.id,
+                        },
+                      },
+
+                      authorEmail:
+                        actorEmail,
+                    },
+                  })
+
+
+              updatedReceipt =
+                await tx.receiptMaterial
+                  .update({
+                    where: {
+                      id:
+                        current
+                          .receiptMaterialId,
+                    },
+
+                    data: {
+                      receiptDate:
+                        dates.receiptDate,
+
+                      qualityDocumentDate:
+                        dates
+                          .qualityDocumentDate,
+
+                      qualityDocumentNumber:
+                        payload
+                          .receiptMaterial
+                          .qualityDocumentNumber,
+
+                      note:
+                        payload
+                          .receiptMaterial
+                          .note ||
+                        null,
+
+                      editorEmail:
+                        actorEmail,
+
+                      material: {
+                        connect: {
+                          id:
+                            material.id,
+                        },
+                      },
+
+                      manufacturer:
+                        manufacturer
+                          ? {
+                              connect: {
+                                id:
+                                  manufacturer.id,
+                              },
+                            }
+                          : {
+                              disconnect:
+                                true,
+                            },
+
+                      ...(qualityDocumentPath
+                        ? {
+                            qualityDocumentPath,
+                          }
+                        : {}),
+                    },
+
+                    /**
+                     * updatedReceipt изначально получает тип
+                     * current.receiptMaterial, а current загружен
+                     * вместе с material + manufacturer.
+                     *
+                     * Поэтому результат update тоже возвращаем
+                     * с теми же relation-полями.
+                     */
+                    include: {
+                      material:
+                        true,
+
+                      manufacturer:
+                        true,
+                    },
+                  })
             }
-            receiptUpdateData.materialId = materialId;
-          } else if (isFilled(body.material)) {
-            // Если пришло название материала — ищем по имени
-            const material = await tx.material.findUnique({ where: { name: body.material.trim() } });
-            if (!material) {
-              throw createError({ statusCode: 404, statusMessage: `Материал "${body.material}" не найден` });
-            }
-            receiptUpdateData.materialId = material.id;
-          }
 
-          if (body.receiptDate !== undefined) {
-            receiptUpdateData.receiptDate = body.receiptDate ? parseDate(body.receiptDate) : null;
-          }
-          if (body.qualDocDate !== undefined) {
-            receiptUpdateData.qualDate = body.qualDocDate ? parseDate(body.qualDocDate) : null;
-          }
-          if (body.qualDocNumber !== undefined) {
-            receiptUpdateData.qualDocNumber = body.qualDocNumber?.trim() || null;
-          }
-          if (body.receiptNote !== undefined) {
-            receiptUpdateData.note = body.receiptNote || null;
-          }
-          if (fileDbPaths.qualDoc) {
-            receiptUpdateData.qualDocPath = fileDbPaths.qualDoc;
-          }
 
-          if (Object.keys(receiptUpdateData).length > 0) {
-            receiptUpdateData.editorEmail = editorEmail;
-            receiptUpdateData.editedAt = new Date();
+            const protocolWasCreated =
+              intent.createsNewProtocol
 
-            const updatedReceipt = await tx.receiptMaterial.update({
-              where: { id: receiptMaterialId },
-              data: receiptUpdateData,
-            });
-
-            const changes =
-              computeAuditDelta(
-                beforeReceiptMaterial as any,
-                updatedReceipt as any,
-              );
 
             if (
-              Object.keys(changes).length > 0
+              current.testProtocol &&
+              payload.testProtocol &&
+              intent.protocolChanged
             ) {
-              auditEntries.push({
+              updatedProtocol =
+                await tx.testProtocol
+                  .update({
+                    where: {
+                      id:
+                        current
+                          .testProtocol
+                          .id,
+                    },
+
+                    data: {
+                      protocolNumber:
+                        payload
+                          .testProtocol
+                          .protocolNumber ||
+                        null,
+
+                      protocolDate:
+                        dates.protocolDate,
+
+                      testResult:
+                        payload
+                          .testProtocol
+                          .testResult ||
+                        null,
+
+                      note:
+                        payload
+                          .testProtocol
+                          .note ||
+                        null,
+
+                      editorEmail:
+                        actorEmail,
+
+                      ...(protocolDocumentPath
+                        ? {
+                            protocolDocumentPath,
+                          }
+                        : {}),
+                    },
+                  })
+
+            } else if (
+              intent.createsNewProtocol &&
+              payload.testProtocol
+            ) {
+              updatedProtocol =
+                await tx.testProtocol
+                  .create({
+                    data: {
+                      protocolNumber:
+                        payload
+                          .testProtocol
+                          .protocolNumber,
+
+                      protocolDate:
+                        dates.protocolDate,
+
+                      protocolDocumentPath:
+                        protocolDocumentPath,
+
+                      testResult:
+                        payload
+                          .testProtocol
+                          .testResult,
+
+                      note:
+                        payload
+                          .testProtocol
+                          .note ||
+                        null,
+
+                      authorEmail:
+                        actorEmail,
+
+                      editorEmail:
+                        actorEmail,
+                    },
+                  })
+            }
+
+
+            /**
+             * SamplingTest обновляем один раз:
+             * - если изменились первые два раздела;
+             * - либо если нужно привязать только что созданный протокол.
+             */
+            if (
+              intent.baseChanged ||
+              (
+                protocolWasCreated &&
+                updatedProtocol
+              )
+            ) {
+              const data:
+                Record<
+                  string,
+                  unknown
+                > = {}
+
+
+              if (
+                intent.baseChanged
+              ) {
+                Object.assign(
+                  data,
+                  {
+                    samplingActNumber:
+                      payload
+                        .samplingTest
+                        .samplingActNumber,
+
+                    samplingDate:
+                      dates.samplingDate,
+
+                    note:
+                      payload
+                        .samplingTest
+                        .note ||
+                      null,
+
+                    editorEmail:
+                      actorEmail,
+
+                    plp: {
+                      connect: {
+                        id:
+                          plp.id,
+                      },
+                    },
+
+                    inspector: {
+                      connect: {
+                        id:
+                          inspector.id,
+                      },
+                    },
+
+                    testLocation: {
+                      connect: {
+                        id:
+                          testLocation.id,
+                      },
+                    },
+
+                    ...(samplingDocumentPath
+                      ? {
+                          samplingDocumentPath,
+                        }
+                      : {}),
+                  },
+                )
+              }
+
+
+              if (
+                protocolWasCreated &&
+                updatedProtocol
+              ) {
+                Object.assign(
+                  data,
+                  {
+                    testProtocol: {
+                      connect: {
+                        id:
+                          updatedProtocol.id,
+                      },
+                    },
+                  },
+                )
+              }
+
+
+              updatedSamplingTest =
+                await tx.samplingTest
+                  .update({
+                    where: {
+                      id:
+                        current.id,
+                    },
+
+                    data:
+                      data as any,
+                  })
+            }
+
+
+            const samplingChanges =
+              computeAuditDelta(
+                samplingAuditShape(
+                  current,
+                ),
+
+                samplingAuditShape(
+                  updatedSamplingTest,
+                ),
+              )
+
+
+            const receiptChanges =
+              computeAuditDelta(
+                receiptAuditShape(
+                  current
+                    .receiptMaterial,
+                ),
+
+                receiptAuditShape(
+                  updatedReceipt,
+                ),
+              )
+
+
+            if (
+              Object.keys(
+                samplingChanges,
+              ).length > 0
+            ) {
+              await auditDataChange({
+                event,
+
+                db:
+                  tx,
+
+                resourceKey:
+                  RESOURCE_KEY,
+
+                entityType:
+                  'SamplingTest',
+
+                entityId:
+                  current.id,
+
+                action:
+                  'UPDATE',
+
+                note:
+                  baseOverrideUsed
+                    ? 'Изменена запись Реестра входного контроля с административным обходом временной блокировки'
+                    : 'Изменена запись Реестра входного контроля',
+
+                changes:
+                  samplingChanges,
+
+                actorEmail,
+              })
+            }
+
+
+            if (
+              Object.keys(
+                receiptChanges,
+              ).length > 0
+            ) {
+              await auditDataChange({
+                event,
+
+                db:
+                  tx,
+
+                resourceKey:
+                  RESOURCE_KEY,
+
                 entityType:
                   'ReceiptMaterial',
 
                 entityId:
-                  receiptMaterialId,
+                  updatedReceipt.id,
 
                 action:
                   'UPDATE',
 
                 note:
-                  'Изменено поступление материала',
+                  baseOverrideUsed
+                    ? 'Изменено поступление материала с административным обходом временной блокировки'
+                    : 'Изменено поступление материала',
 
-                changes,
-              });
+                changes:
+                  receiptChanges,
+
+                actorEmail,
+              })
             }
-          }
-        }
-        // ==========================================
-        // ЕСЛИ У АКТА НЕТ ПОСТУПЛЕНИЯ — СОЗДАЁМ НОВОЕ
-        // НО ТОЛЬКО ЕСЛИ ЕСТЬ РЕАЛЬНЫЕ ДАННЫЕ
-        // ==========================================
-        else if (hasReceiptData) {
-          // Находим materialId
-          let materialId: number | null = null;
 
-          if (isFilled(body.materialId)) {
-            materialId = parseInt(body.materialId);
-            if (isNaN(materialId) || materialId <= 0) {
-              throw createError({ statusCode: 400, statusMessage: 'Некорректный ID материала' });
-            }
-          } else if (isFilled(body.material)) {
-            const material = await tx.material.findUnique({ where: { name: body.material.trim() } });
-            if (!material) {
-              throw createError({ statusCode: 404, statusMessage: `Материал "${body.material}" не найден` });
-            }
-            materialId = material.id;
-          }
-
-          // Материал обязателен для создания поступления
-          if (!materialId) {
-            throw createError({
-              statusCode: 400,
-              statusMessage: 'Для создания поступления материала нужно указать materialId или material',
-            });
-          }
-
-          const createdReceipt = await tx.receiptMaterial.create({
-            data: {
-              receiptDate: body.receiptDate ? parseDate(body.receiptDate) : null,
-              qualDate: body.qualDate ? parseDate(body.qualDate) : null,
-              qualDocNumber: body.qualDocNumber || null,
-              qualDocPath: fileDbPaths.qualDoc || null,
-              note: body.receiptNote || null,
-              materialId,
-              authorEmail: editorEmail,
-              createdAt: new Date(),
-            },
-          });
-
-          receiptMaterialId = createdReceipt.id;
-
-          auditEntries.push({
-            entityType:
-              'ReceiptMaterial',
-
-            entityId:
-              createdReceipt.id,
-
-            action:
-              'CREATE',
-
-            note:
-              `Создано поступление материала ` +
-              `(акт № ${beforeSamplingTest.sActNumber})`,
-
-            changes:
-              buildCreateAuditDelta(
-                createdReceipt as
-                  unknown as
-                  Record<string, unknown>,
-
-                [
-                  'materialId',
-                  'receiptDate',
-                  'qualDate',
-                  'qualDocNumber',
-                ],
-              ),
-          });
-        }
-
-        // Привязываем поступление к акту (если оно было создано)
-        if (receiptMaterialId) {
-          relationUpdates.receiptMaterialId = receiptMaterialId;
-        }
-      }
-
-      // ----- 3.3 Обновление TestProtocol -----
-      // Определяем, есть ли РЕАЛЬНЫЕ данные для создания протокола
-      const hasProtocolData =
-        isFilled(body.testProtocolNumber) ||
-        isFilled(body.testProtocolDate) ||
-        isFilled(body.testResult) ||
-        isFilled(body.protocolNote) ||
-        !!fileDbPaths.protocolDoc;
-
-      // Проверяем, есть ли изменения в существующем протоколе
-      const hasProtocolChanges =
-        isFilled(body.testProtocolNumber) ||
-        isFilled(body.testProtocolDate) ||
-        isFilled(body.testResult) ||
-        isFilled(body.protocolNote) ||
-        !!fileDbPaths.protocolDoc;
-
-      let testProtocolId = beforeSamplingTest.testProtocolId;
-
-      if (hasProtocolChanges) {
-        // ==========================================
-        // ЕСЛИ У АКТА УЖЕ ЕСТЬ ПРОТОКОЛ — ОБНОВЛЯЕМ
-        // ==========================================
-        if (testProtocolId) {
-          const protocolUpdateData: any = {};
-
-          if (body.testProtocolNumber !== undefined) {
-            protocolUpdateData.protocolNumber = body.testProtocolNumber?.trim() || null;
-          }
-          if (body.testProtocolDate !== undefined) {
-            protocolUpdateData.protocolDate = body.testProtocolDate ? parseDate(body.testProtocolDate) : null;
-          }
-          if (body.testResult !== undefined) {
-            protocolUpdateData.testResult = body.testResult || null;
-          }
-          if (body.protocolNote !== undefined) {
-            protocolUpdateData.note = body.protocolNote || null;
-          }
-          if (fileDbPaths.protocolDoc) {
-            protocolUpdateData.protocolDocPath = fileDbPaths.protocolDoc;
-          }
-
-          if (Object.keys(protocolUpdateData).length > 0) {
-            protocolUpdateData.editorEmail = editorEmail;
-            protocolUpdateData.editedAt = new Date();
-
-            const updatedProtocol = await tx.testProtocol.update({
-              where: { id: testProtocolId },
-              data: protocolUpdateData,
-            });
-
-            const changes =
-              computeAuditDelta(
-                beforeTestProtocol as any,
-                updatedProtocol as any,
-              );
 
             if (
-              Object.keys(changes).length > 0
+              protocolWasCreated &&
+              updatedProtocol
             ) {
-              auditEntries.push({
+              await auditDataChange({
+                event,
+
+                db:
+                  tx,
+
+                resourceKey:
+                  RESOURCE_KEY,
+
                 entityType:
                   'TestProtocol',
 
                 entityId:
-                  testProtocolId,
+                  updatedProtocol.id,
 
                 action:
-                  'UPDATE',
+                  'CREATE',
 
                 note:
-                  'Изменён протокол испытаний',
+                  'Создан протокол испытаний',
 
-                changes,
-              });
+                changes:
+                  buildCreateAuditDelta(
+                    protocolAuditShape(
+                      updatedProtocol,
+                    ),
+
+                    [
+                      'protocolNumber',
+                      'protocolDate',
+                      'protocolDocumentPath',
+                      'testResult',
+                      'note',
+                    ],
+                  ),
+
+                actorEmail,
+              })
+
+            } else if (
+              current.testProtocol &&
+              updatedProtocol &&
+              intent.protocolChanged
+            ) {
+              const protocolChanges =
+                computeAuditDelta(
+                  protocolAuditShape(
+                    current
+                      .testProtocol,
+                  ),
+
+                  protocolAuditShape(
+                    updatedProtocol,
+                  ),
+                )
+
+
+              if (
+                Object.keys(
+                  protocolChanges,
+                ).length > 0
+              ) {
+                await auditDataChange({
+                  event,
+
+                  db:
+                    tx,
+
+                  resourceKey:
+                    RESOURCE_KEY,
+
+                  entityType:
+                    'TestProtocol',
+
+                  entityId:
+                    updatedProtocol.id,
+
+                  action:
+                    'UPDATE',
+
+                  note:
+                    protocolOverrideUsed
+                      ? 'Изменён протокол испытаний с административным обходом временной блокировки'
+                      : 'Изменён протокол испытаний',
+
+                  changes:
+                    protocolChanges,
+
+                  actorEmail,
+                })
+              }
             }
-          }
-        }
-        // ==========================================
-        // ЕСЛИ У АКТА НЕТ ПРОТОКОЛА — СОЗДАЁМ НОВЫЙ
-        // НО ТОЛЬКО ЕСЛИ ЕСТЬ РЕАЛЬНЫЕ ДАННЫЕ
-        // ==========================================
-        else if (hasProtocolData) {
-          // Для создания протокола нужно поступление материала
-          if (!receiptMaterialId) {
-            throw createError({
-              statusCode: 400,
-              statusMessage: 'Для создания протокола необходимо сначала создать поступление материала',
-            });
-          }
 
-          const createdProtocol = await tx.testProtocol.create({
-            data: {
-              protocolNumber: body.protocolNumber?.trim() || `Без номера-${Date.now()}`,
-              protocolDate: body.protocolDate ? parseDate(body.protocolDate) : null,
-              protocolDocPath: fileDbPaths.protocolDoc || null,
-              testResult: body.testResult || 'Не указан',
-              note: body.protocolNote || null,
-              receiptMaterialId,
-              authorEmail: editorEmail,
-              createdAt: new Date(),
-            },
-          });
 
-          testProtocolId = createdProtocol.id;
+            return await tx.samplingTest
+              .findUnique({
+                where: {
+                  id:
+                    current.id,
+                },
 
-          auditEntries.push({
-            entityType:
-              'TestProtocol',
+                include: {
+                  plp: true,
+                  inspector: true,
 
-            entityId:
-              createdProtocol.id,
+                  testLocation: {
+                    include: {
+                      testObject:
+                        true,
+                    },
+                  },
 
-            action:
-              'CREATE',
+                  receiptMaterial: {
+                    include: {
+                      material:
+                        true,
 
-            note:
-              `Создан протокол № ${createdProtocol.protocolNumber} ` +
-              `(акт № ${beforeSamplingTest.sActNumber})`,
+                      manufacturer:
+                        true,
+                    },
+                  },
 
-            changes:
-              buildCreateAuditDelta(
-                createdProtocol as
-                  unknown as
-                  Record<string, unknown>,
+                  testProtocol:
+                    true,
+                },
+              })
+          },
 
-                [
-                  'protocolNumber',
-                  'protocolDate',
-                  'testResult',
-                  'receiptMaterialId',
-                ],
-              ),
-          });
-        }
+          {
+            maxWait:
+              5_000,
 
-        // Привязываем протокол к акту (если он был создан)
-        if (testProtocolId) {
-          relationUpdates.testProtocolId = testProtocolId;
-        }
+            timeout:
+              15_000,
+          },
+        )
+
+
+      /**
+       * handleFileUpload может создать каталог даже без файлов.
+       */
+      if (!hasAnyUploadedFile) {
+        cleanupDirectory(
+          uploadDirectory,
+        )
+
+        uploadDirectory = null
       }
 
-      // ----- 3.4 Обновление самой SamplingTest -----
-      if (body.sDate) {
-        updateSamplingTestData.sActDate = parseDate(body.sDate);
-      }
-      if (body.sNote !== undefined) {
-        updateSamplingTestData.note = body.sNote || null;
-      }
-      if (fileDbPaths.sDoc) {
-        updateSamplingTestData.sDocPath = fileDbPaths.sDoc;
-      }
 
-      const finalData = {
-        ...updateSamplingTestData,
-        ...relationUpdates,
-        editorEmail,
-        editedAt: new Date(),
-      };
-      // console.log('finalData =======> ', finalData)
-
-      const updatedSamplingTest = await tx.samplingTest.update({
-        where: { id },
-        data: finalData,
-      });
-
-      // ----- 3.5 Логирование изменений SamplingTest -----
-      const samplingChanges =
-        computeAuditDelta(
-          beforeSamplingTest as any,
-          updatedSamplingTest as any,
-        );
-
-      if (
-        Object.keys(samplingChanges)
-          .length > 0
-      ) {
-        auditEntries.push({
-          entityType:
-            'SamplingTest',
-
-          entityId:
-            id,
-
-          action:
-            'UPDATE',
-
-          note:
-            'Изменён акт отбора',
-
-          changes:
-            samplingChanges,
-        });
-      }
-
-      // ----- 3.6 Запись всех audit-логов внутри транзакции -----
-      for (
-        const entry
-        of auditEntries
-      ) {
-        await auditDataChange({
-          event,
-
-          db:
-            tx,
-
-          resourceKey:
-            'lab.sampling-tests',
-
-          entityType:
-            entry.entityType,
-
-          entityId:
-            entry.entityId,
-
-          action:
-            entry.action,
-
-          note:
-            entry.note,
-
-          changes:
-            entry.changes,
-
-          actorEmail:
-            editorEmail,
-        });
-      }
-
-      // ----- Возвращаем результат транзакции -----
       return {
-        updatedSamplingTest,
-        samplingChanges,
-        auditEntries,
-      };
-    }, {
-      // Таймаут транзакции — 30 секунд (на случай больших обновлений)
-      timeout: 30000,
-    });
+        success: true,
 
-    // ========================================
-    // 4. ОТВЕТ
-    // ========================================
-    return {
-      success: true,
-      data: result.updatedSamplingTest,
-      message: 'Акт отбора успешно обновлён',
-      meta: {
-        changedFields: Object.keys( result.samplingChanges, ),
-        auditEntriesCount: result.auditEntries.length,
-        auditEntries: result.auditEntries.map(e => ({
-          entityType: e.entityType,
-          action: e.action,
-          note: e.note,
-        })),
-      },
-    };
+        data:
+          result,
 
-  } catch (error: any) {
-    console.error('Ошибка при обновлении акта отбора:', error);
+        message:
+          'Запись успешно обновлена',
+      }
 
-    if (error.statusCode) throw error;
+    } catch (error: any) {
+      cleanupDirectory(
+        uploadDirectory,
+      )
 
-    throw createError({
-      statusCode: 500,
-      statusMessage: error.message || 'Ошибка при обновлении акта отбора',
-    });
-  }
-});
+
+      if (error?.statusCode) {
+        throw error
+      }
+
+
+      console.error(
+        `[incoming-control PUT ${id}] Ошибка:`,
+        error,
+      )
+
+
+      throw createError({
+        statusCode: 500,
+
+        statusMessage:
+          'Ошибка при обновлении записи Реестра',
+
+        data:
+          error instanceof Error
+            ? error.message
+            : undefined,
+      })
+    }
+  },
+)

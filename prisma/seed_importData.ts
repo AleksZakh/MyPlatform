@@ -1,11 +1,20 @@
-// prisma/seed.ts
+import 'dotenv/config';
+
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { PrismaClient } from '@prisma/client';
+import { parse } from 'csv-parse/sync';
 
 const prisma = new PrismaClient();
-const CHUNK_SIZE = 1000;
+
+const IMPORT_SOURCE = 'Reestr_1509.csv';
+const IMPORT_AUTHOR = 'legacy-import@system';
+const IMPORT_CHUNK_SIZE = 4;
 
 // ============================================
 // СЛОВАРЬ НОРМАЛИЗАЦИИ ПРОИЗВОДИТЕЛЕЙ
+// Сохранён из прежнего seed_importData.ts
 // ============================================
 const manufacturerNormalization: Record<string, string> = {
   // Группа: ООО СУ-910
@@ -18,30 +27,30 @@ const manufacturerNormalization: Record<string, string> = {
   'ООО СУ 910 ': 'ООО СУ-910',
   'ООО Строительное управление №910': 'ООО СУ-910',
   'Строительное управление №910': 'ООО СУ-910',
-  
+
   // Группа: ООО СУ-926
   'ООО СУ№926': 'ООО СУ-926',
   'ООО СУ №926': 'ООО СУ-926',
   'ООО "СУ№926"': 'ООО СУ-926',
   'ООО "СУ №926"': 'ООО СУ-926',
   'ООО СУ-926': 'ООО СУ-926',
-  
+
   // Группа: ООО Трансстроймеханизация
   'ООО НПС//Трансстроймеханизация': 'ООО Трансстроймеханизация',
   'ООО Трансстроймеханизация': 'ООО Трансстроймеханизация',
   'ООО "Трансстроймеханизация"': 'ООО Трансстроймеханизация',
-  
+
   // Группа: АО Донаэродорстрой
   'АО Донаэродорстрой': 'АО Донаэродорстрой',
   'АО "Донаэродорстрой"': 'АО Донаэродорстрой',
   'АО ДОНАЭРОДОРСТРОЙ': 'АО Донаэродорстрой',
-  
+
   // Группа: ООО СКАвтодор
   'ООО СКАвтодор': 'ООО СК-Автодор',
   'ООО СК-Автодор': 'ООО СК-Автодор',
   'ООО "СКАвтодор"': 'ООО СК-Автодор',
   'ООО "СК-Автодор"': 'ООО СК-Автодор',
-  
+
   // Группа: ООО СУ905
   'ООО СУ905': 'ООО СУ-905',
   'ООО СУ 905': 'ООО СУ-905',
@@ -49,22 +58,22 @@ const manufacturerNormalization: Record<string, string> = {
   'ООО "СУ905"': 'ООО СУ-905',
   'ООО "СУ 905"': 'ООО СУ-905',
   'ООО "СУ-905"': 'ООО СУ-905',
-  
+
   // Группа: ООО ТЕХАЛЬЯНС
   'ООО ТЕХАЛЬЯНС': 'ООО ТехАльянс',
   'ООО ТехАльянс': 'ООО ТехАльянс',
   'ООО "ТЕХАЛЬЯНС"': 'ООО ТехАльянс',
-  
+
   // Группа: ООО А-МОСТ
   'ООО А-МОСТ': 'ООО А-Мост',
   'ООО "А-МОСТ"': 'ООО А-Мост',
   'ООО А-Мост': 'ООО А-Мост',
-  
+
   // Группа: ООО Динскойавтодор
   'ООО ДИК/ ООО Динскойавтодор': 'ООО Динскойавтодор',
   'ООО Динскойавтодор': 'ООО Динскойавтодор',
   'ООО "Динскойавтодор"': 'ООО Динскойавтодор',
-  
+
   // Дополнительные производители из CSV
   'ООО ТехСтройКонтракт': 'ООО ТехСтройКонтракт',
   'ООО ДРСУ Магистраль': 'ООО ДРСУ Магистраль',
@@ -82,428 +91,577 @@ const manufacturerNormalization: Record<string, string> = {
   'ООО ДРСУ ?МАГИСТРАЛЬ?': 'ООО ДРСУ Магистраль',
 };
 
-function normalizeManufacturer(name: string): string {
-  if (!name) return 'Не указан';
-  const trimmed = name.trim().replace(/\s+/g, ' ');
+type CsvRow = Record<string, string | undefined>;
+
+type PreparedRow = {
+  rowNumber: number;
+  plpName: string;
+  objectName: string;
+  samplingActNumber: string;
+  samplingDate: Date;
+  locationName: string;
+  sampleProviderName: string;
+  receiptDate: Date;
+  materialName: string;
+  manufacturerName: string | null;
+  protocolNumber: string | null;
+  protocolDate: Date | null;
+  testResult: string | null;
+  note: string | null;
+};
+
+function normalizeSpaces(value: string): string {
+  return value.trim().replace(/\s+/g, ' ');
+}
+
+function optionalText(value: string | null | undefined): string | null {
+  if (!value) return null;
+
+  const normalized = normalizeSpaces(value);
+
+  if (
+    normalized === '' ||
+    normalized === '-' ||
+    normalized === '—' ||
+    normalized === '–' ||
+    normalized.toLowerCase() === 'null' ||
+    normalized.toLowerCase() === 'undefined'
+  ) {
+    return null;
+  }
+
+  return normalized;
+}
+
+function requiredText(
+  value: string | null | undefined,
+  field: string,
+  rowNumber: number,
+): string {
+  const normalized = optionalText(value);
+
+  if (!normalized) {
+    throw new Error(`Строка ${rowNumber}: обязательное поле "${field}" пустое`);
+  }
+
+  return normalized;
+}
+
+function normalizeManufacturer(name: string | null): string | null {
+  if (!name) return null;
+
+  const trimmed = normalizeSpaces(name);
   return manufacturerNormalization[trimmed] || trimmed;
 }
 
-// ============================================
-// ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ДЛЯ ОЧИСТКИ НОМЕРА ДОКУМЕНТА
-// ============================================
-function cleanDocNumber(value: string | null | undefined): string {
-  if (!value) return '';
-  const trimmed = value.trim();
-  // Если значение "-", "—", "–" или пустое - возвращаем пустую строку
-  if (trimmed === '-' || trimmed === '—' || trimmed === '–' || trimmed === '') {
-    return '';
+function parseLegacyDate(
+  value: string | null | undefined,
+  field: string,
+  rowNumber: number,
+  required = false,
+): Date | null {
+  const normalized = optionalText(value);
+
+  if (!normalized) {
+    if (required) {
+      throw new Error(`Строка ${rowNumber}: обязательная дата "${field}" отсутствует`);
+    }
+    return null;
   }
-  return trimmed;
+
+  const match = normalized.match(/^(\d{1,2})[.](\d{1,2})[.](\d{4})$/);
+
+  if (!match) {
+    throw new Error(
+      `Строка ${rowNumber}: дата "${field}" имеет неизвестный формат: ${normalized}`,
+    );
+  }
+
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]);
+
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    throw new Error(
+      `Строка ${rowNumber}: некорректная дата "${field}": ${normalized}`,
+    );
+  }
+
+  return date;
 }
 
-// ============================================
-// ОСНОВНАЯ ФУНКЦИЯ МИГРАЦИИ
-// ============================================
+function prepareRow(row: CsvRow, index: number): PreparedRow {
+  // +2: первая строка CSV — заголовок, index начинается с 0.
+  const rowNumber = index + 2;
+
+  return {
+    rowNumber,
+    plpName: requiredText(row['ПЛП'], 'ПЛП', rowNumber),
+    objectName: requiredText(
+      row['Наименование объект'],
+      'Наименование объект',
+      rowNumber,
+    ),
+    samplingActNumber: requiredText(
+      row['Номер акта отбора проб'],
+      'Номер акта отбора проб',
+      rowNumber,
+    ),
+    samplingDate: parseLegacyDate(
+      row['Дата отбора проб'],
+      'Дата отбора проб',
+      rowNumber,
+      true,
+    )!,
+    locationName: requiredText(
+      row['Место отбора проб'],
+      'Место отбора проб',
+      rowNumber,
+    ),
+    sampleProviderName: requiredText(
+      row['Лицо, предоставившее пробу'],
+      'Лицо, предоставившее пробу',
+      rowNumber,
+    ),
+    receiptDate: parseLegacyDate(
+      row['Дата поступления материала'],
+      'Дата поступления материала',
+      rowNumber,
+      true,
+    )!,
+    materialName: requiredText(
+      row['Наименование материала'],
+      'Наименование материала',
+      rowNumber,
+    ),
+    manufacturerName: normalizeManufacturer(
+      optionalText(row['Предприятие-изготовитель']),
+    ),
+    protocolNumber: optionalText(row['Номер протокола']),
+    protocolDate: parseLegacyDate(
+      row['Дата протокола'],
+      'Дата протокола',
+      rowNumber,
+      false,
+    ),
+    testResult: optionalText(row['Результат испытаний']),
+    note: optionalText(row['Примечание']),
+  };
+}
+
+async function resetLabData() {
+  console.log('🧹 Очистка лабораторного контура...');
+
+  await prisma.$executeRawUnsafe(`
+    TRUNCATE TABLE
+      "sampling_tests",
+      "test_protocols",
+      "receipt_materials",
+      "test_locations",
+      "test_objects",
+      "materials",
+      "manufacturers",
+      "inspectors",
+      "plps"
+    RESTART IDENTITY CASCADE;
+  `);
+
+  console.log('✅ Лабораторные таблицы очищены\n');
+}
+
 async function main() {
-  console.log('🚀 СТАРТ МИГРАЦИИ В НОВУЮ СТРУКТУРУ БД');
-  console.log('📋 ИСПРАВЛЕННАЯ ВЕРСИЯ С ПРАВИЛЬНЫМ МАППИНГОМ ПОЛЕЙ\n');
+  const csvPath = resolve(process.cwd(), 'temp', IMPORT_SOURCE);
 
-  let skip = 0;
-  let hasMore = true;
-  let totalProcessed = 0;
-  let skippedRecords = 0;
-  let receiptsCreated = 0;
-  let protocolsCreated = 0;
-
-  // Кэш-карты для СПРАВОЧНИКОВ
-  const plpCache = new Map<string, number>();
-  const inspectorCache = new Map<string, number>();
-  const manufacturerCache = new Map<string, number>();
-  const materialCache = new Map<string, number>();
-  const objectCache = new Map<string, number>();
-  const locationCache = new Map<string, Map<string, number>>();
-
-  console.log('📋 МАППИНГ ПОЛЕЙ:');
-  console.log('   receiptDate ← materialReceiptDate (дата поступления материала)');
-  console.log('   qualDate ← qualDocDate (дата документа о качестве)');
-  console.log('   qualDocNumber ← qualDocNumber (очистка от "-")');
-  console.log('   qualDocPath ← qualDocPath или qualityDocument');
-  console.log('   note ← формируется из объекта, места и акта\n');
-
-  while (hasMore) {
-    const records = await prisma.aEng.findMany({
-      skip: skip,
-      take: CHUNK_SIZE,
-      orderBy: { id: 'asc' },
-    });
-
-    if (records.length === 0) {
-      hasMore = false;
-      break;
-    }
-
-    console.log(`📦 Обработка порции... Индекс: ${skip}, Записей: ${records.length}`);
-
-    for (const record of records) {
-      try {
-        // ========================================
-        // 1. ПЛП (справочник)
-        // ========================================
-        const plpName = record.plp?.trim() || 'Не указан';
-        let plpId = plpCache.get(plpName);
-        if (!plpId) {
-          const plp = await prisma.plp.upsert({
-            where: { name: plpName },
-            update: {},
-            create: { 
-              name: plpName, 
-              note: 'Создано при миграции',
-              authorEmail: record.authorEmail || 'migration@system',
-              createdAt: record.createdAt || new Date(),
-            },
-          });
-          plpId = plp.id;
-          plpCache.set(plpName, plpId);
-        }
-
-        // ========================================
-        // 2. Инспектор (справочник)
-        // ========================================
-        const inspectorName = record.personProvidedSample?.trim() || 'Не указан';
-        let inspectorId = inspectorCache.get(inspectorName);
-        if (!inspectorId) {
-          const inspector = await prisma.inspector.upsert({
-            where: { name: inspectorName },
-            update: {},
-            create: { 
-              name: inspectorName, 
-              note: 'Импортирован из AEng',
-              authorEmail: record.authorEmail || 'migration@system',
-              createdAt: record.createdAt || new Date(),
-            },
-          });
-          inspectorId = inspector.id;
-          inspectorCache.set(inspectorName, inspectorId);
-        }
-
-        // ========================================
-        // 3. Производитель (справочник)
-        // ========================================
-        let manufacturerId: number | null = null;
-        if (record.manufacturer?.trim()) {
-          const normalizedName = normalizeManufacturer(record.manufacturer.trim());
-          const manufacturer = await prisma.manufacturer.upsert({
-            where: { name: normalizedName },
-            update: {},
-            create: { 
-              name: normalizedName,
-              note: `Исходное название: "${record.manufacturer.trim()}"`,
-              authorEmail: record.authorEmail || 'migration@system',
-              createdAt: record.createdAt || new Date(),
-            },
-          });
-          manufacturerId = manufacturer.id;
-        }
-
-        // ========================================
-        // 4. Материал (справочник)
-        // ========================================
-        const materialName = record.materialName?.trim() || 'Неизвестный материал';
-        let materialId = materialCache.get(materialName);
-        if (!materialId) {
-          const material = await prisma.material.upsert({
-            where: { name: materialName },
-            update: {
-              manufacturerId: manufacturerId || undefined,
-            },
-            create: {
-              name: materialName,
-              manufacturerId: manufacturerId,
-              note: `Из AEng`,
-              authorEmail: record.authorEmail || 'migration@system',
-              createdAt: record.createdAt || new Date(),
-            },
-          });
-          materialId = material.id;
-          materialCache.set(materialName, materialId);
-        }
-
-        // ========================================
-        // 5. Объект испытаний (справочник)
-        // ========================================
-        const objectName = record.objectName?.trim() || 'Неизвестный объект';
-        let objectId = objectCache.get(objectName);
-        if (!objectId) {
-          const object = await prisma.testObject.upsert({
-            where: { name: objectName },
-            update: {},
-            create: { 
-              name: objectName, 
-              note: 'Создан при миграции из AEng',
-              authorEmail: record.authorEmail || 'migration@system',
-              createdAt: record.createdAt || new Date(),
-            },
-          });
-          objectId = object.id;
-          objectCache.set(objectName, objectId);
-        }
-
-        // ========================================
-        // 6. Место отбора (справочник)
-        // ========================================
-        const locationName = record.samplingPlace?.trim() || 'Неизвестное место';
-        
-        if (!locationCache.has(objectName)) {
-          locationCache.set(objectName, new Map());
-        }
-        const locationMap = locationCache.get(objectName)!;
-        
-        let locationId = locationMap.get(locationName);
-        if (!locationId) {
-          const location = await prisma.testLocation.upsert({
-            where: {
-              testObjectId_name: {
-                testObjectId: objectId,
-                name: locationName,
-              }
-            },
-            update: {},
-            create: {
-              name: locationName,
-              testObjectId: objectId,
-              note: `Место отбора на объекте "${objectName}"`,
-              authorEmail: record.authorEmail || 'migration@system',
-              createdAt: record.createdAt || new Date(),
-            },
-          });
-          locationId = location.id;
-          locationMap.set(locationName, locationId);
-        }
-
-        // ========================================
-        // 7. ПОСТУПЛЕНИЕ МАТЕРИАЛА
-        // ========================================
-        const cleanQualDocPath = record.qualDocPath || record.qualityDocument || null;
-        const cleanQualDocNumber = cleanDocNumber(record.qualDocNumber);
-
-        // Формируем примечание с информацией об объекте, месте и акте
-        const receiptNote = `Объект: ${objectName}, Место: ${locationName}, Акт: ${record.samplingActNumber || 'без номера'}`;
-
-        const receipt = await prisma.receiptMaterial.create({
-          data: {
-            // ← ДАТА ПОСТУПЛЕНИЯ МАТЕРИАЛА (из materialReceiptDate)
-            receiptDate: record.materialReceiptDate || null,
-            
-            // ← ДАТА ДОКУМЕНТА О КАЧЕСТВЕ (из qualDocDate)
-            qualDate: record.qualDocDate || null,
-            
-            // ← Номер документа (очистка от "-")
-            qualDocNumber: cleanQualDocNumber,
-            
-            // ← Путь к документу
-            qualDocPath: cleanQualDocPath,
-            
-            // ← Примечание с объектом и местом
-            note: receiptNote,
-            
-            materialId: materialId,
-            authorEmail: record.authorEmail || 'migration@system',
-            createdAt: record.createdAt || new Date(),
-            editorEmail: record.editorEmail,
-            editedAt: record.editedAt,
-          },
-        });
-        receiptsCreated++;
-
-        // ========================================
-        // 8. ПРОТОКОЛ ИСПЫТАНИЙ (ЕСЛИ ЕСТЬ ДАННЫЕ)
-        // ========================================
-        let protocolId: number | null = null;
-        const hasProtocolData = record.protocolNumber?.trim() || 
-                               record.protocolDate || 
-                               record.protocolDocPath || 
-                               record.testDocPath ||
-                               record.testResult?.trim();
-
-        if (hasProtocolData) {
-          const cleanProtocolDocPath = record.protocolDocPath || record.testDocPath || null;
-          
-          const protocol = await prisma.testProtocol.create({
-            data: {
-              protocolNumber: record.protocolNumber || `Без номера-${record.id}`,
-              protocolDate: record.protocolDate,
-              protocolDocPath: cleanProtocolDocPath,
-              testResult: record.testResult || 'Не указан',
-              note: `Из AEng ID: ${record.id}`,
-              receiptMaterialId: receipt.id,
-              authorEmail: record.authorEmail || 'migration@system',
-              createdAt: record.createdAt || new Date(),
-              editorEmail: record.editorEmail,
-              editedAt: record.editedAt,
-            },
-          });
-          protocolId = protocol.id;
-          protocolsCreated++;
-        }
-
-        // ========================================
-        // 9. ГЛАВНАЯ ТАБЛИЦА - АКТ ОТБОРА ПРОБ
-        // ========================================
-        await prisma.samplingTest.create({
-          data: {
-            sActNumber: record.samplingActNumber || `Без номера-${record.id}`,
-            sActDate: record.samplingDate,
-            sDocPath: record.sDocPath,
-            note: record.note || `Из AEng ID: ${record.id}`,
-            plpId: plpId,
-            inspectorId: inspectorId,
-            testLocationId: locationId,
-            testProtocolId: protocolId,
-            receiptMaterialId: receipt.id,
-            authorEmail: record.authorEmail || 'migration@system',
-            createdAt: record.createdAt || new Date(),
-            editorEmail: record.editorEmail,
-            editedAt: record.editedAt,
-          },
-        });
-
-        totalProcessed++;
-
-        if (totalProcessed % 100 === 0) {
-          console.log(`✅ Обработано записей: ${totalProcessed}`);
-        }
-
-      } catch (error) {
-        console.error(`❌ Ошибка при обработке записи ID: ${record.id}`, error);
-        console.error('   Данные записи:', {
-          materialName: record.materialName,
-          materialReceiptDate: record.materialReceiptDate,
-          qualDocDate: record.qualDocDate,
-          qualDocNumber: record.qualDocNumber,
-          qualDocPath: record.qualDocPath,
-        });
-        skippedRecords++;
-      }
-    }
-
-    console.log(`📊 Прогресс: ${totalProcessed} записей, пропущено: ${skippedRecords}`);
-    console.log(`   📥 Создано поступлений: ${receiptsCreated}`);
-    console.log(`   📊 Создано протоколов: ${protocolsCreated}`);
-    skip += CHUNK_SIZE;
+  if (!existsSync(csvPath)) {
+    throw new Error(`CSV-файл не найден: ${csvPath}`);
   }
 
-  // ===== ИТОГОВАЯ СТАТИСТИКА =====
-  console.log('\n🎉 МИГРАЦИЯ УСПЕШНО ЗАВЕРШЕНА!');
-  console.log(`📊 ИТОГИ:`);
-  console.log(`   ✅ Успешно перенесено записей: ${totalProcessed}`);
-  console.log(`   ⚠️ Пропущено: ${skippedRecords}`);
-  console.log(`   📥 Создано поступлений: ${receiptsCreated}`);
-  console.log(`   📊 Создано протоколов: ${protocolsCreated}`);
+  const resetRequested = process.argv.includes('--reset');
 
-  const stats = await prisma.$transaction([
-    prisma.plp.count(),
-    prisma.inspector.count(),
-    prisma.manufacturer.count(),
-    prisma.material.count(),
-    prisma.receiptMaterial.count(),
-    prisma.testObject.count(),
-    prisma.testLocation.count(),
-    prisma.testProtocol.count(),
-    prisma.samplingTest.count(),
-  ]);
+  console.log('\n🚀 ИМПОРТ РЕЕСТРА ВХОДНОГО КОНТРОЛЯ');
+  console.log(`Источник: ${csvPath}`);
+  console.log(`businessRulesVersion: 0`);
+  console.log(`Очистка перед импортом: ${resetRequested ? 'ДА' : 'НЕТ'}\n`);
 
-  console.log(`\n📋 СТАТИСТИКА НОВЫХ ТАБЛИЦ:`);
-  console.log(`   🏢 ПЛП: ${stats[0]}`);
-  console.log(`   👤 Инспекторы: ${stats[1]}`);
-  console.log(`   🏭 Производители: ${stats[2]}`);
-  console.log(`   📦 Материалы: ${stats[3]}`);
-  console.log(`   📥 Поступления материалов: ${stats[4]} ← ДОЛЖНО БЫТЬ ${totalProcessed}`);
-  console.log(`   🏗️ Объекты испытаний: ${stats[5]}`);
-  console.log(`   📍 Места отбора: ${stats[6]}`);
-  console.log(`   📊 Протоколы испытаний: ${stats[7]}`);
-  console.log(`   📄 Акты отбора проб (ГЛАВНАЯ): ${stats[8]}`);
+  const csvContent = readFileSync(csvPath, 'utf8');
 
-  // ===== ПРОВЕРКА ЗАПОЛНЕННОСТИ =====
-  console.log(`\n📋 ПРОВЕРКА ЗАПОЛНЕННОСТИ ПОЛЕЙ:`);
-  
-  // Проверка поступлений
-  const receiptStats = await prisma.$queryRaw`
-    SELECT 
-      COUNT(*) as total,
-      COUNT("receiptDate") as has_receipt_date,
-      COUNT("qualDate") as has_qual_date,
-      COUNT("qualDocNumber") as has_number,
-      COUNT("qualDocPath") as has_path,
-      COUNT("note") as has_note
-    FROM receipt_materials
-  `;
-  
-  console.log(`   📥 Поступления материалов:`);
-  console.log(`      📊 Всего: ${Number(receiptStats[0].total)}`);
-  console.log(`      📅 С датой поступления: ${Number(receiptStats[0].has_receipt_date)}`);
-  console.log(`      📅 С датой документа о качестве: ${Number(receiptStats[0].has_qual_date)}`);
-  console.log(`      🔢 С номером документа: ${Number(receiptStats[0].has_number)}`);
-  console.log(`      📄 С путем к документу: ${Number(receiptStats[0].has_path)}`);
-  console.log(`      📝 С примечанием: ${Number(receiptStats[0].has_note)}`);
+  const rawRows = parse(csvContent, {
+    columns: true,
+    delimiter: ';',
+    bom: true,
+    skip_empty_lines: true,
+    relax_column_count: true,
+    trim: false,
+  }) as CsvRow[];
 
-  // Проверка связей
-  const actsWithoutReceipt = await prisma.$queryRaw`
-    SELECT COUNT(*) as count
-    FROM sampling_tests st
-    LEFT JOIN receipt_materials rm ON st."receiptMaterialId" = rm.id
-    WHERE rm.id IS NULL
-  `;
-  
-  console.log(`\n   🔗 Проверка связей:`);
-  console.log(`      📄 Актов без поступлений: ${Number(actsWithoutReceipt[0].count)}`);
+  console.log(`📄 Строк CSV: ${rawRows.length}`);
 
-  // Примеры поступлений с данными
-  const samples = await prisma.receiptMaterial.findMany({
-    take: 5,
-    include: {
-      material: true,
-      samplingTests: {
-        take: 1,
-        include: {
-          plp: true,
-          inspector: true,
-          testLocation: {
-            include: {
-              testObject: true
-            }
-          }
-        }
-      }
-    },
-    orderBy: { id: 'desc' }
+  // Сначала валидируем структурно обязательные поля CSV.
+  // Историческую хронологию по НОВЫМ бизнес-правилам здесь НЕ проверяем.
+  // Строки без обязательных структурных данных (например, без места отбора)
+  // не попадают в Реестр: они сохраняются в отдельный отчёт для ручной правки.
+  const rows: PreparedRow[] = [];
+  const rejectedRows: Array<{
+    rowNumber: number;
+    error: string;
+    row: CsvRow;
+  }> = [];
+
+  rawRows.forEach((row, index) => {
+    try {
+      rows.push(prepareRow(row, index));
+    } catch (error) {
+      rejectedRows.push({
+        rowNumber: index + 2,
+        error: error instanceof Error ? error.message : String(error),
+        row,
+      });
+    }
   });
 
-  console.log(`\n📋 ПРИМЕРЫ СОЗДАННЫХ ПОСТУПЛЕНИЙ:`);
-  for (const sample of samples) {
-    const act = sample.samplingTests[0];
-    console.log(`   📥 Поступление ID: ${sample.id}`);
-    console.log(`      📅 Дата поступления: ${sample.receiptDate ? new Date(sample.receiptDate).toLocaleDateString('ru-RU') : 'не указана'}`);
-    console.log(`      📅 Дата документа: ${sample.qualDate ? new Date(sample.qualDate).toLocaleDateString('ru-RU') : 'не указана'}`);
-    console.log(`      🔢 Номер документа: ${sample.qualDocNumber || 'не указан'}`);
-    console.log(`      📦 Материал: ${sample.material?.name || 'неизвестен'}`);
-    console.log(`      📝 Примечание: ${sample.note || 'нет'}`);
-    if (act) {
-      console.log(`      📄 Акт: ${act.sActNumber}`);
-      console.log(`      🏗️ Объект: ${act.testLocation?.testObject?.name || 'неизвестен'}`);
-    }
-    console.log('');
+  console.log(`✅ Валидных строк: ${rows.length}`);
+  console.log(`⚠️ Отклонённых строк: ${rejectedRows.length}`);
+
+  if (rejectedRows.length > 0) {
+    const rejectPath = resolve(
+      process.cwd(),
+      'temp',
+      'Reestr_1509.rejected.csv',
+    );
+
+    const headers = Object.keys(rawRows[0] ?? {});
+    const csvEscape = (value: unknown): string => {
+      const text = value == null ? '' : String(value);
+      if (/[;"\r\n]/.test(text)) {
+        return `"${text.replace(/"/g, '""')}"`;
+      }
+      return text;
+    };
+
+    const lines = [
+      ['CSV row', 'Import error', ...headers].map(csvEscape).join(';'),
+      ...rejectedRows.map(item =>
+        [
+          item.rowNumber,
+          item.error,
+          ...headers.map(header => item.row[header] ?? ''),
+        ]
+          .map(csvEscape)
+          .join(';'),
+      ),
+    ];
+
+    writeFileSync(rejectPath, `\uFEFF${lines.join('\n')}\n`, 'utf8');
+
+    console.log(`📝 Отчёт по отклонённым строкам: ${rejectPath}`);
   }
+
+  if (rows.length === 0) {
+    throw new Error('После структурной валидации не осталось строк для импорта');
+  }
+
+  if (resetRequested) {
+    await resetLabData();
+  }
+
+  // ============================================
+  // 1. СПРАВОЧНИКИ
+  // ============================================
+
+  const plpNames = [...new Set(rows.map(row => row.plpName))];
+  const providerNames = [...new Set(rows.map(row => row.sampleProviderName))];
+  const materialNames = [...new Set(rows.map(row => row.materialName))];
+  const objectNames = [...new Set(rows.map(row => row.objectName))];
+  const manufacturerNames = [
+    ...new Set(
+      rows
+        .map(row => row.manufacturerName)
+        .filter((value): value is string => Boolean(value)),
+    ),
+  ];
+
+  console.log('\n📚 Создание справочников...');
+
+  await prisma.plp.createMany({
+    data: plpNames.map(name => ({
+      name,
+      note: `Импортировано из ${IMPORT_SOURCE}`,
+      authorEmail: IMPORT_AUTHOR,
+    })),
+    skipDuplicates: true,
+  });
+
+  await prisma.inspector.createMany({
+    data: providerNames.map(name => ({
+      name,
+      note: `Импортировано из ${IMPORT_SOURCE}`,
+      authorEmail: IMPORT_AUTHOR,
+    })),
+    skipDuplicates: true,
+  });
+
+  await prisma.material.createMany({
+    data: materialNames.map(name => ({
+      name,
+      note: `Импортировано из ${IMPORT_SOURCE}`,
+      authorEmail: IMPORT_AUTHOR,
+    })),
+    skipDuplicates: true,
+  });
+
+  await prisma.manufacturer.createMany({
+    data: manufacturerNames.map(name => ({
+      name,
+      note: `Импортировано из ${IMPORT_SOURCE}`,
+      authorEmail: IMPORT_AUTHOR,
+    })),
+    skipDuplicates: true,
+  });
+
+  await prisma.testObject.createMany({
+    data: objectNames.map(name => ({
+      name,
+      note: `Импортировано из ${IMPORT_SOURCE}`,
+      authorEmail: IMPORT_AUTHOR,
+    })),
+    skipDuplicates: true,
+  });
+
+  const [plps, providers, materials, manufacturers, objects] = await Promise.all([
+    prisma.plp.findMany({ select: { id: true, name: true } }),
+    prisma.inspector.findMany({ select: { id: true, name: true } }),
+    prisma.material.findMany({ select: { id: true, name: true } }),
+    prisma.manufacturer.findMany({ select: { id: true, name: true } }),
+    prisma.testObject.findMany({ select: { id: true, name: true } }),
+  ]);
+
+  const plpByName = new Map(plps.map(item => [item.name, item.id]));
+  const providerByName = new Map(providers.map(item => [item.name, item.id]));
+  const materialByName = new Map(materials.map(item => [item.name, item.id]));
+  const manufacturerByName = new Map(manufacturers.map(item => [item.name, item.id]));
+  const objectByName = new Map(objects.map(item => [item.name, item.id]));
+
+  // ============================================
+  // 2. МЕСТА ОТБОРА
+  // ============================================
+
+  const locationKeys = new Map<string, { testObjectId: number; name: string }>();
+
+  for (const row of rows) {
+    const testObjectId = objectByName.get(row.objectName);
+    if (!testObjectId) {
+      throw new Error(`Не найден TestObject: ${row.objectName}`);
+    }
+
+    const key = `${testObjectId}\u0000${row.locationName}`;
+    locationKeys.set(key, {
+      testObjectId,
+      name: row.locationName,
+    });
+  }
+
+  await prisma.testLocation.createMany({
+    data: [...locationKeys.values()].map(location => ({
+      ...location,
+      note: `Импортировано из ${IMPORT_SOURCE}`,
+      authorEmail: IMPORT_AUTHOR,
+    })),
+    skipDuplicates: true,
+  });
+
+  const locations = await prisma.testLocation.findMany({
+    select: {
+      id: true,
+      name: true,
+      testObjectId: true,
+    },
+  });
+
+  const locationByKey = new Map(
+    locations.map(location => [
+      `${location.testObjectId}\u0000${location.name}`,
+      location.id,
+    ]),
+  );
+
+  console.log(`   ПЛП: ${plpByName.size}`);
+  console.log(`   Лица, предоставившие пробу: ${providerByName.size}`);
+  console.log(`   Материалы: ${materialByName.size}`);
+  console.log(`   Производители: ${manufacturerByName.size}`);
+  console.log(`   Объекты: ${objectByName.size}`);
+  console.log(`   Места отбора: ${locationByKey.size}`);
+
+  // ============================================
+  // 3. ОСНОВНОЙ ИМПОРТ
+  // ============================================
+
+  console.log('\n📥 Импорт записей...');
+
+  let imported = 0;
+  let protocolsCreated = 0;
+  let rowsWithoutManufacturer = 0;
+
+  for (let start = 0; start < rows.length; start += IMPORT_CHUNK_SIZE) {
+    const chunk = rows.slice(start, start + IMPORT_CHUNK_SIZE);
+
+    const operations = chunk.map(row => {
+      const plpId = plpByName.get(row.plpName);
+      const inspectorId = providerByName.get(row.sampleProviderName);
+      const materialId = materialByName.get(row.materialName);
+      const testObjectId = objectByName.get(row.objectName);
+      const manufacturerId = row.manufacturerName
+        ? manufacturerByName.get(row.manufacturerName) ?? null
+        : null;
+
+      if (!plpId) throw new Error(`Не найден Plp: ${row.plpName}`);
+      if (!inspectorId) throw new Error(`Не найден Inspector: ${row.sampleProviderName}`);
+      if (!materialId) throw new Error(`Не найден Material: ${row.materialName}`);
+      if (!testObjectId) throw new Error(`Не найден TestObject: ${row.objectName}`);
+
+      const testLocationId =
+        locationByKey.get(`${testObjectId}\u0000${row.locationName}`);
+
+      if (!testLocationId) {
+        throw new Error(
+          `Не найден TestLocation: ${row.objectName} / ${row.locationName}`,
+        );
+      }
+
+      const hasProtocol = Boolean(
+        row.protocolNumber || row.protocolDate || row.testResult,
+      );
+
+      if (hasProtocol) protocolsCreated++;
+      if (!manufacturerId) rowsWithoutManufacturer++;
+
+      return prisma.samplingTest.create({
+        data: {
+          samplingActNumber: row.samplingActNumber,
+          samplingDate: row.samplingDate,
+          samplingDocumentPath: null,
+          note: row.note,
+
+          plp: {
+            connect: { id: plpId },
+          },
+
+          inspector: {
+            connect: { id: inspectorId },
+          },
+
+          testLocation: {
+            connect: { id: testLocationId },
+          },
+
+          businessRulesVersion: 0,
+          importSource: IMPORT_SOURCE,
+          importRowNumber: row.rowNumber,
+
+          authorEmail: IMPORT_AUTHOR,
+
+          receiptMaterial: {
+            create: {
+              receiptDate: row.receiptDate,
+
+              // В текущем CSV поле "Документ о качестве" содержит только "-".
+              // Реальные исторические файлы будут привязаны отдельным этапом позже.
+              qualityDocumentDate: null,
+              qualityDocumentNumber: null,
+              qualityDocumentPath: null,
+
+              note: null,
+              material: {
+                connect: { id: materialId },
+              },
+
+              ...(manufacturerId
+                ? {
+                    manufacturer: {
+                      connect: { id: manufacturerId },
+                    },
+                  }
+                : {}),
+              authorEmail: IMPORT_AUTHOR,
+            },
+          },
+
+          ...(hasProtocol
+            ? {
+                testProtocol: {
+                  create: {
+                    protocolNumber: row.protocolNumber,
+                    protocolDate: row.protocolDate,
+                    protocolDocumentPath: null,
+                    testResult: row.testResult,
+                    note: null,
+                    authorEmail: IMPORT_AUTHOR,
+                  },
+                },
+              }
+            : {}),
+        },
+      });
+    });
+
+    await Promise.all(operations);
+
+    imported += chunk.length;
+    console.log(`   ✅ ${imported}/${rows.length}`);
+  }
+
+  // ============================================
+  // 4. КОНТРОЛЬНАЯ СТАТИСТИКА
+  // ============================================
+
+  const [samplingCount, receiptCount, protocolCount] = await Promise.all([
+    prisma.samplingTest.count({
+      where: {
+        importSource: IMPORT_SOURCE,
+        businessRulesVersion: 0,
+      },
+    }),
+    prisma.receiptMaterial.count(),
+    prisma.testProtocol.count(),
+  ]);
+
+  console.log('\n🎉 ИМПОРТ ЗАВЕРШЁН');
+  console.log(`   SamplingTest: ${samplingCount}`);
+  console.log(`   ReceiptMaterial: ${receiptCount}`);
+  console.log(`   TestProtocol: ${protocolCount}`);
+  console.log(`   Отклонено из-за структурных ошибок: ${rejectedRows.length}`);
+  console.log(`   Без производителя: ${rowsWithoutManufacturer}`);
+  console.log(`   Протоколов создано: ${protocolsCreated}`);
+
+  if (samplingCount !== rows.length) {
+    throw new Error(
+      `Контроль количества не пройден: CSV=${rows.length}, SamplingTest=${samplingCount}`,
+    );
+  }
+
+  if (receiptCount !== rows.length) {
+    throw new Error(
+      `Контроль количества ReceiptMaterial не пройден: ожидалось ${rows.length}, получено ${receiptCount}`,
+    );
+  }
+
+  console.log('\n✅ Количество строк совпало с CSV.');
+  console.log('✅ Тестовые записи старой БД в импорт не попали.');
+  console.log('✅ Историческая хронология намеренно НЕ валидировалась по новым правилам.');
+  console.log('✅ Строки без обязательного места отбора в Реестр не импортировались.\n');
 }
 
-// ============================================
-// ЗАПУСК
-// ============================================
 main()
-  .catch((e) => {
-    console.error('❌ КРИТИЧЕСКАЯ ОШИБКА:', e);
-    process.exit(1);
+  .catch(error => {
+    console.error('\n❌ ОШИБКА ИМПОРТА');
+    console.error(error);
+    process.exitCode = 1;
   })
   .finally(async () => {
     await prisma.$disconnect();
-    console.log('👋 Соединение с БД закрыто');
   });

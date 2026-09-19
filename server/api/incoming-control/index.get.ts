@@ -1,347 +1,629 @@
-// server/api/lab/sampling-test/index.get.ts
-import { PrismaClient } from '@prisma/client';
-import { defineEventHandler, getQuery, getCookie } from 'h3';
+// server/api/incoming-control/index.get.ts
 
-const prisma = new PrismaClient();
+import {
+  AccessAction,
+  Prisma,
+} from '@prisma/client';
+
+import {
+  defineEventHandler,
+  getCookie,
+  getQuery,
+} from 'h3';
+
+import { prisma } from '~~/server/utils/prisma';
+
+import {
+  requirePermission,
+} from '~~/server/services/access-control.service';
+
+
+const RESOURCE_KEY = 'lab.sampling-tests';
+
+
+function parseDate(value: unknown): Date | null {
+  if (typeof value !== 'string' || !value.trim()) {
+    return null;
+  }
+
+  const date = new Date(value);
+
+  return Number.isNaN(date.getTime())
+    ? null
+    : date;
+}
+
 
 export default defineEventHandler(async (event) => {
-    try {
-        const query = getQuery(event);
-        const page = parseInt(query.page as string) || 1;
-        const pageSize = parseInt(query.pageSize as string) || 25;
-        const sortKey = (query.sortKey as string) || 'sActDate';
-        const sortOrder = (query.sortOrder as string) || 'desc';
-        const rawCookie = getCookie(event, 'lab_reestrTable_filter')
+  await requirePermission(
+    event,
+    RESOURCE_KEY,
+    AccessAction.VIEW,
+  );
 
-        const validPage = Math.max(1, page);
-        const validPageSize = Math.min(100, Math.max(1, pageSize));
-        const skip = (validPage - 1) * validPageSize;
+  try {
+    const query = getQuery(event);
 
-        // ============================================
-        // ФОРМИРУЕМ УСЛОВИЯ ФИЛЬТРАЦИИ
-        // ============================================
-        const where: any = {};
+    const page = Math.max(
+      1,
+      Number.parseInt(String(query.page ?? '1'), 10) || 1,
+    );
 
-        let cookieFilters: any = {
-            plp: null,
-            objName: null,
-            samplActNumber: null,
-            sPlace: null,
-            sProvairer: null,
-            materialName: null,
-            manufacturer: null
-        }
+    const pageSize = Math.min(
+      100,
+      Math.max(
+        1,
+        Number.parseInt(String(query.pageSize ?? '25'), 10) || 25,
+      ),
+    );
 
-        // 2. Поскольку плагин сохраняет данные в куку как JSON-строку, нам нужно её распарсить
-        if (rawCookie) {
-            try {
-            // Декодируем URI (на случай спецсимволов и кириллицы) и парсим в объект
-            const parsedData = JSON.parse(decodeURIComponent(rawCookie))
-            // console.log('--- СЕРВЕР ПРИНЯЛ КУКУ ---', rawCookie)
-            
-            // Обратите внимание: плагин pinia-plugin-persistedstate заворачивает стейт в объект.
-            // Если в вашем сторе состояние называется `filter`, то в куке оно будет лежать как parsedData.filter
-            if (parsedData && parsedData.filter) {
-                cookieFilters = parsedData.filter
-            }
-            } catch (error) {
-            console.error('Ошибка парсинга куки с фильтрами на сервере:', error)
-            }
-        }
+    const skip = (page - 1) * pageSize;
 
-        // Для отладки в консоли терминала (не браузера!):
-        // console.log('Полученные на сервере фильтры:', cookieFilters)
-        
+    const sortOrder =
+      query.sortOrder === 'asc'
+        ? 'asc'
+        : 'desc';
 
-        // ---- Текстовые фильтры ----
-        
-        // ПЛП
-        if (cookieFilters.plp) {
-            where.plp = { name: { contains: cookieFilters.plp as string, mode: 'insensitive' as const } };
-        }
-        
-        // Объект (Наименование объекта)
-        if (cookieFilters.objName) {
-            where.testLocation = { 
-                testObject: { 
-                    name: { contains: cookieFilters.objName as string, mode: 'insensitive' as const } 
-                } 
-            };
-        }
-        
-        // Номер акта отбора проб
-        if (cookieFilters.samplActNumber) {
-            where.sActNumber = { contains: cookieFilters.samplActNumber as string, mode: 'insensitive' as const };
-        }
-        
-        // Место отбора проб
-        if (cookieFilters.sPlace) {
-            where.testLocation = { 
-                ...where.testLocation,
-                name: { contains: cookieFilters.sPlace as string, mode: 'insensitive' as const } 
-            };
-        }
-        
-        // Лицо, предоставившее пробу (Инспектор)
-        if (cookieFilters.sProvaider) {
-            where.inspector = { name: { contains: cookieFilters.sProvaider as string, mode: 'insensitive' as const } };
-        }
-        
-        // Наименование материала
-        if (cookieFilters.materialName) {
-            where.receiptMaterial = { 
-                material: { 
-                    name: { contains: cookieFilters.materialName as string, mode: 'insensitive' as const } 
-                } 
-            };
-        }
-        
-        // Предприятие-изготовитель (Производитель)
-        if (cookieFilters.manufacturer) {
-            where.receiptMaterial = { 
-                material: { 
-                    manufacturer: { 
-                        name: { contains: cookieFilters.manufacturer as string, mode: 'insensitive' as const } 
-                    } 
-                } 
-            };
-        }
-        
-        // Номер документа о качестве
-        if (cookieFilters.qualiDocNumber) {
-            where.receiptMaterial = { 
-                ...where.receiptMaterial,
-                qualDocNumber: { contains: cookieFilters.qualiDocNumber as string, mode: 'insensitive' as const } 
-            };
-        }
-        
-        // Результат испытаний
-        if (cookieFilters.testResult) {
-            where.testProtocol = { 
-                testResult: { contains: cookieFilters.testResult as string, mode: 'insensitive' as const } 
-            };
-        }
-        
-        // Номер протокола
-        if (cookieFilters.testProtocolNumber) {
-            where.testProtocol = { 
-                ...where.testProtocol,
-                protocolNumber: { contains: cookieFilters.testProtocolNumber as string, mode: 'insensitive' as const } 
-            };
-        }
+    const sortKey =
+      typeof query.sortKey === 'string'
+        ? query.sortKey
+        : 'samplingDate';
 
-        // ---- Фильтры по датам ----
-        
-        // Дата отбора (начало)
-        if (cookieFilters.sDateStart) {
-            where.sActDate = { gte: new Date(cookieFilters.sDateStart as string) };
-        }
-        
-        // Дата отбора (конец)
-        if (cookieFilters.sDateEnd) {
-            const endDate = new Date(cookieFilters.sDateEnd as string);
-            endDate.setHours(23, 59, 59, 999);
-            where.sActDate = { ...where.sActDate, lte: endDate };
-        }
-        
-        // Дата поступления материала (начало)
-        if (cookieFilters.receiveDateStart) {
-            where.receiptMaterial = { 
-                ...where.receiptMaterial,
-                qualDate: { gte: new Date(cookieFilters.receiveDateStart as string) } 
-            };
-        }
-        
-        // Дата поступления материала (конец)
-        if (cookieFilters.receiveDateEnd) {
-            const endDate = new Date(cookieFilters.receiveDateEnd as string);
-            endDate.setHours(23, 59, 59, 999);
-            where.receiptMaterial = { 
-                ...where.receiptMaterial,
-                qualDate: { ...where.receiptMaterial?.qualDate, lte: endDate } 
-            };
-        }
-        
-        // Дата документа о качестве (начало)
-        if (cookieFilters.qualiDateStart) {
-            where.receiptMaterial = { 
-                ...where.receiptMaterial,
-                qualDate: { ...where.receiptMaterial?.qualDate, gte: new Date(cookieFilters.qualiDateStart as string) } 
-            };
-        }
-        
-        // Дата документа о качестве (конец)
-        if (cookieFilters.qualiDateEnd) {
-            const endDate = new Date(cookieFilters.qualiDateEnd as string);
-            endDate.setHours(23, 59, 59, 999);
-            where.receiptMaterial = { 
-                ...where.receiptMaterial,
-                qualDate: { ...where.receiptMaterial?.qualDate, lte: endDate } 
-            };
-        }
-        
-        // Дата протокола (начало)
-        if (cookieFilters.testReportDataStart) {
-            where.testProtocol = { 
-                ...where.testProtocol,
-                protocolDate: { gte: new Date(cookieFilters.testReportDataStart as string) } 
-            };
-        }
-        
-        // Дата протокола (конец)
-        if (cookieFilters.testReportDataEnd) {
-            const endDate = new Date(cookieFilters.testReportDataEnd as string);
-            endDate.setHours(23, 59, 59, 999);
-            where.testProtocol = { 
-                ...where.testProtocol,
-                protocolDate: { ...where.testProtocol?.protocolDate, lte: endDate } 
-            };
-        }
 
-        // ---- Глобальный поиск (если есть) ----
-        if (query.search) {
-            const searchTerm = query.search as string;
-            where.OR = [
-                { sActNumber: { contains: searchTerm, mode: 'insensitive' as const } },
-                { note: { contains: searchTerm, mode: 'insensitive' as const } },
-                { plp: { name: { contains: searchTerm, mode: 'insensitive' as const } } },
-                { inspector: { name: { contains: searchTerm, mode: 'insensitive' as const } } },
-                { testLocation: { name: { contains: searchTerm, mode: 'insensitive' as const } } },
-                { testLocation: { testObject: { name: { contains: searchTerm, mode: 'insensitive' as const } } } },
-                { receiptMaterial: { material: { name: { contains: searchTerm, mode: 'insensitive' as const } } } },
-                { receiptMaterial: { material: { manufacturer: { name: { contains: searchTerm, mode: 'insensitive' as const } } } } },
-                { testProtocol: { protocolNumber: { contains: searchTerm, mode: 'insensitive' as const } } },
-                { testProtocol: { testResult: { contains: searchTerm, mode: 'insensitive' as const } } },
-            ];
-        }
+    // ============================================================
+    // ФИЛЬТРЫ
+    //
+    // Названия ключей cookie пока оставлены прежними, чтобы
+    // текущая панель фильтров продолжала работать.
+    // После перевода frontend переименуем и их.
+    // ============================================================
 
-        // ============================================
-        // СОРТИРОВКА
-        // ============================================
-        let orderBy: any = {};
-        if (sortKey === 'plp') {
-            orderBy = { plp: { name: sortOrder === 'asc' ? 'asc' : 'desc' } };
-        } else if (sortKey === 'inspector') {
-            orderBy = { inspector: { name: sortOrder === 'asc' ? 'asc' : 'desc' } };
-        } else if (sortKey === 'object') {
-            orderBy = { testLocation: { testObject: { name: sortOrder === 'asc' ? 'asc' : 'desc' } } };
-        } else if (sortKey === 'location') {
-            orderBy = { testLocation: { name: sortOrder === 'asc' ? 'asc' : 'desc' } };
-        } else if (sortKey === 'material') {
-            orderBy = { receiptMaterial: { material: { name: sortOrder === 'asc' ? 'asc' : 'desc' } } };
-        } else if (sortKey === 'manufacturer') {
-            orderBy = { receiptMaterial: { material: { manufacturer: { name: sortOrder === 'asc' ? 'asc' : 'desc' } } } };
-        } else if (sortKey === 'sActDate') {
-            orderBy = { sActDate: sortOrder === 'asc' ? 'asc' : 'desc' };
-        } else {
-            orderBy = { [sortKey]: sortOrder === 'asc' ? 'asc' : 'desc' };
-        }
+    let cookieFilters: Record<string, any> = {};
 
-        // ============================================
-        // ВЫПОЛНЯЕМ ЗАПРОС
-        // ============================================
-        const [samplingTests, totalCount] = await Promise.all([
-            prisma.samplingTest.findMany({
-                where,
-                include: {
-                    plp: true,
-                    inspector: true,
-                    testLocation: {
-                        include: {
-                            testObject: true
-                        }
-                    },
-                    receiptMaterial: {
-                        include: {
-                            material: {
-                                include: {
-                                    manufacturer: true
-                                }
-                            }
-                        }
-                    },
-                    testProtocol: {
-                        include: {
-                            receiptMaterial: {
-                                include: {
-                                    material: {
-                                        include: {
-                                            manufacturer: true
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+    const rawCookie = getCookie(
+      event,
+      'lab_reestrTable_filter',
+    );
+
+    if (rawCookie) {
+      try {
+        const parsed =
+          JSON.parse(decodeURIComponent(rawCookie));
+
+        cookieFilters =
+          parsed?.filter && typeof parsed.filter === 'object'
+            ? parsed.filter
+            : {};
+      } catch (error) {
+        console.error(
+          '[incoming-control] Ошибка чтения cookie фильтров:',
+          error,
+        );
+      }
+    }
+
+
+    const AND: Prisma.SamplingTestWhereInput[] = [
+      {
+        deletedAt: null,
+      },
+    ];
+
+
+    // ПЛП
+    if (cookieFilters.plp) {
+      AND.push({
+        plp: {
+          name: {
+            contains: String(cookieFilters.plp),
+            mode: 'insensitive',
+          },
+        },
+      });
+    }
+
+
+    // Объект
+    if (cookieFilters.objName) {
+      AND.push({
+        testLocation: {
+          testObject: {
+            name: {
+              contains: String(cookieFilters.objName),
+              mode: 'insensitive',
+            },
+          },
+        },
+      });
+    }
+
+
+    // Номер акта отбора проб
+    if (cookieFilters.samplActNumber) {
+      AND.push({
+        samplingActNumber: {
+          contains: String(cookieFilters.samplActNumber),
+          mode: 'insensitive',
+        },
+      });
+    }
+
+
+    // Место отбора
+    if (cookieFilters.sPlace) {
+      AND.push({
+        testLocation: {
+          name: {
+            contains: String(cookieFilters.sPlace),
+            mode: 'insensitive',
+          },
+        },
+      });
+    }
+
+
+    // Лицо, предоставившее пробу
+    if (cookieFilters.sProvaider) {
+      AND.push({
+        inspector: {
+          name: {
+            contains: String(cookieFilters.sProvaider),
+            mode: 'insensitive',
+          },
+        },
+      });
+    }
+
+
+    // Материал
+    if (cookieFilters.materialName) {
+      AND.push({
+        receiptMaterial: {
+          material: {
+            name: {
+              contains: String(cookieFilters.materialName),
+              mode: 'insensitive',
+            },
+          },
+        },
+      });
+    }
+
+
+    // Производитель
+    if (cookieFilters.manufacturer) {
+      AND.push({
+        receiptMaterial: {
+          manufacturer: {
+            name: {
+              contains: String(cookieFilters.manufacturer),
+              mode: 'insensitive',
+            },
+          },
+        },
+      });
+    }
+
+
+    // Номер документа о качестве
+    if (cookieFilters.qualiDocNumber) {
+      AND.push({
+        receiptMaterial: {
+          qualityDocumentNumber: {
+            contains: String(cookieFilters.qualiDocNumber),
+            mode: 'insensitive',
+          },
+        },
+      });
+    }
+
+
+    // Результат испытаний
+    if (cookieFilters.testResult) {
+      AND.push({
+        testProtocol: {
+          testResult: {
+            contains: String(cookieFilters.testResult),
+            mode: 'insensitive',
+          },
+        },
+      });
+    }
+
+
+    // Номер протокола
+    if (cookieFilters.testProtocolNumber) {
+      AND.push({
+        testProtocol: {
+          protocolNumber: {
+            contains: String(cookieFilters.testProtocolNumber),
+            mode: 'insensitive',
+          },
+        },
+      });
+    }
+
+
+    // ============================================================
+    // ДАТЫ
+    // ============================================================
+
+    const samplingDateStart =
+      parseDate(cookieFilters.sDateStart);
+
+    const samplingDateEnd =
+      parseDate(cookieFilters.sDateEnd);
+
+    if (samplingDateStart || samplingDateEnd) {
+      AND.push({
+        samplingDate: {
+          ...(samplingDateStart
+            ? { gte: samplingDateStart }
+            : {}),
+          ...(samplingDateEnd
+            ? { lte: samplingDateEnd }
+            : {}),
+        },
+      });
+    }
+
+
+    const receiptDateStart =
+      parseDate(cookieFilters.receiveDateStart);
+
+    const receiptDateEnd =
+      parseDate(cookieFilters.receiveDateEnd);
+
+    if (receiptDateStart || receiptDateEnd) {
+      AND.push({
+        receiptMaterial: {
+          receiptDate: {
+            ...(receiptDateStart
+              ? { gte: receiptDateStart }
+              : {}),
+            ...(receiptDateEnd
+              ? { lte: receiptDateEnd }
+              : {}),
+          },
+        },
+      });
+    }
+
+
+    const qualityDocumentDateStart =
+      parseDate(cookieFilters.qualiDateStart);
+
+    const qualityDocumentDateEnd =
+      parseDate(cookieFilters.qualiDateEnd);
+
+    if (
+      qualityDocumentDateStart ||
+      qualityDocumentDateEnd
+    ) {
+      AND.push({
+        receiptMaterial: {
+          qualityDocumentDate: {
+            ...(qualityDocumentDateStart
+              ? { gte: qualityDocumentDateStart }
+              : {}),
+            ...(qualityDocumentDateEnd
+              ? { lte: qualityDocumentDateEnd }
+              : {}),
+          },
+        },
+      });
+    }
+
+
+    const protocolDateStart =
+      parseDate(cookieFilters.testReportDataStart);
+
+    const protocolDateEnd =
+      parseDate(cookieFilters.testReportDataEnd);
+
+    if (protocolDateStart || protocolDateEnd) {
+      AND.push({
+        testProtocol: {
+          protocolDate: {
+            ...(protocolDateStart
+              ? { gte: protocolDateStart }
+              : {}),
+            ...(protocolDateEnd
+              ? { lte: protocolDateEnd }
+              : {}),
+          },
+        },
+      });
+    }
+
+
+    // ============================================================
+    // ГЛОБАЛЬНЫЙ ПОИСК
+    // ============================================================
+
+    if (
+      typeof query.search === 'string' &&
+      query.search.trim()
+    ) {
+      const search = query.search.trim();
+
+      AND.push({
+        OR: [
+          {
+            samplingActNumber: {
+              contains: search,
+              mode: 'insensitive',
+            },
+          },
+          {
+            note: {
+              contains: search,
+              mode: 'insensitive',
+            },
+          },
+          {
+            plp: {
+              name: {
+                contains: search,
+                mode: 'insensitive',
+              },
+            },
+          },
+          {
+            inspector: {
+              name: {
+                contains: search,
+                mode: 'insensitive',
+              },
+            },
+          },
+          {
+            testLocation: {
+              name: {
+                contains: search,
+                mode: 'insensitive',
+              },
+            },
+          },
+          {
+            testLocation: {
+              testObject: {
+                name: {
+                  contains: search,
+                  mode: 'insensitive',
                 },
-                skip: skip,
-                take: validPageSize,
-                orderBy: orderBy
-            }),
-            prisma.samplingTest.count({ where })
-        ]);
+              },
+            },
+          },
+          {
+            receiptMaterial: {
+              material: {
+                name: {
+                  contains: search,
+                  mode: 'insensitive',
+                },
+              },
+            },
+          },
+          {
+            receiptMaterial: {
+              manufacturer: {
+                name: {
+                  contains: search,
+                  mode: 'insensitive',
+                },
+              },
+            },
+          },
+          {
+            receiptMaterial: {
+              qualityDocumentNumber: {
+                contains: search,
+                mode: 'insensitive',
+              },
+            },
+          },
+          {
+            testProtocol: {
+              protocolNumber: {
+                contains: search,
+                mode: 'insensitive',
+              },
+            },
+          },
+          {
+            testProtocol: {
+              testResult: {
+                contains: search,
+                mode: 'insensitive',
+              },
+            },
+          },
+        ],
+      });
+    }
 
-        // ============================================
-        // ТРАНСФОРМАЦИЯ ДАННЫХ
-        // ============================================
-        const transformedData = samplingTests.map((test) => {
-            const receipt = test.receiptMaterial || test.testProtocol?.receiptMaterial;
-            const material = receipt?.material;
-            const manufacturer = material?.manufacturer;
-            const protocol = test.testProtocol;
-            const location = test.testLocation;
-            const object = location?.testObject;
 
-            return {
-                'ID': test.id || '',
-                'ПЛП': test.plp?.name || '',
-                'Наименование объекта': object?.name || '',
-                'Место отбора проб': location?.name || '',
-                'Номер акта отбора проб': test.sActNumber || '',
-                'Дата отбора проб': test.sActDate
-                    ? new Date(test.sActDate).toLocaleDateString('ru-RU')
-                    : '',
-                'Документ отбора проб': test.sDocPath || '',
-                'Лицо, предоставившее пробу': test.inspector?.name || '',
-                'Примечание (акт)': test.note || '',
-                'Наименование материала': material?.name || '',
-                'Предприятие-изготовитель': manufacturer?.name || '',
-                'Дата поступления материала': receipt?.receiptDate
-                    ? new Date(receipt.receiptDate).toLocaleDateString('ru-RU')
-                    : '',
-                'Дата документа о качестве': receipt?.qualDate
-                    ? new Date(receipt.qualDate).toLocaleDateString('ru-RU')
-                    : '',
-                'Документ о качестве': receipt?.qualDocPath || '',
-                'Номер документа о качестве': receipt?.qualDocNumber || '',
-                'Номер протокола': protocol?.protocolNumber || '',
-                'Дата протокола': protocol?.protocolDate
-                    ? new Date(protocol.protocolDate).toLocaleDateString('ru-RU')
-                    : '',
-                'Документ протокола': protocol?.protocolDocPath || '',
-                'Результат испытаний': protocol?.testResult || '',
-                'Примечание (протокол)': protocol?.note || '',
-            };
-        });
+    const where: Prisma.SamplingTestWhereInput = {
+      AND,
+    };
 
-        return {
-            success: true,
-            data: transformedData,
-            pagination: {
-                currentPage: validPage,
-                pageSize: validPageSize,
-                totalCount: totalCount,
-                totalPages: Math.ceil(totalCount / validPageSize),
-                hasNext: validPage < Math.ceil(totalCount / validPageSize),
-                hasPrev: validPage > 1,
-            }
+
+    // ============================================================
+    // СОРТИРОВКА
+    //
+    // Старые sortKey временно поддерживаются, пока frontend
+    // не переведён на новые имена.
+    // ============================================================
+
+    let orderBy: Prisma.SamplingTestOrderByWithRelationInput;
+
+    switch (sortKey) {
+      case 'plp':
+        orderBy = {
+          plp: {
+            name: sortOrder,
+          },
         };
+        break;
 
-    } catch (error) {
-        console.error('Ошибка при загрузке данных:', error);
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : 'Ошибка при получении данных',
+      case 'inspector':
+        orderBy = {
+          inspector: {
+            name: sortOrder,
+          },
+        };
+        break;
+
+      case 'object':
+        orderBy = {
+          testLocation: {
+            testObject: {
+              name: sortOrder,
+            },
+          },
+        };
+        break;
+
+      case 'location':
+        orderBy = {
+          testLocation: {
+            name: sortOrder,
+          },
+        };
+        break;
+
+      case 'material':
+        orderBy = {
+          receiptMaterial: {
+            material: {
+              name: sortOrder,
+            },
+          },
+        };
+        break;
+
+      case 'manufacturer':
+        orderBy = {
+          receiptMaterial: {
+            manufacturer: {
+              name: sortOrder,
+            },
+          },
+        };
+        break;
+
+      case 'sActDate':
+      case 'samplingDate':
+        orderBy = {
+          samplingDate: sortOrder,
+        };
+        break;
+
+      case 'sActNumber':
+      case 'samplingActNumber':
+        orderBy = {
+          samplingActNumber: sortOrder,
+        };
+        break;
+
+      case 'receiptDate':
+        orderBy = {
+          receiptMaterial: {
+            receiptDate: sortOrder,
+          },
+        };
+        break;
+
+      case 'protocolDate':
+        orderBy = {
+          testProtocol: {
+            protocolDate: sortOrder,
+          },
+        };
+        break;
+
+      default:
+        orderBy = {
+          samplingDate: 'desc',
         };
     }
+
+
+    // ============================================================
+    // ЗАПРОС
+    //
+    // ВАЖНО:
+    // Никакого преобразования в русские ключи.
+    // API возвращает поля под теми же именами, что и Prisma.
+    // ============================================================
+
+    const [records, totalCount] =
+      await Promise.all([
+        prisma.samplingTest.findMany({
+          where,
+          include: {
+            plp: true,
+            inspector: true,
+
+            testLocation: {
+              include: {
+                testObject: true,
+              },
+            },
+
+            receiptMaterial: {
+              include: {
+                material: true,
+                manufacturer: true,
+              },
+            },
+
+            testProtocol: true,
+          },
+
+          skip,
+          take: pageSize,
+          orderBy,
+        }),
+
+        prisma.samplingTest.count({
+          where,
+        }),
+      ]);
+
+
+    const totalPages =
+      Math.ceil(totalCount / pageSize);
+
+
+    return {
+      success: true,
+
+      data: records,
+
+      pagination: {
+        currentPage: page,
+        pageSize,
+        totalCount,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+    };
+
+  } catch (error) {
+    console.error(
+      '[incoming-control] Ошибка загрузки Реестра:',
+      error,
+    );
+
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Ошибка при получении данных',
+    };
+  }
 });
