@@ -38,7 +38,7 @@
         @click="openPicker"
       >
         <Icon
-          name="streamline-freehand-color:folder-file-1"
+          name="streamline-freehand-color:office-folder"
           size="18"
         />
 

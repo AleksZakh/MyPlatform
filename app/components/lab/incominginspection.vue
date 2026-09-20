@@ -21,7 +21,7 @@
             @click="tableSettingsOpen"
           >
             <Icon
-              name="material-symbols-light:table-view-outline-rounded"
+              name="streamline-freehand-color:app-window-layout"
               size="24"
             />
             Настройка полей таблицы
@@ -229,26 +229,19 @@
             <tr
               v-for="row in table.getRowModel().rows"
               :key="row.original.id"
-              class="hover:bg-gray-50 transition"
+              class="lab-row"
               :class="{
-                'bg-red-50':
+                'lab-row--selected': isRowSelected(row.original.id),
+
+                'lab-row--negative':
                   row.original.testProtocol?.testResult
                     ?.toLowerCase()
                     .trim() === 'не соответствует',
-
-                'bg-green-50':
-                  isRowSelected(
-                    row.original.id,
-                  ),
               }"
-              @click="
-                selectRow(row.original)
-              "
+              @click.left.stop="selectRow(row.original)"
+              @contextmenu.capture="onRowContextMenu(row.original)"
               @dblclick.stop.prevent="
-                handleDblClick(
-                  row.original.id,
-                  row.original,
-                )
+                handleDblClick(row.original.id, row.original)
               "
             >
               <td
@@ -405,6 +398,15 @@ import {
 import {
   useTableFilterStore,
 } from '~/stores/tableFilter'
+
+
+async function reloadAfterSave(): Promise<void> {
+  // Дожидаемся обновления таблицы,
+  // но не возвращаем результат загрузки в модалку.
+  await reloadCurrentPage()
+}
+
+type ModalAction = 'create' | 'edit' | 'view'
 
 
 declare module '@tanstack/table-core' {
@@ -983,6 +985,32 @@ const selectRow =
     }
   }
 
+  // Запись, для которой пользователь открыл контекстное меню.
+  // Храним отдельно от текущего выделения таблицы.
+  const contextMenuRecord = ref<IncomingControlRecord | null>(null)
+
+  function onRowContextMenu(row: IncomingControlRecord): void {
+    contextMenuRecord.value = { ...row }
+
+    // Правый клик тоже выбирает строку, но никогда не снимает выбор.
+    selectRow(row)
+  }
+
+  function openContextRecord(action: 'view' | 'edit'): void {
+    const record = contextMenuRecord.value
+
+    if (!record) {
+      return
+    }
+
+    // Восстанавливаем выбор из контекста меню перед открытием.
+    selectRow(record)
+
+    // Используем существующую функцию открытия модалки напрямую.
+    // Здесь не нужен handleDblClick с его setTimeout.
+    void open(action)
+  }
+
 
 const isRowSelected =
   (id: number) => {
@@ -1012,20 +1040,23 @@ const items:
     [
       {
         label:
-          '"просто посмотреть"',
+          'Просмотр',
         icon:
           'streamline-freehand-color:kindle-read-document-hold',
-        onClick: () => {
-          if (
-            selectedRecord.value
-          ) {
-            handleDblClick(
-              selectedRecord.value.id,
-              selectedRecord.value,
-              'view',
-            )
-          }
+        onSelect: () => {
+          openContextRecord('view')
         },
+        // onClick: () => {
+        //   if (
+        //     selectedRecord.value
+        //   ) {
+        //     handleDblClick(
+        //       selectedRecord.value.id,
+        //       selectedRecord.value,
+        //       'view',
+        //     )
+        //   }
+        // },
       },
 
       {
@@ -1038,17 +1069,20 @@ const items:
         label: 'Изменить',
         icon:
           'streamline-freehand-color:edit-pencil',
-        onClick: () => {
-          if (
-            selectedRecord.value
-          ) {
-            handleDblClick(
-              selectedRecord.value.id,
-              selectedRecord.value,
-              'edit',
-            )
-          }
-        },
+          onSelect: () => {
+            openContextRecord('edit')
+          },
+        // onClick: () => {
+        //   if (
+        //     selectedRecord.value
+        //   ) {
+        //     handleDblClick(
+        //       selectedRecord.value.id,
+        //       selectedRecord.value,
+        //       'edit',
+        //     )
+        //   }
+        // },
       },
     ],
 
@@ -1103,7 +1137,7 @@ async function handleDelete(
 function handleDblClick(
   id: number,
   row: IncomingControlRecord,
-  action = 'view',
+  action: ModalAction = 'view',
 ) {
   selectedRecord.value = {
     ...row,
@@ -1133,7 +1167,7 @@ async function tableSettingsOpen() {
 
 
 async function open(
-  action: string,
+  action: ModalAction,
 ) {
   const record = {
     ...(selectedRecord.value ?? {}),
@@ -1147,43 +1181,35 @@ async function open(
       }
 
   if (action === 'view') {
-    modalView.open({
-      record,
+  modalView.open({
+    record,
 
-      onEdit: () => {
-        modalCreate.open({
-          count:
-            count.value,
-          selectedRecord: {
-            ...record,
-            action: 'edit',
-          },
-          reloadData:
-            reloadCurrentPage,
-        })
-      },
+    onEdit: () => {
+      modalCreate.open({
+        count: count.value,
 
-      onClose: () => {
-        modalView.close()
-      },
-    })
+        selectedRecord: {
+          ...record,
+          action: 'edit',
+        },
 
-    return
-  }
+        reloadData: reloadAfterSave,
+      })
+    },
 
-  if (
-    action === 'create' ||
-    action === 'edit'
-  ) {
+    onClose: () => {
+      modalView.close()
+    },
+  })
+
+  return
+}
+
+  if (action === 'create' || action === 'edit') {
     modalCreate.open({
-      count:
-        count.value,
-
-      selectedRecord:
-        record,
-
-      reloadData:
-        reloadCurrentPage,
+      count: count.value,
+      selectedRecord: record,
+      reloadData: reloadAfterSave,
     })
   }
 }
@@ -1226,5 +1252,63 @@ onMounted(
 
 .cursor-grabbing {
   cursor: grabbing;
+}
+
+.lab-row {
+  --selection-accent: #83d3fb;
+  --selection-line: #cee4ff;
+
+  cursor: pointer;
+}
+
+.lab-row > td {
+  transition:
+    background-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+/* Наведение на обычную строку. */
+.lab-row:not(.lab-row--selected):hover > td {
+  background-color: #f8fafc;
+}
+
+/* Отрицательный результат сохраняет своё обозначение. */
+.lab-row--negative > td {
+  background-color: #fffafa;
+}
+
+.lab-row--negative:not(.lab-row--selected):hover > td {
+  background-color: #fff5f5;
+}
+
+/* Выбранная строка: мягкий фон, контур и внутренняя тень. */
+.lab-row.lab-row--selected > td {
+  background-color: #eff6ff;
+  font-weight: 500;
+
+  box-shadow:
+    inset 0 1px 0 var(--selection-line),
+    inset 0 -1px 0 var(--selection-line),
+    inset 0 -4px 8px -6px rgb(2 132 199 / 20%);
+}
+
+/* Синяя полоска на левом краю выбранной строки. */
+.lab-row.lab-row--selected > td:first-child {
+  box-shadow:
+    inset 3px 0 0 var(--selection-accent),
+    inset 0 1px 0 var(--selection-line),
+    inset 0 -1px 0 var(--selection-line),
+    inset 0 -4px 8px -6px rgb(2 132 199 / 20%);
+}
+
+/* Выбрана проблемная запись: сохраняем красноватый фон. */
+.lab-row.lab-row--selected.lab-row--negative > td {
+  background-color: #ffe4e6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-row > td {
+    transition: none;
+  }
 }
 </style>
