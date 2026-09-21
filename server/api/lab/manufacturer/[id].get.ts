@@ -1,59 +1,47 @@
 // server/api/lab/manufacturer/[id].get.ts
-import { PrismaClient } from '@prisma/client';
+import { AccessAction } from '@prisma/client';
 import { defineEventHandler, getRouterParam } from 'h3';
 
-const prisma = new PrismaClient();
+import { prisma } from '~~/server/utils/prisma';
+import { requirePermission } from '~~/server/services/access-control.service';
+import {
+  MANUFACTURER_RESOURCE_KEY,
+  manufacturerBlockingReceiptWhere,
+  manufacturerError,
+  manufacturerUsageInclude,
+  parseManufacturerId,
+  rethrowManufacturerError,
+} from '~~/server/services/lab/manufacturer-api.service';
 
 export default defineEventHandler(async (event) => {
+  await requirePermission(event, MANUFACTURER_RESOURCE_KEY, AccessAction.VIEW);
+  const id = parseManufacturerId(getRouterParam(event, 'id'));
   try {
-    const idParam = getRouterParam(event, 'id');
-    const id = parseInt(idParam || '', 10);
-
-    if (isNaN(id) || id <= 0) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Некорректный ID производителя',
-      });
-    }
-
-    const manufacturer = await prisma.manufacturer.findUnique({
-      where: { id },
+    const data = await prisma.manufacturer.findFirst({
+      where: { id, deletedAt: null },
       include: {
-        _count: {
-          select: {
-            materials: true,
-          },
-        },
-        materials: {
+        ...manufacturerUsageInclude,
+        // Прямой Manufacturer.materials в новой схеме нет.
+        // Показываем до 10 примеров учитываемых поступлений, а не весь Реестр.
+        receipts: {
+          where: manufacturerBlockingReceiptWhere,
           take: 10,
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
           select: {
             id: true,
-            name: true,
+            receiptDate: true,
+            materialId: true,
+            material: { select: { id: true, name: true } },
           },
         },
       },
     });
-
-    if (!manufacturer) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: `Производитель с ID ${id} не найден`,
-      });
+    if (!data) {
+      manufacturerError(404, 'MANUFACTURER_NOT_FOUND',
+        'Производитель не найден или удалён из справочника.');
     }
-
-    return {
-      success: true,
-      data: manufacturer,
-    };
-
-  } catch (error: any) {
-    console.error('Ошибка при получении производителя:', error);
-    
-    if (error.statusCode) throw error;
-    
-    throw createError({
-      statusCode: 500,
-      statusMessage: error.message || 'Ошибка при получении производителя',
-    });
+    return { success: true, data };
+  } catch (error: unknown) {
+    rethrowManufacturerError(error, 'detail');
   }
 });

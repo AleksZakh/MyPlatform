@@ -1,63 +1,36 @@
 // server/api/lab/manufacturer/index.get.ts
-import { PrismaClient } from '@prisma/client';
+import { AccessAction } from '@prisma/client';
 import { defineEventHandler, getQuery } from 'h3';
 
-const prisma = new PrismaClient();
+import { prisma } from '~~/server/utils/prisma';
+import { requirePermission } from '~~/server/services/access-control.service';
+import {
+  MANUFACTURER_RESOURCE_KEY,
+  manufacturerPagination,
+  manufacturerReadOptions,
+  manufacturerUsageInclude,
+  rethrowManufacturerError,
+} from '~~/server/services/lab/manufacturer-api.service';
 
 export default defineEventHandler(async (event) => {
+  await requirePermission(event, MANUFACTURER_RESOURCE_KEY, AccessAction.VIEW);
   try {
     const query = getQuery(event);
-    const page = parseInt(query.page as string) || 1;
-    const pageSize = parseInt(query.pageSize as string) || 10;
-    const search = (query.search as string) || '';
-    const sortKey = (query.sortKey as string) || 'name';
-    const sortOrder = (query.sortOrder as string) || 'asc';
-
-    // Формируем условия поиска
-    const where = search ? {
-      OR: [
-        { name: { contains: search, mode: 'insensitive' } },
-        { note: { contains: search, mode: 'insensitive' } },
-      ],
-    } : {};
-
-    // Формируем сортировку
-    const orderBy = {
-      [sortKey]: sortOrder === 'asc' ? 'asc' : 'desc',
-    };
-
-    // Выполняем запросы параллельно
+    const { page, pageSize, skip } = manufacturerPagination(query);
+    const { where, orderBy } = manufacturerReadOptions(query);
     const [data, total] = await Promise.all([
       prisma.manufacturer.findMany({
         where,
         orderBy,
-        skip: (page - 1) * pageSize,
+        skip,
         take: pageSize,
-        include: {
-          _count: {
-            select: {
-              materials: true,
-            },
-          },
-        },
+        include: manufacturerUsageInclude,
       }),
       prisma.manufacturer.count({ where }),
     ]);
-
-    return {
-      success: true,
-      data,
-      total,
-      page,
-      pageSize,
-    };
-
-  } catch (error: any) {
-    console.error('Ошибка при получении списка производителей:', error);
-    
-    throw createError({
-      statusCode: 500,
-      statusMessage: error.message || 'Ошибка при получении списка производителей',
-    });
+    // _count.receipts — число учитываемых поступлений, НЕ число видов материалов.
+    return { success: true, data, total, page, pageSize };
+  } catch (error: unknown) {
+    rethrowManufacturerError(error, 'list');
   }
 });

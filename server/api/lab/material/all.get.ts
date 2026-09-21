@@ -1,38 +1,86 @@
-// server/api/lab/material/all.get.ts (расширенная версия)
-import { PrismaClient } from '@prisma/client';
-import { defineEventHandler, getQuery } from 'h3';
+// Установить как server/api/lab/material/all.get.ts
+import { AccessAction } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
+import { createError, defineEventHandler, getQuery, isError } from 'h3';
 
-const prisma = new PrismaClient();
+import { prisma } from '~~/server/utils/prisma';
+import { requirePermission } from '~~/server/services/access-control.service';
+
+const RESOURCE_KEY = 'lab.materials';
+
+/**
+ * Тот же критерий использования, что в обновлённых index.get.ts и DELETE.
+ * Учитываем действующий Реестр (даже при несогласованном deletedAt поступления)
+ * и отдельное действующее поступление без Реестра.
+ * Связь с мягко удалённой записью Реестра использованием не считается.
+ */
+const blockingReceiptWhere: Prisma.ReceiptMaterialWhereInput = {
+  OR: [
+    { samplingTest: { is: { deletedAt: null } } },
+    { deletedAt: null, samplingTest: { is: null } },
+  ],
+};
 
 export default defineEventHandler(async (event) => {
+  // Право просмотра проверяется до запроса к справочнику.
+  // Ожидаемый отказ в доступе не превращается в ошибку сервера.
+  await requirePermission(event, RESOURCE_KEY, AccessAction.VIEW);
+
   try {
     const query = getQuery(event);
-    const search = (query.search as string) || '';
-    const sortKey = (query.sortKey as string) || 'name';
-    const sortOrder = (query.sortOrder as string) || 'asc';
+    const search = typeof query.search === 'string' ? query.search.trim() : '';
+    const sortOrder: Prisma.SortOrder = query.sortOrder === 'desc' ? 'desc' : 'asc';
 
-    // Формируем условия поиска
-    const where: any = {};
-    
+    if (search.includes('\u0000')) {
+      const message = 'Поисковая строка содержит недопустимый символ.';
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'INVALID_MATERIAL_SEARCH',
+        message,
+        data: { code: 'INVALID_MATERIAL_SEARCH', message },
+      });
+    }
+
+    // Удалённые материалы никогда не попадают в обычный список выбора.
+    const where: Prisma.MaterialWhereInput = { deletedAt: null };
+
     if (search) {
       where.OR = [
-        { name: { contains: search, mode: 'insensitive' as const } },
-        { note: { contains: search, mode: 'insensitive' as const } },
-        { manufacturer: { name: { contains: search, mode: 'insensitive' as const } } },
+        { name: { contains: search, mode: 'insensitive' } },
+        { note: { contains: search, mode: 'insensitive' } },
+        {
+          // Поиск по изготовителю сохраняем через поступления.
+          // Прямой связи Material.manufacturer в новой модели нет.
+          receipts: {
+            some: {
+              AND: [
+                blockingReceiptWhere,
+                { manufacturer: { is: { name: { contains: search, mode: 'insensitive' } } } },
+              ],
+            },
+          },
+        },
       ];
     }
 
-    // Формируем сортировку
-    const orderBy: any = {};
-    if (sortKey === 'manufacturer') {
-      orderBy.manufacturer = {
-        name: sortOrder === 'asc' ? 'asc' : 'desc',
-      };
-    } else {
-      orderBy[sortKey] = sortOrder === 'asc' ? 'asc' : 'desc';
+    let primaryOrder: Prisma.MaterialOrderByWithRelationInput;
+    switch (query.sortKey) {
+      case 'id': primaryOrder = { id: sortOrder }; break;
+      case 'note': primaryOrder = { note: sortOrder }; break;
+      case 'createdAt': primaryOrder = { createdAt: sortOrder }; break;
+      case 'editedAt': primaryOrder = { editedAt: sortOrder }; break;
+      case 'authorEmail': primaryOrder = { authorEmail: sortOrder }; break;
+      case 'editorEmail': primaryOrder = { editorEmail: sortOrder }; break;
+      // sortKey=manufacturer и неизвестный ключ — сортировка по названию,
+      // как в index.get.ts. Единственного изготовителя не подставляем.
+      default: primaryOrder = { name: sortOrder };
     }
 
-    // Получаем все материалы без пагинации
+    const orderBy: Prisma.MaterialOrderByWithRelationInput[] = [primaryOrder];
+    if (query.sortKey !== 'id') orderBy.push({ id: 'asc' });
+
+    // Без skip/take: ВСЕ действующие материалы, соответствующие поиску.
+    // Материал без поступлений тоже доступен для выбора.
     const materials = await prisma.material.findMany({
       where,
       orderBy,
@@ -40,34 +88,27 @@ export default defineEventHandler(async (event) => {
         id: true,
         name: true,
         note: true,
-        manufacturerId: true,
-        manufacturer: {
-          select: {
-            id: true,
-            name: true,
-            note: true,
-          },
-        },
         _count: {
           select: {
-            receipts: true,
+            receipts: { where: blockingReceiptWhere },
           },
         },
       },
     });
 
-    return {
-      success: true,
-      data: materials,
-      total: materials.length,
-    };
+    // Сохраняем оболочку ответа и используемые поля списка.
+    // manufacturerId/manufacturer намеренно исключены из Material.
+    return { success: true, data: materials, total: materials.length };
+  } catch (error: unknown) {
+    if (isError(error)) throw error;
 
-  } catch (error: any) {
-    console.error('Ошибка при получении списка материалов:', error);
-    
+    console.error('[lab/material ALL GET] Ошибка получения списка материалов:', error);
+    const message = 'Не удалось загрузить список материалов. Повторите попытку.';
     throw createError({
       statusCode: 500,
-      statusMessage: error.message || 'Ошибка при получении списка материалов',
+      statusMessage: 'MATERIAL_OPTIONS_FAILED',
+      message,
+      data: { code: 'MATERIAL_OPTIONS_FAILED', message },
     });
   }
 });

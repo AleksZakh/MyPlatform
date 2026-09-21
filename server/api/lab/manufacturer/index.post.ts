@@ -1,59 +1,50 @@
 // server/api/lab/manufacturer/index.post.ts
-import { PrismaClient } from '@prisma/client';
+import { AccessAction } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { defineEventHandler, readBody } from 'h3';
 
-const prisma = new PrismaClient();
+import { requirePermission } from '~~/server/services/access-control.service';
+import { buildCreateAuditDelta, writeAuditEvent } from '~~/server/utils/auditLog';
+import {
+  MANUFACTURER_RESOURCE_KEY,
+  assertManufacturerNameAvailable,
+  manufacturerAuditActor,
+  manufacturerWriteTransaction,
+  parseManufacturerInput,
+  rethrowManufacturerError,
+  rethrowManufacturerNameConflict,
+} from '~~/server/services/lab/manufacturer-api.service';
 
 export default defineEventHandler(async (event) => {
+  const permission = await requirePermission(event, MANUFACTURER_RESOURCE_KEY, AccessAction.CREATE);
   try {
-    const body = await readBody(event);
-    
-    // Валидация
-    if (!body.name?.trim()) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Название производителя обязательно для заполнения',
+    const input = parseManufacturerInput(await readBody<unknown>(event));
+    return await manufacturerWriteTransaction(async (tx) => {
+      await assertManufacturerNameAvailable(tx, input.name);
+      const actor = await manufacturerAuditActor(tx, permission.userId);
+      const data: Prisma.ManufacturerCreateInput = {
+        name: input.name,
+        note: input.note ?? null,
+        authorEmail: actor.actorEmail,
+      };
+      const created = await tx.manufacturer.create({ data }).catch(rethrowManufacturerNameConflict);
+      // Ошибки аудита не маскируются под дубликат производителя.
+      await writeAuditEvent({
+        event,
+        db: tx,
+        category: 'DATA',
+        result: 'SUCCESS',
+        action: 'CREATE',
+        resourceKey: MANUFACTURER_RESOURCE_KEY,
+        entityType: 'Manufacturer',
+        entityId: created.id,
+        ...actor,
+        note: `Создан производитель «${created.name}».`,
+        changes: buildCreateAuditDelta({ name: created.name, note: created.note }, ['name', 'note']),
       });
-    }
-
-    // Проверка на дубликат
-    const existing = await prisma.manufacturer.findUnique({
-      where: { name: body.name.trim() },
+      return { success: true, data: created, message: 'Производитель успешно создан' };
     });
-
-    if (existing) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: `Производитель с названием "${body.name}" уже существует`,
-      });
-    }
-
-    // Получаем email автора из сессии или из тела запроса
-    const authorEmail = body.authorEmail || event.context.user?.email || 'system@user';
-
-    const newManufacturer = await prisma.manufacturer.create({
-      data: {
-        name: body.name.trim(),
-        note: body.note || null,
-        authorEmail: authorEmail,
-        createdAt: new Date(),
-      },
-    });
-
-    return {
-      success: true,
-      data: newManufacturer,
-      message: 'Производитель успешно создан',
-    };
-
-  } catch (error: any) {
-    console.error('Ошибка при создании производителя:', error);
-    
-    if (error.statusCode) throw error;
-    
-    throw createError({
-      statusCode: 500,
-      statusMessage: error.message || 'Ошибка при создании производителя',
-    });
+  } catch (error: unknown) {
+    rethrowManufacturerError(error, 'create');
   }
 });

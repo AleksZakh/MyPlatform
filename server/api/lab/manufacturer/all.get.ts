@@ -1,52 +1,28 @@
 // server/api/lab/manufacturer/all.get.ts
-import { PrismaClient } from '@prisma/client';
+import { AccessAction } from '@prisma/client';
 import { defineEventHandler, getQuery } from 'h3';
 
-const prisma = new PrismaClient();
+import { prisma } from '~~/server/utils/prisma';
+import { requirePermission } from '~~/server/services/access-control.service';
+import {
+  MANUFACTURER_RESOURCE_KEY,
+  manufacturerReadOptions,
+  rethrowManufacturerError,
+} from '~~/server/services/lab/manufacturer-api.service';
 
 export default defineEventHandler(async (event) => {
+  await requirePermission(event, MANUFACTURER_RESOURCE_KEY, AccessAction.VIEW);
   try {
-    const query = getQuery(event);
-    const search = (query.search as string) || '';
-    const sortKey = (query.sortKey as string) || 'name';
-    const sortOrder = (query.sortOrder as string) || 'asc';
-
-    // Формируем условия поиска
-    const where = search ? {
-      OR: [
-        { name: { contains: search, mode: 'insensitive' } },
-        { note: { contains: search, mode: 'insensitive' } },
-      ],
-    } : {};
-
-    // Формируем сортировку
-    const orderBy = {
-      [sortKey]: sortOrder === 'asc' ? 'asc' : 'desc',
-    };
-
-    // Получаем всех производителей без пагинации
-    const manufacturers = await prisma.manufacturer.findMany({
+    const { where, orderBy } = manufacturerReadOptions(getQuery(event));
+    // Все действующие элементы, соответствующие поиску. Без skip/take и лимита 100.
+    // Производитель без поступлений также доступен для выбора.
+    const data = await prisma.manufacturer.findMany({
       where,
       orderBy,
-      select: {
-        id: true,
-        name: true,
-        note: true,
-      },
+      select: { id: true, name: true, note: true },
     });
-
-    return {
-      success: true,
-      data: manufacturers,
-      total: manufacturers.length,
-    };
-
-  } catch (error: any) {
-    console.error('Ошибка при получении списка производителей:', error);
-    
-    throw createError({
-      statusCode: 500,
-      statusMessage: error.message || 'Ошибка при получении списка производителей',
-    });
+    return { success: true, data, total: data.length };
+  } catch (error: unknown) {
+    rethrowManufacturerError(error, 'options');
   }
 });

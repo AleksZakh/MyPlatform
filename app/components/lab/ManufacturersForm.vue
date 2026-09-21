@@ -102,12 +102,13 @@
                 <th
                   v-for="header in headers"
                   :key="header.key"
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  :class="header.sortable ? 'cursor-pointer hover:text-gray-700' : 'cursor-default'"
                   @click="sortBy(header.key)"
                 >
                   <span class="flex items-center gap-1">
                     {{ header.title }}
-                    <span v-if="sortKey === header.key" class="text-xs">
+                    <span v-if="header.sortable && sortKey === header.key" class="text-xs">
                       {{ sortOrder === 'asc' ? '↑' : '↓' }}
                     </span>
                   </span>
@@ -128,8 +129,13 @@
                   {{ manufacturer.note || '—' }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <span class="text-xs bg-gray-100 px-2 py-1 rounded">
-                    {{ manufacturer._count?.materials || 0 }} материалов
+                  <span
+                    class="text-xs bg-gray-100 px-2 py-1 rounded"
+                    :title="getReceiptCount(manufacturer) === null
+                      ? 'Счётчик не получен. Обновите список.'
+                      : 'Поступления, учитываемые при проверке удаления; не число видов материалов.'"
+                  >
+                    {{ getReceiptCount(manufacturer) ?? '—' }}
                   </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -221,8 +227,48 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, reactive, onMounted, watch } from 'vue';
+
+// Поля, используемые из GET /api/lab/manufacturer.
+// _count.receipts — число учитываемых поступлений, не видов материалов.
+interface Manufacturer {
+  id: number;
+  name: string;
+  note: string | null;
+  _count: {
+    receipts: number;
+  };
+}
+
+interface ManufacturerListResponse {
+  success: boolean;
+  data: Manufacturer[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+// В ответах POST/PUT/DELETE здесь используются только эти общие поля.
+interface ManufacturerMutationResponse {
+  success: boolean;
+  message?: string;
+}
+
+interface ManufacturerFormState {
+  id: number | null;
+  name: string;
+  note: string;
+}
+
+type ManufacturerSortKey = 'name' | 'note';
+type ManufacturerColumnKey = ManufacturerSortKey | 'receipts' | 'actions';
+
+interface ManufacturerHeader {
+  key: ManufacturerColumnKey;
+  title: string;
+  sortable: boolean;
+}
 
 // ============================================
 // ИСПОЛЬЗОВАНИЕ TOAST
@@ -238,27 +284,27 @@ const isEditing = ref(false);
 const isLoading = ref(false);
 
 // Заголовки таблицы
-const headers = [
-  { key: 'name', title: 'Название производителя' },
-  { key: 'note', title: 'Примечание' },
-  { key: 'count', title: 'Материалов' },
-  { key: 'actions', title: 'Действия' },
+const headers: ManufacturerHeader[] = [
+  { key: 'name', title: 'Название производителя', sortable: true },
+  { key: 'note', title: 'Примечание', sortable: true },
+  { key: 'receipts', title: 'Поступлений', sortable: false },
+  { key: 'actions', title: 'Действия', sortable: false },
 ];
 
 // Сортировка
-const sortKey = ref('name');
-const sortOrder = ref('asc');
+const sortKey = ref<ManufacturerSortKey>('name');
+const sortOrder = ref<'asc' | 'desc'>('asc');
 
 // Пагинация
 const currentPage = ref(1);
 const pageSize = ref(10);
 
 // Данные с сервера
-const manufacturers = ref([]);
+const manufacturers = ref<Manufacturer[]>([]);
 const totalCount = ref(0);
 
 // Текущий производитель для формы
-const currentManufacturer = reactive({
+const currentManufacturer = reactive<ManufacturerFormState>({
   id: null,
   name: '',
   note: '',
@@ -276,11 +322,22 @@ const totalPages = computed(() => {
 // МЕТОДЫ
 // ============================================
 
+/**
+ * Отсутствие/некорректность счётчика не подменяем нулём.
+ * Это помогает заметить старую версию API вместо ложного «связей нет».
+ */
+function getReceiptCount(manufacturer: Manufacturer | undefined): number | null {
+  const count = manufacturer?._count?.receipts;
+  return typeof count === 'number' && Number.isSafeInteger(count) && count >= 0
+    ? count
+    : null;
+}
+
 // Загрузка данных с сервера с пагинацией
-async function loadManufacturers() {
+async function loadManufacturers(): Promise<void> {
   isLoading.value = true;
   try {
-    const response = await $fetch('/api/lab/manufacturer', {
+    const response = await $fetch<ManufacturerListResponse>('/api/lab/manufacturer', {
       params: {
         page: currentPage.value,
         pageSize: pageSize.value,
@@ -309,7 +366,10 @@ async function loadManufacturers() {
 }
 
 // Сортировка
-const sortBy = (key) => {
+const sortBy = (key: ManufacturerColumnKey): void => {
+  // API не поддерживает сортировку по счётчику и кнопкам действий.
+  if (key !== 'name' && key !== 'note') return;
+
   if (sortKey.value === key) {
     sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
   } else {
@@ -356,7 +416,7 @@ const saveManufacturer = async () => {
     
     const method = currentManufacturer.id ? 'put' : 'post';
     
-    const response = await $fetch(url, {
+    const response = await $fetch<ManufacturerMutationResponse>(url, {
       method,
       body: {
         name: currentManufacturer.name.trim(),
@@ -380,7 +440,7 @@ const saveManufacturer = async () => {
     console.error('Ошибка сохранения производителя:', error);
     showTost(
       'Ошибка!',
-      `Не удалось сохранить производителя. ${error.message || ''}`,
+      `Не удалось сохранить производителя. ${error instanceof Error ? error.message : ''}`,
       'error',
       'fxemoji:warningsign',
       5000
@@ -391,7 +451,7 @@ const saveManufacturer = async () => {
 };
 
 // Редактирование производителя
-const editManufacturer = (manufacturer) => {
+const editManufacturer = (manufacturer: Manufacturer): void => {
   Object.assign(currentManufacturer, {
     id: manufacturer.id,
     name: manufacturer.name,
@@ -401,13 +461,27 @@ const editManufacturer = (manufacturer) => {
 };
 
 // Удаление производителя
-const deleteManufacturer = async (id) => {
-  // Проверка, есть ли связанные материалы (нужно загрузить полную информацию)
+const deleteManufacturer = async (id: number): Promise<void> => {
   const manufacturer = manufacturers.value.find(m => m.id === id);
-  if (manufacturer?._count?.materials > 0) {
+  const receiptCount = getReceiptCount(manufacturer);
+
+  if (receiptCount === null) {
+    showTost(
+      'Обновите список',
+      'Не удалось определить количество связанных поступлений. Обновите список перед удалением.',
+      'warning',
+      'fxemoji:warningsign',
+      5000
+    );
+    return;
+  }
+
+  // Предварительная подсказка интерфейса. После подтверждения сервер
+  // всё равно проверяет актуальные связи и право DELETE самостоятельно.
+  if (receiptCount > 0) {
     showTost(
       'Невозможно удалить!',
-      `Производитель используется в ${manufacturer._count.materials} материалах`,
+      `Производитель используется в действующих записях Реестра или отдельных действующих поступлениях. Учитываемых связей: ${receiptCount}.`,
       'warning',
       'fxemoji:warningsign',
       5000
@@ -419,7 +493,7 @@ const deleteManufacturer = async (id) => {
 
   isLoading.value = true;
   try {
-    const response = await $fetch(`/api/lab/manufacturer/${id}`, {
+    const response = await $fetch<ManufacturerMutationResponse>(`/api/lab/manufacturer/${id}`, {
       method: 'delete',
     });
 
@@ -438,7 +512,7 @@ const deleteManufacturer = async (id) => {
     console.error('Ошибка удаления производителя:', error);
     showTost(
       'Ошибка!',
-      `${error.message || 'Не удалось удалить производителя'}`,
+      error instanceof Error ? error.message : 'Не удалось удалить производителя',
       'error',
       'fxemoji:warningsign',
       5000

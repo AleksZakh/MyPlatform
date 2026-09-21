@@ -45,8 +45,7 @@ export { useLabDataLoader, IncomingControlReference, IncomingControlRecord } fro
 export { useRecordDelete, DeleteOptions } from '../app/composables/useRecordDelete';
 export { useRecordUpdate, UpdateOptions } from '../app/composables/useRecordUpdate';
 export { useReferenceDataLoader } from '../app/composables/useReferenceDataLoader';
-export { LAB_TABLE_COLUMNS, LabTableColumnDefinition } from '../app/composables/useTableSettings';
-export { useTableSettings } from '../app/composables/useTableSettings__';
+export { LAB_TABLE_COLUMNS, useTableSettings, LabTableColumnDefinition } from '../app/composables/useTableSettings';
 export { useAuthStore, actions, useIsLoadingStore } from '../app/stores/auth.store';
 export { useTableFilterStore } from '../app/stores/tableFilter';
 export { useToastStore } from '../app/stores/toast.store';
