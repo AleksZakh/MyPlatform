@@ -1,93 +1,15 @@
-// server/api/lab/test-location/[id].put.ts
-import { PrismaClient } from '@prisma/client';
+// server/api/lab/locations/[id].put.ts
+import { AccessAction } from '@prisma/client';
 import { defineEventHandler, getRouterParam, readBody } from 'h3';
+import { requirePermission } from '~~/server/services/access-control.service';
+import { LOCATION_RESOURCE_KEY, rethrowCatalogError, catalogId, readLocationInput } from '~~/server/services/lab/objects-locations-api.service';
+import { updateLocation } from '~~/server/services/lab/objects-locations-write.service';
 
-const prisma = new PrismaClient();
-
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async event => {
+  const permission = await requirePermission(event, LOCATION_RESOURCE_KEY, AccessAction.UPDATE);
   try {
-    const idParam = getRouterParam(event, 'id');
-    const id = parseInt(idParam || '', 10);
-
-    if (isNaN(id) || id <= 0) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Некорректный ID места отбора',
-      });
-    }
-
-    // Проверяем существование записи
-    const existingLocation = await prisma.testLocation.findUnique({
-      where: { id },
-    });
-
-    if (!existingLocation) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: `Место отбора с ID ${id} не найдено`,
-      });
-    }
-
-    const body = await readBody(event);
-
-    // Валидация
-    if (!body.name?.trim()) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Название места отбора обязательно для заполнения',
-      });
-    }
-
-    // Проверка на дубликат (если имя или объект изменились)
-    if (body.name.trim() !== existingLocation.name || 
-        (body.testObjectId && body.testObjectId !== existingLocation.testObjectId)) {
-      
-      const objectId = body.testObjectId || existingLocation.testObjectId;
-      
-      const duplicate = await prisma.testLocation.findUnique({
-        where: {
-          testObjectId_name: {
-            testObjectId: objectId,
-            name: body.name.trim(),
-          },
-        },
-      });
-
-      if (duplicate && duplicate.id !== id) {
-        throw createError({
-          statusCode: 400,
-          statusMessage: `Место "${body.name}" уже существует для этого объекта`,
-        });
-      }
-    }
-
-    const editorEmail = body.editorEmail || event.context.user?.email || 'system@user';
-
-    const updatedLocation = await prisma.testLocation.update({
-      where: { id },
-      data: {
-        name: body.name.trim(),
-        note: body.note || null,
-        testObjectId: body.testObjectId || existingLocation.testObjectId,
-        editorEmail: editorEmail,
-        editedAt: new Date(),
-      },
-    });
-
-    return {
-      success: true,
-      data: updatedLocation,
-      message: 'Место отбора успешно обновлено',
-    };
-
-  } catch (error: any) {
-    console.error('Ошибка при обновлении места отбора:', error);
-    
-    if (error.statusCode) throw error;
-    
-    throw createError({
-      statusCode: 500,
-      statusMessage: error.message || 'Ошибка при обновлении места отбора',
-    });
-  }
+    const id = catalogId(getRouterParam(event, 'id')); 
+    const input = readLocationInput(await readBody<unknown>(event), false);
+    return await updateLocation(event, permission.userId, id, input);
+  } catch (error: unknown) { rethrowCatalogError(error, 'location', 'update'); }
 });

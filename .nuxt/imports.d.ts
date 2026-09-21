@@ -46,6 +46,7 @@ export { useRecordDelete, DeleteOptions } from '../app/composables/useRecordDele
 export { useRecordUpdate, UpdateOptions } from '../app/composables/useRecordUpdate';
 export { useReferenceDataLoader } from '../app/composables/useReferenceDataLoader';
 export { LAB_TABLE_COLUMNS, useTableSettings, LabTableColumnDefinition } from '../app/composables/useTableSettings';
+export { normalizeLocationName, locationNameKey } from '../shared/utils/lab-location-name';
 export { useAuthStore, actions, useIsLoadingStore } from '../app/stores/auth.store';
 export { useTableFilterStore } from '../app/stores/tableFilter';
 export { useToastStore } from '../app/stores/toast.store';

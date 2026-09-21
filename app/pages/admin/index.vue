@@ -22,7 +22,7 @@
         </h1>
 
         <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-          Инструменты управление пользователями, правами доступа,
+          Инструменты управления пользователями, правами доступа,
           заявками и системным журналом событий.
         </p>
       </div>
@@ -92,18 +92,23 @@
 
 
         <!-- Users -->
-        <div
+        <NuxtLink
+          to="/admin/users"
           class="
-            rounded-2xl border border-slate-200
-            bg-white p-6 opacity-60
+            group rounded-2xl border border-slate-200
+            bg-white p-6 shadow-sm transition
+            hover:-translate-y-0.5
+            hover:border-sky-300
+            hover:shadow-md
           "
         >
           <div
             class="
               mb-5 flex h-12 w-12
               items-center justify-center
-              rounded-xl bg-slate-100
-              text-slate-500
+              rounded-xl bg-sky-50
+              text-sky-700 transition
+              group-hover:bg-sky-100
             "
           >
             <Icon
@@ -117,14 +122,27 @@
           </h2>
 
           <p class="mt-2 text-sm leading-5 text-slate-500">
-            Управление учётными записями
-            и состояниями пользователей.
+            Управление доменными и внешними
+            пользователями, профилями и доступами.
           </p>
 
-          <div class="mt-5 text-xs font-medium uppercase tracking-wide text-slate-400">
-            В разработке
+          <div
+            class="
+              mt-5 flex items-center gap-2
+              text-sm font-medium text-sky-700
+            "
+          >
+            Открыть пользователей
+
+            <Icon
+              name="lucide:arrow-right"
+              class="
+                h-4 w-4 transition-transform
+                group-hover:translate-x-1
+              "
+            />
           </div>
-        </div>
+        </NuxtLink>
 
 
         <!-- Access -->
@@ -225,7 +243,7 @@
 
 <script setup lang="ts">
 useSeoMeta({
-  title: 'Центр админимтрирования',
+  title: 'Центр администрирования',
   description: 'Центр администрирования Space',
 });
 </script>

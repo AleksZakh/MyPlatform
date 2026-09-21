@@ -15,8 +15,21 @@ declare module "nitropack/types" {
     '/api/ad/search': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ad/search.get').default>>>>
     }
+    '/api/admin/ad-cache/refresh': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/ad-cache/refresh.post').default>>>>
+    }
     '/api/admin/audit-log': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/audit-log/index.get').default>>>>
+    }
+    '/api/admin/departments/:id/permissions': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/departments/[id]/permissions.get').default>>>>
+      'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/departments/[id]/permissions.put').default>>>>
+    }
+    '/api/admin/directory-departments': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/directory-departments/index.get').default>>>>
+    }
+    '/api/admin/directory-departments/mapping': {
+      'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/directory-departments/mapping.put').default>>>>
     }
     '/api/admin/registration-requests/:id': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/registration-requests/[id].get').default>>>>
@@ -29,6 +42,12 @@ declare module "nitropack/types" {
     }
     '/api/admin/registration-requests': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/registration-requests/index.get').default>>>>
+    }
+    '/api/admin/users/:id/access': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/users/[id]/access.get').default>>>>
+    }
+    '/api/admin/users': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/users/index.get').default>>>>
     }
     '/api/auth/activate-account': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/auth/activate-account.post').default>>>>
@@ -84,6 +103,12 @@ declare module "nitropack/types" {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/index.get').default>>>>
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/index.post').default>>>>
     }
+    '/api/lab/event-journal/:type/:id/history': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/event-journal/[type]/[id]/history.get').default>>>>
+    }
+    '/api/lab/event-journal': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/event-journal/index.get').default>>>>
+    }
     '/api/lab/filter-template/:id': {
       'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/filter-template/[id].delete').default>>>>
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/filter-template/[id].get').default>>>>
@@ -107,6 +132,9 @@ declare module "nitropack/types" {
     '/api/lab/locations': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/locations/index.get').default>>>>
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/locations/index.post').default>>>>
+    }
+    '/api/lab/locations/suggestions': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/locations/suggestions.get').default>>>>
     }
     '/api/lab/manufacturer/:id': {
       'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/manufacturer/[id].delete').default>>>>

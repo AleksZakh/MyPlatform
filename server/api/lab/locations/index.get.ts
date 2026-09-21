@@ -1,75 +1,20 @@
-// server/api/lab/test-location/index.get.ts
-import { PrismaClient } from '@prisma/client';
+import { AccessAction } from '@prisma/client';
 import { defineEventHandler, getQuery } from 'h3';
+import { prisma } from '~~/server/utils/prisma';
+import { requirePermission } from '~~/server/services/access-control.service';
+import { LOCATION_RESOURCE_KEY, catalogPagination, locationWhere, locationOrders, locationUsageInclude,
+  rethrowCatalogError } from '~~/server/services/lab/objects-locations-api.service';
 
-const prisma = new PrismaClient();
-
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async event => {
+  await requirePermission(event, LOCATION_RESOURCE_KEY, AccessAction.VIEW);
   try {
     const query = getQuery(event);
-    const page = parseInt(query.page as string) || 1;
-    const pageSize = parseInt(query.pageSize as string) || 10;
-    const testObjectId = parseInt(query.testObjectId as string) || 0;
-    const search = (query.search as string) || '';
-    const sortKey = (query.sortKey as string) || 'name';
-    const sortOrder = (query.sortOrder as string) || 'asc';
-
-    // Формируем условия поиска
-    const where: any = {};
-    
-    if (testObjectId > 0) {
-      where.testObjectId = testObjectId;
-    }
-    
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' as const } },
-        { note: { contains: search, mode: 'insensitive' as const } },
-      ];
-    }
-
-    // Формируем сортировку
-    const orderBy: any = {};
-    orderBy[sortKey] = sortOrder === 'asc' ? 'asc' : 'desc';
-
-    // Выполняем запросы параллельно
+    const { page, pageSize, skip } = catalogPagination(query);
+    const where = await locationWhere(query);
     const [data, total] = await Promise.all([
-      prisma.testLocation.findMany({
-        where,
-        orderBy,
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-        include: {
-          testObject: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-          _count: {
-            select: {
-              samplingTests: true,
-            },
-          },
-        },
-      }),
+      prisma.testLocation.findMany({ where, orderBy: locationOrders(query), skip, take: pageSize, include: locationUsageInclude }),
       prisma.testLocation.count({ where }),
     ]);
-
-    return {
-      success: true,
-      data,
-      total,
-      page,
-      pageSize,
-    };
-
-  } catch (error: any) {
-    console.error('Ошибка при получении списка мест отбора:', error);
-    
-    throw createError({
-      statusCode: 500,
-      statusMessage: error.message || 'Ошибка при получении списка мест отбора',
-    });
-  }
+    return { success: true, data, total, page, pageSize };
+  } catch (error: unknown) { rethrowCatalogError(error, 'location', 'list'); }
 });

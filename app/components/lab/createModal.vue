@@ -7,9 +7,11 @@
     class="custom-modal bg-sky-100 shadow-blue-200 max-h-full w-full border border-gray-300"
     :ui="{
       content:
-        ' max-w-[1500px] bg-gray-100 overflow-x-hidden',
+        'max-w-[1500px] max-h-[94vh] bg-gray-100 overflow-hidden flex flex-col',
       body:
-        'overflow-x-hidden',
+        'min-h-0 flex-1 overflow-y-auto overflow-x-hidden',
+      header:
+        'shrink-0',
     }"
   >
     <template #header>
@@ -58,16 +60,15 @@
       <UForm
         :schema="schema"
         :state="state"
-        class="modal-form w-full min-w-0 max-w-full overflow-x-hidden relative"
+        class="incoming-control-form w-full min-w-0 relative"
         @submit="handleSubmit"
       >
         <div
-          class="parent grid gap-3 px-1 pb-2 bg-white"
+          class="parent grid min-w-0 gap-3 px-1 pb-2 bg-white"
         >
           <!-- ===================================== -->
           <!-- 1. ОТБОР ПРОБ -->
           <!-- ===================================== -->
-          <div class="section-slot">
           <fieldset
             :disabled="
               baseSectionDisabled
@@ -264,13 +265,106 @@
                   </span>
                 </template>
 
-                <UInput
-                  v-model="
-                    state.samplingTest
-                      .testLocationName
-                  "
-                  class="w-full min-w-0 shadow-sm"
-                />
+                <div
+                  class="location-input-shell"
+                >
+                  <UInput
+                    v-model="
+                      state.samplingTest
+                        .testLocationName
+                    "
+                    class="w-full min-w-0 shadow-sm"
+                    autocomplete="off"
+                    @focus="
+                      openLocationSuggestions
+                    "
+                    @blur="
+                      closeLocationSuggestionsDelayed
+                    "
+                  />
+
+                  <div
+                    v-if="
+                      locationSuggestionOpen &&
+                      (
+                        locationSuggestions.length > 0 ||
+                        locationSuggestionHint
+                      )
+                    "
+                    class="location-suggestions"
+                  >
+                    <button
+                      v-for="item in locationSuggestions"
+                      :key="item.id"
+                      type="button"
+                      class="location-suggestion-item"
+                      @mousedown.prevent="
+                        selectLocationSuggestion(
+                          item,
+                        )
+                      "
+                    >
+                      <Icon
+                        name="i-heroicons-map-pin"
+                        size="15"
+                        class="shrink-0 text-sky-600"
+                      />
+
+                      <span
+                        class="location-suggestion-name"
+                      >
+                        {{ item.name }}
+                      </span>
+
+                      <span
+                        v-if="
+                          locationMatchStatus ===
+                            'existing' &&
+                          locationMatchId ===
+                            item.id
+                        "
+                        class="location-suggestion-badge"
+                      >
+                        точное совпадение
+                      </span>
+                    </button>
+
+                    <div
+                      v-if="locationSuggestionHint"
+                      class="location-suggestion-hint"
+                      :class="{
+                        'location-suggestion-hint--warning':
+                          locationMatchStatus ===
+                            'deleted' ||
+                          locationMatchStatus ===
+                            'ambiguous',
+                        'location-suggestion-hint--new':
+                          locationMatchStatus ===
+                            'new',
+                      }"
+                    >
+                      <Icon
+                        :name="
+                          locationMatchStatus ===
+                            'new'
+                            ? 'i-heroicons-plus-circle'
+                            : locationMatchStatus ===
+                                'existing'
+                              ? 'i-heroicons-check-circle'
+                              : 'i-heroicons-exclamation-triangle'
+                        "
+                        size="16"
+                        class="shrink-0"
+                      />
+
+                      <span>
+                        {{
+                          locationSuggestionHint
+                        }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </UFormField>
 
 
@@ -324,13 +418,11 @@
               </UFormField>
             </div>
           </fieldset>
-          </div>
 
 
           <!-- ===================================== -->
           <!-- 2. ПОСТУПЛЕНИЕ МАТЕРИАЛА -->
           <!-- ===================================== -->
-          <div class="section-slot">
           <fieldset
             :disabled="
               baseSectionDisabled
@@ -573,13 +665,11 @@
               </UFormField>
             </div>
           </fieldset>
-          </div>
 
 
           <!-- ===================================== -->
           <!-- 3. ПРОТОКОЛ ИСПЫТАНИЙ -->
           <!-- ===================================== -->
-          <div class="section-slot">
           <fieldset
             :disabled="
               protocolSectionDisabled
@@ -816,7 +906,6 @@
               </UFormField>
             </div>
           </fieldset>
-          </div>
         </div>
 
 
@@ -888,7 +977,6 @@ import type {
 } from '~/composables/useLabDataLoader'
 
 
-
 type ModalAction =
   | 'create'
   | 'edit'
@@ -899,6 +987,44 @@ type SelectedRecord =
   Partial<IncomingControlRecord> & {
     action?: ModalAction
   }
+
+
+interface TestObjectOption {
+  id: number
+  name: string
+  fullName: string | null
+}
+
+
+interface LocationSuggestion {
+  id: number
+  name: string
+  testObjectId: number
+}
+
+
+type LocationMatchStatus =
+  | 'empty'
+  | 'existing'
+  | 'ambiguous'
+  | 'deleted'
+  | 'new'
+
+
+interface LocationSuggestionsResponse {
+  success: boolean
+  testObjectId: number
+
+  data: LocationSuggestion[]
+  total: number
+
+  match: {
+    status: LocationMatchStatus
+    locationId: number | null
+  }
+
+  nameAvailable: boolean
+}
 
 
 interface EditWindowState {
@@ -1023,6 +1149,41 @@ const plpItems =
 const testObjectItems =
   ref<string[]>([])
 
+const testObjectOptions =
+  ref<TestObjectOption[]>([])
+
+
+const locationSuggestions =
+  ref<LocationSuggestion[]>([])
+
+const locationMatchStatus =
+  ref<LocationMatchStatus>(
+    'empty',
+  )
+
+const locationMatchId =
+  ref<number | null>(
+    null,
+  )
+
+const locationSuggestionOpen =
+  ref(false)
+
+const locationSuggestionsLoading =
+  ref(false)
+
+let locationSuggestionTimer:
+  ReturnType<
+    typeof setTimeout
+  > | null = null
+
+let locationSuggestionRequestId =
+  0
+
+let suppressObjectLocationReset =
+  false
+
+
 const inspectorItems =
   ref<string[]>([])
 
@@ -1037,6 +1198,234 @@ const testResultItems =
     'Соответствует',
     'Не соответствует',
   ])
+
+
+const selectedTestObject =
+  computed(
+    () =>
+      testObjectOptions.value
+        .find(
+          item =>
+            item.name ===
+            state
+              .samplingTest
+              .testObjectName,
+        ) ??
+      null,
+  )
+
+
+const locationSuggestionHint =
+  computed(() => {
+    const value =
+      state
+        .samplingTest
+        .testLocationName
+        .trim()
+
+    if (
+      !value ||
+      !selectedTestObject.value
+    ) {
+      return ''
+    }
+
+    if (
+      locationSuggestionsLoading.value
+    ) {
+      return 'Поиск существующих мест...'
+    }
+
+    switch (
+      locationMatchStatus.value
+    ) {
+      case 'existing':
+        return 'Такое место уже есть в выбранном объекте. При сохранении будет использована существующая запись.'
+
+      case 'new':
+        return 'Такого места пока нет. Оно будет создано только после успешного сохранения Реестра.'
+
+      case 'deleted':
+        return 'Совпадающее место было мягко удалено. Автоматическое восстановление запрещено.'
+
+      case 'ambiguous':
+        return 'Найдено несколько эквивалентных мест. Сначала необходимо уточнить справочник.'
+
+      default:
+        return ''
+    }
+  })
+
+
+function clearLocationSuggestionState() {
+  locationSuggestions.value =
+    []
+
+  locationMatchStatus.value =
+    'empty'
+
+  locationMatchId.value =
+    null
+}
+
+
+function openLocationSuggestions() {
+  locationSuggestionOpen.value =
+    true
+
+  scheduleLocationSuggestions()
+}
+
+
+function closeLocationSuggestionsDelayed() {
+  setTimeout(
+    () => {
+      locationSuggestionOpen.value =
+        false
+    },
+    150,
+  )
+}
+
+
+function selectLocationSuggestion(
+  item: LocationSuggestion,
+) {
+  state.samplingTest
+    .testLocationName =
+      item.name
+
+  locationSuggestionOpen.value =
+    false
+
+  locationSuggestions.value =
+    [item]
+
+  locationMatchStatus.value =
+    'existing'
+
+  locationMatchId.value =
+    item.id
+}
+
+
+function scheduleLocationSuggestions() {
+  if (locationSuggestionTimer) {
+    clearTimeout(
+      locationSuggestionTimer,
+    )
+  }
+
+  locationSuggestionTimer =
+    setTimeout(
+      () => {
+        void loadLocationSuggestions()
+      },
+      250,
+    )
+}
+
+
+async function loadLocationSuggestions() {
+  const object =
+    selectedTestObject.value
+
+  const search =
+    state.samplingTest
+      .testLocationName
+      .trim()
+
+  if (
+    !object ||
+    !search
+  ) {
+    clearLocationSuggestionState()
+    return
+  }
+
+
+  const requestId =
+    ++locationSuggestionRequestId
+
+  locationSuggestionsLoading.value =
+    true
+
+  try {
+    const response =
+      await $fetch<
+        LocationSuggestionsResponse
+      >(
+        '/api/lab/locations/suggestions',
+        {
+          query: {
+            testObjectId:
+              object.id,
+
+            search,
+          },
+        },
+      )
+
+
+    /**
+     * Пользователь мог успеть изменить объект/текст,
+     * пока предыдущий запрос был в сети.
+     */
+    if (
+      requestId !==
+      locationSuggestionRequestId
+    ) {
+      return
+    }
+
+
+    locationSuggestions.value =
+      response.data ?? []
+
+    locationMatchStatus.value =
+      response.match
+        ?.status ??
+      'empty'
+
+    locationMatchId.value =
+      response.match
+        ?.locationId ??
+      null
+
+  } catch (error: any) {
+    /**
+     * Подсказки — UX, а не источник истины.
+     * Серверный resolver всё равно проверит место при SAVE.
+     *
+     * Поэтому временная ошибка подсказок не блокирует ввод.
+     */
+    if (
+      requestId ===
+      locationSuggestionRequestId
+    ) {
+      clearLocationSuggestionState()
+    }
+
+    if (
+      error?.statusCode !== 403 &&
+      error?.status !== 403
+    ) {
+      console.warn(
+        'Не удалось загрузить подсказки мест отбора:',
+        error,
+      )
+    }
+
+  } finally {
+    if (
+      requestId ===
+      locationSuggestionRequestId
+    ) {
+      locationSuggestionsLoading.value =
+        false
+    }
+  }
+}
 
 
 const isCreateMode =
@@ -1676,6 +2065,9 @@ function fillFormWithData(
   record:
     IncomingControlRecord,
 ) {
+  suppressObjectLocationReset =
+    true
+
   state.samplingTest.plpName =
     record.plp?.name ?? ''
 
@@ -1764,6 +2156,10 @@ function fillFormWithData(
   state.testProtocol.note =
     protocol?.note ?? ''
 
+  suppressObjectLocationReset =
+    false
+
+  clearLocationSuggestionState()
 }
 
 
@@ -1791,6 +2187,45 @@ async function loadReferenceData() {
   inspectorItems.value = inspectors
   materialItems.value = materials
   manufacturerItems.value = manufacturers
+
+
+  /**
+   * Для подсказок места нужен стабильный ID объекта.
+   * Старый loadReference() возвращает только строки,
+   * поэтому ID загружаем отдельно, не ломая его контракт.
+   */
+  try {
+    const response =
+      await $fetch<{
+        success: boolean
+        data: TestObjectOption[]
+      }>(
+        '/api/lab/objects/all',
+      )
+
+    if (response.success) {
+      testObjectOptions.value =
+        response.data ?? []
+
+      /**
+       * API объектов — приоритетный источник,
+       * потому что он исключает мягко удалённые записи.
+       */
+      testObjectItems.value =
+        testObjectOptions.value
+          .map(
+            item => item.name,
+          )
+    }
+  } catch (error) {
+    console.warn(
+      'Не удалось загрузить ID объектов для подсказок мест:',
+      error,
+    )
+
+    testObjectOptions.value =
+      []
+  }
 }
 
 
@@ -2364,6 +2799,56 @@ async function handleSubmit(
 }
 
 
+watch(
+  () =>
+    state.samplingTest
+      .testObjectName,
+
+  (
+    newValue,
+    oldValue,
+  ) => {
+    if (
+      suppressObjectLocationReset ||
+      newValue === oldValue
+    ) {
+      return
+    }
+
+    /**
+     * Место принадлежит объекту.
+     * После смены объекта старое значение нельзя оставлять.
+     */
+    state.samplingTest
+      .testLocationName =
+        ''
+
+    locationSuggestionRequestId++
+
+    clearLocationSuggestionState()
+  },
+
+  {
+    flush:
+      'sync',
+  },
+)
+
+
+watch(
+  () =>
+    state.samplingTest
+      .testLocationName,
+
+  () => {
+    locationSuggestionOpen.value =
+      true
+
+    scheduleLocationSuggestions()
+  },
+)
+
+
 onMounted(
   async () => {
     await loadReferenceData()
@@ -2382,6 +2867,15 @@ onMounted(
 
 onUnmounted(
   () => {
+    if (locationSuggestionTimer) {
+      clearTimeout(
+        locationSuggestionTimer,
+      )
+
+      locationSuggestionTimer =
+        null
+    }
+
     if (editLockTimer) {
       clearInterval(
         editLockTimer,
@@ -2401,114 +2895,262 @@ defineExpose({
 
 
 <style scoped>
-.modal-form {
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
-  overflow-x: hidden;
-  box-sizing: border-box;
-}
-
 .date-field-shell {
-  display: inline-flex;
   width: fit-content;
   max-width: 100%;
-  padding: 1px;
-  border: 2px solid transparent;
-  border-radius: 0.5rem;
-  box-sizing: border-box;
+  min-width: 0;
+  border-radius: 0.375rem;
   transition:
-    border-color 0.15s ease,
-    background-color 0.15s ease;
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .date-field-shell--error {
-  border-color: #ef4444;
-  background-color: #fef2f2;
+  box-shadow:
+    0 0 0 2px #ef4444;
+}
+
+/* ==========================================================
+ * ОСНОВНАЯ СЕТКА ФОРМЫ
+ * ========================================================== */
+
+.incoming-control-form {
+  width: 100%;
+  min-width: 0;
 }
 
 .parent {
-  display: grid !important;
-  width: 100% !important;
-  min-width: 0 !important;
-  max-width: 100% !important;
+  width: 100%;
+  min-width: 0;
+  align-items: start;
   grid-template-columns:
     repeat(
       3,
       minmax(0, 1fr)
     );
-  align-items: stretch;
-  box-sizing: border-box;
-  overflow-x: hidden;
 }
 
 /*
- * Размером колонки управляет обычный div.
- * fieldset больше не участвует напрямую в расчёте grid track,
- * поэтому его intrinsic/min-content width не может раздвигать сетку.
+ * Критично для CSS Grid:
+ * содержимое дочерней колонки не должно увеличивать её
+ * минимальную ширину и вытеснять соседнюю колонку.
  */
-.section-slot {
-  width: 100%;
+.parent > fieldset,
+.parent > * {
   min-width: 0;
   max-width: 100%;
-  overflow: hidden;
-  box-sizing: border-box;
 }
 
-.section-slot > fieldset {
-  width: 100%;
-  min-width: 0 !important;
-  min-inline-size: 0 !important;
-  max-width: 100%;
-  height: 100%;
-  box-sizing: border-box;
-  overflow: hidden;
+/*
+ * overflow:hidden здесь НЕ используем:
+ * иначе выпадающий список места отбора обрезается границей fieldset.
+ */
+.parent > fieldset {
+  overflow: visible;
 }
 
-.section-slot > fieldset > * {
+/* Любой flex/grid внутри секции должен иметь право сжиматься. */
+.parent :deep(.w-full),
+.parent :deep(input),
+.parent :deep(textarea),
+.parent :deep(select),
+.parent :deep(button) {
   min-width: 0;
   max-width: 100%;
-  box-sizing: border-box;
 }
 
-.section-slot legend {
-  max-width: 100%;
-}
-
-.section-slot p,
-.section-slot label,
-.section-slot span {
+/*
+ * Длинные подписи и сообщения ошибок не должны растягивать колонку.
+ */
+.parent :deep(label),
+.parent :deep(p),
+.parent :deep(span) {
   overflow-wrap: anywhere;
 }
 
-.parent :deep(input),
-.parent :deep(textarea),
-.parent :deep(button),
-.parent :deep([role="combobox"]) {
+/*
+ * Nuxt UI trigger/select может содержать длинное название объекта.
+ * Ограничиваем внутренние элементы шириной своей колонки.
+ */
+.parent :deep([role='combobox']),
+.parent :deep([data-slot='base']),
+.parent :deep([data-slot='input']),
+.parent :deep([data-slot='content']) {
   min-width: 0;
   max-width: 100%;
-  box-sizing: border-box;
 }
 
-.parent :deep(.w-full) {
-  min-width: 0 !important;
-  max-width: 100% !important;
+/* ==========================================================
+ * ПОДСКАЗКИ МЕСТ ОТБОРА
+ * ========================================================== */
+
+.location-input-shell {
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
 }
 
-@media (max-width: 980px) {
+.location-suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 80;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  max-height: min(260px, 36vh);
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  box-shadow:
+    0 12px 30px
+    rgb(15 23 42 / 16%);
+}
+
+.location-suggestion-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  gap: 0.5rem;
+  padding: 0.55rem 0.7rem;
+  color: #0f172a;
+  text-align: left;
+  background: #fff;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.location-suggestion-item:hover {
+  background: #f0f9ff;
+}
+
+.location-suggestion-name {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.location-suggestion-badge {
+  flex: 0 0 auto;
+  max-width: 42%;
+  padding: 0.1rem 0.35rem;
+  overflow: hidden;
+  font-size: 0.68rem;
+  color: #0369a1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: #e0f2fe;
+  border-radius: 999px;
+}
+
+.location-suggestion-hint {
+  display: flex;
+  align-items: flex-start;
+  min-width: 0;
+  gap: 0.45rem;
+  padding: 0.55rem 0.7rem;
+  overflow-wrap: anywhere;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: #0369a1;
+  background: #f0f9ff;
+}
+
+.location-suggestion-hint--new {
+  color: #166534;
+  background: #f0fdf4;
+}
+
+.location-suggestion-hint--warning {
+  color: #991b1b;
+  background: #fef2f2;
+}
+
+/* ==========================================================
+ * НИЖНЯЯ ПАНЕЛЬ КНОПОК
+ * ========================================================== */
+
+/*
+ * Если высоты экрана мало, body UModal прокручивается,
+ * а кнопки не создают горизонтальное переполнение.
+ */
+.incoming-control-form > .relative:last-child {
+  min-width: 0;
+}
+
+.incoming-control-form > .relative:last-child > div {
+  flex-wrap: wrap;
+}
+
+/* ==========================================================
+ * RESPONSIVE: 3 -> 2 -> 1 КОЛОНКИ
+ * ========================================================== */
+
+/*
+ * На обычном рабочем мониторе оставляем три колонки.
+ * При сужении модалки переходим на две до того,
+ * как поля успеют начать давить друг на друга.
+ */
+@media (max-width: 1280px) {
   .parent {
     grid-template-columns:
-      1fr;
-    overflow-x: hidden;
+      repeat(
+        2,
+        minmax(0, 1fr)
+      );
   }
 
-  .section-slot {
-    width: 100%;
-    max-width: 100%;
+  /*
+   * Третий блок при двух колонках занимает всю строку:
+   * так протокол не остаётся узкой одиночной колонкой.
+   */
+  .parent > fieldset:nth-child(3) {
+    grid-column:
+      1 / -1;
   }
 }
 
-.parent > .section-slot:last-child {
+@media (max-width: 860px) {
+  .parent {
+    grid-template-columns:
+      minmax(0, 1fr);
+  }
+
+  .parent > fieldset:nth-child(3) {
+    grid-column:
+      auto;
+  }
+}
+
+/*
+ * На низком экране уменьшаем вертикальные отступы,
+ * чтобы больше полезной области помещалось до прокрутки.
+ */
+@media (max-height: 760px) {
+  .parent {
+    gap: 0.5rem;
+  }
+
+  .parent > fieldset {
+    padding-top: 0.35rem;
+    padding-bottom: 0.35rem;
+  }
+
+  .location-suggestions {
+    max-height:
+      min(
+        210px,
+        30vh
+      );
+  }
+}
+
+.parent > *:last-child {
   margin-bottom: 16px;
 }
 

@@ -48,6 +48,11 @@ import {
 } from '~~/server/services/lab/incoming-control-edit-lock.service'
 
 
+import {
+  resolveIncomingControlLocation,
+} from '~~/server/services/lab/incoming-control-location.service'
+
+
 const RESOURCE_KEY =
   'lab.sampling-tests'
 
@@ -1030,45 +1035,24 @@ export default defineEventHandler(
 
 
               testLocation =
-                await tx.testLocation
-                  .upsert({
-                    where: {
-                      testObjectId_name: {
-                        testObjectId:
-                          testObject.id,
+                await resolveIncomingControlLocation({
+                  event,
 
-                        name:
-                          payload
-                            .samplingTest
-                            .testLocationName,
-                      },
-                    },
+                  tx,
 
-                    update: {
-                      deletedAt: null,
-                      deletedBy: null,
+                  testObjectId:
+                    testObject.id,
 
-                      editorEmail:
-                        actorEmail,
-                    },
+                  rawName:
+                    payload
+                      .samplingTest
+                      .testLocationName,
 
-                    create: {
-                      name:
-                        payload
-                          .samplingTest
-                          .testLocationName,
+                  userId:
+                    permission.userId,
 
-                      testObject: {
-                        connect: {
-                          id:
-                            testObject.id,
-                        },
-                      },
-
-                      authorEmail:
-                        actorEmail,
-                    },
-                  })
+                  actorEmail,
+                })
 
 
               updatedReceipt =

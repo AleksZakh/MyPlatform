@@ -1,65 +1,14 @@
-// server/api/lab/test-location/[id].delete.ts
-import { PrismaClient } from '@prisma/client';
+// server/api/lab/locations/[id].delete.ts
+import { AccessAction } from '@prisma/client';
 import { defineEventHandler, getRouterParam } from 'h3';
+import { requirePermission } from '~~/server/services/access-control.service';
+import { LOCATION_RESOURCE_KEY, rethrowCatalogError, catalogId } from '~~/server/services/lab/objects-locations-api.service';
+import { deleteLocation } from '~~/server/services/lab/objects-locations-write.service';
 
-const prisma = new PrismaClient();
-
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async event => {
+  const permission = await requirePermission(event, LOCATION_RESOURCE_KEY, AccessAction.DELETE);
   try {
-    const idParam = getRouterParam(event, 'id');
-    const id = parseInt(idParam || '', 10);
-
-    if (isNaN(id) || id <= 0) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Некорректный ID места отбора',
-      });
-    }
-
-    // Проверяем существование записи
-    const existingLocation = await prisma.testLocation.findUnique({
-      where: { id },
-      include: {
-        _count: {
-          select: {
-            samplingTests: true,
-          },
-        },
-      },
-    });
-
-    if (!existingLocation) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: `Место отбора с ID ${id} не найдено`,
-      });
-    }
-
-    // Проверяем, есть ли связанные отборы проб
-    if (existingLocation._count.samplingTests > 0) {
-      throw createError({
-        statusCode: 409,
-        statusMessage: `Невозможно удалить место, так как оно используется в ${existingLocation._count.samplingTests} отборах проб`,
-      });
-    }
-
-    await prisma.testLocation.delete({
-      where: { id },
-    });
-
-    return {
-      success: true,
-      message: 'Место отбора успешно удалено',
-    };
-
-  } catch (error: any) {
-    console.error('Ошибка при удалении места отбора:', error);
-    
-    if (error.statusCode) throw error;
-    
-    throw createError({
-      statusCode: 500,
-      statusMessage: error.message || 'Ошибка при удалении места отбора',
-    });
-  }
+    const id = catalogId(getRouterParam(event, 'id')); 
+    return await deleteLocation(event, permission.userId, id);
+  } catch (error: unknown) { rethrowCatalogError(error, 'location', 'delete'); }
 });

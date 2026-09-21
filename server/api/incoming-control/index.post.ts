@@ -36,6 +36,11 @@ import {
 } from '~~/server/services/lab/incoming-control-rules.service'
 
 
+import {
+  resolveIncomingControlLocation,
+} from '~~/server/services/lab/incoming-control-location.service'
+
+
 const RESOURCE_KEY =
   'lab.sampling-tests'
 
@@ -384,44 +389,24 @@ export default defineEventHandler(
 
 
             const testLocation =
-              await tx.testLocation
-                .upsert({
-                  where: {
-                    testObjectId_name: {
-                      testObjectId:
-                        testObject.id,
+              await resolveIncomingControlLocation({
+                event,
 
-                      name:
-                        payload
-                          .samplingTest
-                          .testLocationName,
-                    },
-                  },
+                tx,
 
-                  update: {
-                    deletedAt: null,
-                    deletedBy: null,
-                    editorEmail:
-                      actorEmail,
-                  },
+                testObjectId:
+                  testObject.id,
 
-                  create: {
-                    name:
-                      payload
-                        .samplingTest
-                        .testLocationName,
+                rawName:
+                  payload
+                    .samplingTest
+                    .testLocationName,
 
-                    testObject: {
-                      connect: {
-                        id:
-                          testObject.id,
-                      },
-                    },
+                userId:
+                  permission.userId,
 
-                    authorEmail:
-                      actorEmail,
-                  },
-                })
+                actorEmail,
+              })
 
 
             const created =

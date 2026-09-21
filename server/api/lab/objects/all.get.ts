@@ -1,48 +1,16 @@
-// server/api/lab/test-object/all.get.ts
-import { PrismaClient } from '@prisma/client';
+import { AccessAction } from '@prisma/client';
 import { defineEventHandler, getQuery } from 'h3';
+import { prisma } from '~~/server/utils/prisma';
+import { requirePermission } from '~~/server/services/access-control.service';
+import { OBJECT_RESOURCE_KEY, objectWhere, objectOrders, rethrowCatalogError
+} from '~~/server/services/lab/objects-locations-api.service';
 
-const prisma = new PrismaClient();
-
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async event => {
+  await requirePermission(event, OBJECT_RESOURCE_KEY, AccessAction.VIEW);
   try {
     const query = getQuery(event);
-    const search = (query.search as string) || '';
-    const sortKey = (query.sortKey as string) || 'name';
-    const sortOrder = (query.sortOrder as string) || 'asc';
-
-    const where: any = {};
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' as const } },
-        { note: { contains: search, mode: 'insensitive' as const } },
-      ];
-    }
-
-    const objects = await prisma.testObject.findMany({
-      where,
-      orderBy: {
-        [sortKey]: sortOrder === 'asc' ? 'asc' : 'desc',
-      },
-      select: {
-        id: true,
-        name: true,
-        note: true,
-      },
-    });
-
-    return {
-      success: true,
-      data: objects,
-      total: objects.length,
-    };
-
-  } catch (error: any) {
-    console.error('Ошибка при получении списка объектов:', error);
-    
-    throw createError({
-      statusCode: 500,
-      statusMessage: error.message || 'Ошибка при получении списка объектов',
-    });
-  }
+    const data = await prisma.testObject.findMany({ where: objectWhere(query), orderBy: objectOrders(query),
+      select: { id: true, name: true, fullName: true, note: true } });
+    return { success: true, data, total: data.length };
+  } catch (error: unknown) { rethrowCatalogError(error, 'object', 'options'); }
 });

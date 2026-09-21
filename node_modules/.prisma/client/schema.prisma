@@ -214,9 +214,10 @@ model ReceiptMaterial {
 
 // 6. Объект испытаний
 model TestObject {
-  id   Int     @id @default(autoincrement())
-  name String  @unique @db.Text
-  note String? @db.Text
+  id       Int     @id @default(autoincrement())
+  name     String  @unique @db.Text
+  fullName String? @db.Text
+  note     String? @db.Text
 
   // Системные поля
   createdAt   DateTime  @default(now())
@@ -470,7 +471,9 @@ model Department {
   sortOrder Int @default(0)
 
   // Связанные ресурсы
-  resources DepartmentResource[]
+  resources         DepartmentResource[]
+  permissions       DepartmentPermission[]
+  directoryMappings DirectoryDepartmentMapping[]
 
   users User[]
 
@@ -517,6 +520,8 @@ model AccessResource {
   registrationRequests RegistrationRequestResource[]
 
   permissions UserPermission[]
+
+  departmentPermissions DepartmentPermission[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -758,4 +763,44 @@ model UserPermission {
   @@index([resourceId])
   @@index([action])
   @@map("user_permissions")
+}
+
+model DepartmentPermission {
+  id Int @id @default(autoincrement())
+
+  departmentId Int
+  resourceId   Int
+  action       AccessAction
+
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  resource AccessResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  grantedByLogin String? @db.VarChar(255)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([departmentId, resourceId, action])
+  @@index([departmentId])
+  @@index([resourceId])
+  @@index([action])
+  @@map("department_permissions")
+}
+
+model DirectoryDepartmentMapping {
+  id Int @id @default(autoincrement())
+
+  // Точное название department из Active Directory
+  directoryName String @unique @db.VarChar(255)
+
+  departmentId Int
+
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([departmentId])
+  @@map("directory_department_mappings")
 }

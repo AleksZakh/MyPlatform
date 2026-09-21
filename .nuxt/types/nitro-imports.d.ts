@@ -155,9 +155,11 @@ declare global {
   const isStream: typeof import('../../node_modules/h3/dist/index').isStream
   const isWebResponse: typeof import('../../node_modules/h3/dist/index').isWebResponse
   const lazyEventHandler: typeof import('../../node_modules/h3/dist/index').lazyEventHandler
+  const locationNameKey: typeof import('../../shared/utils/lab-location-name').locationNameKey
   const logAudit: typeof import('../../server/utils/auditLog').logAudit
   const logger: typeof import('../../server/utils/logger').logger
   const nitroPlugin: typeof import('../../node_modules/nitropack/dist/runtime/internal/plugin').nitroPlugin
+  const normalizeLocationName: typeof import('../../shared/utils/lab-location-name').normalizeLocationName
   const normalizeRelative: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/path-safety').normalizeRelative
   const parseCookies: typeof import('../../node_modules/h3/dist/index').parseCookies
   const parseDataUrl: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/storage').parseDataUrl
@@ -397,6 +399,7 @@ export { defineNitroErrorHandler } from 'nitropack/runtime/internal/error/utils'
 export { buildAssetsURL as __buildAssetsURL, publicAssetsURL as __publicAssetsURL } from '/home/local_adm/Projects/MyPlatform/node_modules/@nuxt/nitro-server/dist/runtime/utils/paths';
 export { defineAppConfig } from '/home/local_adm/Projects/MyPlatform/node_modules/@nuxt/nitro-server/dist/runtime/utils/config';
 export { useImage } from '/home/local_adm/Projects/MyPlatform/node_modules/@nuxt/image/dist/runtime/server/utils/image';
+export { normalizeLocationName, locationNameKey } from '/home/local_adm/Projects/MyPlatform/shared/utils/lab-location-name';
 export { defineOAuthAppleEventHandler } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-auth-utils/dist/runtime/server/lib/oauth/apple';
 export { defineOAuthAtlassianEventHandler } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-auth-utils/dist/runtime/server/lib/oauth/atlassian';
 export { defineOAuthAuth0EventHandler } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-auth-utils/dist/runtime/server/lib/oauth/auth0';

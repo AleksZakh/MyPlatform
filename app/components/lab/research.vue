@@ -1,72 +1,65 @@
-<!-- Контент для третьей вкладки -->
 <template>
   <UTabs
     :items="items"
     orientation="vertical"
-    class="vertical-tabs absolute left-0 right-0 bottom-0 top-0"
+    class="vertical-tabs absolute inset-0"
     color="info"
     variant="link"
     :ui="{
-      list: 'flex items-center justify-center ',
-      trigger: 'flex items-center px-4 py-8 max-w-27 flex-col',
-      label: 'text-balance font-normal text-base',
-      content: 'relative p-2 bg-white rounded-xl border border-gray-200 shadow-sm h-full',
-      indicator: 'absolute transition-all duration-300 ',
-      leadingIcon: 'w-5 h-5 size-10 ',                  // иконка внутри триггера
+      list:
+        'flex items-center justify-center',
+      trigger:
+        'flex items-center px-4 py-8 max-w-27 flex-col',
+      label:
+        'text-balance font-normal text-base',
+      content:
+        'relative p-2 bg-white rounded-xl border border-gray-200 shadow-sm h-full min-w-0 overflow-hidden',
+      indicator:
+        'absolute transition-all duration-300',
+      leadingIcon:
+        'w-5 h-5 size-10',
     }"
   >
-    <!-- Слот для вкладки "ПЛП" -->
-    <template #sampling>
-      <LabSamplingForm />
+    <template #event_journal>
+      <LabEventJournal />
     </template>
 
-    <!-- Слот для вкладки "Поступление материала" -->
-    <template #receipt_material>
-      <LabReceiptMaterialForm />
-    </template>
-
-    <!-- Слот для вкладки "Протоколиспытаний" -->
-    <template #test_report>
-      <LabTestReportForm />
-    </template>
-
-    <!-- Слот для вкладки "Файловая система" -->
     <template #file_system>
       <LabFileSystem />
     </template>
   </UTabs>
 </template>
 
+
 <script setup lang="ts">
 const items = [
   {
-    label: 'Отбор проб',
-    icon: 'uil:jackhammer',
-    slot: 'sampling'  // ← имя слота
+    label:
+      'Журнал событий',
+
+    icon:
+      'streamline-freehand-color:form-edition-clipboard-write',
+
+    slot:
+      'event_journal',
   },
+
   {
-    label: 'Поступление материала',
-    icon: 'solar:delivery-line-duotone',
-    slot: 'receipt_material'  // ← имя слота
+    label:
+      'Файловая система',
+
+    icon:
+      'streamline-freehand-color:organization-files',
+
+    slot:
+      'file_system',
   },
-  {
-    label: 'Протоколы испытаний',
-    icon: 'streamline-ultimate:laboratory-drug-file',
-    slot: 'test_report'
-  },
-  {
-    label: 'Файловая система',
-    icon: 'streamline-freehand-color:organization-files',
-    slot: 'file_system'
-  }
-];
+]
 </script>
 
+
 <style scoped>
-/* Для табов только в этом компоненте */
-.vertical-tabs .tab-trigger {
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
+.vertical-tabs {
+  min-width: 0;
 }
 </style>
-

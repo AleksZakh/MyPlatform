@@ -1,54 +1,16 @@
-// server/api/lab/test-location/all.get.ts
-import { PrismaClient } from '@prisma/client';
+import { AccessAction } from '@prisma/client';
 import { defineEventHandler, getQuery } from 'h3';
+import { prisma } from '~~/server/utils/prisma';
+import { requirePermission } from '~~/server/services/access-control.service';
+import { LOCATION_RESOURCE_KEY, locationWhere, locationOrders, rethrowCatalogError
+} from '~~/server/services/lab/objects-locations-api.service';
 
-const prisma = new PrismaClient();
-
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async event => {
+  await requirePermission(event, LOCATION_RESOURCE_KEY, AccessAction.VIEW);
   try {
     const query = getQuery(event);
-    const testObjectId = parseInt(query.testObjectId as string) || 0;
-    const search = (query.search as string) || '';
-    const sortKey = (query.sortKey as string) || 'name';
-    const sortOrder = (query.sortOrder as string) || 'asc';
-
-    const where: any = {};
-    
-    if (testObjectId > 0) {
-      where.testObjectId = testObjectId;
-    }
-    
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' as const } },
-        { note: { contains: search, mode: 'insensitive' as const } },
-      ];
-    }
-
-    const locations = await prisma.testLocation.findMany({
-      where,
-      orderBy: {
-        [sortKey]: sortOrder === 'asc' ? 'asc' : 'desc',
-      },
-      select: {
-        id: true,
-        name: true,
-        note: true,
-      },
-    });
-
-    return {
-      success: true,
-      data: locations,
-      total: locations.length,
-    };
-
-  } catch (error: any) {
-    console.error('Ошибка при получении списка мест отбора:', error);
-    
-    throw createError({
-      statusCode: 500,
-      statusMessage: error.message || 'Ошибка при получении списка мест отбора',
-    });
-  }
+    const data = await prisma.testLocation.findMany({ where: await locationWhere(query), orderBy: locationOrders(query),
+      select: { id: true, name: true, note: true, testObjectId: true } });
+    return { success: true, data, total: data.length };
+  } catch (error: unknown) { rethrowCatalogError(error, 'location', 'options'); }
 });

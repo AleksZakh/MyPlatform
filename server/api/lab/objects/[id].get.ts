@@ -1,60 +1,21 @@
-// server/api/lab/test-object/[id].get.ts
-import { PrismaClient } from '@prisma/client';
+import { AccessAction } from '@prisma/client';
 import { defineEventHandler, getRouterParam } from 'h3';
+import { prisma } from '~~/server/utils/prisma';
+import { requirePermission } from '~~/server/services/access-control.service';
+import { OBJECT_RESOURCE_KEY, catalogId, catalogError, objectUsageInclude, rethrowCatalogError
+} from '~~/server/services/lab/objects-locations-api.service';
 
-const prisma = new PrismaClient();
-
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async event => {
+  await requirePermission(event, OBJECT_RESOURCE_KEY, AccessAction.VIEW);
   try {
-    const idParam = getRouterParam(event, 'id');
-    const id = parseInt(idParam || '', 10);
-
-    if (isNaN(id) || id <= 0) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Некорректный ID объекта',
-      });
-    }
-
-    const object = await prisma.testObject.findUnique({
-      where: { id },
-      include: {
-        _count: {
-          select: {
-            locations: true,
-          },
-        },
-        locations: {
-          take: 10,
-          select: {
-            id: true,
-            name: true,
-            note: true,
-          },
-        },
-      },
-    });
-
-    if (!object) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: `Объект с ID ${id} не найден`,
-      });
-    }
-
-    return {
-      success: true,
-      data: object,
-    };
-
-  } catch (error: any) {
-    console.error('Ошибка при получении объекта:', error);
-    
-    if (error.statusCode) throw error;
-    
-    throw createError({
-      statusCode: 500,
-      statusMessage: error.message || 'Ошибка при получении объекта',
-    });
-  }
+    const id = catalogId(getRouterParam(event, 'id'));
+    const data = await prisma.testObject.findFirst({ where: { id, deletedAt: null }, include: {
+      ...objectUsageInclude,
+      // Только обзор. Полная таблица мест — отдельный /locations?testObjectId=ID.
+      locations: { where: { deletedAt: null }, take: 10, orderBy: [{ name: 'asc' }, { id: 'asc' }],
+        select: { id: true, name: true, note: true } },
+    } });
+    if (!data) catalogError(404, 'OBJECT_NOT_FOUND', 'Объект не найден или удалён из справочника.');
+    return { success: true, data };
+  } catch (error: unknown) { rethrowCatalogError(error, 'object', 'detail'); }
 });

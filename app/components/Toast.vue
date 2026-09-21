@@ -31,7 +31,7 @@ const handleRemove = (id: number | string) => {
     tag="div"
     name="fade"
     appear
-    class="fixed top-16 left-1/2 transform translate-x-[-50%] z-50"
+    class="fixed top-16 left-1/2 transform translate-x-[-50%] z-2000"
   >
     <div
       v-for="toast in activeToasts"
