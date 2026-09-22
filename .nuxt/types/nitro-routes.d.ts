@@ -31,6 +31,9 @@ declare module "nitropack/types" {
     '/api/admin/directory-departments/mapping': {
       'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/directory-departments/mapping.put').default>>>>
     }
+    '/api/admin/guard': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/guard.get').default>>>>
+    }
     '/api/admin/registration-requests/:id': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/registration-requests/[id].get').default>>>>
     }

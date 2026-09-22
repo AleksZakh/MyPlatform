@@ -3192,9 +3192,18 @@ onMounted(
 .admin-shell {
   display: flex;
   flex-direction: column;
-  min-height:
-    calc(100vh - 32px);
+
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+
+  min-width: 0;
+  min-height: 0;
+
+  box-sizing: border-box;
   padding: 18px;
+
+  overflow: hidden;
   background: #f8fafc;
 }
 
@@ -3202,6 +3211,7 @@ onMounted(
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  flex: 0 0 auto;
   gap: 22px;
 }
 
@@ -3312,6 +3322,7 @@ onMounted(
 
 .stats-grid {
   display: grid;
+  flex: 0 0 auto;
   grid-template-columns:
     repeat(
       6,
@@ -3351,6 +3362,7 @@ onMounted(
 
 .filters {
   display: grid;
+  flex: 0 0 auto;
   grid-template-columns:
     minmax(300px, 1fr)
     170px
@@ -3400,6 +3412,7 @@ onMounted(
 .admin-mode-tabs {
   display: flex;
   align-items: center;
+  flex: 0 0 auto;
   gap: 5px;
   margin-top: 12px;
 }
@@ -3430,19 +3443,24 @@ onMounted(
 
 .departments-workspace {
   display: grid;
+  box-sizing: border-box;
   grid-template-columns:
     minmax(360px, 0.8fr)
     minmax(560px, 1.5fr);
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   min-height: 0;
   gap: 12px;
   margin-top: 12px;
+  overflow: hidden;
 }
 
 .departments-list-panel,
 .department-detail-panel {
   min-width: 0;
-  min-height: 620px;
+  box-sizing: border-box;
+  min-height: 0;
+  height: 100%;
   overflow: hidden;
   background: #fff;
   border: 1px solid #e2e8f0;
@@ -3457,10 +3475,17 @@ onMounted(
   flex-direction: column;
 }
 
-.department-list {
-  flex: 1;
-  min-height: 0;
+.department-detail-panel {
   overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.department-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .department-row {
@@ -3634,18 +3659,25 @@ onMounted(
 
 .workspace {
   display: grid;
+  box-sizing: border-box;
   grid-template-columns:
     minmax(380px, 0.85fr)
     minmax(520px, 1.5fr);
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   min-height: 0;
   gap: 12px;
   margin-top: 12px;
+  overflow: hidden;
 }
 
 .users-panel,
 .detail-panel {
   min-width: 0;
+  box-sizing: border-box;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
@@ -3657,8 +3689,6 @@ onMounted(
 .users-panel {
   display: flex;
   flex-direction: column;
-  min-height: 620px;
-  overflow: hidden;
 }
 
 .panel-head {
@@ -3694,9 +3724,11 @@ onMounted(
 }
 
 .users-list {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .user-row {
@@ -3883,8 +3915,10 @@ onMounted(
 /* DETAIL */
 
 .detail-panel {
-  min-height: 620px;
-  overflow: hidden;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .detail-header {
@@ -4286,7 +4320,11 @@ onMounted(
 
 @media (max-width: 880px) {
   .admin-shell {
+    height: auto;
+    max-height: none;
+    min-height: 100%;
     padding: 12px;
+    overflow: visible;
   }
 
   .admin-header {
@@ -4302,6 +4340,22 @@ onMounted(
   .departments-workspace {
     grid-template-columns:
       1fr;
+    overflow: visible;
+  }
+
+  .users-panel,
+  .detail-panel,
+  .departments-list-panel,
+  .department-detail-panel {
+    height: auto;
+    min-height: 420px;
+    overflow: visible;
+  }
+
+  .users-list,
+  .department-list {
+    max-height: 520px;
+    overflow-y: auto;
   }
 
   .department-mapping-card,

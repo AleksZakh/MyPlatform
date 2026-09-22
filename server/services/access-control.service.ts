@@ -21,6 +21,13 @@ type PermissionContext = {
   action: AccessAction;
 
   isSystemAdmin: boolean;
+
+  source:
+    | 'SYSTEM_ADMIN'
+    | 'USER'
+    | 'DEPARTMENT';
+
+  departmentId?: number;
 };
 
 
@@ -96,6 +103,8 @@ function getAdminLogins(
  *   ↓
  * UserPermission
  *   ↓
+ * DepartmentPermission
+ *   ↓
  * ALLOW / 403
  */
 export async function requirePermission(
@@ -160,6 +169,15 @@ export async function requirePermission(
         login: true,
         email: true,
         status: true,
+
+        departmentId: true,
+
+        department: {
+          select: {
+            id: true,
+            isActive: true,
+          },
+        },
       },
     });
 
@@ -328,42 +346,95 @@ export async function requirePermission(
 
       isSystemAdmin:
         true,
+
+      source:
+        'SYSTEM_ADMIN',
     };
   }
 
 
   /**
    * ----------------------------------------------------------
-   * 5. UserPermission
+   * 5. UserPermission + DepartmentPermission
    * ----------------------------------------------------------
    *
-   * Используем findFirst, чтобы не зависеть
-   * от имени composite unique selector Prisma.
+   * Effective permission сейчас аддитивный:
+   *
+   * UserPermission
+   *       OR
+   * DepartmentPermission активного подразделения пользователя.
+   *
+   * DENY пока намеренно не вводим.
    */
-  const permission =
-    await prisma.userPermission.findFirst({
-      where: {
-        userId:
-          appUser.id,
-
-        resourceId:
-          resource.id,
-
-        action,
-      },
-
-      select: {
-        id: true,
-      },
-    });
+  const activeDepartmentId =
+    appUser.department?.isActive
+      ? appUser.department.id
+      : null;
 
 
-  if (!permission) {
-    
+  const [
+    userPermission,
+    departmentPermission,
+  ] =
+    await Promise.all([
+      prisma.userPermission.findFirst({
+        where: {
+          userId:
+            appUser.id,
+
+          resourceId:
+            resource.id,
+
+          action,
+        },
+
+        select: {
+          id: true,
+        },
+      }),
+
+      activeDepartmentId
+        ? prisma.departmentPermission.findFirst({
+            where: {
+              departmentId:
+                activeDepartmentId,
+
+              resourceId:
+                resource.id,
+
+              action,
+            },
+
+            select: {
+              id: true,
+            },
+          })
+        : Promise.resolve(null),
+    ]);
+
+
+  const grantedByUser =
+    Boolean(
+      userPermission,
+    );
+
+
+  const grantedByDepartment =
+    Boolean(
+      departmentPermission,
+    );
+
+
+  if (
+    !grantedByUser &&
+    !grantedByDepartment
+  ) {
+
     logger.warn(
-        `ACCESS DENIED: userId=${appUser.id}, ` +
-        `actor=${actorIdentifier}, ` +
-        `resource=${resource.key}, action=${action}`,
+      `ACCESS DENIED: userId=${appUser.id}, ` +
+      `actor=${actorIdentifier}, ` +
+      `departmentId=${activeDepartmentId ?? 'none'}, ` +
+      `resource=${resource.key}, action=${action}`,
     );
 
     await auditDenied({
@@ -434,5 +505,21 @@ export async function requirePermission(
 
     isSystemAdmin:
       false,
+
+    /**
+     * Если право есть и персонально, и через подразделение,
+     * для диагностики считаем персональное более конкретным.
+     */
+    source:
+      grantedByUser
+        ? 'USER'
+        : 'DEPARTMENT',
+
+    ...(grantedByUser
+      ? {}
+      : {
+          departmentId:
+            activeDepartmentId!,
+        }),
   };
 }

@@ -1,68 +1,48 @@
-# AdminCenter — DepartmentPermission matrix v1
+# Access control — DepartmentPermission v1
 
-Добавить/заменить:
+Заменить:
+server/services/access-control.service.ts
 
-- server/api/admin/departments/[id]/permissions.get.ts
-- server/api/admin/departments/[id]/permissions.put.ts
-- app/components/admin/UserDirectory.vue
-- scripts/ensure-admin-department-permissions-resource.ts
+Новая логика:
+SYSTEM_ADMIN
+OR UserPermission
+OR DepartmentPermission
 
-Требуется ранее созданная Prisma-модель:
-- DepartmentPermission
+Условия наследования DepartmentPermission:
+- User.status = ACTIVE;
+- User.departmentId задан;
+- Department.isActive = true;
+- AccessResource.isActive = true;
+- action совпадает.
 
-и рабочий mapping:
-- DirectoryDepartmentMapping
+DENY пока не реализован: права аддитивные.
 
-## 1. Создать FEATURE-ресурс
+requirePermission() теперь возвращает source:
+- SYSTEM_ADMIN
+- USER
+- DEPARTMENT
 
-npx tsx scripts/ensure-admin-department-permissions-resource.ts \
-  --grant-login=zakharov_av
+и departmentId для source=DEPARTMENT.
 
-Ожидаем:
+Проверка:
 
-✅ FEATURE-ресурс готов: admin.department-permissions
-✅ UPDATE выдан пользователю zakharov_av
-
-## 2. Typecheck
-
-npx nuxi typecheck > /tmp/admin-department-permissions-v1.log 2>&1
+npx nuxi typecheck > /tmp/access-control-department-v1.log 2>&1
 status=$?
 
-grep -E \
-'server/api/admin/departments/.*/permissions|components/admin/UserDirectory\.vue|ensure-admin-department-permissions-resource' \
-/tmp/admin-department-permissions-v1.log
+grep -E 'server/services/access-control\.service\.ts' /tmp/access-control-department-v1.log
 
 printf 'Full typecheck exit code: %s\n' "$status"
 
-## 3. Проверка API
+Безопасный тест:
+1. Не удалять существующие UserPermission.
+2. Взять тестового пользователя с departmentId.
+3. На тестовом ресурсе убрать его персональный UPDATE.
+4. Выдать UPDATE его Department через AdminCenter.
+5. Повторить операцию — должна пройти.
+6. Отозвать DepartmentPermission — снова должен быть 403, если UserPermission нет.
 
-Для Space Department id=1:
-
-/api/admin/departments/1/permissions
-
-## 4. Проверка UI
-
-/admin/users
-→ Подразделения
-→ выбрать AD-подразделение, которое сопоставлено со Space
-→ Права подразделения
-
-Каждая ячейка VIEW / CREATE / UPDATE / DELETE:
-- создаёт DepartmentPermission при включении;
-- удаляет DepartmentPermission при выключении;
-- сохраняется отдельно;
-- изменение пишет ADMIN-событие в AuditLog.
-
-## ВАЖНО
-
-Этим шагом DepartmentPermission УЖЕ хранится и редактируется,
-но requirePermission() ЕЩЁ НЕ использует эти права.
-
-То есть это пока административная настройка будущих наследуемых прав.
-
-Следующий отдельный шаг:
-обновить access-control.service так, чтобы effective permission было:
-
-UserPermission OR DepartmentPermission
-
-после того как проверим матрицу и реальные записи.
+Важно для Реестра лаборатории:
+lab.sampling-tests:UPDATE даёт право изменять данные,
+но не отменяет 10-минутный edit lock.
+Для обхода lock нужен отдельный:
+lab.incoming-control.edit-lock-override:UPDATE.

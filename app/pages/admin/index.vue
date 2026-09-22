@@ -1,6 +1,6 @@
 <template>
-  <div class="min-h-full bg-slate-50">
-    <div class="mx-auto w-full max-w-[1500px] px-6 py-8 lg:px-8">
+  <div class="min-h-full bg-slate-50 ">
+    <div class="mx-auto w-full max-w-[1500px] px-6 py-8 lg:px-8 ">
 
       <!-- Header -->
       <div class="mb-8">

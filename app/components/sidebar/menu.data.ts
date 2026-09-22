@@ -86,7 +86,7 @@ export const menuItems: MenuItem[] = [
 
     permission: {
       resource:
-        'system.admin-center',
+        'admin.center',
 
       action:
         'VIEW',

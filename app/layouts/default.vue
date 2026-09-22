@@ -24,7 +24,13 @@
 
 
       <!-- Контент текущей страницы -->
-      <main class="overflow-y-auto">
+      <main
+        class="main-content relative bg-red-300"
+        :class="{
+          'main-content--contained':
+            isContainedMain,
+        }"
+      >
         <slot />
       </main>
 
@@ -44,7 +50,10 @@
 
 <script setup lang="ts">
 
-import { ref } from 'vue';
+import {
+  computed,
+  ref,
+} from 'vue';
 
 
 /**
@@ -52,6 +61,28 @@ import { ref } from 'vue';
  * false -> sidebar развернут
  */
 const isCollapsed = ref(true);
+
+
+const route =
+  useRoute();
+
+
+/**
+ * Страницы с собственным внутренним scroll-layout.
+ *
+ * Для них main НЕ должен прокручиваться сам:
+ * высоту main наследует корневой контейнер страницы,
+ * а прокрутка живёт уже внутри рабочих панелей.
+ */
+const isContainedMain =
+  computed(
+    () =>
+      route.path ===
+        '/admin/users' ||
+      route.path.startsWith(
+        '/admin/users/',
+      ),
+  );
 
 
 /**
@@ -71,9 +102,12 @@ const toggleSidebar = () => {
   display: grid;
 
   grid-template-rows:
-    auto 1fr auto;
+    auto minmax(0, 1fr) auto;
 
-  height: 100vh;
+  width: 100%;
+  height: 100dvh;
+  min-width: 0;
+  min-height: 0;
 
   overflow: hidden;
 }
@@ -83,12 +117,21 @@ const toggleSidebar = () => {
  * Основная область:
  *
  * sidebar + content
+ *
+ * min-height: 0 здесь принципиален:
+ * без него grid-элемент может растянуть строку
+ * содержимым страницы и вытолкнуть footer вниз.
  */
 .layout-content {
   display: grid;
 
   grid-template-columns:
     180px minmax(0, 1fr);
+
+  min-width: 0;
+  min-height: 0;
+
+  overflow: hidden;
 
   transition:
     grid-template-columns 0.3s ease;
@@ -104,8 +147,28 @@ const toggleSidebar = () => {
 }
 
 
-main {
+/**
+ * По умолчанию main остаётся обычной
+ * прокручиваемой областью приложения.
+ */
+.main-content {
+  min-width: 0;
+  min-height: 0;
+
+  overflow-x: hidden;
   overflow-y: auto;
+}
+
+
+/**
+ * Страницы с собственным внутренним scroll-layout.
+ *
+ * Здесь сам main не прокручивается.
+ * Его точную высоту наследует страница,
+ * а прокрутка происходит уже внутри её панелей.
+ */
+.main-content--contained {
+  overflow: hidden;
 }
 
 </style>

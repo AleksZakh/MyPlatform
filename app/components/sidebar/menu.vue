@@ -24,7 +24,7 @@
     <nav v-if="loggedIn">
 
       <NuxtLink
-        v-for="item in menuItems"
+        v-for="item in visibleMenuItems"
         :key="item.url"
         :to="item.url"
         class="
@@ -71,33 +71,170 @@
 
 <script setup lang="ts">
 
-import { menuItems } from './menu.data';
+import {
+  computed,
+  ref,
+  watch,
+} from 'vue'
+
+import {
+  menuItems,
+} from './menu.data'
+
+import type {
+  MenuItem,
+} from './menu.data'
 
 
 /**
  * ============================================================
  * Авторизация
  * ============================================================
- *
- * useUserSession() — теперь единый источник состояния
- * авторизации во всём приложении.
- *
- * loggedIn — реактивный ref/computed.
- *
- * После:
- *
- *   setUserSession()
- *       +
- *   refreshSession()
- *
- * в login.vue значение здесь автоматически станет true.
- *
- * После logout оно автоматически станет false.
  */
-
 const {
   loggedIn,
-} = useUserSession();
+} = useUserSession()
+
+
+/**
+ * ============================================================
+ * Права навигации
+ * ============================================================
+ *
+ * Пока в боковом меню защищён только AdminCenter.
+ *
+ * Сервер остаётся единственным источником истины:
+ * наличие пункта в меню само по себе доступ не даёт.
+ */
+const canViewAdminCenter =
+  ref(false)
+
+const isLoadingMenuPermissions =
+  ref(false)
+
+
+async function loadMenuPermissions() {
+  if (
+    !loggedIn.value
+  ) {
+    canViewAdminCenter.value =
+      false
+
+    return
+  }
+
+
+  isLoadingMenuPermissions.value =
+    true
+
+  try {
+    await $fetch(
+      '/api/admin/guard',
+    )
+
+    canViewAdminCenter.value =
+      true
+
+  } catch (error: any) {
+    const statusCode =
+      Number(
+        error?.statusCode ??
+        error?.status ??
+        error?.response
+          ?.status ??
+        0,
+      )
+
+    if (
+      statusCode === 401 ||
+      statusCode === 403
+    ) {
+      canViewAdminCenter.value =
+        false
+
+      return
+    }
+
+
+    /**
+     * При технической ошибке не показываем
+     * административный пункт "на всякий случай".
+     *
+     * Это fail-closed поведение.
+     */
+    canViewAdminCenter.value =
+      false
+
+    console.error(
+      '[sidebar menu] Не удалось проверить доступ к AdminCenter:',
+      error,
+    )
+
+  } finally {
+    isLoadingMenuPermissions.value =
+      false
+  }
+}
+
+
+function canShowMenuItem(
+  item:
+    MenuItem,
+): boolean {
+  if (
+    !item.permission
+  ) {
+    return true
+  }
+
+
+  if (
+    item.permission.resource ===
+      'admin.center' &&
+    item.permission.action ===
+      'VIEW'
+  ) {
+    return (
+      canViewAdminCenter.value
+    )
+  }
+
+
+  /**
+   * Для неизвестного защищённого пункта
+   * используем fail-closed:
+   * пока нет серверной проверки — не показываем.
+   */
+  return false
+}
+
+
+const visibleMenuItems =
+  computed(
+    () =>
+      menuItems.filter(
+        canShowMenuItem,
+      ),
+  )
+
+
+watch(
+  loggedIn,
+  async value => {
+    if (!value) {
+      canViewAdminCenter.value =
+        false
+
+      return
+    }
+
+    await loadMenuPermissions()
+  },
+  {
+    immediate:
+      true,
+  },
+)
 
 
 /**
@@ -105,10 +242,10 @@ const {
  * Props
  * ============================================================
  */
-
 defineProps<{
-  isCollapsed: boolean;
-}>();
+  isCollapsed:
+    boolean
+}>()
 
 
 /**
@@ -116,10 +253,9 @@ defineProps<{
  * Events
  * ============================================================
  */
-
 defineEmits<{
-  toggle: [];
-}>();
+  toggle: []
+}>()
 
 </script>
 
