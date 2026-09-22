@@ -523,6 +523,8 @@ model AccessResource {
 
   departmentPermissions DepartmentPermission[]
 
+  domainGroupPermissions DomainGroupPermission[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -804,3 +806,35 @@ model DirectoryDepartmentMapping {
   @@index([departmentId])
   @@map("directory_department_mappings")
 }
+
+model DomainGroupPermission {
+  id             Int            @id @default(autoincrement())
+  domainGroupId  Int
+  resourceId     Int
+  action         AccessAction
+  grantedByLogin String?        @db.VarChar(150)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  domainGroup    DomainGroup    @relation(fields: [domainGroupId], references: [id], onDelete: Cascade)
+  resource       AccessResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@unique([domainGroupId, resourceId, action])
+  @@index([resourceId, action])
+  @@map("domain_group_permissions")
+}
+
+model DomainGroup {
+  id                Int                     @id @default(autoincrement())
+  directoryObjectId String                  @unique @db.VarChar(36)
+  name              String                  @db.VarChar(255)
+  distinguishedName String                  @db.Text
+  isActive          Boolean                 @default(true)
+  permissions       DomainGroupPermission[]
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  @@map("domain_groups")
+}
+
+
+

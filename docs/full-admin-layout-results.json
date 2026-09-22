@@ -1,0 +1,41 @@
+[
+  {
+    "width": 1440,
+    "height": 900,
+    "header": 158,
+    "filters": 358,
+    "tableHeight": 438,
+    "tableScroll": 1275,
+    "cardHeight": 731,
+    "cardScroll": 731,
+    "statsHeight": 16,
+    "contentTop": 157,
+    "tableScrolled": 600
+  },
+  {
+    "width": 1100,
+    "height": 720,
+    "header": 158,
+    "filters": 376,
+    "tableHeight": 240,
+    "tableScroll": 1320,
+    "cardHeight": 551,
+    "cardScroll": 551,
+    "statsHeight": 16,
+    "contentTop": 157,
+    "tableScrolled": 600
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "header": 796.09375,
+    "filters": 1073.09375,
+    "tableHeight": 238,
+    "tableScroll": 1320,
+    "cardHeight": 673,
+    "cardScroll": 673,
+    "statsHeight": 56,
+    "contentTop": 363.09375,
+    "tableScrolled": 600
+  }
+]

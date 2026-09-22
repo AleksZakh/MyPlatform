@@ -1,0 +1,38 @@
+--- a/nuxt.config.ts
++++ b/nuxt.config.ts
+@@ -24,10 +24,18 @@
+     storage: 'localStorage', // Оставляем стандартный тип, ошибки TS больше нет
+   },
+   runtimeConfig: {
++    session: {
++      // Preserve nuxt-auth-utils' actual default cookie name.
++      name: 'nuxt-session',
++      password: '', // NUXT_SESSION_PASSWORD: stable secret of at least 32 characters
++      maxAge: 60 * 60 * 24 * 7,
++      cookie: { sameSite: 'lax', httpOnly: true },
++    },
+     // Серверные переменные (доступны только на сервере)
+     ad: {
+       url: process.env.AD_URL || 'ldap://localhost:389',
+       baseDN: process.env.AD_DOMAIN_USERS || 'DC=local,DC=com',
++      groupsBaseDN: '', // NUXT_AD_GROUPS_BASE_DN: domain root or OU containing security groups
+       username: process.env.AD_USERNAME || '',
+       password: process.env.AD_PASSWORD || '',
+       timeout: parseInt(process.env.AD_TIMEOUT || '5000'),
+@@ -115,15 +123,5 @@
+     // you need to set the mount in your .env file at the root of your project
+   },
+ 
+-  // Опциональная настройка auth-utils
+-  auth: {
+-    // Меняем название куки (опционально)
+-    cookieName: 'userSession',
+-    // Время жизни сессии (по умолчанию 60*60*24*7 = 7 дней)
+-    maxAge: 60 * 60 * 24 * 7,
+-    // Защита от CSRF
+-    csrf: {
+-      enabled: true,
+-    },
+-  },
++
+ });

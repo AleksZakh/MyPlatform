@@ -1,0 +1,32 @@
+{
+  "base": "space-access-management-v1",
+  "sourceFiles": [
+    "app/components/admin/UserDirectory.vue",
+    "app/components/admin/AccessMatrix.vue",
+    "app/components/admin/DomainGroupImport.vue",
+    "app/composables/useAccessMatrix.ts",
+    "app/composables/useDomainGroupImport.ts",
+    "app/pages/admin/access.vue",
+    "app/pages/login.vue",
+    "app/layouts/default.vue",
+    "server/services/access-control.service.ts",
+    "server/services/access-management.service.ts",
+    "server/services/domain-group-directory.service.ts",
+    "server/services/domain-group-access.service.ts",
+    "server/api/admin/access/subjects.get.ts",
+    "server/api/admin/domain-groups/search.get.ts",
+    "server/api/admin/domain-groups/index.post.ts",
+    "server/api/admin/domain-groups/[id]/permissions.get.ts",
+    "server/api/admin/domain-groups/[id]/permissions.put.ts",
+    "server/api/auth/kerberos.post.ts",
+    "shared/types/access-management.ts",
+    "shared/utils/access-decision.ts",
+    "prisma/patches/domain-groups.prisma",
+    "prisma/migrations/20260922140000_domain_group_permissions/migration.sql",
+    "scripts/apply-domain-groups-schema.mjs"
+  ],
+  "configuration": "config/nuxt-config.patch",
+  "databaseMigrationRequired": true,
+  "testsPassed": 41,
+  "deploymentPerformed": false
+}

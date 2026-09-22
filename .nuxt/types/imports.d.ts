@@ -2,6 +2,7 @@
 export {}
 declare global {
   const $fetch: typeof import('../fetch.mjs').$fetch
+  const ACCESS_ACTIONS: typeof import('../../shared/types/access-management').ACCESS_ACTIONS
   const LAB_TABLE_COLUMNS: typeof import('../../app/composables/useTableSettings').LAB_TABLE_COLUMNS
   const abortNavigation: typeof import('../../node_modules/nuxt/dist/app/composables/router').abortNavigation
   const acceptHMRUpdate: typeof import('../../node_modules/@pinia/nuxt/dist/runtime/composables').acceptHMRUpdate
@@ -17,6 +18,7 @@ declare global {
   const createUseAsyncData: typeof import('../../node_modules/nuxt/dist/app/composables/asyncData').createUseAsyncData
   const createUseFetch: typeof import('../../node_modules/nuxt/dist/app/composables/fetch').createUseFetch
   const customRef: typeof import('vue').customRef
+  const decideAccess: typeof import('../../shared/utils/access-decision').decideAccess
   const defineAppConfig: typeof import('../../node_modules/nuxt/dist/app/nuxt').defineAppConfig
   const defineAsyncComponent: typeof import('vue').defineAsyncComponent
   const defineComponent: typeof import('vue').defineComponent
@@ -51,6 +53,7 @@ declare global {
   const isReadonly: typeof import('vue').isReadonly
   const isRef: typeof import('vue').isRef
   const isShallow: typeof import('vue').isShallow
+  const isSystemAdminLogin: typeof import('../../shared/utils/access-decision').isSystemAdminLogin
   const isVue2: typeof import('../../node_modules/nuxt/dist/app/compat/vue-demi').isVue2
   const isVue3: typeof import('../../node_modules/nuxt/dist/app/compat/vue-demi').isVue3
   const loadPayload: typeof import('../../node_modules/nuxt/dist/app/composables/payload').loadPayload
@@ -59,6 +62,7 @@ declare global {
   const markRaw: typeof import('vue').markRaw
   const navigateTo: typeof import('../../node_modules/nuxt/dist/app/composables/router').navigateTo
   const nextTick: typeof import('vue').nextTick
+  const normalizeAdminLogins: typeof import('../../shared/utils/access-decision').normalizeAdminLogins
   const normalizeLocationName: typeof import('../../shared/utils/lab-location-name').normalizeLocationName
   const onActivated: typeof import('vue').onActivated
   const onBeforeMount: typeof import('vue').onBeforeMount
@@ -113,6 +117,7 @@ declare global {
   const unref: typeof import('vue').unref
   const updateAppConfig: typeof import('../../node_modules/nuxt/dist/app/config').updateAppConfig
   const useADUsers: typeof import('../../app/composables/useADUsers').useADUsers
+  const useAccessMatrix: typeof import('../../app/composables/useAccessMatrix').useAccessMatrix
   const useAnnouncer: typeof import('../../node_modules/nuxt/dist/app/composables/announcer').useAnnouncer
   const useAppConfig: typeof import('../../node_modules/nuxt/dist/app/config').useAppConfig
   const useAppToasts: typeof import('../../app/composables/useAppToasts').useAppToasts
@@ -125,6 +130,7 @@ declare global {
   const useCookie: typeof import('../../node_modules/nuxt/dist/app/composables/cookie').useCookie
   const useCssModule: typeof import('vue').useCssModule
   const useCssVars: typeof import('vue').useCssVars
+  const useDomainGroupImport: typeof import('../../app/composables/useDomainGroupImport').useDomainGroupImport
   const useError: typeof import('../../node_modules/nuxt/dist/app/composables/error').useError
   const useFetch: typeof import('../../node_modules/nuxt/dist/app/composables/fetch').useFetch
   const useFileStorage: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/composables/useFileStorage').default
@@ -262,12 +268,16 @@ declare global {
   // @ts-ignore
   export type { LabTableColumnDefinition } from '../../app/composables/useTableSettings'
   import('../../app/composables/useTableSettings')
+  // @ts-ignore
+  export type { AccessActionName, AccessSubjectKind, AccessSource, AccessBlock, AccessCell, AccessRow, AccessSnapshot, AccessChange, AccessMutation, AccessSubjectOption } from '../../shared/types/access-management'
+  import('../../shared/types/access-management')
 }
 // for vue template auto import
 import { UnwrapRef } from 'vue'
 declare module 'vue' {
   interface ComponentCustomProperties {
     readonly $fetch: UnwrapRef<typeof import('../fetch.mjs')['$fetch']>
+    readonly ACCESS_ACTIONS: UnwrapRef<typeof import('../../shared/types/access-management')['ACCESS_ACTIONS']>
     readonly LAB_TABLE_COLUMNS: UnwrapRef<typeof import('../../app/composables/useTableSettings')['LAB_TABLE_COLUMNS']>
     readonly abortNavigation: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/router')['abortNavigation']>
     readonly acceptHMRUpdate: UnwrapRef<typeof import('../../node_modules/@pinia/nuxt/dist/runtime/composables')['acceptHMRUpdate']>
@@ -283,6 +293,7 @@ declare module 'vue' {
     readonly createUseAsyncData: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/asyncData')['createUseAsyncData']>
     readonly createUseFetch: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/fetch')['createUseFetch']>
     readonly customRef: UnwrapRef<typeof import('vue')['customRef']>
+    readonly decideAccess: UnwrapRef<typeof import('../../shared/utils/access-decision')['decideAccess']>
     readonly defineAppConfig: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/nuxt')['defineAppConfig']>
     readonly defineAsyncComponent: UnwrapRef<typeof import('vue')['defineAsyncComponent']>
     readonly defineComponent: UnwrapRef<typeof import('vue')['defineComponent']>
@@ -317,6 +328,7 @@ declare module 'vue' {
     readonly isReadonly: UnwrapRef<typeof import('vue')['isReadonly']>
     readonly isRef: UnwrapRef<typeof import('vue')['isRef']>
     readonly isShallow: UnwrapRef<typeof import('vue')['isShallow']>
+    readonly isSystemAdminLogin: UnwrapRef<typeof import('../../shared/utils/access-decision')['isSystemAdminLogin']>
     readonly isVue2: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/compat/vue-demi')['isVue2']>
     readonly isVue3: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/compat/vue-demi')['isVue3']>
     readonly loadPayload: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/payload')['loadPayload']>
@@ -325,6 +337,7 @@ declare module 'vue' {
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
     readonly navigateTo: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/router')['navigateTo']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
+    readonly normalizeAdminLogins: UnwrapRef<typeof import('../../shared/utils/access-decision')['normalizeAdminLogins']>
     readonly normalizeLocationName: UnwrapRef<typeof import('../../shared/utils/lab-location-name')['normalizeLocationName']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>
     readonly onBeforeMount: UnwrapRef<typeof import('vue')['onBeforeMount']>
@@ -379,6 +392,7 @@ declare module 'vue' {
     readonly unref: UnwrapRef<typeof import('vue')['unref']>
     readonly updateAppConfig: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/config')['updateAppConfig']>
     readonly useADUsers: UnwrapRef<typeof import('../../app/composables/useADUsers')['useADUsers']>
+    readonly useAccessMatrix: UnwrapRef<typeof import('../../app/composables/useAccessMatrix')['useAccessMatrix']>
     readonly useAnnouncer: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/announcer')['useAnnouncer']>
     readonly useAppConfig: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/config')['useAppConfig']>
     readonly useAppToasts: UnwrapRef<typeof import('../../app/composables/useAppToasts')['useAppToasts']>
@@ -391,6 +405,7 @@ declare module 'vue' {
     readonly useCookie: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/cookie')['useCookie']>
     readonly useCssModule: UnwrapRef<typeof import('vue')['useCssModule']>
     readonly useCssVars: UnwrapRef<typeof import('vue')['useCssVars']>
+    readonly useDomainGroupImport: UnwrapRef<typeof import('../../app/composables/useDomainGroupImport')['useDomainGroupImport']>
     readonly useError: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/error')['useError']>
     readonly useFetch: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/fetch')['useFetch']>
     readonly useFileStorage: UnwrapRef<typeof import('../../node_modules/nuxt-file-storage/dist/runtime/composables/useFileStorage')['default']>

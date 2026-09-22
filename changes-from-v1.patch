@@ -1,0 +1,1431 @@
+--- a/app/components/admin/UserDirectory.vue
++++ b/app/components/admin/UserDirectory.vue
+@@ -2,17 +2,10 @@
+   <div class="admin-shell">
+     <header class="admin-header">
+       <div>
+-        <p class="eyebrow">
+-          Space
+-        </p>
+-
+         <h1 class="page-title">
+           AdminCenter
+         </h1>
+ 
+-        <p class="page-subtitle">
+-          Пользователи, доступы и структура системы
+-        </p>
+       </div>
+ 
+       <div class="cache-toolbar">
+@@ -28,25 +21,13 @@
+           />
+ 
+           <div>
+-            <div class="cache-title">
+-              Кэш Active Directory
+-            </div>
++            <span class="cache-title">AD</span>
+ 
+             <div class="cache-text">
+               {{ cacheStateText }}
+             </div>
+ 
+-            <div
+-              v-if="responseMeta.directoryCache.lastUpdated"
+-              class="cache-updated"
+-            >
+-              Обновлён:
+-              {{
+-                formatDateTime(
+-                  responseMeta.directoryCache.lastUpdated,
+-                )
+-              }}
+-            </div>
++
+           </div>
+         </div>
+ 
+@@ -196,6 +177,7 @@
+ 
+ 
+     <div class="admin-mode-tabs">
++      <NuxtLink to="/admin/access?kind=domainGroup" class="admin-mode-tab">Доменные группы</NuxtLink>
+       <button
+         type="button"
+         class="admin-mode-tab"
+@@ -369,7 +351,7 @@
+       </aside>
+ 
+ 
+-      <main class="detail-panel">
++      <main class="detail-panel" :class="{ 'detail-panel--access': activeTab === 'access' }">
+         <template v-if="selectedUser">
+           <header class="detail-header">
+             <div class="detail-person">
+@@ -789,7 +771,7 @@
+       </aside>
+ 
+ 
+-      <main class="department-detail-panel">
++      <main class="department-detail-panel" :class="{ 'detail-panel--access': departmentDetailTab === 'permissions' }">
+         <template v-if="selectedDirectoryDepartment">
+           <header class="detail-header">
+             <div>
+@@ -3415,4 +3397,34 @@
+       1fr;
+   }
+ }
++/* Compact header and fixed permissions panel. The table owns vertical scrolling. */
++.admin-shell { padding: 10px 14px; }
++.admin-header { align-items: center; gap: 12px; }
++.page-title { font-size: 21px; }
++.cache-state { min-width: 0; padding: 5px 8px; }
++.cache-state > div { display: flex; align-items: center; gap: 5px; }
++.cache-text { margin: 0; font-size: 11px; }
++.access-navigation-link { font-size: 12px; }
++.stats-grid { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 9px; }
++.stat-card { flex-direction: row; align-items: baseline; gap: 6px; padding: 0; border: 0; background: transparent; }
++.stat-label { font-size: 11px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #64748b; }
++.stat-value { margin: 0; font-size: 14px; }
++.stat-card--warning .stat-value { color: #b45309; }
++.filters, .admin-mode-tabs, .workspace, .departments-workspace { margin-top: 8px; }
++.detail-header { padding: 10px 14px; }
++.detail-panel--access { display: flex; flex-direction: column; overflow: hidden; }
++.detail-panel--access > .detail-header, .detail-panel--access > .section-tabs { flex: 0 0 auto; }
++.detail-panel--access > .access-section, .detail-panel--access > .department-permissions-section {
++  display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; padding: 10px 12px; overflow: hidden;
++}
++.detail-panel--access :deep(.access-matrix) { flex: 1 1 0; min-height: 0; }
++@media (max-width: 880px) {
++  .admin-shell { height: 100%; max-height: 100%; min-height: 0; overflow: auto; }
++  .workspace, .departments-workspace { flex: none; }
++  .admin-header { flex-direction: row; flex-wrap: wrap; }
++  .cache-toolbar { flex-wrap: wrap; }
++  .filters { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
++  .search-box { grid-column: 1 / -1; }
++  .detail-panel--access { height: max(560px, 80dvh); min-height: 0; overflow: hidden; }
++}
+ </style>
+--- a/app/components/admin/AccessMatrix.vue
++++ b/app/components/admin/AccessMatrix.vue
+@@ -12,15 +12,17 @@
+ 
+ function sourceText(row: AccessRow, action: AccessActionName): string {
+   const cell = row.actions[action]
+-  if (cell.blockedBy === 'USER_INACTIVE') return props.kind === 'user' ? 'Сотрудник неактивен' : 'Отдел отключён'
++  if (cell.blockedBy === 'USER_INACTIVE') return props.kind === 'user' ? 'Сотрудник неактивен' : 'Получатель отключён'
+   if (cell.blockedBy === 'RESOURCE_INACTIVE') return 'Ресурс отключён'
+   if (cell.blockedBy === 'ADMIN_REQUIRED') return 'Только системный администратор'
+   if (!cell.effectiveGranted) return 'Нет доступа'
+   if (props.kind === 'department') return 'Для сотрудников отдела'
++  if (props.kind === 'domainGroup') return 'Для участников группы AD'
+   const parts = []
+   if (cell.systemGranted) parts.push('Системный администратор')
+   if (cell.directGranted) parts.push('Лично')
+   if (cell.inheritedGranted) parts.push(`Отдел: ${snapshot.value?.subject.department?.name ?? ''}`)
++  if (cell.domainGroups?.length) parts.push(`Группы AD: ${cell.domainGroups.map(g => g.name).join(', ')}`)
+   return parts.join(' + ')
+ }
+ 
+@@ -41,7 +43,7 @@
+   <section class="access-matrix" aria-label="Назначение прав" :aria-busy="loading || saving">
+     <header class="matrix-heading">
+       <div>
+-        <h3>{{ kind === 'user' ? 'Личные и итоговые права' : 'Права подразделения' }}</h3>
++        <h3>{{ kind === 'user' ? 'Личные и итоговые права' : kind === 'domainGroup' ? 'Права доменной группы' : 'Права подразделения' }}</h3>
+         <p v-if="snapshot">{{ snapshot.subject.name }}</p>
+       </div>
+       <button type="button" class="matrix-button" :disabled="loading || saving" @click="load">Обновить</button>
+@@ -52,18 +54,19 @@
+     <template v-if="snapshot && !loading">
+       <p v-if="!snapshot.canManage" class="matrix-hint">Режим просмотра. Назначать права пока может только системный администратор.</p>
+       <p v-else class="matrix-hint">
+-        {{ kind === 'user' ? 'Галочка меняет личное назначение. Ниже показан итоговый доступ и его источник.' : `Назначения действуют для всех участников отдела (${snapshot.subject.memberCount}), включая будущих.` }}
++        {{ kind === 'user' ? 'Галочка меняет личное назначение. Ниже показан итоговый доступ и его источник.' : kind === 'domainGroup' ? 'Права наследуют участники группы безопасности AD, включая вложенные группы.' : `Назначения действуют для всех участников отдела (${snapshot.subject.memberCount}), включая будущих.` }}
+         Каждое изменение сохраняется сразу.
+       </p>
+       <p v-if="!snapshot.subject.isActive" class="matrix-hint">Получатель неактивен. Назначения сохранены, но не дают доступа. Их можно отозвать.</p>
+       <p v-if="snapshot.subject.department && !snapshot.subject.department.isActive" class="matrix-hint">Отдел отключён: его права не наследуются.</p>
++      <p v-if="snapshot.directoryWarning" class="matrix-error" role="status">{{ snapshot.directoryWarning }}</p>
+       <div class="matrix-filters">
+         <label>Поиск ресурса<input v-model="search" type="search" placeholder="Название или ключ" /></label>
+-        <label>Группа<select v-model="group"><option value="">Все группы</option><option v-for="item in groups" :key="item">{{ item }}</option></select></label>
++        <label>Раздел ресурсов<select v-model="group"><option value="">Все разделы</option><option v-for="item in groups" :key="item">{{ item }}</option></select></label>
+         <label class="assigned-filter"><input v-model="onlyAssigned" type="checkbox" /> Только с назначениями или доступом</label>
+       </div>
+       <p class="matrix-count">Ресурсов: {{ snapshot.summary.totalResources }} · Прямых назначений: {{ snapshot.summary.directPermissions }} · Действующих прав: {{ snapshot.summary.effectivePermissions }}<span v-if="saving"> · Сохранение…</span></p>
+-      <div class="matrix-table-wrap">
++      <div class="matrix-table-wrap" tabindex="0" role="region" aria-label="Список прав пользователя или группы">
+         <table>
+           <caption class="sr-only">Ресурсы и действия. Галочки показывают прямое назначение, подписи — итоговый доступ.</caption>
+           <thead><tr><th scope="col">Ресурс</th><th v-for="action in snapshot.actions" :key="action" scope="col">{{ labels[action] }}</th></tr></thead>
+@@ -73,9 +76,9 @@
+               <td v-for="action in snapshot.actions" :key="action">
+                 <label class="grant-control">
+                   <input type="checkbox" :checked="row.actions[action].directGranted" :disabled="disabled(row, action)"
+-                    :aria-label="`${row.name}: ${labels[action]}, ${kind === 'user' ? 'личное назначение' : 'назначение отделу'}`"
++                    :aria-label="`${row.name}: ${labels[action]}, ${kind === 'user' ? 'личное назначение' : kind === 'domainGroup' ? 'назначение группе AD' : 'назначение отделу'}`"
+                     @change="changePermission(row, action, $event)" />
+-                  <span>{{ kind === 'user' ? 'Лично' : 'Отделу' }}</span>
++                  <span>{{ kind === 'user' ? 'Лично' : kind === 'domainGroup' ? 'Группе AD' : 'Отделу' }}</span>
+                 </label>
+                 <small class="effective-state" :class="{ granted: row.actions[action].effectiveGranted }">{{ sourceText(row, action) }}</small>
+                 <small v-if="!row.actions[action].canGrant && !row.actions[action].directGranted && snapshot.canManage && snapshot.subject.isActive && row.isActive">Назначение недоступно</small>
+@@ -113,4 +116,19 @@
+ input[type=checkbox] { accent-color: #2563b8; width: 17px; height: 17px; flex-shrink: 0; }
+ .effective-state.granted { color: #126148; font-weight: 550; }
+ .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
++.access-matrix { display: flex; flex-direction: column; min-height: 0; overflow: hidden; font-size: 13px; }
++.access-matrix > :not(.matrix-table-wrap) { flex-shrink: 0; }
++.matrix-heading { align-items: center; }
++h3 { font-size: 16px; margin: 0; }
++p { margin: 4px 0 6px; }
++.matrix-heading p { font-size: 12px; margin-bottom: 0; }
++.matrix-hint, .matrix-count { font-size: 12px; }
++.matrix-filters { gap: 8px; margin: 8px 0 4px; }
++.matrix-filters label { gap: 3px; flex-basis: 150px; }
++.matrix-filters input[type=search], select, .matrix-button { padding: 6px 8px; }
++.matrix-table-wrap { flex: 1 1 0; min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
++thead th { position: sticky; top: 0; z-index: 1; background: #f3f6fa; box-shadow: 0 1px #dce4ed; }
++th, td { padding: 10px; }
++.resource-title, .grant-control { margin-bottom: 4px; }
++.matrix-notice, .matrix-error { padding: 6px 8px; margin: 4px 0; }
+ </style>
+--- /dev/null
++++ b/app/components/admin/DomainGroupImport.vue
+@@ -0,0 +1,30 @@
++<script setup lang="ts">
++import { useDomainGroupImport } from '~/composables/useDomainGroupImport'
++import type { AccessSubjectOption } from '~~/shared/types/access-management'
++const emit = defineEmits<{ imported: [item: AccessSubjectOption] }>()
++const { query, items, busy, error, hasMore, search, add } = useDomainGroupImport(item => emit('imported', item))
++</script>
++<template>
++  <details class="group-import">
++    <summary>Добавить группу из AD</summary>
++    <form @submit.prevent="search">
++      <label>Название группы<input v-model="query" type="search" minlength="2" maxlength="120" required placeholder="Не менее 2 символов" /></label>
++      <button :disabled="busy" type="submit">{{ busy ? 'Проверка AD…' : 'Найти в AD' }}</button>
++    </form>
++    <p v-if="error" role="alert">{{ error }}</p>
++    <ul><li v-for="item in items" :key="item.directoryObjectId">
++      <button type="button" :disabled="busy" @click="add(item)"><strong>{{ item.name }}</strong><small>{{ item.distinguishedName }}</small><small>{{ item.directoryObjectId }}</small><span>Добавить и назначить права →</span></button>
++    </li></ul>
++    <p v-if="hasMore">Показаны первые 50 групп. Уточните поиск.</p>
++    <small>Доступно системному администратору. Поддерживаются вложенные группы безопасности. Членство через основную группу AD (например, Domain Users) не учитывается.</small>
++  </details>
++</template>
++<style scoped>
++.group-import { border: 1px solid #dce4ed; border-radius: 8px; padding: 9px; font-size: 12px; }
++summary { cursor: pointer; color: #315f96; } form { margin-top: 10px; } label, small, strong, span { display: block; }
++input { width: 100%; box-sizing: border-box; margin: 5px 0; padding: 6px; border: 1px solid #becada; border-radius: 5px; }
++button { cursor: pointer; color: #25486d; background: white; border: 1px solid #becada; border-radius: 6px; padding: 6px; text-align: left; }
++button:disabled { opacity: .55; cursor: default; } ul { list-style: none; padding: 0; max-height: 220px; overflow: auto; }
++li { margin-top: 6px; } li button { width: 100%; } small { color: #63758b; line-height: 1.5; overflow-wrap: anywhere; margin-top: 5px; }
++[role=alert] { color: #962c25; }
++</style>
+--- a/app/composables/useAccessMatrix.ts
++++ b/app/composables/useAccessMatrix.ts
+@@ -13,7 +13,7 @@
+   const group = ref('')
+   let generation = 0
+   let disposed = false
+-  const endpoint = kind === 'user' ? `/api/admin/users/${id}/access` : `/api/admin/departments/${id}/permissions`
++  const endpoint = kind === 'user' ? `/api/admin/users/${id}/access` : kind === 'domainGroup' ? `/api/admin/domain-groups/${id}/permissions` : `/api/admin/departments/${id}/permissions`
+   const labels: Record<AccessActionName, string> = {
+     VIEW: 'Просмотр', CREATE: 'Создание', UPDATE: 'Изменение', DELETE: 'Удаление',
+   }
+@@ -59,7 +59,7 @@
+       notice.value = `${labels[change.action]}: ${change.granted ? 'право назначено' : 'назначение отозвано'}.`
+         + (remains ? updated.systemGranted
+           ? ' Доступ остаётся: системный администратор.'
+-          : ` Доступ остаётся через отдел «${response.subject.department?.name ?? ''}».` : '')
++          : ' Доступ остаётся через отдел или доменные группы; источник указан под правом.' : '')
+     } catch (e) {
+       if (disposed) return
+       error.value = message(e, 'Не удалось подтвердить сохранение. Обновите матрицу перед повторной попыткой.')
+--- /dev/null
++++ b/app/composables/useDomainGroupImport.ts
+@@ -0,0 +1,28 @@
++import { ref, onBeforeUnmount } from 'vue'
++import type { AccessSubjectOption } from '~~/shared/types/access-management'
++interface DirectoryGroup { directoryObjectId: string; name: string; distinguishedName: string }
++export function useDomainGroupImport(onImported: (item: AccessSubjectOption) => void) {
++  const query = ref(''), items = ref<DirectoryGroup[]>([]), busy = ref(false), error = ref(''), hasMore = ref(false)
++  let disposed = false
++  onBeforeUnmount(() => { disposed = true })
++  const fail = (e: any) => { error.value = e?.data?.data?.message || 'Не удалось обратиться к каталогу AD. Проверьте настройки и повторите.' }
++  async function search() {
++    if (busy.value || query.value.trim().length < 2) return
++    busy.value = true; error.value = ''; items.value = []
++    try {
++      const result = await $fetch<{ items: DirectoryGroup[]; hasMore: boolean }>('/api/admin/domain-groups/search', { query: { search: query.value.trim() } })
++      if (!disposed) { items.value = result.items; hasMore.value = result.hasMore }
++    } catch (e) { if (!disposed) fail(e) } finally { if (!disposed) busy.value = false }
++  }
++  async function add(item: DirectoryGroup) {
++    if (busy.value) return
++    busy.value = true; error.value = ''
++    try {
++      const result = await $fetch<{ item: AccessSubjectOption }>('/api/admin/domain-groups', {
++        method: 'POST', headers: { 'x-space-access-change': '1' }, body: { directoryObjectId: item.directoryObjectId },
++      })
++      if (!disposed) { onImported(result.item); items.value = []; query.value = '' }
++    } catch (e) { if (!disposed) fail(e) } finally { if (!disposed) busy.value = false }
++  }
++  return { query, items, busy, error, hasMore, search, add }
++}
+--- a/app/pages/admin/access.vue
++++ b/app/pages/admin/access.vue
+@@ -3,7 +3,8 @@
+ import type { AccessSubjectKind, AccessSubjectOption } from '~~/shared/types/access-management'
+ 
+ useSeoMeta({ title: 'Space — управление правами' })
+-const kind = ref<AccessSubjectKind>('department')
++const route = useRoute()
++const kind = ref<AccessSubjectKind>(route.query.kind === 'domainGroup' ? 'domainGroup' : 'department')
+ const search = ref('')
+ const subjects = ref<AccessSubjectOption[]>([])
+ const selected = ref<AccessSubjectOption | null>(null)
+@@ -43,7 +44,8 @@
+     <header><div><NuxtLink to="/admin/users">← Сотрудники и подразделения</NuxtLink><h1>Управление правами</h1></div></header>
+     <div class="access-layout">
+       <aside aria-label="Получатель прав">
+-        <label>Назначить права<select v-model="kind"><option value="department">Подразделению</option><option value="user">Сотруднику</option></select></label>
++        <label>Назначить права<select v-model="kind"><option value="department">Подразделению</option><option value="user">Сотруднику</option><option value="domainGroup">Доменной группе</option></select></label>
++        <AdminDomainGroupImport v-if="kind === 'domainGroup'" @imported="selected = $event; search = ''; load()" />
+         <label>Поиск<input v-model="search" type="search" maxlength="120" placeholder="Название, имя или логин" /></label>
+         <p v-if="loading" role="status">Загрузка…</p>
+         <p v-if="error" role="alert">{{ error }} <button type="button" @click="load">Повторить</button></p>
+@@ -55,7 +57,7 @@
+       </aside>
+       <main>
+         <AdminAccessMatrix v-if="selected" :key="`${kind}:${selected.id}`" :kind="kind" :subject-id="selected.id" />
+-        <p v-else class="choose-subject">Выберите сотрудника или подразделение.</p>
++        <p v-else class="choose-subject">Выберите сотрудника, подразделение или доменную группу.</p>
+       </main>
+     </div>
+   </div>
+@@ -73,4 +75,16 @@
+ li button[aria-pressed=true] { background: #edf4fc; border-color: #a7c3e6; } strong, small { display: block; } strong { font-size: 13px; } small { margin-top: 4px; font-size: 11px; color: #63758b; overflow-wrap: anywhere; }
+ .choose-subject { padding: 25px 0; color: #63758b; } aside p { color: #52637a; font-size: 13px; }
+ @media(max-width: 850px) { .access-layout { grid-template-columns: 1fr; } .access-page { padding: 12px; } }
++.access-page { overflow: hidden; padding: 12px 14px; }
++header { flex-shrink: 0; margin-bottom: 10px; } h1 { font-size: 21px; margin-top: 5px; }
++.access-layout { flex: 1 1 0; min-height: 0; align-items: stretch; gap: 12px; }
++aside, main { min-height: 0; padding: 12px; }
++aside { overflow: auto; } main { display: flex; flex-direction: column; overflow: hidden; }
++main :deep(.access-matrix) { flex: 1 1 0; min-height: 0; }
++@media(max-width: 850px) {
++  .access-page { overflow: auto; }
++  .access-layout { flex: none; }
++  aside { max-height: 320px; }
++  main { height: max(500px, 75dvh); }
++}
+ </style>
+--- a/app/pages/login.vue
++++ b/app/pages/login.vue
+@@ -299,6 +299,11 @@
+                 class="space-y-4"
+                 @submit.prevent="authUser"
+               >
++                <div class="rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-600">
++                  <p v-if="kerberosDiagnostic" role="status">{{ kerberosDiagnostic }}</p>
++                  <p v-else>Можно войти с текущей доменной учётной записью без ввода пароля.</p>
++                  <button type="button" class="mt-2 font-semibold text-sky-700" :disabled="isSubmitting" @click="tryKerberosLogin">Повторить доменный вход</button>
++                </div>
+                 <label class="block">
+                   <span class="mb-2 block text-sm font-medium text-slate-700">
+                     Доменный логин
+@@ -843,158 +848,38 @@
+  * после открытия /login.
+  */
+ 
++const kerberosDiagnostic = ref('');
+ const tryKerberosLogin = async () => {
+-
++  if (isSubmitting.value) return;
+   isKerberosChecking.value = true;
+-
+-
++  kerberosDiagnostic.value = '';
++  let phase = 'negotiate';
++  let requestId = '';
+   try {
+-
+-    /**
+-     * ========================================================
+-     * ВОТ ЗДЕСЬ происходит обращение к:
+-     *
+-     * server/api/auth/kerberos.post.ts
+-     * ========================================================
+-     *
+-     * Но сначала запрос проходит через nginx:
+-     *
+-     * location = /api/auth/kerberos {
+-     *
+-     *     auth_gss on;
+-     *
+-     *     ...
+-     *
+-     * }
+-     *
+-     *
+-     * Если Kerberos успешен:
+-     *
+-     * nginx
+-     *   ↓
+-     * X-Remote-User
+-     *   ↓
+-     * kerberos.post.ts
+-     *   ↓
+-     * AD
+-     *   ↓
+-     * setUserSession()
+-     *
+-     *
+-     * Если Kerberos неуспешен:
+-     *
+-     * nginx
+-     *   ↓
+-     * 401 / 403
+-     *
+-     * kerberos.post.ts в таком случае
+-     * может вообще НЕ выполниться.
+-     */
+-
+-    const result =
+-      await $fetch<{
+-        success: boolean;
+-        user?: any;
+-      }>(
+-        '/api/auth/kerberos',
+-        {
+-          method: 'POST',
+-          credentials: 'include',
+-          // ignoreResponseError: true,
+-        },
+-      );
+-
+-
+-    /**
+-     * Endpoint отработал,
+-     * но почему-то не сообщил success.
+-     */
+-    if (!result?.success) {
+-
+-      throw new Error(
+-        'Kerberos authentication failed',
+-      );
+-    }
+-
+-
+-    /**
+-     * Kerberos endpoint уже создал session.
+-     */
+-    await finishLogin(
+-      'kerberos',
+-      result.user,
++    const result = await $fetch<{ success: boolean; user?: any; requestId?: string }>(
++      '/api/auth/kerberos', { method: 'POST', credentials: 'include', retry: 0, timeout: 15000 },
+     );
+-
+-
+-    showToast(
+-      `Пользователь ${result.user?.name || result.user?.username || ''} авторизован через доменную учётную запись`,
+-      'success',
+-    );
+-
+-  }
+-  catch (error: any) {
+-    console.error(
+-      'Ошибка Kerberos-авторизации:',
+-      error,
+-    );
+-
+-    console.error(
+-      'STATUS:',
+-      error?.statusCode ||
+-      error?.status ||
+-      error?.response?.status,
+-    );
+-
+-    console.error(
+-      'DATA:',
+-      error?.data,
+-    );
+-  }
+-  // catch (error: any) {
+-
+-  //   /**
+-  //    * --------------------------------------------------------
+-  //    * Это НОРМАЛЬНЫЙ сценарий для недоменного пользователя.
+-  //    * --------------------------------------------------------
+-  //    *
+-  //    * Если Kerberos не сработал, мы ничего больше автоматически
+-  //    * не делаем.
+-  //    *
+-  //    * Просто завершаем проверку и показываем форму login/password.
+-  //    */
+-
+-  //   const status =
+-  //     error?.statusCode ||
+-  //     error?.status ||
+-  //     error?.response?.status;
+-
+-
+-  //   if (
+-  //     status !== 401 &&
+-  //     status !== 403
+-  //   ) {
+-
+-  //     /**
+-  //      * 401/403 ожидаемы.
+-  //      *
+-  //      * Остальные ошибки полезно видеть в console.
+-  //      */
+-  //     console.error(
+-  //       'Ошибка Kerberos-авторизации:',
+-  //       error,
+-  //     );
+-  //   }
+-
+-  // }
+-  finally {
+-
+-    /**
+-     * После этого v-if переключит страницу
+-     * с сообщения "Проверка..."
+-     * на обычную форму.
+-     */
+-    isKerberosChecking.value =
+-      false;
++    requestId = result.requestId || '';
++    if (!result.success) throw new Error('KERBEROS_RESPONSE_INVALID');
++    phase = 'session-check';
++    await finishLogin('kerberos', result.user);
++    showToast('Вход через доменную учётную запись выполнен', 'success');
++  } catch (error: any) {
++    const data = error?.data?.data;
++    const stage = data?.stage || error?.response?.headers?.get('x-space-auth-stage') || phase;
++    const status = error?.statusCode || error?.response?.status || '—';
++    const id = data?.requestId || error?.response?.headers?.get('x-space-auth-request') || requestId;
++    const messages: Record<string, string> = {
++      negotiate: 'Браузер или nginx не завершили автоматический доменный вход.',
++      proxy: 'Приложение не получило подтверждённое имя пользователя от nginx.',
++      directory: 'Не удалось получить профиль из Active Directory.',
++      account: 'Не удалось подготовить учётную запись Space или вход для неё запрещён.',
++      session: 'Сервер не смог создать сессию Space.',
++      'session-check': 'Сессия после входа не подтвердилась. Проверьте cookie и настройки сервера.',
++    };
++    kerberosDiagnostic.value = `${messages[stage] || 'Доменный вход не завершён.'} Этап: ${stage}; HTTP: ${status}${id ? `; запрос: ${id}` : ''}.`;
++  } finally {
++    isKerberosChecking.value = false;
+   }
+ };
+ 
+--- a/app/layouts/default.vue
++++ b/app/layouts/default.vue
+@@ -79,6 +79,7 @@
+     () =>
+       route.path ===
+         '/admin/users' ||
++      route.path === '/admin/access' ||
+       route.path.startsWith(
+         '/admin/users/',
+       ),
+--- a/server/services/access-control.service.ts
++++ b/server/services/access-control.service.ts
+@@ -4,6 +4,7 @@
+ import { auditDenied } from '../utils/auditLog'
+ import { decideAccess, isSystemAdminLogin } from '../../shared/utils/access-decision'
+ import type { AccessSource } from '../../shared/types/access-management'
++import { getDomainGroupContext } from './domain-group-access.service'
+ import { isSystemAdminOperation } from './access-catalog'
+ 
+ export type PermissionContext = {
+@@ -27,7 +28,7 @@
+   const user = await db.user.findUnique({
+     where: { id: userId },
+     select: {
+-      id: true, login: true, email: true, authType: true, status: true,
++      id: true, login: true, email: true, authType: true, status: true, directoryObjectId: true,
+       department: { select: { id: true, name: true, isActive: true } },
+     },
+   })
+@@ -57,12 +58,26 @@
+       where: { departmentId, resourceId: resource.id, action }, select: { id: true },
+     }) : null,
+   ])
+-  const decision = decideAccess({
++  let decision = decideAccess({
+     userActive: actor.user.status === 'ACTIVE', resourceActive: resource.isActive,
+     systemAdmin: actor.isSystemAdmin, direct: !!direct,
+     systemAdminOnly: isSystemAdminOperation(resource.key),
+     departmentActive: !!departmentId, departmentGranted: !!inherited,
+   })
++  if (!decision.allowed && decision.blockedBy === 'NO_PERMISSION' && actor.user.authType === 'DOMAIN') {
++    const grants = await prisma.domainGroupPermission.findMany({
++      where: { resourceId: resource.id, action, domainGroup: { isActive: true } },
++      select: { domainGroup: { select: { directoryObjectId: true } } },
++    })
++    if (grants.length) {
++      const membership = await getDomainGroupContext(event, actor.user)
++      if (membership.warning) throw createError({ statusCode: 503, statusMessage: 'AD_GROUP_ACCESS_UNVERIFIED',
++        data: { code: 'AD_GROUP_ACCESS_UNVERIFIED', message: membership.warning } })
++      if (grants.some(p => membership.ids.includes(p.domainGroup.directoryObjectId))) {
++        decision = { allowed: true, sources: ['DOMAIN_GROUP'], blockedBy: null }
++      }
++    }
++  }
+   if (!decision.allowed) {
+     await auditDenied({ event, actorUserId: actor.user.id, actorLogin: actor.user.login,
+       actorEmail: actor.user.email, actorAuthType: actor.user.authType, resourceKey, action })
+--- a/server/services/access-management.service.ts
++++ b/server/services/access-management.service.ts
+@@ -1,3 +1,4 @@
++import { getDomainGroupContext, emptyDomainGroupContext, type DomainGroupContext } from './domain-group-access.service'
+ import { createHash } from 'node:crypto'
+ import { Prisma } from '@prisma/client'
+ import type { H3Event } from 'h3'
+@@ -16,7 +17,7 @@
+ 
+ export async function buildAccessSnapshot(
+   db: Prisma.TransactionClient, kind: AccessSubjectKind, id: number,
+-  adminLogins: unknown, canManage: boolean,
++  adminLogins: unknown, canManage: boolean, membership: DomainGroupContext = emptyDomainGroupContext(),
+ ): Promise<AccessSnapshot> {
+   const user = kind === 'user' ? await db.user.findUnique({
+     where: { id }, select: {
+@@ -33,15 +34,22 @@
+       _count: { select: { users: true } },
+     },
+   }) : null
+-  if (!user && !department) accessError(404, 'ACCESS_SUBJECT_NOT_FOUND', 'Сотрудник или подразделение не найдены.')
++  const domainGroup = kind === 'domainGroup' ? await db.domainGroup.findUnique({
++    where: { id }, include: { permissions: { select: permissionSelect, orderBy: { id: 'asc' } } },
++  }) : null
++  const groupGrants = user && membership.ids.length ? await db.domainGroupPermission.findMany({
++    where: { domainGroup: { isActive: true, directoryObjectId: { in: membership.ids } } },
++    include: { domainGroup: { select: { id: true, name: true } } }, orderBy: { id: 'asc' },
++  }) : []
++  if (!user && !department && !domainGroup) accessError(404, 'ACCESS_SUBJECT_NOT_FOUND', 'Получатель прав не найден.')
+   const targetDepartment = user?.department ?? null
+-  const direct = user?.permissions ?? department?.permissions ?? []
++  const direct = user?.permissions ?? department?.permissions ?? domainGroup?.permissions ?? []
+   const inherited = targetDepartment?.permissions ?? []
+   const subject: AccessSnapshot['subject'] = {
+     kind, id,
+-    name: user ? user.fullName || user.login || user.email || `Сотрудник #${id}` : department!.name,
+-    isActive: user ? user.status === 'ACTIVE' : department!.isActive,
+-    status: user ? user.status : department!.isActive ? 'ACTIVE' : 'DISABLED',
++    name: user ? user.fullName || user.login || user.email || `Сотрудник #${id}` : (department || domainGroup)!.name,
++    isActive: user ? user.status === 'ACTIVE' : (department || domainGroup)!.isActive,
++    status: user ? user.status : (department || domainGroup)!.isActive ? 'ACTIVE' : 'DISABLED',
+     isSystemAdmin: !!user && isSystemAdminLogin(user.login, adminLogins),
+     department: targetDepartment ? {
+       id: targetDepartment.id, name: targetDepartment.name, isActive: targetDepartment.isActive,
+@@ -67,10 +75,12 @@
+         systemAdmin: subject.isSystemAdmin, direct: kind === 'user' && !!own,
+         systemAdminOnly: isSystemAdminOperation(resource.key),
+         departmentActive: kind === 'department' ? subject.isActive : !!targetDepartment?.isActive,
++        domainGroupGranted: kind === 'domainGroup' ? !!own : groupGrants.some(p => p.resourceId === resource.id && p.action === action),
+         departmentGranted: kind === 'department' ? !!own : inheritedGranted,
+       })
+       const cell: AccessCell = {
+-        directGranted: !!own, inheritedGranted, systemGranted: subject.isSystemAdmin,
++        directGranted: !!own, inheritedGranted,
++        domainGroups: groupGrants.filter(p => p.resourceId === resource.id && p.action === action).map(p => p.domainGroup), systemGranted: subject.isSystemAdmin,
+         effectiveGranted: decision.allowed, sources: decision.sources, blockedBy: decision.blockedBy,
+         canGrant: canManage && resource.isActive && subject.isActive && supported.includes(action),
+         canRevoke: canManage && !!own,
+@@ -85,8 +95,8 @@
+       actions }
+   })
+   // Version includes inherited access, membership, status and catalog changes.
+-  const revision = createHash('sha256').update(JSON.stringify({ subject, direct, inherited, data })).digest('hex')
+-  return { success: true, revision, canManage, subject, actions: [...ACCESS_ACTIONS], data,
++  const revision = createHash('sha256').update(JSON.stringify({ subject, direct, inherited, data, membership })).digest('hex')
++  return { success: true, revision, directoryWarning: membership.warning, canManage, subject, actions: [...ACCESS_ACTIONS], data,
+     summary: {
+       totalResources: data.length,
+       directPermissions: data.reduce((n, row) => n + ACCESS_ACTIONS.filter(a => row.actions[a].directGranted).length, 0),
+@@ -94,23 +104,31 @@
+     } }
+ }
+ 
++async function membershipForSubject(event: H3Event, kind: AccessSubjectKind, id: number) {
++  if (kind !== 'user') return emptyDomainGroupContext()
++  const user = await prisma.user.findUnique({ where: { id }, select: { authType: true, login: true, directoryObjectId: true, status: true } })
++  return user ? getDomainGroupContext(event, user) : emptyDomainGroupContext()
++}
++
+ export async function readAccessSnapshot(event: H3Event, kind: AccessSubjectKind, id: number) {
+   const viewer = await requirePermission(event, 'admin.users', 'VIEW')
++  const membership = await membershipForSubject(event, kind, id)
+   return prisma.$transaction(tx => buildAccessSnapshot(
+-    tx, kind, id, useRuntimeConfig(event).adminLogins, viewer.isSystemAdmin,
++    tx, kind, id, useRuntimeConfig(event).adminLogins, viewer.isSystemAdmin, membership,
+   ), { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead })
+ }
+ 
+ export async function saveAccessChanges(event: H3Event, kind: AccessSubjectKind, id: number, input: AccessMutation) {
+   const viewer = await requirePermission(event, 'admin.users', 'VIEW')
+   if (!viewer.isSystemAdmin) accessError(403, 'ACCESS_MANAGEMENT_ADMIN_ONLY', 'Назначать права пока может только системный администратор.')
++  const membership = await membershipForSubject(event, kind, id)
+   for (let attempt = 0; attempt < 3; attempt++) {
+     try {
+       return await prisma.$transaction(async tx => {
+         // Recheck the actor inside the same transaction as the grants and audit.
+         const actor = await getAccessActor(event, tx)
+         if (!actor.isSystemAdmin) accessError(403, 'ACCESS_MANAGEMENT_ADMIN_ONLY', 'Недостаточно полномочий для назначения прав.')
+-        const snapshot = await buildAccessSnapshot(tx, kind, id, useRuntimeConfig(event).adminLogins, true)
++        const snapshot = await buildAccessSnapshot(tx, kind, id, useRuntimeConfig(event).adminLogins, true, membership)
+         if (snapshot.revision !== input.revision) {
+           accessError(409, 'ACCESS_REVISION_CONFLICT', 'Права, состав отдела или ресурс изменились. Обновите матрицу и повторите действие.')
+         }
+@@ -128,13 +146,16 @@
+           const row = rows.get(change.resourceId)!
+           const previous = row.actions[change.action].directGranted
+           if (previous === change.granted) continue
+-          const entityType = kind === 'user' ? 'UserPermission' : 'DepartmentPermission'
++          const entityType = kind === 'user' ? 'UserPermission' : kind === 'department' ? 'DepartmentPermission' : 'DomainGroupPermission'
+           if (change.granted) {
+             const common = { resourceId: change.resourceId, action: change.action, grantedByLogin: actor.user.login }
+             if (kind === 'user') await tx.userPermission.create({ data: { ...common, userId: id } })
++            else if (kind === 'domainGroup') await tx.domainGroupPermission.create({ data: { ...common, domainGroupId: id } })
+             else await tx.departmentPermission.create({ data: { ...common, departmentId: id } })
+           } else if (kind === 'user') {
+             await tx.userPermission.deleteMany({ where: { userId: id, resourceId: change.resourceId, action: change.action } })
++          } else if (kind === 'domainGroup') {
++            await tx.domainGroupPermission.deleteMany({ where: { domainGroupId: id, resourceId: change.resourceId, action: change.action } })
+           } else {
+             await tx.departmentPermission.deleteMany({ where: { departmentId: id, resourceId: change.resourceId, action: change.action } })
+           }
+@@ -152,7 +173,7 @@
+           })
+           changed++
+         }
+-        const updated = await buildAccessSnapshot(tx, kind, id, useRuntimeConfig(event).adminLogins, true)
++        const updated = await buildAccessSnapshot(tx, kind, id, useRuntimeConfig(event).adminLogins, true, membership)
+         return { ...updated, changed }
+       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 5000, timeout: 10000 })
+     } catch (error) {
+@@ -180,6 +201,12 @@
+     items = users.map(user => ({ id: user.id, name: user.fullName || user.login || user.email || `#${user.id}`,
+       detail: [user.login || user.email, user.department?.name, user.status].filter(Boolean).join(' · '),
+       isActive: user.status === 'ACTIVE' }))
++  } else if (kind === 'domainGroup') {
++    const groups = await prisma.domainGroup.findMany({
++      where: search ? { name: { contains: search, mode: 'insensitive' } } : {},
++      orderBy: [{ name: 'asc' }, { id: 'asc' }], take: 51,
++    })
++    items = groups.map(g => ({ id: g.id, name: g.name, detail: g.distinguishedName, isActive: g.isActive }))
+   } else {
+     const departments = await prisma.department.findMany({
+       where: search ? { name: { contains: search, mode: 'insensitive' } } : {},
+--- /dev/null
++++ b/server/services/domain-group-directory.service.ts
+@@ -0,0 +1,71 @@
++import { createError, type H3Event } from 'h3'
++import { createAdClient, findDomainUser, normalizeDirectoryObjectId } from './ad-directory.service'
++
++export interface DirectorySecurityGroup {
++  directoryObjectId: string
++  name: string
++  distinguishedName: string
++}
++const guidPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i
++const securityGroup = '(objectCategory=group)(groupType:1.2.840.113556.1.4.803:=2147483648)'
++const attributes = ['objectGUID', 'cn', 'sAMAccountName', 'distinguishedName', 'dn', 'groupType']
++
++export function escapeLdapFilter(value: string): string {
++  return value.replace(/[\\*()\x00]/g, char => `\\${char.charCodeAt(0).toString(16).padStart(2, '0')}`)
++}
++export function guidLdapFilter(value: string): string {
++  if (!guidPattern.test(value)) throw createError({ statusCode: 400, statusMessage: 'INVALID_DIRECTORY_GUID' })
++  const bytes = value.replace(/-/g, '').match(/../g)!
++  return [3,2,1,0,5,4,7,6,8,9,10,11,12,13,14,15].map(i => `\\${bytes[i]}`).join('')
++}
++function groupFromRaw(raw: Record<string, unknown>): DirectorySecurityGroup | null {
++  const id = normalizeDirectoryObjectId(raw.objectGUID)
++  const dn = raw.distinguishedName || raw.dn
++  const name = raw.cn || raw.sAMAccountName
++  if (!id || !guidPattern.test(id) || typeof dn !== 'string' || typeof name !== 'string') return null
++  // Do not trust a distribution group even if the server ignored our filter.
++  if ((Number(raw.groupType) & 0x80000000) === 0) return null
++  return { directoryObjectId: id, name, distinguishedName: dn }
++}
++async function queryDirectory(event: H3Event, filter: string, fields: string[], userScope = false) {
++  const config = useRuntimeConfig(event).ad as { baseDN: string; groupsBaseDN?: string }
++  const baseDN = userScope ? config.baseDN : config.groupsBaseDN
++  if (!baseDN) throw createError({ statusCode: 503, statusMessage: 'AD_GROUPS_BASE_DN_REQUIRED',
++    data: { code: 'AD_GROUPS_BASE_DN_REQUIRED', message: 'Задайте NUXT_AD_GROUPS_BASE_DN для поиска групп AD.' } })
++  const client = createAdClient(event)
++  return new Promise<{ groups?: Record<string, unknown>[]; users?: Record<string, unknown>[] }>((resolve, reject) => {
++    client.find({ baseDN, filter, attributes: fields, includeMembership: [],
++      // No referrals across domains; use a configured domain scope.
++      entryParser: (entry: any, raw: any, callback: (entry: any) => void) => {
++        const rawGuid = Array.isArray(raw?.objectGUID) ? raw.objectGUID[0] : raw?.objectGUID
++        if (rawGuid) entry.objectGUID = rawGuid
++        callback(entry)
++      },
++      referrals: { enabled: false } } as any, (error: unknown, result: any) => {
++      if (error) reject(createError({ statusCode: 503, statusMessage: 'AD_GROUP_LOOKUP_FAILED',
++        data: { code: 'AD_GROUP_LOOKUP_FAILED', message: 'Не удалось проверить группы в Active Directory.' } }))
++      else resolve(result || {})
++    })
++  })
++}
++export async function searchDirectoryGroups(event: H3Event, search: string): Promise<DirectorySecurityGroup[]> {
++  const q = escapeLdapFilter(search.trim())
++  const result = await queryDirectory(event, `(&${securityGroup}(|(cn=*${q}*)(sAMAccountName=*${q}*)))`, attributes)
++  return (result.groups || []).map(groupFromRaw).filter((g): g is DirectorySecurityGroup => !!g)
++    .sort((a, b) => a.name.localeCompare(b.name)).slice(0, 51)
++}
++export async function findDirectoryGroup(event: H3Event, id: string): Promise<DirectorySecurityGroup | null> {
++  const result = await queryDirectory(event, `(&${securityGroup}(objectGUID=${guidLdapFilter(id)}))`, attributes)
++  return (result.groups || []).map(groupFromRaw).find(g => g?.directoryObjectId === id.toLowerCase()) || null
++}
++/** Resolve the DB-bound AD object, never a browser-supplied login or group list. */
++export async function resolveDomainGroupIds(event: H3Event, directoryObjectId: string, login: string): Promise<string[]> {
++  // Use the same identity normalization as login. Do not silently rebind existing users.
++  const user = await findDomainUser(login, event)
++  if (!user || user.directoryObjectId !== directoryObjectId.toLowerCase() || user.accountDisabled || !user.distinguishedName) return []
++  const groups = await queryDirectory(event,
++    `(&${securityGroup}(member:1.2.840.113556.1.4.1941:=${escapeLdapFilter(user.distinguishedName)}))`, attributes)
++  // Includes nested member links. AD primaryGroupID is deliberately not interpreted as a role.
++  return [...new Set((groups.groups || []).map(groupFromRaw).filter((g): g is DirectorySecurityGroup => !!g)
++    .map(g => g.directoryObjectId))].sort()
++}
+--- /dev/null
++++ b/server/services/domain-group-access.service.ts
+@@ -0,0 +1,22 @@
++import type { H3Event } from 'h3'
++import { prisma } from '../utils/prisma'
++import { resolveDomainGroupIds } from './domain-group-directory.service'
++
++export interface DomainGroupContext { ids: string[]; warning: string | null }
++export const emptyDomainGroupContext = (): DomainGroupContext => ({ ids: [], warning: null })
++
++export async function getDomainGroupContext(event: H3Event, user: {
++  authType: string; login: string | null; directoryObjectId: string | null; status: string
++}): Promise<DomainGroupContext> {
++  if (user.authType !== 'DOMAIN' || user.status !== 'ACTIVE') return emptyDomainGroupContext()
++  if (!await prisma.domainGroupPermission.count({ where: { domainGroup: { isActive: true } } })) return emptyDomainGroupContext()
++  if (!user.directoryObjectId || !user.login) return { ids: [], warning: 'Нет связи с objectGUID AD. Выполните повторный доменный вход для проверки групп.' }
++  try {
++    // Cache only in this request, not in a cookie or between requests. AD revocation is rechecked.
++    const lookups = event.context.spaceGroupLookups ??= new Map<string, Promise<string[]>>()
++    if (!lookups.has(user.directoryObjectId)) lookups.set(user.directoryObjectId, resolveDomainGroupIds(event, user.directoryObjectId, user.login))
++    return { ids: await lookups.get(user.directoryObjectId)!, warning: null }
++  } catch {
++    return { ids: [], warning: 'Группы AD не проверены: каталог недоступен или не настроена область поиска. Их права сейчас не подтверждены.' }
++  }
++}
+--- a/server/api/admin/access/subjects.get.ts
++++ b/server/api/admin/access/subjects.get.ts
+@@ -4,8 +4,8 @@
+ 
+ export default defineEventHandler(async event => {
+   const query = getQuery(event)
+-  if (query.kind !== 'user' && query.kind !== 'department') {
+-    accessError(400, 'INVALID_ACCESS_KIND', 'Выберите сотрудников или подразделения.')
++  if (query.kind !== 'user' && query.kind !== 'department' && query.kind !== 'domainGroup') {
++    accessError(400, 'INVALID_ACCESS_KIND', 'Выберите тип получателя прав.')
+   }
+   if (query.search !== undefined && (typeof query.search !== 'string' || query.search.length > 120)) {
+     accessError(400, 'INVALID_ACCESS_SEARCH', 'Поиск ограничен 120 символами.')
+--- /dev/null
++++ b/server/api/admin/domain-groups/search.get.ts
+@@ -0,0 +1,15 @@
++import { defineEventHandler, getQuery } from 'h3'
++import { requirePermission } from '~~/server/services/access-control.service'
++import { searchDirectoryGroups } from '~~/server/services/domain-group-directory.service'
++import { accessError } from '~~/server/services/access-input'
++
++export default defineEventHandler(async event => {
++  const actor = await requirePermission(event, 'admin.users', 'VIEW')
++  if (!actor.isSystemAdmin) accessError(403, 'ACCESS_MANAGEMENT_ADMIN_ONLY', 'Поиск новых групп доступен системному администратору.')
++  const search = getQuery(event).search
++  if (typeof search !== 'string' || search.trim().length < 2 || search.length > 120) {
++    accessError(400, 'INVALID_GROUP_SEARCH', 'Введите от 2 до 120 символов названия группы.')
++  }
++  const groups = await searchDirectoryGroups(event, search)
++  return { items: groups.slice(0, 50), hasMore: groups.length > 50 }
++})
+--- /dev/null
++++ b/server/api/admin/domain-groups/index.post.ts
+@@ -0,0 +1,30 @@
++import { defineEventHandler, readBody } from 'h3'
++import { prisma } from '~~/server/utils/prisma'
++import { writeAuditEvent } from '~~/server/utils/auditLog'
++import { requirePermission, getAccessActor } from '~~/server/services/access-control.service'
++import { findDirectoryGroup } from '~~/server/services/domain-group-directory.service'
++import { accessError, requireAccessMutationRequest } from '~~/server/services/access-input'
++
++export default defineEventHandler(async event => {
++  requireAccessMutationRequest(event)
++  const viewer = await requirePermission(event, 'admin.users', 'VIEW')
++  if (!viewer.isSystemAdmin) accessError(403, 'ACCESS_MANAGEMENT_ADMIN_ONLY', 'Добавлять группы может только системный администратор.')
++  const body = await readBody(event)
++  if (!body || typeof body.directoryObjectId !== 'string') accessError(400, 'INVALID_DIRECTORY_GUID', 'Выберите группу из каталога AD.')
++  const group = await findDirectoryGroup(event, body.directoryObjectId)
++  if (!group) accessError(404, 'DIRECTORY_GROUP_NOT_FOUND', 'Группа безопасности не найдена в AD.')
++  const result = await prisma.$transaction(async tx => {
++    const actor = await getAccessActor(event, tx)
++    if (!actor.isSystemAdmin) accessError(403, 'ACCESS_MANAGEMENT_ADMIN_ONLY', 'Недостаточно полномочий.')
++    const saved = await tx.domainGroup.upsert({ where: { directoryObjectId: group.directoryObjectId },
++      create: group, update: { name: group.name, distinguishedName: group.distinguishedName } })
++    await writeAuditEvent({ event, db: tx, category: 'ADMIN', result: 'SUCCESS', action: 'UPDATE',
++      resourceKey: 'admin.users', entityType: 'DomainGroup', actorUserId: actor.user.id, actorLogin: actor.user.login,
++      actorEmail: actor.user.email || actor.user.login || `user:${actor.user.id}`, actorAuthType: actor.user.authType,
++      note: `Группа AD добавлена / обновлена: ${saved.name}`,
++      changes: { directoryObjectId: { before: null, after: saved.directoryObjectId } },
++    })
++    return saved
++  })
++  return { item: { id: result.id, name: result.name, detail: result.distinguishedName, isActive: result.isActive } }
++})
+--- /dev/null
++++ b/server/api/admin/domain-groups/[id]/permissions.get.ts
+@@ -0,0 +1,8 @@
++import { defineEventHandler, getRouterParam } from 'h3'
++import { readAccessSnapshot } from '~~/server/services/access-management.service'
++import { parseAccessId } from '~~/server/services/access-input'
++
++export default defineEventHandler(async event => {
++  const id = parseAccessId(getRouterParam(event, 'id'))
++  return readAccessSnapshot(event, 'domainGroup', id)
++})
+--- /dev/null
++++ b/server/api/admin/domain-groups/[id]/permissions.put.ts
+@@ -0,0 +1,10 @@
++import { defineEventHandler, getRouterParam, readBody } from 'h3'
++import { saveAccessChanges } from '~~/server/services/access-management.service'
++import { parseAccessId, parseAccessMutation, requireAccessMutationRequest } from '~~/server/services/access-input'
++
++export default defineEventHandler(async event => {
++  requireAccessMutationRequest(event)
++  const id = parseAccessId(getRouterParam(event, 'id'))
++  const input = parseAccessMutation(await readBody<unknown>(event))
++  return saveAccessChanges(event, 'domainGroup', id, input)
++})
+--- a/server/api/auth/kerberos.post.ts
++++ b/server/api/auth/kerberos.post.ts
+@@ -1,283 +1,49 @@
+-// server/api/auth/kerberos.post.ts
++import { randomUUID } from 'node:crypto'
++import { createError, defineEventHandler, getRequestHeader, setResponseHeader } from 'h3'
++import { logger } from '../../utils/logger'
++import { findDomainUser } from '../../services/ad-directory.service'
++import { ensureDomainUser, assertDomainUserCanLogin } from '../../services/domain-user.service'
+ 
+-import { logger } from '../../utils/logger';
+-
+-import {
+-  findDomainUser,
+-} from '../../services/ad-directory.service';
+-
+-import {
+-  ensureDomainUser,
+-  assertDomainUserCanLogin,
+-} from '../../services/domain-user.service';
+-
+-
+-/**
+- * ============================================================
+- * POST /api/auth/kerberos
+- * ============================================================
+- *
+- * Kerberos-аутентификация выполняется nginx.
+- *
+- * nginx:
+- *
+- *   auth_gss on;
+- *        ↓
+- *   X-Remote-User
+- *        ↓
+- *   этот endpoint
+- *
+- * Сам endpoint пароль НЕ проверяет.
+- */
+-export default defineEventHandler(async (event) => {
+-
+-  /**
+-   * ----------------------------------------------------------
+-   * 1. Получаем пользователя, подтверждённого nginx/Kerberos
+-   * ----------------------------------------------------------
+-   */
+-  const remoteUser =
+-    getRequestHeader(
+-      event,
+-      'x-remote-user',
+-    ) ||
+-    getRequestHeader(
+-      event,
+-      'remote-user',
+-    ) ||
+-    getRequestHeader(
+-      event,
+-      'x-forwarded-user',
+-    );
+-
+-
+-  if (!remoteUser) {
+-    logger.warn(
+-      'Kerberos endpoint вызван без X-Remote-User.',
+-    );
+-
+-    throw createError({
+-      statusCode: 401,
+-
+-      statusMessage:
+-        'Kerberos authentication required',
+-
+-      message:
+-        'Не удалось определить пользователя Kerberos.',
+-    });
++/** nginx validates SPNEGO. Nitro must only be reachable through the trusted proxy. */
++export default defineEventHandler(async event => {
++  const requestId = randomUUID()
++  let stage = 'proxy'
++  setResponseHeader(event, 'Cache-Control', 'no-store')
++  setResponseHeader(event, 'X-Space-Auth-Request', requestId)
++  const mark = (value: string) => { stage = value; setResponseHeader(event, 'X-Space-Auth-Stage', value) }
++  mark(stage)
++  try {
++    // Compatibility with existing proxy configurations. All three headers must be overwritten/cleared by nginx.
++    const remoteUser = getRequestHeader(event, 'x-remote-user') || getRequestHeader(event, 'remote-user') || getRequestHeader(event, 'x-forwarded-user')
++    if (!remoteUser) throw createError({ statusCode: 401, statusMessage: 'KERBEROS_IDENTITY_MISSING' })
++    mark('directory')
++    const directoryUser = await findDomainUser(remoteUser, event)
++    if (!directoryUser) throw createError({ statusCode: 403, statusMessage: 'KERBEROS_DIRECTORY_USER_NOT_FOUND' })
++    mark('account')
++    const appUser = await ensureDomainUser(directoryUser)
++    assertDomainUserCanLogin(directoryUser, appUser)
++    const user = {
++      id: appUser.id, login: appUser.login || directoryUser.login,
++      fullName: appUser.fullName || directoryUser.fullName, email: appUser.email ?? undefined,
++      authType: 'DOMAIN' as const, authMethod: 'KERBEROS' as const,
++      username: appUser.login || directoryUser.login,
++      name: appUser.fullName || directoryUser.fullName || directoryUser.login,
++      department: directoryUser.department ?? undefined,
++      title: appUser.position ?? directoryUser.position ?? undefined,
++    }
++    mark('session')
++    await setUserSession(event, { user, loggedInAt: new Date().toISOString() })
++    event.context.user = user
++    mark('complete')
++    logger.info(`[kerberos] request=${requestId} stage=complete status=200 appUserId=${appUser.id}`)
++    return { success: true, user, requestId }
++  } catch (error: any) {
++    const supplied = Number(error?.statusCode)
++    const statusCode = [400, 401, 403, 503].includes(supplied) ? supplied : stage === 'directory' ? 503 : 500
++    const code = `KERBEROS_${stage.toUpperCase()}_FAILED`
++    // No tokens, cookies, password, LDAP bind credentials or raw exception in this diagnostic log.
++    logger.warn(`[kerberos] request=${requestId} stage=${stage} status=${statusCode} code=${code}`)
++    throw createError({ statusCode, statusMessage: code,
++      data: { code, stage, requestId, message: 'Автоматический доменный вход не завершён.' } })
+   }
+-
+-
+-  logger.info(
+-    `Kerberos подтвердил пользователя: ${remoteUser}`,
+-  );
+-
+-
+-  /**
+-   * ----------------------------------------------------------
+-   * 2. Получаем нормализованный профиль из Active Directory
+-   * ----------------------------------------------------------
+-   *
+-   * Нормализация login, objectGUID и других полей
+-   * выполняется внутри ad-directory.service.ts.
+-   */
+-  let directoryUser;
+-
+-
+-  try {
+-    directoryUser =
+-      await findDomainUser(
+-        remoteUser,
+-        event,
+-      );
+-  }
+-  catch (error: any) {
+-    logger.error(
+-      `Ошибка получения DOMAIN-пользователя ${remoteUser}: ` +
+-      `${error?.message || String(error)}`,
+-    );
+-
+-
+-    /**
+-     * Если service уже сформировал осмысленную H3-ошибку,
+-     * не затираем её.
+-     */
+-    if (error?.statusCode) {
+-      throw error;
+-    }
+-
+-
+-    throw createError({
+-      statusCode: 503,
+-
+-      statusMessage:
+-        'Active Directory unavailable',
+-
+-      message:
+-        'Не удалось получить данные пользователя из Active Directory.',
+-    });
+-  }
+-
+-
+-  /**
+-   * ----------------------------------------------------------
+-   * 3. Пользователь Kerberos не найден в AD
+-   * ----------------------------------------------------------
+-   */
+-  if (!directoryUser) {
+-    logger.warn(
+-      `Kerberos-пользователь ${remoteUser} не найден в Active Directory.`,
+-    );
+-
+-
+-    throw createError({
+-      statusCode: 403,
+-
+-      statusMessage:
+-        'User not found',
+-
+-      message:
+-        'Пользователь не найден в Active Directory.',
+-    });
+-  }
+-
+-
+-  /**
+-   * ----------------------------------------------------------
+-   * 4. Создаём / синхронизируем локального app_users
+-   * ----------------------------------------------------------
+-   *
+-   * Первый вход:
+-   *
+-   * AD
+-   *  ↓
+-   * CREATE app_users
+-   *
+-   * Следующие входы:
+-   *
+-   * AD
+-   *  ↓
+-   * UPDATE только AD-полей
+-   *
+-   * status / departmentId / permissions здесь не меняются.
+-   */
+-  const appUser =
+-    await ensureDomainUser(
+-      directoryUser,
+-    );
+-
+-
+-  /**
+-   * ----------------------------------------------------------
+-   * 5. Проверяем возможность входа
+-   * ----------------------------------------------------------
+-   *
+-   * Здесь проверяем:
+-   *
+-   * - accountDisabled в AD;
+-   * - ACTIVE / BLOCKED / DISABLED в Space.
+-   */
+-  assertDomainUserCanLogin(
+-    directoryUser,
+-    appUser,
+-  );
+-
+-
+-  /**
+-   * ----------------------------------------------------------
+-   * 6. Формируем пользователя для Nuxt session
+-   * ----------------------------------------------------------
+-   *
+-   * ВАЖНО:
+-   *
+-   * id — теперь это реальный app_users.id.
+-   *
+-   * Именно его позднее будет использовать
+-   * requirePermission().
+-   *
+-   * username/name/department/title пока сохраняем
+-   * для совместимости со старым frontend.
+-   */
+-  const user = {
+-  id:
+-    appUser.id,
+-
+-  login:
+-    appUser.login ||
+-    directoryUser.login,
+-
+-  fullName:
+-    appUser.fullName ||
+-    directoryUser.fullName,
+-
+-  email:
+-    appUser.email ??
+-    undefined,
+-
+-  authType:
+-    'DOMAIN' as const,
+-
+-  authMethod:
+-    'KERBEROS' as const,
+-
+-  username:
+-    appUser.login ||
+-    directoryUser.login,
+-
+-  name:
+-    appUser.fullName ||
+-    directoryUser.fullName ||
+-    directoryUser.login,
+-
+-  department:
+-    directoryUser.department ??
+-    undefined,
+-
+-  title:
+-    appUser.position ??
+-    directoryUser.position ??
+-    undefined,
+-};
+-
+-
+-  /**
+-   * ----------------------------------------------------------
+-   * 7. Создаём Nuxt session
+-   * ----------------------------------------------------------
+-   */
+-  await setUserSession(
+-    event,
+-    {
+-      user,
+-
+-      loggedInAt:
+-        new Date()
+-          .toISOString(),
+-    },
+-  );
+-
+-
+-  /**
+-   * Делаем пользователя доступным текущему request.
+-   */
+-  event.context.user =
+-    user;
+-
+-
+-  logger.info(
+-    `Kerberos-авторизация завершена успешно: ` +
+-    `${user.login}, appUserId=${appUser.id}`,
+-  );
+-
+-
+-  /**
+-   * ----------------------------------------------------------
+-   * 8. Ответ login.vue
+-   * ----------------------------------------------------------
+-   */
+-  return {
+-    success: true,
+-
+-    user,
+-  };
+-});
+\ No newline at end of file
++})
+--- a/shared/types/access-management.ts
++++ b/shared/types/access-management.ts
+@@ -1,12 +1,13 @@
+ export const ACCESS_ACTIONS = ['VIEW', 'CREATE', 'UPDATE', 'DELETE'] as const
+ export type AccessActionName = typeof ACCESS_ACTIONS[number]
+-export type AccessSubjectKind = 'user' | 'department'
+-export type AccessSource = 'SYSTEM_ADMIN' | 'USER' | 'DEPARTMENT'
++export type AccessSubjectKind = 'user' | 'department' | 'domainGroup'
++export type AccessSource = 'SYSTEM_ADMIN' | 'USER' | 'DEPARTMENT' | 'DOMAIN_GROUP'
+ export type AccessBlock = 'USER_INACTIVE' | 'RESOURCE_INACTIVE' | 'ADMIN_REQUIRED' | 'NO_PERMISSION' | null
+ 
+ export interface AccessCell {
+   directGranted: boolean
+   inheritedGranted: boolean
++  domainGroups: { id: number; name: string }[]
+   systemGranted: boolean
+   effectiveGranted: boolean
+   sources: AccessSource[]
+@@ -30,6 +31,7 @@
+ export interface AccessSnapshot {
+   success: true
+   revision: string
++  directoryWarning: string | null
+   canManage: boolean
+   subject: {
+     kind: AccessSubjectKind
+--- a/shared/utils/access-decision.ts
++++ b/shared/utils/access-decision.ts
+@@ -19,6 +19,7 @@
+   direct: boolean
+   departmentActive: boolean
+   departmentGranted: boolean
++  domainGroupGranted?: boolean
+ }): { allowed: boolean; sources: AccessSource[]; blockedBy: AccessBlock } {
+   if (!input.userActive) return { allowed: false, sources: [], blockedBy: 'USER_INACTIVE' }
+   if (!input.resourceActive) return { allowed: false, sources: [], blockedBy: 'RESOURCE_INACTIVE' }
+@@ -27,5 +28,6 @@
+   if (input.systemAdmin) sources.push('SYSTEM_ADMIN')
+   if (input.direct) sources.push('USER')
+   if (input.departmentActive && input.departmentGranted) sources.push('DEPARTMENT')
++  if (input.domainGroupGranted) sources.push('DOMAIN_GROUP')
+   return { allowed: sources.length > 0, sources, blockedBy: sources.length ? null : 'NO_PERMISSION' }
+ }
+--- /dev/null
++++ b/prisma/patches/domain-groups.prisma
+@@ -0,0 +1,30 @@
++// Add `domainGroupPermissions DomainGroupPermission[]` to the existing AccessResource model.
++// Append these two models once. Do not replace your complete business schema.
++model DomainGroup {
++  id                Int                     @id @default(autoincrement())
++  directoryObjectId String                  @unique @db.VarChar(36)
++  name              String                  @db.VarChar(255)
++  distinguishedName String                  @db.Text
++  isActive          Boolean                 @default(true)
++  permissions       DomainGroupPermission[]
++  createdAt         DateTime                @default(now())
++  updatedAt         DateTime                @updatedAt
++
++  @@map("domain_groups")
++}
++
++model DomainGroupPermission {
++  id             Int            @id @default(autoincrement())
++  domainGroupId  Int
++  resourceId     Int
++  action         AccessAction
++  grantedByLogin String?        @db.VarChar(150)
++  createdAt      DateTime       @default(now())
++  updatedAt      DateTime       @updatedAt
++  domainGroup    DomainGroup    @relation(fields: [domainGroupId], references: [id], onDelete: Cascade)
++  resource       AccessResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
++
++  @@unique([domainGroupId, resourceId, action])
++  @@index([resourceId, action])
++  @@map("domain_group_permissions")
++}
+--- /dev/null
++++ b/prisma/migrations/20260922140000_domain_group_permissions/migration.sql
+@@ -0,0 +1,41 @@
++-- CreateTable
++CREATE TABLE "domain_groups" (
++    "id" SERIAL NOT NULL,
++    "directoryObjectId" VARCHAR(36) NOT NULL,
++    "name" VARCHAR(255) NOT NULL,
++    "distinguishedName" TEXT NOT NULL,
++    "isActive" BOOLEAN NOT NULL DEFAULT true,
++    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    "updatedAt" TIMESTAMP(3) NOT NULL,
++
++    CONSTRAINT "domain_groups_pkey" PRIMARY KEY ("id")
++);
++
++-- CreateTable
++CREATE TABLE "domain_group_permissions" (
++    "id" SERIAL NOT NULL,
++    "domainGroupId" INTEGER NOT NULL,
++    "resourceId" INTEGER NOT NULL,
++    "action" "AccessAction" NOT NULL,
++    "grantedByLogin" VARCHAR(150),
++    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    "updatedAt" TIMESTAMP(3) NOT NULL,
++
++    CONSTRAINT "domain_group_permissions_pkey" PRIMARY KEY ("id")
++);
++
++-- CreateIndex
++CREATE UNIQUE INDEX "domain_groups_directoryObjectId_key" ON "domain_groups"("directoryObjectId");
++
++-- CreateIndex
++CREATE INDEX "domain_group_permissions_resourceId_action_idx" ON "domain_group_permissions"("resourceId", "action");
++
++-- CreateIndex
++CREATE UNIQUE INDEX "domain_group_permissions_domainGroupId_resourceId_action_key" ON "domain_group_permissions"("domainGroupId", "resourceId", "action");
++
++-- AddForeignKey
++ALTER TABLE "domain_group_permissions" ADD CONSTRAINT "domain_group_permissions_domainGroupId_fkey" FOREIGN KEY ("domainGroupId") REFERENCES "domain_groups"("id") ON DELETE CASCADE ON UPDATE CASCADE;
++
++-- AddForeignKey
++ALTER TABLE "domain_group_permissions" ADD CONSTRAINT "domain_group_permissions_resourceId_fkey" FOREIGN KEY ("resourceId") REFERENCES "access_resources"("id") ON DELETE CASCADE ON UPDATE CASCADE;
++
+--- /dev/null
++++ b/scripts/apply-domain-groups-schema.mjs
+@@ -0,0 +1,22 @@
++import { readFile, writeFile } from 'node:fs/promises'
++import { fileURLToPath } from 'node:url'
++import path from 'node:path'
++const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
++const schema = path.resolve(process.argv[2] || path.join(root, 'prisma/schema.prisma'))
++const source = await readFile(schema, 'utf8')
++const hasGroup = /\bmodel\s+DomainGroup\s*\{/.test(source)
++const hasPermission = /\bmodel\s+DomainGroupPermission\s*\{/.test(source)
++const match = /\bmodel\s+AccessResource\s*\{[\s\S]*?^\}/m.exec(source)
++if (!match) throw new Error('AccessResource model not found; schema has not been changed.')
++const hasRelation = /\bdomainGroupPermissions\s+DomainGroupPermission\[\]/.test(match[0])
++if (hasGroup && hasPermission && hasRelation) {
++  console.log('Group models are already present. No changes. Run prisma validate to check your schema.')
++} else {
++  if (hasGroup || hasPermission || hasRelation) throw new Error('Partial group schema exists; reconcile it manually. No changes made.')
++  const models = await readFile(path.join(root, 'prisma/patches/domain-groups.prisma'), 'utf8')
++  const updated = source.replace(match[0], match[0].replace('{', '{\n  domainGroupPermissions DomainGroupPermission[]')) + '\n' + models
++  // Never overwrite a prior backup.
++  await writeFile(schema + '.before-domain-groups.bak', source, { flag: 'wx' })
++  await writeFile(schema, updated)
++  console.log('Added DomainGroup, DomainGroupPermission and AccessResource relation. Backup saved alongside the schema.')
++}
+--- a/nuxt.config.ts
++++ b/nuxt.config.ts
+@@ -24,10 +24,18 @@
+     storage: 'localStorage', // Оставляем стандартный тип, ошибки TS больше нет
+   },
+   runtimeConfig: {
++    session: {
++      // Preserve nuxt-auth-utils' actual default cookie name.
++      name: 'nuxt-session',
++      password: '', // NUXT_SESSION_PASSWORD: stable secret of at least 32 characters
++      maxAge: 60 * 60 * 24 * 7,
++      cookie: { sameSite: 'lax', httpOnly: true },
++    },
+     // Серверные переменные (доступны только на сервере)
+     ad: {
+       url: process.env.AD_URL || 'ldap://localhost:389',
+       baseDN: process.env.AD_DOMAIN_USERS || 'DC=local,DC=com',
++      groupsBaseDN: '', // NUXT_AD_GROUPS_BASE_DN: domain root or OU containing security groups
+       username: process.env.AD_USERNAME || '',
+       password: process.env.AD_PASSWORD || '',
+       timeout: parseInt(process.env.AD_TIMEOUT || '5000'),
+@@ -115,15 +123,5 @@
+     // you need to set the mount in your .env file at the root of your project
+   },
+ 
+-  // Опциональная настройка auth-utils
+-  auth: {
+-    // Меняем название куки (опционально)
+-    cookieName: 'userSession',
+-    // Время жизни сессии (по умолчанию 60*60*24*7 = 7 дней)
+-    maxAge: 60 * 60 * 24 * 7,
+-    // Защита от CSRF
+-    csrf: {
+-      enabled: true,
+-    },
+-  },
++
+ });

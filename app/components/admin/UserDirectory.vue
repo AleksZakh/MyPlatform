@@ -2,20 +2,14 @@
   <div class="admin-shell">
     <header class="admin-header">
       <div>
-        <p class="eyebrow">
-          Space
-        </p>
-
         <h1 class="page-title">
           AdminCenter
         </h1>
 
-        <p class="page-subtitle">
-          Пользователи, доступы и структура системы
-        </p>
       </div>
 
       <div class="cache-toolbar">
+        <NuxtLink to="/admin/access" class="access-navigation-link">Управление правами</NuxtLink>
         <div
           class="cache-state"
           :class="cacheStateClass"
@@ -27,25 +21,13 @@
           />
 
           <div>
-            <div class="cache-title">
-              Кэш Active Directory
-            </div>
+            <span class="cache-title">AD</span>
 
             <div class="cache-text">
               {{ cacheStateText }}
             </div>
 
-            <div
-              v-if="responseMeta.directoryCache.lastUpdated"
-              class="cache-updated"
-            >
-              Обновлён:
-              {{
-                formatDateTime(
-                  responseMeta.directoryCache.lastUpdated,
-                )
-              }}
-            </div>
+
           </div>
         </div>
 
@@ -195,6 +177,7 @@
 
 
     <div class="admin-mode-tabs">
+      <NuxtLink to="/admin/access?kind=domainGroup" class="admin-mode-tab">Доменные группы</NuxtLink>
       <button
         type="button"
         class="admin-mode-tab"
@@ -368,7 +351,7 @@
       </aside>
 
 
-      <main class="detail-panel">
+      <main class="detail-panel" :class="{ 'detail-panel--access': activeTab === 'access' }">
         <template v-if="selectedUser">
           <header class="detail-header">
             <div class="detail-person">
@@ -624,174 +607,13 @@
               </div>
             </template>
 
-            <template v-else>
-              <div class="access-head">
-                <div>
-                  <h3 class="block-title">
-                    Индивидуальные права
-                  </h3>
-
-                  <p class="access-hint">
-                    Сейчас матрица работает только в режиме просмотра.
-                  </p>
-                </div>
-
-                <div class="access-summary">
-                  <span>
-                    Ресурсов:
-                    <strong>
-                      {{ accessSummary.totalResources }}
-                    </strong>
-                  </span>
-
-                  <span>
-                    С доступом:
-                    <strong>
-                      {{ accessSummary.resourcesWithAnyPermission }}
-                    </strong>
-                  </span>
-
-                  <span>
-                    Прав:
-                    <strong>
-                      {{ accessSummary.grantedPermissionsCount }}
-                    </strong>
-                  </span>
-                </div>
-              </div>
-
-              <div
-                v-if="isLoadingAccess"
-                class="loading-state access-loading"
-              >
-                <div class="spinner" />
-                <span>Загрузка прав...</span>
-              </div>
-
-              <div
-                v-else
-                class="access-table-shell"
-              >
-                <table class="access-table">
-                  <thead>
-                    <tr>
-                      <th class="resource-column">
-                        Ресурс
-                      </th>
-
-                      <th>
-                        Тип
-                      </th>
-
-                      <th>
-                        Подразделение
-                      </th>
-
-                      <th
-                        v-for="action in accessActions"
-                        :key="action"
-                        class="action-column"
-                      >
-                        {{ action }}
-                      </th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    <tr
-                      v-for="resource in accessResources"
-                      :key="resource.id"
-                    >
-                      <td>
-                        <div class="resource-name">
-                          {{ resource.name }}
-                        </div>
-
-                        <div
-                          class="resource-key"
-                          :title="resource.key"
-                        >
-                          {{ resource.key }}
-                        </div>
-                      </td>
-
-                      <td>
-                        <span class="resource-type">
-                          {{ resource.type }}
-                        </span>
-                      </td>
-
-                      <td>
-                        <div class="resource-departments">
-                          <span
-                            v-for="department in resource.departments"
-                            :key="department.id"
-                            class="department-chip"
-                            :class="{
-                              'department-chip--owner':
-                                department.isOwner,
-                            }"
-                            :title="
-                              department.isOwner
-                                ? 'Владелец ресурса'
-                                : department.name
-                            "
-                          >
-                            {{ department.name }}
-                          </span>
-
-                          <span
-                            v-if="resource.departments.length === 0"
-                            class="muted"
-                          >
-                            —
-                          </span>
-                        </div>
-                      </td>
-
-                      <td
-                        v-for="action in accessActions"
-                        :key="action"
-                        class="permission-cell"
-                      >
-                        <span
-                          class="permission-box"
-                          :class="{
-                            'permission-box--granted':
-                              resource.actions[action]?.granted,
-                          }"
-                          :title="
-                            permissionTitle(
-                              resource,
-                              action,
-                            )
-                          "
-                        >
-                          <Icon
-                            v-if="resource.actions[action]?.granted"
-                            name="i-heroicons-check"
-                            size="14"
-                          />
-
-                          <span v-else>
-                            —
-                          </span>
-                        </span>
-                      </td>
-                    </tr>
-
-                    <tr v-if="accessResources.length === 0">
-                      <td
-                        colspan="7"
-                        class="empty-access"
-                      >
-                        Активные ресурсы не найдены
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </template>
+            <AdminAccessMatrix
+              v-else
+              :key="`user:${selectedUser.appUser.id}`"
+              kind="user"
+              :subject-id="selectedUser.appUser.id"
+              @updated="selectedUser.appUser.permissionsCount = $event.summary.directPermissions"
+            />
           </section>
 
 
@@ -949,7 +771,7 @@
       </aside>
 
 
-      <main class="department-detail-panel">
+      <main class="department-detail-panel" :class="{ 'detail-panel--access': departmentDetailTab === 'permissions' }">
         <template v-if="selectedDirectoryDepartment">
           <header class="detail-header">
             <div>
@@ -1184,211 +1006,12 @@
             v-else
             class="department-permissions-section"
           >
-            <template v-if="selectedDirectoryDepartment.mapping">
-              <div class="access-head">
-                <div>
-                  <h3 class="block-title">
-                    Права подразделения
-                    «{{ selectedDirectoryDepartment.mapping.department.name }}»
-                  </h3>
-
-                  <p class="access-hint">
-                    Каждая галочка сохраняется отдельно.
-                    Это права подразделения, а не персональные UserPermission.
-                  </p>
-                </div>
-
-                <div class="access-summary">
-                  <span>
-                    Ресурсов:
-                    <strong>
-                      {{ departmentPermissionSummary.totalResources }}
-                    </strong>
-                  </span>
-
-                  <span>
-                    С доступом:
-                    <strong>
-                      {{
-                        departmentPermissionSummary
-                          .resourcesWithAnyPermission
-                      }}
-                    </strong>
-                  </span>
-
-                  <span>
-                    Прав:
-                    <strong>
-                      {{
-                        departmentPermissionSummary
-                          .grantedPermissionsCount
-                      }}
-                    </strong>
-                  </span>
-                </div>
-              </div>
-
-
-              <div
-                v-if="isLoadingDepartmentPermissions"
-                class="loading-state access-loading"
-              >
-                <div class="spinner" />
-                <span>
-                  Загрузка прав подразделения...
-                </span>
-              </div>
-
-
-              <div
-                v-else
-                class="access-table-shell"
-              >
-                <table class="access-table">
-                  <thead>
-                    <tr>
-                      <th class="resource-column">
-                        Ресурс
-                      </th>
-
-                      <th>
-                        Тип
-                      </th>
-
-                      <th>
-                        Владелец
-                      </th>
-
-                      <th
-                        v-for="action in departmentPermissionActions"
-                        :key="action"
-                        class="action-column"
-                      >
-                        {{ action }}
-                      </th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    <tr
-                      v-for="resource in departmentPermissionResources"
-                      :key="resource.id"
-                    >
-                      <td>
-                        <div class="resource-name">
-                          {{ resource.name }}
-                        </div>
-
-                        <div class="resource-key">
-                          {{ resource.key }}
-                        </div>
-                      </td>
-
-                      <td>
-                        <span class="resource-type">
-                          {{ resource.type }}
-                        </span>
-                      </td>
-
-                      <td>
-                        <div class="resource-departments">
-                          <span
-                            v-for="owner in resource.ownership.filter(
-                              item => item.isOwner
-                            )"
-                            :key="owner.departmentId"
-                            class="department-chip department-chip--owner"
-                          >
-                            {{ owner.departmentName }}
-                          </span>
-
-                          <span
-                            v-if="
-                              resource.ownership.filter(
-                                item => item.isOwner
-                              ).length === 0
-                            "
-                            class="muted"
-                          >
-                            —
-                          </span>
-                        </div>
-                      </td>
-
-                      <td
-                        v-for="action in departmentPermissionActions"
-                        :key="action"
-                        class="permission-cell"
-                      >
-                        <button
-                          type="button"
-                          class="permission-toggle"
-                          :class="{
-                            'permission-toggle--granted':
-                              resource.actions[action]?.granted,
-                          }"
-                          :disabled="
-                            isDepartmentPermissionSaving(
-                              resource.id,
-                              action,
-                            )
-                          "
-                          :title="
-                            departmentPermissionTitle(
-                              resource,
-                              action,
-                            )
-                          "
-                          @click="
-                            toggleDepartmentPermission(
-                              resource,
-                              action,
-                            )
-                          "
-                        >
-                          <Icon
-                            v-if="
-                              isDepartmentPermissionSaving(
-                                resource.id,
-                                action,
-                              )
-                            "
-                            name="i-heroicons-arrow-path"
-                            size="14"
-                            class="permission-spin"
-                          />
-
-                          <Icon
-                            v-else-if="
-                              resource.actions[action]?.granted
-                            "
-                            name="i-heroicons-check"
-                            size="14"
-                          />
-
-                          <span v-else>
-                            —
-                          </span>
-                        </button>
-                      </td>
-                    </tr>
-
-                    <tr
-                      v-if="
-                        departmentPermissionResources.length === 0
-                      "
-                    >
-                      <td
-                        colspan="7"
-                        class="empty-access"
-                      >
-                        Активные ресурсы не найдены
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </template>
+            <AdminAccessMatrix
+              v-if="selectedDirectoryDepartment.mapping"
+              :key="`department:${selectedDirectoryDepartment.mapping.department.id}`"
+              kind="department"
+              :subject-id="selectedDirectoryDepartment.mapping.department.id"
+            />
 
             <div
               v-else
@@ -1553,130 +1176,9 @@ interface ApiResponse {
 }
 
 
-type AccessActionName =
-  | 'VIEW'
-  | 'CREATE'
-  | 'UPDATE'
-  | 'DELETE'
-
-
-interface AccessPermissionState {
-  granted: boolean
-  permissionId: number | null
-  grantedByLogin: string | null
-  createdAt: string | null
-  updatedAt: string | null
-}
-
-
-interface AccessResourceRow {
-  id: number
-  key: string
-  name: string
-  description: string | null
-  type:
-    | 'TABLE'
-    | 'SECTION'
-    | 'FEATURE'
-
-  sortOrder: number
-
-  departments: Array<{
-    id: number
-    key: string
-    name: string
-    isOwner: boolean
-  }>
-
-  actions:
-    Record<
-      AccessActionName,
-      AccessPermissionState
-    >
-}
-
-
-interface UserAccessResponse {
-  success: boolean
-
-  actions:
-    AccessActionName[]
-
-  data:
-    AccessResourceRow[]
-
-  summary: {
-    totalResources: number
-    resourcesWithAnyPermission: number
-    grantedPermissionsCount: number
-  }
-}
-
-
 const {
   showTost,
 } = useAppToasts()
-
-
-type DepartmentAccessAction =
-  | 'VIEW'
-  | 'CREATE'
-  | 'UPDATE'
-  | 'DELETE'
-
-
-interface DepartmentPermissionState {
-  granted: boolean
-  permissionId: number | null
-  grantedByLogin: string | null
-  createdAt: string | null
-  updatedAt: string | null
-}
-
-
-interface DepartmentPermissionResource {
-  id: number
-  key: string
-  name: string
-  description: string | null
-
-  type:
-    | 'TABLE'
-    | 'SECTION'
-    | 'FEATURE'
-
-  sortOrder: number
-
-  ownership: Array<{
-    departmentId: number
-    departmentKey: string
-    departmentName: string
-    isOwner: boolean
-  }>
-
-  actions:
-    Record<
-      DepartmentAccessAction,
-      DepartmentPermissionState
-    >
-}
-
-
-interface DepartmentPermissionsResponse {
-  success: boolean
-
-  actions:
-    DepartmentAccessAction[]
-
-  data:
-    DepartmentPermissionResource[]
-
-  summary: {
-    totalResources: number
-    resourcesWithAnyPermission: number
-    grantedPermissionsCount: number
-  }
-}
 
 
 interface DirectoryDepartmentMember {
@@ -1799,50 +1301,6 @@ const departmentDetailTab =
   )
 
 
-const departmentPermissionActions =
-  ref<DepartmentAccessAction[]>([
-    'VIEW',
-    'CREATE',
-    'UPDATE',
-    'DELETE',
-  ])
-
-
-const departmentPermissionResources =
-  ref<DepartmentPermissionResource[]>([])
-
-
-const isLoadingDepartmentPermissions =
-  ref(false)
-
-
-const departmentPermissionSaving =
-  ref<
-    Set<string>
-  >(
-    new Set(),
-  )
-
-
-const loadedDepartmentPermissionId =
-  ref<number | null>(
-    null,
-  )
-
-
-const departmentPermissionSummary =
-  reactive({
-    totalResources:
-      0,
-
-    resourcesWithAnyPermission:
-      0,
-
-    grantedPermissionsCount:
-      0,
-  })
-
-
 const departmentMappingChanged =
   computed(
     () =>
@@ -1881,38 +1339,6 @@ const total =
 
 const totalPages =
   ref(1)
-
-
-const accessActions =
-  ref<AccessActionName[]>([
-    'VIEW',
-    'CREATE',
-    'UPDATE',
-    'DELETE',
-  ])
-
-const accessResources =
-  ref<AccessResourceRow[]>([])
-
-const isLoadingAccess =
-  ref(false)
-
-const loadedAccessUserId =
-  ref<number | null>(
-    null,
-  )
-
-const accessSummary =
-  reactive({
-    totalResources:
-      0,
-
-    resourcesWithAnyPermission:
-      0,
-
-    grantedPermissionsCount:
-      0,
-  })
 
 
 const filters =
@@ -2214,253 +1640,11 @@ function getApiErrorMessage(
 }
 
 
-function departmentPermissionKey(
-  resourceId: number,
-  action: DepartmentAccessAction,
-): string {
-  return `${resourceId}:${action}`
-}
-
-
-function isDepartmentPermissionSaving(
-  resourceId: number,
-  action: DepartmentAccessAction,
-): boolean {
-  return departmentPermissionSaving.value.has(
-    departmentPermissionKey(
-      resourceId,
-      action,
-    ),
-  )
-}
-
-
-function departmentPermissionTitle(
-  resource: DepartmentPermissionResource,
-  action: DepartmentAccessAction,
-): string {
-  const state =
-    resource.actions[action]
-
-  if (
-    !state ||
-    !state.granted
-  ) {
-    return `${action}: право подразделению не выдано`
-  }
-
-  const parts = [
-    `${action}: право подразделению выдано`,
-  ]
-
-  if (
-    state.grantedByLogin
-  ) {
-    parts.push(
-      `выдал: ${state.grantedByLogin}`,
-    )
-  }
-
-  if (
-    state.createdAt
-  ) {
-    parts.push(
-      `дата: ${formatDateTime(state.createdAt)}`,
-    )
-  }
-
-  return parts.join('\n')
-}
-
-
-async function loadDepartmentPermissions(
-  departmentId: number,
-) {
-  isLoadingDepartmentPermissions.value =
-    true
-
-  try {
-    const response =
-      await $fetch<DepartmentPermissionsResponse>(
-        `/api/admin/departments/${departmentId}/permissions`,
-      )
-
-    departmentPermissionActions.value =
-      response.actions
-
-    departmentPermissionResources.value =
-      response.data
-
-    Object.assign(
-      departmentPermissionSummary,
-      response.summary,
-    )
-
-    loadedDepartmentPermissionId.value =
-      departmentId
-
-  } catch (error) {
-    console.error(
-      '[AdminCenter department permissions] Ошибка:',
-      error,
-    )
-
-    showTost(
-      'Ошибка',
-      getApiErrorMessage(
-        error,
-        'Не удалось загрузить права подразделения',
-      ),
-      'error',
-      'fxemoji:warningsign',
-      6000,
-    )
-
-  } finally {
-    isLoadingDepartmentPermissions.value =
-      false
+function openDepartmentPermissions() {
+  if (selectedDirectoryDepartment.value?.mapping?.department.id) {
+    departmentDetailTab.value = 'permissions'
   }
 }
-
-
-async function openDepartmentPermissions() {
-  const departmentId =
-    selectedDirectoryDepartment
-      .value
-      ?.mapping
-      ?.department
-      .id
-
-  if (!departmentId) {
-    return
-  }
-
-  departmentDetailTab.value =
-    'permissions'
-
-  if (
-    loadedDepartmentPermissionId.value !==
-      departmentId
-  ) {
-    await loadDepartmentPermissions(
-      departmentId,
-    )
-  }
-}
-
-
-async function toggleDepartmentPermission(
-  resource: DepartmentPermissionResource,
-  action: DepartmentAccessAction,
-) {
-  const departmentId =
-    selectedDirectoryDepartment
-      .value
-      ?.mapping
-      ?.department
-      .id
-
-  if (!departmentId) {
-    return
-  }
-
-
-  const key =
-    departmentPermissionKey(
-      resource.id,
-      action,
-    )
-
-
-  if (
-    departmentPermissionSaving.value.has(
-      key,
-    )
-  ) {
-    return
-  }
-
-
-  const current =
-    !!resource.actions[action]
-      ?.granted
-
-  const next =
-    !current
-
-
-  departmentPermissionSaving.value.add(
-    key,
-  )
-
-  departmentPermissionSaving.value =
-    new Set(
-      departmentPermissionSaving.value,
-    )
-
-
-  try {
-    await $fetch(
-      `/api/admin/departments/${departmentId}/permissions`,
-      {
-        method:
-          'PUT',
-
-        body: {
-          resourceId:
-            resource.id,
-
-          action,
-
-          granted:
-            next,
-        },
-      },
-    )
-
-
-    const state =
-      resource.actions[action]
-
-    if (state) {
-      state.granted =
-        next
-    }
-
-
-    await loadDepartmentPermissions(
-      departmentId,
-    )
-
-  } catch (error) {
-    console.error(
-      '[AdminCenter department permission update] Ошибка:',
-      error,
-    )
-
-    showTost(
-      'Ошибка',
-      getApiErrorMessage(
-        error,
-        'Не удалось изменить право подразделения',
-      ),
-      'error',
-      'fxemoji:warningsign',
-      6000,
-    )
-
-  } finally {
-    departmentPermissionSaving.value.delete(
-      key,
-    )
-
-    departmentPermissionSaving.value =
-      new Set(
-        departmentPermissionSaving.value,
-      )
-  }
-}
-
 
 async function loadDirectoryDepartments() {
   isLoadingDepartments.value =
@@ -2803,124 +1987,6 @@ async function loadUsers() {
 }
 
 
-async function loadUserAccess() {
-  const appUserId =
-    selectedUser.value
-      ?.appUser
-      ?.id
-
-  if (!appUserId) {
-    accessResources.value =
-      []
-
-    loadedAccessUserId.value =
-      null
-
-    Object.assign(
-      accessSummary,
-      {
-        totalResources:
-          0,
-
-        resourcesWithAnyPermission:
-          0,
-
-        grantedPermissionsCount:
-          0,
-      },
-    )
-
-    return
-  }
-
-
-  isLoadingAccess.value =
-    true
-
-  try {
-    const response =
-      await $fetch<UserAccessResponse>(
-        `/api/admin/users/${appUserId}/access`,
-      )
-
-    accessActions.value =
-      response.actions
-
-    accessResources.value =
-      response.data
-
-    Object.assign(
-      accessSummary,
-      response.summary,
-    )
-
-    loadedAccessUserId.value =
-      appUserId
-
-  } catch (error) {
-    console.error(
-      '[AdminCenter user access] Ошибка:',
-      error,
-    )
-
-    showTost(
-      'Ошибка',
-      getApiErrorMessage(
-        error,
-        'Не удалось загрузить права пользователя',
-      ),
-      'error',
-      'fxemoji:warningsign',
-      6000,
-    )
-
-  } finally {
-    isLoadingAccess.value =
-      false
-  }
-}
-
-
-function permissionTitle(
-  resource:
-    AccessResourceRow,
-  action:
-    AccessActionName,
-): string {
-  const state =
-    resource.actions[action]
-
-  if (
-    !state ||
-    !state.granted
-  ) {
-    return `${action}: право не назначено`
-  }
-
-  const parts = [
-    `${action}: право назначено`,
-  ]
-
-  if (
-    state.grantedByLogin
-  ) {
-    parts.push(
-      `выдал: ${state.grantedByLogin}`,
-    )
-  }
-
-  if (
-    state.createdAt
-  ) {
-    parts.push(
-      `дата: ${formatDateTime(state.createdAt)}`,
-    )
-  }
-
-  return parts.join('\n')
-}
-
-
 function selectUser(
   row: AdminUserRow,
 ) {
@@ -3135,47 +2201,6 @@ watch(
     departmentDetailTab.value =
       'members'
 
-    loadedDepartmentPermissionId.value =
-      null
-
-    departmentPermissionResources.value =
-      []
-  },
-)
-
-
-watch(
-  [
-    () =>
-      activeTab.value,
-
-    () =>
-      selectedUser.value
-        ?.appUser
-        ?.id,
-  ],
-  (
-    [
-      tab,
-      userId,
-    ],
-  ) => {
-    if (
-      tab !==
-        'access' ||
-      !userId
-    ) {
-      return
-    }
-
-    if (
-      loadedAccessUserId.value ===
-        userId
-    ) {
-      return
-    }
-
-    void loadUserAccess()
   },
 )
 
@@ -3189,6 +2214,8 @@ onMounted(
 
 
 <style scoped>
+.access-navigation-link { color: #2563b8; font-size: 14px; font-weight: 600; white-space: nowrap; }
+
 .admin-shell {
   display: flex;
   flex-direction: column;
@@ -4369,5 +3396,35 @@ onMounted(
     grid-template-columns:
       1fr;
   }
+}
+/* Compact header and fixed permissions panel. The table owns vertical scrolling. */
+.admin-shell { padding: 10px 14px; }
+.admin-header { align-items: center; gap: 12px; }
+.page-title { font-size: 21px; }
+.cache-state { min-width: 0; padding: 5px 8px; }
+.cache-state > div { display: flex; align-items: center; gap: 5px; }
+.cache-text { margin: 0; font-size: 11px; }
+.access-navigation-link { font-size: 12px; }
+.stats-grid { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 9px; }
+.stat-card { flex-direction: row; align-items: baseline; gap: 6px; padding: 0; border: 0; background: transparent; }
+.stat-label { font-size: 11px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #64748b; }
+.stat-value { margin: 0; font-size: 14px; }
+.stat-card--warning .stat-value { color: #b45309; }
+.filters, .admin-mode-tabs, .workspace, .departments-workspace { margin-top: 8px; }
+.detail-header { padding: 10px 14px; }
+.detail-panel--access { display: flex; flex-direction: column; overflow: hidden; }
+.detail-panel--access > .detail-header, .detail-panel--access > .section-tabs { flex: 0 0 auto; }
+.detail-panel--access > .access-section, .detail-panel--access > .department-permissions-section {
+  display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; padding: 10px 12px; overflow: hidden;
+}
+.detail-panel--access :deep(.access-matrix) { flex: 1 1 0; min-height: 0; }
+@media (max-width: 880px) {
+  .admin-shell { height: 100%; max-height: 100%; min-height: 0; overflow: auto; }
+  .workspace, .departments-workspace { flex: none; }
+  .admin-header { flex-direction: row; flex-wrap: wrap; }
+  .cache-toolbar { flex-wrap: wrap; }
+  .filters { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .search-box { grid-column: 1 / -1; }
+  .detail-panel--access { height: max(560px, 80dvh); min-height: 0; overflow: hidden; }
 }
 </style>

@@ -299,6 +299,11 @@
                 class="space-y-4"
                 @submit.prevent="authUser"
               >
+                <div class="rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-600">
+                  <p v-if="kerberosDiagnostic" role="status">{{ kerberosDiagnostic }}</p>
+                  <p v-else>Можно войти с текущей доменной учётной записью без ввода пароля.</p>
+                  <button type="button" class="mt-2 font-semibold text-sky-700" :disabled="isSubmitting" @click="tryKerberosLogin">Повторить доменный вход</button>
+                </div>
                 <label class="block">
                   <span class="mb-2 block text-sm font-medium text-slate-700">
                     Доменный логин
@@ -843,158 +848,38 @@ const finishLogin = async (
  * после открытия /login.
  */
 
+const kerberosDiagnostic = ref('');
 const tryKerberosLogin = async () => {
-
+  if (isSubmitting.value) return;
   isKerberosChecking.value = true;
-
-
+  kerberosDiagnostic.value = '';
+  let phase = 'negotiate';
+  let requestId = '';
   try {
-
-    /**
-     * ========================================================
-     * ВОТ ЗДЕСЬ происходит обращение к:
-     *
-     * server/api/auth/kerberos.post.ts
-     * ========================================================
-     *
-     * Но сначала запрос проходит через nginx:
-     *
-     * location = /api/auth/kerberos {
-     *
-     *     auth_gss on;
-     *
-     *     ...
-     *
-     * }
-     *
-     *
-     * Если Kerberos успешен:
-     *
-     * nginx
-     *   ↓
-     * X-Remote-User
-     *   ↓
-     * kerberos.post.ts
-     *   ↓
-     * AD
-     *   ↓
-     * setUserSession()
-     *
-     *
-     * Если Kerberos неуспешен:
-     *
-     * nginx
-     *   ↓
-     * 401 / 403
-     *
-     * kerberos.post.ts в таком случае
-     * может вообще НЕ выполниться.
-     */
-
-    const result =
-      await $fetch<{
-        success: boolean;
-        user?: any;
-      }>(
-        '/api/auth/kerberos',
-        {
-          method: 'POST',
-          credentials: 'include',
-          // ignoreResponseError: true,
-        },
-      );
-
-
-    /**
-     * Endpoint отработал,
-     * но почему-то не сообщил success.
-     */
-    if (!result?.success) {
-
-      throw new Error(
-        'Kerberos authentication failed',
-      );
-    }
-
-
-    /**
-     * Kerberos endpoint уже создал session.
-     */
-    await finishLogin(
-      'kerberos',
-      result.user,
+    const result = await $fetch<{ success: boolean; user?: any; requestId?: string }>(
+      '/api/auth/kerberos', { method: 'POST', credentials: 'include', retry: 0, timeout: 15000 },
     );
-
-
-    showToast(
-      `Пользователь ${result.user?.name || result.user?.username || ''} авторизован через доменную учётную запись`,
-      'success',
-    );
-
-  }
-  catch (error: any) {
-    console.error(
-      'Ошибка Kerberos-авторизации:',
-      error,
-    );
-
-    console.error(
-      'STATUS:',
-      error?.statusCode ||
-      error?.status ||
-      error?.response?.status,
-    );
-
-    console.error(
-      'DATA:',
-      error?.data,
-    );
-  }
-  // catch (error: any) {
-
-  //   /**
-  //    * --------------------------------------------------------
-  //    * Это НОРМАЛЬНЫЙ сценарий для недоменного пользователя.
-  //    * --------------------------------------------------------
-  //    *
-  //    * Если Kerberos не сработал, мы ничего больше автоматически
-  //    * не делаем.
-  //    *
-  //    * Просто завершаем проверку и показываем форму login/password.
-  //    */
-
-  //   const status =
-  //     error?.statusCode ||
-  //     error?.status ||
-  //     error?.response?.status;
-
-
-  //   if (
-  //     status !== 401 &&
-  //     status !== 403
-  //   ) {
-
-  //     /**
-  //      * 401/403 ожидаемы.
-  //      *
-  //      * Остальные ошибки полезно видеть в console.
-  //      */
-  //     console.error(
-  //       'Ошибка Kerberos-авторизации:',
-  //       error,
-  //     );
-  //   }
-
-  // }
-  finally {
-
-    /**
-     * После этого v-if переключит страницу
-     * с сообщения "Проверка..."
-     * на обычную форму.
-     */
-    isKerberosChecking.value =
-      false;
+    requestId = result.requestId || '';
+    if (!result.success) throw new Error('KERBEROS_RESPONSE_INVALID');
+    phase = 'session-check';
+    await finishLogin('kerberos', result.user);
+    showToast('Вход через доменную учётную запись выполнен', 'success');
+  } catch (error: any) {
+    const data = error?.data?.data;
+    const stage = data?.stage || error?.response?.headers?.get('x-space-auth-stage') || phase;
+    const status = error?.statusCode || error?.response?.status || '—';
+    const id = data?.requestId || error?.response?.headers?.get('x-space-auth-request') || requestId;
+    const messages: Record<string, string> = {
+      negotiate: 'Браузер или nginx не завершили автоматический доменный вход.',
+      proxy: 'Приложение не получило подтверждённое имя пользователя от nginx.',
+      directory: 'Не удалось получить профиль из Active Directory.',
+      account: 'Не удалось подготовить учётную запись Space или вход для неё запрещён.',
+      session: 'Сервер не смог создать сессию Space.',
+      'session-check': 'Сессия после входа не подтвердилась. Проверьте cookie и настройки сервера.',
+    };
+    kerberosDiagnostic.value = `${messages[stage] || 'Доменный вход не завершён.'} Этап: ${stage}; HTTP: ${status}${id ? `; запрос: ${id}` : ''}.`;
+  } finally {
+    isKerberosChecking.value = false;
   }
 };
 

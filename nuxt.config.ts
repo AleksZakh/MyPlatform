@@ -29,6 +29,7 @@ export default defineNuxtConfig({
       url: process.env.AD_URL || 'ldap://localhost:389',
       baseDN: process.env.AD_DOMAIN_USERS || 'DC=local,DC=com',
       username: process.env.AD_USERNAME || '',
+      groupsBaseDN: 'dc=corp,dc=avtodor-eng,dc=ru', // NUXT_AD_GROUPS_BASE_DN: domain root or OU containing security groups
       password: process.env.AD_PASSWORD || '',
       timeout: parseInt(process.env.AD_TIMEOUT || '5000'),
       databaseUrl: process.env.DATABASE_URL,
@@ -45,6 +46,13 @@ export default defineNuxtConfig({
     siteUrl: '',
     public: {
       cryptoKey: '',
+    },
+    session: {
+      // Preserve nuxt-auth-utils' actual default cookie name.
+      name: 'nuxt-session',
+      password: ')hH0^|M*bRLZ=dniZtj^yYgH@wD:8VVM',
+      maxAge: 60 * 60 * 24 * 7,
+      cookie: { sameSite: 'lax', httpOnly: true },
     },
   },
   app: {
@@ -116,14 +124,14 @@ export default defineNuxtConfig({
   },
 
   // Опциональная настройка auth-utils
-  auth: {
+  // auth: {
     // Меняем название куки (опционально)
-    cookieName: 'userSession',
+    // cookieName: 'userSession',
     // Время жизни сессии (по умолчанию 60*60*24*7 = 7 дней)
-    maxAge: 60 * 60 * 24 * 7,
+    // maxAge: 60 * 60 * 24 * 7,
     // Защита от CSRF
-    csrf: {
-      enabled: true,
-    },
-  },
+    // csrf: {
+      // enabled: true,
+    // },
+  // },
 });

@@ -17,6 +17,8 @@ import { RuntimeConfig as UserRuntimeConfig, PublicRuntimeConfig as UserPublicRu
 
       username: string,
 
+      groupsBaseDN: string,
+
       password: string,
 
       timeout: number,
@@ -49,7 +51,11 @@ import { RuntimeConfig as UserRuntimeConfig, PublicRuntimeConfig as UserPublicRu
 
       cookie: {
          sameSite: string,
+
+         httpOnly: boolean,
       },
+
+      maxAge: number,
    },
 
    hash: {

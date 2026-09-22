@@ -3,6 +3,9 @@ import type { Serialize, Simplify } from "nitropack/types";
 declare module "nitropack/types" {
   type Awaited<T> = T extends PromiseLike<infer U> ? Awaited<U> : T
   interface InternalApi {
+    '/api/access/check': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/access/check.get').default>>>>
+    }
     '/api/ad/get-groups': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ad/get-groups.get').default>>>>
     }
@@ -14,6 +17,9 @@ declare module "nitropack/types" {
     }
     '/api/ad/search': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ad/search.get').default>>>>
+    }
+    '/api/admin/access/subjects': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/access/subjects.get').default>>>>
     }
     '/api/admin/ad-cache/refresh': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/ad-cache/refresh.post').default>>>>
@@ -30,6 +36,16 @@ declare module "nitropack/types" {
     }
     '/api/admin/directory-departments/mapping': {
       'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/directory-departments/mapping.put').default>>>>
+    }
+    '/api/admin/domain-groups/:id/permissions': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/domain-groups/[id]/permissions.get').default>>>>
+      'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/domain-groups/[id]/permissions.put').default>>>>
+    }
+    '/api/admin/domain-groups': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/domain-groups/index.post').default>>>>
+    }
+    '/api/admin/domain-groups/search': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/domain-groups/search.get').default>>>>
     }
     '/api/admin/guard': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/guard.get').default>>>>
@@ -48,6 +64,7 @@ declare module "nitropack/types" {
     }
     '/api/admin/users/:id/access': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/users/[id]/access.get').default>>>>
+      'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/users/[id]/access.put').default>>>>
     }
     '/api/admin/users': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/users/index.get').default>>>>

@@ -1,0 +1,3776 @@
+--- /dev/null
++++ b/app/components/admin/AccessMatrix.vue
+@@ -0,0 +1,116 @@
++<script setup lang="ts">
++import { watch } from 'vue'
++import type { AccessActionName, AccessRow, AccessSnapshot, AccessSubjectKind } from '~~/shared/types/access-management'
++import { useAccessMatrix } from '~/composables/useAccessMatrix'
++
++const props = defineProps<{ kind: AccessSubjectKind; subjectId: number }>()
++const emit = defineEmits<{ updated: [snapshot: AccessSnapshot] }>()
++// Parent keys this component by subject: in-flight responses never update another subject.
++const { snapshot, loading, saving, error, notice, needsReload, search, onlyAssigned,
++  group, groups, rows, labels, load, toggle } = useAccessMatrix(props.kind, props.subjectId)
++watch(snapshot, value => { if (value) emit('updated', value) })
++
++function sourceText(row: AccessRow, action: AccessActionName): string {
++  const cell = row.actions[action]
++  if (cell.blockedBy === 'USER_INACTIVE') return props.kind === 'user' ? 'Сотрудник неактивен' : 'Отдел отключён'
++  if (cell.blockedBy === 'RESOURCE_INACTIVE') return 'Ресурс отключён'
++  if (cell.blockedBy === 'ADMIN_REQUIRED') return 'Только системный администратор'
++  if (!cell.effectiveGranted) return 'Нет доступа'
++  if (props.kind === 'department') return 'Для сотрудников отдела'
++  const parts = []
++  if (cell.systemGranted) parts.push('Системный администратор')
++  if (cell.directGranted) parts.push('Лично')
++  if (cell.inheritedGranted) parts.push(`Отдел: ${snapshot.value?.subject.department?.name ?? ''}`)
++  return parts.join(' + ')
++}
++
++function disabled(row: AccessRow, action: AccessActionName): boolean {
++  const cell = row.actions[action]
++  return loading.value || saving.value || needsReload.value || (cell.directGranted ? !cell.canRevoke : !cell.canGrant)
++}
++
++function changePermission(row: AccessRow, action: AccessActionName, event: Event) {
++  const input = event.target as HTMLInputElement
++  const granted = input.checked
++  input.checked = row.actions[action].directGranted
++  void toggle({ resourceId: row.id, action, granted })
++}
++</script>
++
++<template>
++  <section class="access-matrix" aria-label="Назначение прав" :aria-busy="loading || saving">
++    <header class="matrix-heading">
++      <div>
++        <h3>{{ kind === 'user' ? 'Личные и итоговые права' : 'Права подразделения' }}</h3>
++        <p v-if="snapshot">{{ snapshot.subject.name }}</p>
++      </div>
++      <button type="button" class="matrix-button" :disabled="loading || saving" @click="load">Обновить</button>
++    </header>
++    <p v-if="loading" role="status">Загрузка прав…</p>
++    <div v-if="error" class="matrix-error" role="alert">{{ error }} Нажмите «Обновить».</div>
++    <p v-if="notice" class="matrix-notice" role="status">{{ notice }}</p>
++    <template v-if="snapshot && !loading">
++      <p v-if="!snapshot.canManage" class="matrix-hint">Режим просмотра. Назначать права пока может только системный администратор.</p>
++      <p v-else class="matrix-hint">
++        {{ kind === 'user' ? 'Галочка меняет личное назначение. Ниже показан итоговый доступ и его источник.' : `Назначения действуют для всех участников отдела (${snapshot.subject.memberCount}), включая будущих.` }}
++        Каждое изменение сохраняется сразу.
++      </p>
++      <p v-if="!snapshot.subject.isActive" class="matrix-hint">Получатель неактивен. Назначения сохранены, но не дают доступа. Их можно отозвать.</p>
++      <p v-if="snapshot.subject.department && !snapshot.subject.department.isActive" class="matrix-hint">Отдел отключён: его права не наследуются.</p>
++      <div class="matrix-filters">
++        <label>Поиск ресурса<input v-model="search" type="search" placeholder="Название или ключ" /></label>
++        <label>Группа<select v-model="group"><option value="">Все группы</option><option v-for="item in groups" :key="item">{{ item }}</option></select></label>
++        <label class="assigned-filter"><input v-model="onlyAssigned" type="checkbox" /> Только с назначениями или доступом</label>
++      </div>
++      <p class="matrix-count">Ресурсов: {{ snapshot.summary.totalResources }} · Прямых назначений: {{ snapshot.summary.directPermissions }} · Действующих прав: {{ snapshot.summary.effectivePermissions }}<span v-if="saving"> · Сохранение…</span></p>
++      <div class="matrix-table-wrap">
++        <table>
++          <caption class="sr-only">Ресурсы и действия. Галочки показывают прямое назначение, подписи — итоговый доступ.</caption>
++          <thead><tr><th scope="col">Ресурс</th><th v-for="action in snapshot.actions" :key="action" scope="col">{{ labels[action] }}</th></tr></thead>
++          <tbody>
++            <tr v-for="row in rows" :key="row.id">
++              <th scope="row"><span class="resource-title">{{ row.name }}</span><small>{{ row.group }}</small><small>{{ row.key }}</small><small v-if="!row.isActive">Отключён</small></th>
++              <td v-for="action in snapshot.actions" :key="action">
++                <label class="grant-control">
++                  <input type="checkbox" :checked="row.actions[action].directGranted" :disabled="disabled(row, action)"
++                    :aria-label="`${row.name}: ${labels[action]}, ${kind === 'user' ? 'личное назначение' : 'назначение отделу'}`"
++                    @change="changePermission(row, action, $event)" />
++                  <span>{{ kind === 'user' ? 'Лично' : 'Отделу' }}</span>
++                </label>
++                <small class="effective-state" :class="{ granted: row.actions[action].effectiveGranted }">{{ sourceText(row, action) }}</small>
++                <small v-if="!row.actions[action].canGrant && !row.actions[action].directGranted && snapshot.canManage && snapshot.subject.isActive && row.isActive">Назначение недоступно</small>
++              </td>
++            </tr>
++            <tr v-if="!rows.length"><td colspan="5">Ресурсы по этому фильтру не найдены.</td></tr>
++          </tbody>
++        </table>
++      </div>
++    </template>
++  </section>
++</template>
++
++<style scoped>
++.access-matrix { color: #172b4d; min-width: 0; font-size: 14px; }
++.matrix-heading { display: flex; justify-content: space-between; gap: 12px; align-items: start; flex-wrap: wrap; }
++h3 { font-size: 18px; margin: 0 0 5px; font-weight: 650; } p { margin: 6px 0 12px; }
++.matrix-heading p, .matrix-hint, .matrix-count { color: #52637a; line-height: 1.5; }
++.matrix-button { background: #fff; border: 1px solid #b9c6d6; padding: 8px 12px; border-radius: 7px; color: #25486d; cursor: pointer; }
++.matrix-button:disabled { opacity: .55; cursor: default; }
++.matrix-error { background: #fff1f0; color: #962c25; padding: 12px; border-radius: 7px; margin: 10px 0; }
++.matrix-notice { background: #eef8f4; color: #175c43; padding: 12px; border-radius: 7px; }
++.matrix-filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin: 18px 0 10px; }
++.matrix-filters label { display: flex; flex-direction: column; gap: 5px; flex: 1 1 180px; }
++.matrix-filters input[type=search], select { border: 1px solid #becada; background: white; color: inherit; border-radius: 7px; padding: 8px 10px; min-width: 0; width: 100%; box-sizing: border-box; }
++.matrix-filters .assigned-filter { flex-direction: row; align-items: center; padding: 8px 0; }
++.matrix-table-wrap { overflow-x: auto; border: 1px solid #dce4ed; border-radius: 9px; }
++table { width: 100%; border-collapse: collapse; min-width: 660px; text-align: left; }
++th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid #e4eaf1; }
++thead { background: #f3f6fa; } thead th { font-weight: 600; font-size: 12px; }
++tbody th { width: 28%; font-weight: normal; } tbody tr:last-child > * { border-bottom: 0; }
++.resource-title { display: block; font-weight: 600; margin-bottom: 5px; }
++small { display: block; color: #63758b; font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
++.grant-control { display: flex; gap: 7px; align-items: center; margin-bottom: 7px; }
++input[type=checkbox] { accent-color: #2563b8; width: 17px; height: 17px; flex-shrink: 0; }
++.effective-state.granted { color: #126148; font-weight: 550; }
++.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
++</style>
+--- a/app/components/admin/UserDirectory.vue
++++ b/app/components/admin/UserDirectory.vue
+@@ -16,6 +16,7 @@
+       </div>
+ 
+       <div class="cache-toolbar">
++        <NuxtLink to="/admin/access" class="access-navigation-link">Управление правами</NuxtLink>
+         <div
+           class="cache-state"
+           :class="cacheStateClass"
+@@ -624,174 +625,13 @@
+               </div>
+             </template>
+ 
+-            <template v-else>
+-              <div class="access-head">
+-                <div>
+-                  <h3 class="block-title">
+-                    Индивидуальные права
+-                  </h3>
+-
+-                  <p class="access-hint">
+-                    Сейчас матрица работает только в режиме просмотра.
+-                  </p>
+-                </div>
+-
+-                <div class="access-summary">
+-                  <span>
+-                    Ресурсов:
+-                    <strong>
+-                      {{ accessSummary.totalResources }}
+-                    </strong>
+-                  </span>
+-
+-                  <span>
+-                    С доступом:
+-                    <strong>
+-                      {{ accessSummary.resourcesWithAnyPermission }}
+-                    </strong>
+-                  </span>
+-
+-                  <span>
+-                    Прав:
+-                    <strong>
+-                      {{ accessSummary.grantedPermissionsCount }}
+-                    </strong>
+-                  </span>
+-                </div>
+-              </div>
+-
+-              <div
+-                v-if="isLoadingAccess"
+-                class="loading-state access-loading"
+-              >
+-                <div class="spinner" />
+-                <span>Загрузка прав...</span>
+-              </div>
+-
+-              <div
+-                v-else
+-                class="access-table-shell"
+-              >
+-                <table class="access-table">
+-                  <thead>
+-                    <tr>
+-                      <th class="resource-column">
+-                        Ресурс
+-                      </th>
+-
+-                      <th>
+-                        Тип
+-                      </th>
+-
+-                      <th>
+-                        Подразделение
+-                      </th>
+-
+-                      <th
+-                        v-for="action in accessActions"
+-                        :key="action"
+-                        class="action-column"
+-                      >
+-                        {{ action }}
+-                      </th>
+-                    </tr>
+-                  </thead>
+-
+-                  <tbody>
+-                    <tr
+-                      v-for="resource in accessResources"
+-                      :key="resource.id"
+-                    >
+-                      <td>
+-                        <div class="resource-name">
+-                          {{ resource.name }}
+-                        </div>
+-
+-                        <div
+-                          class="resource-key"
+-                          :title="resource.key"
+-                        >
+-                          {{ resource.key }}
+-                        </div>
+-                      </td>
+-
+-                      <td>
+-                        <span class="resource-type">
+-                          {{ resource.type }}
+-                        </span>
+-                      </td>
+-
+-                      <td>
+-                        <div class="resource-departments">
+-                          <span
+-                            v-for="department in resource.departments"
+-                            :key="department.id"
+-                            class="department-chip"
+-                            :class="{
+-                              'department-chip--owner':
+-                                department.isOwner,
+-                            }"
+-                            :title="
+-                              department.isOwner
+-                                ? 'Владелец ресурса'
+-                                : department.name
+-                            "
+-                          >
+-                            {{ department.name }}
+-                          </span>
+-
+-                          <span
+-                            v-if="resource.departments.length === 0"
+-                            class="muted"
+-                          >
+-                            —
+-                          </span>
+-                        </div>
+-                      </td>
+-
+-                      <td
+-                        v-for="action in accessActions"
+-                        :key="action"
+-                        class="permission-cell"
+-                      >
+-                        <span
+-                          class="permission-box"
+-                          :class="{
+-                            'permission-box--granted':
+-                              resource.actions[action]?.granted,
+-                          }"
+-                          :title="
+-                            permissionTitle(
+-                              resource,
+-                              action,
+-                            )
+-                          "
+-                        >
+-                          <Icon
+-                            v-if="resource.actions[action]?.granted"
+-                            name="i-heroicons-check"
+-                            size="14"
+-                          />
+-
+-                          <span v-else>
+-                            —
+-                          </span>
+-                        </span>
+-                      </td>
+-                    </tr>
+-
+-                    <tr v-if="accessResources.length === 0">
+-                      <td
+-                        colspan="7"
+-                        class="empty-access"
+-                      >
+-                        Активные ресурсы не найдены
+-                      </td>
+-                    </tr>
+-                  </tbody>
+-                </table>
+-              </div>
+-            </template>
++            <AdminAccessMatrix
++              v-else
++              :key="`user:${selectedUser.appUser.id}`"
++              kind="user"
++              :subject-id="selectedUser.appUser.id"
++              @updated="selectedUser.appUser.permissionsCount = $event.summary.directPermissions"
++            />
+           </section>
+ 
+ 
+@@ -1184,211 +1024,12 @@
+             v-else
+             class="department-permissions-section"
+           >
+-            <template v-if="selectedDirectoryDepartment.mapping">
+-              <div class="access-head">
+-                <div>
+-                  <h3 class="block-title">
+-                    Права подразделения
+-                    «{{ selectedDirectoryDepartment.mapping.department.name }}»
+-                  </h3>
+-
+-                  <p class="access-hint">
+-                    Каждая галочка сохраняется отдельно.
+-                    Это права подразделения, а не персональные UserPermission.
+-                  </p>
+-                </div>
+-
+-                <div class="access-summary">
+-                  <span>
+-                    Ресурсов:
+-                    <strong>
+-                      {{ departmentPermissionSummary.totalResources }}
+-                    </strong>
+-                  </span>
+-
+-                  <span>
+-                    С доступом:
+-                    <strong>
+-                      {{
+-                        departmentPermissionSummary
+-                          .resourcesWithAnyPermission
+-                      }}
+-                    </strong>
+-                  </span>
+-
+-                  <span>
+-                    Прав:
+-                    <strong>
+-                      {{
+-                        departmentPermissionSummary
+-                          .grantedPermissionsCount
+-                      }}
+-                    </strong>
+-                  </span>
+-                </div>
+-              </div>
+-
+-
+-              <div
+-                v-if="isLoadingDepartmentPermissions"
+-                class="loading-state access-loading"
+-              >
+-                <div class="spinner" />
+-                <span>
+-                  Загрузка прав подразделения...
+-                </span>
+-              </div>
+-
+-
+-              <div
+-                v-else
+-                class="access-table-shell"
+-              >
+-                <table class="access-table">
+-                  <thead>
+-                    <tr>
+-                      <th class="resource-column">
+-                        Ресурс
+-                      </th>
+-
+-                      <th>
+-                        Тип
+-                      </th>
+-
+-                      <th>
+-                        Владелец
+-                      </th>
+-
+-                      <th
+-                        v-for="action in departmentPermissionActions"
+-                        :key="action"
+-                        class="action-column"
+-                      >
+-                        {{ action }}
+-                      </th>
+-                    </tr>
+-                  </thead>
+-
+-                  <tbody>
+-                    <tr
+-                      v-for="resource in departmentPermissionResources"
+-                      :key="resource.id"
+-                    >
+-                      <td>
+-                        <div class="resource-name">
+-                          {{ resource.name }}
+-                        </div>
+-
+-                        <div class="resource-key">
+-                          {{ resource.key }}
+-                        </div>
+-                      </td>
+-
+-                      <td>
+-                        <span class="resource-type">
+-                          {{ resource.type }}
+-                        </span>
+-                      </td>
+-
+-                      <td>
+-                        <div class="resource-departments">
+-                          <span
+-                            v-for="owner in resource.ownership.filter(
+-                              item => item.isOwner
+-                            )"
+-                            :key="owner.departmentId"
+-                            class="department-chip department-chip--owner"
+-                          >
+-                            {{ owner.departmentName }}
+-                          </span>
+-
+-                          <span
+-                            v-if="
+-                              resource.ownership.filter(
+-                                item => item.isOwner
+-                              ).length === 0
+-                            "
+-                            class="muted"
+-                          >
+-                            —
+-                          </span>
+-                        </div>
+-                      </td>
+-
+-                      <td
+-                        v-for="action in departmentPermissionActions"
+-                        :key="action"
+-                        class="permission-cell"
+-                      >
+-                        <button
+-                          type="button"
+-                          class="permission-toggle"
+-                          :class="{
+-                            'permission-toggle--granted':
+-                              resource.actions[action]?.granted,
+-                          }"
+-                          :disabled="
+-                            isDepartmentPermissionSaving(
+-                              resource.id,
+-                              action,
+-                            )
+-                          "
+-                          :title="
+-                            departmentPermissionTitle(
+-                              resource,
+-                              action,
+-                            )
+-                          "
+-                          @click="
+-                            toggleDepartmentPermission(
+-                              resource,
+-                              action,
+-                            )
+-                          "
+-                        >
+-                          <Icon
+-                            v-if="
+-                              isDepartmentPermissionSaving(
+-                                resource.id,
+-                                action,
+-                              )
+-                            "
+-                            name="i-heroicons-arrow-path"
+-                            size="14"
+-                            class="permission-spin"
+-                          />
+-
+-                          <Icon
+-                            v-else-if="
+-                              resource.actions[action]?.granted
+-                            "
+-                            name="i-heroicons-check"
+-                            size="14"
+-                          />
+-
+-                          <span v-else>
+-                            —
+-                          </span>
+-                        </button>
+-                      </td>
+-                    </tr>
+-
+-                    <tr
+-                      v-if="
+-                        departmentPermissionResources.length === 0
+-                      "
+-                    >
+-                      <td
+-                        colspan="7"
+-                        class="empty-access"
+-                      >
+-                        Активные ресурсы не найдены
+-                      </td>
+-                    </tr>
+-                  </tbody>
+-                </table>
+-              </div>
+-            </template>
++            <AdminAccessMatrix
++              v-if="selectedDirectoryDepartment.mapping"
++              :key="`department:${selectedDirectoryDepartment.mapping.department.id}`"
++              kind="department"
++              :subject-id="selectedDirectoryDepartment.mapping.department.id"
++            />
+ 
+             <div
+               v-else
+@@ -1553,130 +1194,9 @@
+ }
+ 
+ 
+-type AccessActionName =
+-  | 'VIEW'
+-  | 'CREATE'
+-  | 'UPDATE'
+-  | 'DELETE'
+-
+-
+-interface AccessPermissionState {
+-  granted: boolean
+-  permissionId: number | null
+-  grantedByLogin: string | null
+-  createdAt: string | null
+-  updatedAt: string | null
+-}
+-
+-
+-interface AccessResourceRow {
+-  id: number
+-  key: string
+-  name: string
+-  description: string | null
+-  type:
+-    | 'TABLE'
+-    | 'SECTION'
+-    | 'FEATURE'
+-
+-  sortOrder: number
+-
+-  departments: Array<{
+-    id: number
+-    key: string
+-    name: string
+-    isOwner: boolean
+-  }>
+-
+-  actions:
+-    Record<
+-      AccessActionName,
+-      AccessPermissionState
+-    >
+-}
+-
+-
+-interface UserAccessResponse {
+-  success: boolean
+-
+-  actions:
+-    AccessActionName[]
+-
+-  data:
+-    AccessResourceRow[]
+-
+-  summary: {
+-    totalResources: number
+-    resourcesWithAnyPermission: number
+-    grantedPermissionsCount: number
+-  }
+-}
+-
+-
+ const {
+   showTost,
+ } = useAppToasts()
+-
+-
+-type DepartmentAccessAction =
+-  | 'VIEW'
+-  | 'CREATE'
+-  | 'UPDATE'
+-  | 'DELETE'
+-
+-
+-interface DepartmentPermissionState {
+-  granted: boolean
+-  permissionId: number | null
+-  grantedByLogin: string | null
+-  createdAt: string | null
+-  updatedAt: string | null
+-}
+-
+-
+-interface DepartmentPermissionResource {
+-  id: number
+-  key: string
+-  name: string
+-  description: string | null
+-
+-  type:
+-    | 'TABLE'
+-    | 'SECTION'
+-    | 'FEATURE'
+-
+-  sortOrder: number
+-
+-  ownership: Array<{
+-    departmentId: number
+-    departmentKey: string
+-    departmentName: string
+-    isOwner: boolean
+-  }>
+-
+-  actions:
+-    Record<
+-      DepartmentAccessAction,
+-      DepartmentPermissionState
+-    >
+-}
+-
+-
+-interface DepartmentPermissionsResponse {
+-  success: boolean
+-
+-  actions:
+-    DepartmentAccessAction[]
+-
+-  data:
+-    DepartmentPermissionResource[]
+-
+-  summary: {
+-    totalResources: number
+-    resourcesWithAnyPermission: number
+-    grantedPermissionsCount: number
+-  }
+-}
+ 
+ 
+ interface DirectoryDepartmentMember {
+@@ -1797,50 +1317,6 @@
+   >(
+     'members',
+   )
+-
+-
+-const departmentPermissionActions =
+-  ref<DepartmentAccessAction[]>([
+-    'VIEW',
+-    'CREATE',
+-    'UPDATE',
+-    'DELETE',
+-  ])
+-
+-
+-const departmentPermissionResources =
+-  ref<DepartmentPermissionResource[]>([])
+-
+-
+-const isLoadingDepartmentPermissions =
+-  ref(false)
+-
+-
+-const departmentPermissionSaving =
+-  ref<
+-    Set<string>
+-  >(
+-    new Set(),
+-  )
+-
+-
+-const loadedDepartmentPermissionId =
+-  ref<number | null>(
+-    null,
+-  )
+-
+-
+-const departmentPermissionSummary =
+-  reactive({
+-    totalResources:
+-      0,
+-
+-    resourcesWithAnyPermission:
+-      0,
+-
+-    grantedPermissionsCount:
+-      0,
+-  })
+ 
+ 
+ const departmentMappingChanged =
+@@ -1883,38 +1359,6 @@
+   ref(1)
+ 
+ 
+-const accessActions =
+-  ref<AccessActionName[]>([
+-    'VIEW',
+-    'CREATE',
+-    'UPDATE',
+-    'DELETE',
+-  ])
+-
+-const accessResources =
+-  ref<AccessResourceRow[]>([])
+-
+-const isLoadingAccess =
+-  ref(false)
+-
+-const loadedAccessUserId =
+-  ref<number | null>(
+-    null,
+-  )
+-
+-const accessSummary =
+-  reactive({
+-    totalResources:
+-      0,
+-
+-    resourcesWithAnyPermission:
+-      0,
+-
+-    grantedPermissionsCount:
+-      0,
+-  })
+-
+-
+ const filters =
+   reactive({
+     search:
+@@ -2214,253 +1658,11 @@
+ }
+ 
+ 
+-function departmentPermissionKey(
+-  resourceId: number,
+-  action: DepartmentAccessAction,
+-): string {
+-  return `${resourceId}:${action}`
+-}
+-
+-
+-function isDepartmentPermissionSaving(
+-  resourceId: number,
+-  action: DepartmentAccessAction,
+-): boolean {
+-  return departmentPermissionSaving.value.has(
+-    departmentPermissionKey(
+-      resourceId,
+-      action,
+-    ),
+-  )
+-}
+-
+-
+-function departmentPermissionTitle(
+-  resource: DepartmentPermissionResource,
+-  action: DepartmentAccessAction,
+-): string {
+-  const state =
+-    resource.actions[action]
+-
+-  if (
+-    !state ||
+-    !state.granted
+-  ) {
+-    return `${action}: право подразделению не выдано`
++function openDepartmentPermissions() {
++  if (selectedDirectoryDepartment.value?.mapping?.department.id) {
++    departmentDetailTab.value = 'permissions'
+   }
+-
+-  const parts = [
+-    `${action}: право подразделению выдано`,
+-  ]
+-
+-  if (
+-    state.grantedByLogin
+-  ) {
+-    parts.push(
+-      `выдал: ${state.grantedByLogin}`,
+-    )
+-  }
+-
+-  if (
+-    state.createdAt
+-  ) {
+-    parts.push(
+-      `дата: ${formatDateTime(state.createdAt)}`,
+-    )
+-  }
+-
+-  return parts.join('\n')
+-}
+-
+-
+-async function loadDepartmentPermissions(
+-  departmentId: number,
+-) {
+-  isLoadingDepartmentPermissions.value =
+-    true
+-
+-  try {
+-    const response =
+-      await $fetch<DepartmentPermissionsResponse>(
+-        `/api/admin/departments/${departmentId}/permissions`,
+-      )
+-
+-    departmentPermissionActions.value =
+-      response.actions
+-
+-    departmentPermissionResources.value =
+-      response.data
+-
+-    Object.assign(
+-      departmentPermissionSummary,
+-      response.summary,
+-    )
+-
+-    loadedDepartmentPermissionId.value =
+-      departmentId
+-
+-  } catch (error) {
+-    console.error(
+-      '[AdminCenter department permissions] Ошибка:',
+-      error,
+-    )
+-
+-    showTost(
+-      'Ошибка',
+-      getApiErrorMessage(
+-        error,
+-        'Не удалось загрузить права подразделения',
+-      ),
+-      'error',
+-      'fxemoji:warningsign',
+-      6000,
+-    )
+-
+-  } finally {
+-    isLoadingDepartmentPermissions.value =
+-      false
+-  }
+-}
+-
+-
+-async function openDepartmentPermissions() {
+-  const departmentId =
+-    selectedDirectoryDepartment
+-      .value
+-      ?.mapping
+-      ?.department
+-      .id
+-
+-  if (!departmentId) {
+-    return
+-  }
+-
+-  departmentDetailTab.value =
+-    'permissions'
+-
+-  if (
+-    loadedDepartmentPermissionId.value !==
+-      departmentId
+-  ) {
+-    await loadDepartmentPermissions(
+-      departmentId,
+-    )
+-  }
+-}
+-
+-
+-async function toggleDepartmentPermission(
+-  resource: DepartmentPermissionResource,
+-  action: DepartmentAccessAction,
+-) {
+-  const departmentId =
+-    selectedDirectoryDepartment
+-      .value
+-      ?.mapping
+-      ?.department
+-      .id
+-
+-  if (!departmentId) {
+-    return
+-  }
+-
+-
+-  const key =
+-    departmentPermissionKey(
+-      resource.id,
+-      action,
+-    )
+-
+-
+-  if (
+-    departmentPermissionSaving.value.has(
+-      key,
+-    )
+-  ) {
+-    return
+-  }
+-
+-
+-  const current =
+-    !!resource.actions[action]
+-      ?.granted
+-
+-  const next =
+-    !current
+-
+-
+-  departmentPermissionSaving.value.add(
+-    key,
+-  )
+-
+-  departmentPermissionSaving.value =
+-    new Set(
+-      departmentPermissionSaving.value,
+-    )
+-
+-
+-  try {
+-    await $fetch(
+-      `/api/admin/departments/${departmentId}/permissions`,
+-      {
+-        method:
+-          'PUT',
+-
+-        body: {
+-          resourceId:
+-            resource.id,
+-
+-          action,
+-
+-          granted:
+-            next,
+-        },
+-      },
+-    )
+-
+-
+-    const state =
+-      resource.actions[action]
+-
+-    if (state) {
+-      state.granted =
+-        next
+-    }
+-
+-
+-    await loadDepartmentPermissions(
+-      departmentId,
+-    )
+-
+-  } catch (error) {
+-    console.error(
+-      '[AdminCenter department permission update] Ошибка:',
+-      error,
+-    )
+-
+-    showTost(
+-      'Ошибка',
+-      getApiErrorMessage(
+-        error,
+-        'Не удалось изменить право подразделения',
+-      ),
+-      'error',
+-      'fxemoji:warningsign',
+-      6000,
+-    )
+-
+-  } finally {
+-    departmentPermissionSaving.value.delete(
+-      key,
+-    )
+-
+-    departmentPermissionSaving.value =
+-      new Set(
+-        departmentPermissionSaving.value,
+-      )
+-  }
+-}
+-
++}
+ 
+ async function loadDirectoryDepartments() {
+   isLoadingDepartments.value =
+@@ -2800,124 +2002,6 @@
+     isLoading.value =
+       false
+   }
+-}
+-
+-
+-async function loadUserAccess() {
+-  const appUserId =
+-    selectedUser.value
+-      ?.appUser
+-      ?.id
+-
+-  if (!appUserId) {
+-    accessResources.value =
+-      []
+-
+-    loadedAccessUserId.value =
+-      null
+-
+-    Object.assign(
+-      accessSummary,
+-      {
+-        totalResources:
+-          0,
+-
+-        resourcesWithAnyPermission:
+-          0,
+-
+-        grantedPermissionsCount:
+-          0,
+-      },
+-    )
+-
+-    return
+-  }
+-
+-
+-  isLoadingAccess.value =
+-    true
+-
+-  try {
+-    const response =
+-      await $fetch<UserAccessResponse>(
+-        `/api/admin/users/${appUserId}/access`,
+-      )
+-
+-    accessActions.value =
+-      response.actions
+-
+-    accessResources.value =
+-      response.data
+-
+-    Object.assign(
+-      accessSummary,
+-      response.summary,
+-    )
+-
+-    loadedAccessUserId.value =
+-      appUserId
+-
+-  } catch (error) {
+-    console.error(
+-      '[AdminCenter user access] Ошибка:',
+-      error,
+-    )
+-
+-    showTost(
+-      'Ошибка',
+-      getApiErrorMessage(
+-        error,
+-        'Не удалось загрузить права пользователя',
+-      ),
+-      'error',
+-      'fxemoji:warningsign',
+-      6000,
+-    )
+-
+-  } finally {
+-    isLoadingAccess.value =
+-      false
+-  }
+-}
+-
+-
+-function permissionTitle(
+-  resource:
+-    AccessResourceRow,
+-  action:
+-    AccessActionName,
+-): string {
+-  const state =
+-    resource.actions[action]
+-
+-  if (
+-    !state ||
+-    !state.granted
+-  ) {
+-    return `${action}: право не назначено`
+-  }
+-
+-  const parts = [
+-    `${action}: право назначено`,
+-  ]
+-
+-  if (
+-    state.grantedByLogin
+-  ) {
+-    parts.push(
+-      `выдал: ${state.grantedByLogin}`,
+-    )
+-  }
+-
+-  if (
+-    state.createdAt
+-  ) {
+-    parts.push(
+-      `дата: ${formatDateTime(state.createdAt)}`,
+-    )
+-  }
+-
+-  return parts.join('\n')
+ }
+ 
+ 
+@@ -3135,47 +2219,6 @@
+     departmentDetailTab.value =
+       'members'
+ 
+-    loadedDepartmentPermissionId.value =
+-      null
+-
+-    departmentPermissionResources.value =
+-      []
+-  },
+-)
+-
+-
+-watch(
+-  [
+-    () =>
+-      activeTab.value,
+-
+-    () =>
+-      selectedUser.value
+-        ?.appUser
+-        ?.id,
+-  ],
+-  (
+-    [
+-      tab,
+-      userId,
+-    ],
+-  ) => {
+-    if (
+-      tab !==
+-        'access' ||
+-      !userId
+-    ) {
+-      return
+-    }
+-
+-    if (
+-      loadedAccessUserId.value ===
+-        userId
+-    ) {
+-      return
+-    }
+-
+-    void loadUserAccess()
+   },
+ )
+ 
+@@ -3189,6 +2232,8 @@
+ 
+ 
+ <style scoped>
++.access-navigation-link { color: #2563b8; font-size: 14px; font-weight: 600; white-space: nowrap; }
++
+ .admin-shell {
+   display: flex;
+   flex-direction: column;
+--- /dev/null
++++ b/app/composables/useAccessMatrix.ts
+@@ -0,0 +1,83 @@
++import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
++import type { AccessActionName, AccessChange, AccessSnapshot, AccessSubjectKind } from '~~/shared/types/access-management'
++
++export function useAccessMatrix(kind: AccessSubjectKind, id: number) {
++  const snapshot = ref<AccessSnapshot | null>(null)
++  const loading = ref(false)
++  const saving = ref(false)
++  const error = ref('')
++  const notice = ref('')
++  const needsReload = ref(false)
++  const search = ref('')
++  const onlyAssigned = ref(false)
++  const group = ref('')
++  let generation = 0
++  let disposed = false
++  const endpoint = kind === 'user' ? `/api/admin/users/${id}/access` : `/api/admin/departments/${id}/permissions`
++  const labels: Record<AccessActionName, string> = {
++    VIEW: 'Просмотр', CREATE: 'Создание', UPDATE: 'Изменение', DELETE: 'Удаление',
++  }
++  function message(value: unknown, fallback: string): string {
++    const e = value as { data?: { data?: { message?: string }; message?: string }; message?: string }
++    return e?.data?.data?.message || e?.data?.message || fallback
++  }
++  async function load() {
++    if (saving.value) return
++    const current = ++generation
++    loading.value = true
++    error.value = ''
++    notice.value = ''
++    try {
++      const response = await $fetch<AccessSnapshot>(endpoint)
++      if (disposed || current !== generation) return
++      snapshot.value = response
++      needsReload.value = false
++    } catch (e) {
++      if (disposed || current !== generation) return
++      error.value = message(e, 'Не удалось загрузить права. Повторите загрузку.')
++      needsReload.value = true
++    } finally {
++      if (!disposed && current === generation) loading.value = false
++    }
++  }
++  async function toggle(change: AccessChange) {
++    if (!snapshot.value || saving.value || loading.value || needsReload.value) return
++    const cell = snapshot.value.data.find(row => row.id === change.resourceId)?.actions[change.action]
++    if (!cell || (change.granted ? !cell.canGrant : !cell.canRevoke)) return
++    saving.value = true
++    error.value = ''
++    notice.value = ''
++    const revision = snapshot.value.revision
++    try {
++      const response = await $fetch<AccessSnapshot>(endpoint, {
++        method: 'PUT', headers: { 'x-space-access-change': '1' }, body: { revision, changes: [change] },
++      })
++      if (disposed) return
++      snapshot.value = response
++      const updated = response.data.find(row => row.id === change.resourceId)?.actions[change.action]
++      const remains = !change.granted && updated?.effectiveGranted
++      notice.value = `${labels[change.action]}: ${change.granted ? 'право назначено' : 'назначение отозвано'}.`
++        + (remains ? updated.systemGranted
++          ? ' Доступ остаётся: системный администратор.'
++          : ` Доступ остаётся через отдел «${response.subject.department?.name ?? ''}».` : '')
++    } catch (e) {
++      if (disposed) return
++      error.value = message(e, 'Не удалось подтвердить сохранение. Обновите матрицу перед повторной попыткой.')
++      // A failed response may follow a committed transaction: do not guess the server state.
++      needsReload.value = true
++    } finally {
++      if (!disposed) saving.value = false
++    }
++  }
++  const groups = computed(() => [...new Set(snapshot.value?.data.map(row => row.group) ?? [])].sort())
++  const rows = computed(() => {
++    const q = search.value.trim().toLocaleLowerCase('ru')
++    return (snapshot.value?.data ?? []).filter(row =>
++      (!group.value || row.group === group.value)
++      && (!q || `${row.name} ${row.key} ${row.description ?? ''}`.toLocaleLowerCase('ru').includes(q))
++      && (!onlyAssigned.value || Object.values(row.actions).some(cell => cell.directGranted || cell.effectiveGranted)))
++  })
++  onMounted(load)
++  onBeforeUnmount(() => { disposed = true; generation++ })
++  return { snapshot, loading, saving, error, notice, needsReload, search, onlyAssigned, group, groups, rows, labels, load, toggle }
++}
+--- /dev/null
++++ b/app/pages/admin/access.vue
+@@ -0,0 +1,76 @@
++<script setup lang="ts">
++import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
++import type { AccessSubjectKind, AccessSubjectOption } from '~~/shared/types/access-management'
++
++useSeoMeta({ title: 'Space — управление правами' })
++const kind = ref<AccessSubjectKind>('department')
++const search = ref('')
++const subjects = ref<AccessSubjectOption[]>([])
++const selected = ref<AccessSubjectOption | null>(null)
++const loading = ref(false)
++const error = ref('')
++const hasMore = ref(false)
++let sequence = 0
++let timer: ReturnType<typeof setTimeout> | undefined
++let disposed = false
++async function load() {
++  const current = ++sequence
++  loading.value = true
++  error.value = ''
++  try {
++    const response = await $fetch<{ items: AccessSubjectOption[]; hasMore: boolean }>('/api/admin/access/subjects', {
++      query: { kind: kind.value, search: search.value },
++    })
++    if (disposed || current !== sequence) return
++    subjects.value = response.items
++    hasMore.value = response.hasMore
++  } catch {
++    if (disposed || current !== sequence) return
++    subjects.value = []
++    error.value = 'Не удалось загрузить список. Проверьте доступ и повторите.'
++  } finally {
++    if (!disposed && current === sequence) loading.value = false
++  }
++}
++watch(kind, () => { selected.value = null; subjects.value = []; clearTimeout(timer); void load() })
++watch(search, () => { sequence++; clearTimeout(timer); timer = setTimeout(load, 250) })
++onMounted(load)
++onBeforeUnmount(() => { disposed = true; sequence++; clearTimeout(timer) })
++</script>
++
++<template>
++  <div class="access-page">
++    <header><div><NuxtLink to="/admin/users">← Сотрудники и подразделения</NuxtLink><h1>Управление правами</h1></div></header>
++    <div class="access-layout">
++      <aside aria-label="Получатель прав">
++        <label>Назначить права<select v-model="kind"><option value="department">Подразделению</option><option value="user">Сотруднику</option></select></label>
++        <label>Поиск<input v-model="search" type="search" maxlength="120" placeholder="Название, имя или логин" /></label>
++        <p v-if="loading" role="status">Загрузка…</p>
++        <p v-if="error" role="alert">{{ error }} <button type="button" @click="load">Повторить</button></p>
++        <ul v-if="!loading">
++          <li v-for="item in subjects" :key="item.id"><button type="button" :aria-pressed="selected?.id === item.id" @click="selected = item"><strong>{{ item.name }}</strong><small>{{ item.detail }}</small></button></li>
++        </ul>
++        <p v-if="!loading && !subjects.length && !error">Ничего не найдено.</p>
++        <p v-if="hasMore">Показаны первые 50 результатов. Уточните поиск.</p>
++      </aside>
++      <main>
++        <AdminAccessMatrix v-if="selected" :key="`${kind}:${selected.id}`" :kind="kind" :subject-id="selected.id" />
++        <p v-else class="choose-subject">Выберите сотрудника или подразделение.</p>
++      </main>
++    </div>
++  </div>
++</template>
++
++<style scoped>
++.access-page { height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: auto; padding: 20px; box-sizing: border-box; color: #172b4d; background: #f5f7fa; }
++header { margin-bottom: 20px; } header a { color: #315f96; font-size: 13px; } h1 { font-size: 24px; font-weight: 650; margin: 8px 0 0; }
++.access-layout { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: 20px; align-items: start; }
++aside, main { min-width: 0; background: white; padding: 18px; border: 1px solid #dce4ed; border-radius: 12px; }
++label { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; font-size: 13px; }
++input, select { border: 1px solid #becada; border-radius: 7px; background: white; color: inherit; width: 100%; box-sizing: border-box; padding: 9px; }
++ul { list-style: none; margin: 15px 0 0; padding: 0; } li { margin-bottom: 5px; }
++li button { width: 100%; text-align: left; padding: 12px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: inherit; cursor: pointer; }
++li button[aria-pressed=true] { background: #edf4fc; border-color: #a7c3e6; } strong, small { display: block; } strong { font-size: 13px; } small { margin-top: 4px; font-size: 11px; color: #63758b; overflow-wrap: anywhere; }
++.choose-subject { padding: 25px 0; color: #63758b; } aside p { color: #52637a; font-size: 13px; }
++@media(max-width: 850px) { .access-layout { grid-template-columns: 1fr; } .access-page { padding: 12px; } }
++</style>
+--- /dev/null
++++ b/server/api/access/check.get.ts
+@@ -0,0 +1,15 @@
++import { defineEventHandler, getQuery } from 'h3'
++import { requirePermission } from '~~/server/services/access-control.service'
++import { accessError } from '~~/server/services/access-input'
++import { ACCESS_ACTIONS, type AccessActionName } from '~~/shared/types/access-management'
++
++/** Checks only the current session; never accepts another user's id. */
++export default defineEventHandler(async event => {
++  const query = getQuery(event)
++  if (typeof query.resource !== 'string' || !query.resource || query.resource.length > 150
++    || typeof query.action !== 'string' || !ACCESS_ACTIONS.includes(query.action as AccessActionName)) {
++    accessError(400, 'INVALID_ACCESS_CHECK', 'Укажите ресурс и действие VIEW / CREATE / UPDATE / DELETE.')
++  }
++  const permission = await requirePermission(event, query.resource, query.action as AccessActionName)
++  return { allowed: true, resource: permission.resourceKey, action: permission.action, sources: permission.sources }
++})
+--- /dev/null
++++ b/server/api/admin/access/subjects.get.ts
+@@ -0,0 +1,14 @@
++import { defineEventHandler, getQuery } from 'h3'
++import { listAccessSubjects } from '~~/server/services/access-management.service'
++import { accessError } from '~~/server/services/access-input'
++
++export default defineEventHandler(async event => {
++  const query = getQuery(event)
++  if (query.kind !== 'user' && query.kind !== 'department') {
++    accessError(400, 'INVALID_ACCESS_KIND', 'Выберите сотрудников или подразделения.')
++  }
++  if (query.search !== undefined && (typeof query.search !== 'string' || query.search.length > 120)) {
++    accessError(400, 'INVALID_ACCESS_SEARCH', 'Поиск ограничен 120 символами.')
++  }
++  return listAccessSubjects(event, query.kind, typeof query.search === 'string' ? query.search.trim() : '')
++})
+--- a/server/api/admin/departments/[id]/permissions.get.ts
++++ b/server/api/admin/departments/[id]/permissions.get.ts
+@@ -1,358 +1,8 @@
+-// server/api/admin/departments/[id]/permissions.get.ts
++import { defineEventHandler, getRouterParam } from 'h3'
++import { readAccessSnapshot } from '~~/server/services/access-management.service'
++import { parseAccessId } from '~~/server/services/access-input'
+ 
+-import {
+-  AccessAction,
+-} from '@prisma/client'
+-
+-import {
+-  createError,
+-  defineEventHandler,
+-  getRouterParam,
+-} from 'h3'
+-
+-import {
+-  prisma,
+-} from '~~/server/utils/prisma'
+-
+-import {
+-  requirePermission,
+-} from '~~/server/services/access-control.service'
+-
+-
+-const VIEW_RESOURCE_KEY =
+-  'admin.users'
+-
+-
+-function parseDepartmentId(
+-  raw:
+-    string | undefined,
+-): number {
+-  const text =
+-    raw ?? ''
+-
+-  const id =
+-    Number(text)
+-
+-  if (
+-    !/^[1-9]\d*$/.test(
+-      text,
+-    ) ||
+-    !Number.isSafeInteger(
+-      id,
+-    ) ||
+-    id >
+-      2_147_483_647
+-  ) {
+-    throw createError({
+-      statusCode:
+-        400,
+-
+-      statusMessage:
+-        'INVALID_DEPARTMENT_ID',
+-
+-      data: {
+-        code:
+-          'INVALID_DEPARTMENT_ID',
+-
+-        message:
+-          'Некорректный ID подразделения.',
+-      },
+-    })
+-  }
+-
+-  return id
+-}
+-
+-
+-export default defineEventHandler(
+-  async event => {
+-    await requirePermission(
+-      event,
+-      VIEW_RESOURCE_KEY,
+-      AccessAction.VIEW,
+-    )
+-
+-
+-    const departmentId =
+-      parseDepartmentId(
+-        getRouterParam(
+-          event,
+-          'id',
+-        ),
+-      )
+-
+-
+-    const department =
+-      await prisma.department
+-        .findFirst({
+-          where: {
+-            id:
+-              departmentId,
+-
+-            isActive:
+-              true,
+-          },
+-
+-          select: {
+-            id:
+-              true,
+-
+-            key:
+-              true,
+-
+-            name:
+-              true,
+-
+-            permissions: {
+-              select: {
+-                id:
+-                  true,
+-
+-                resourceId:
+-                  true,
+-
+-                action:
+-                  true,
+-
+-                grantedByLogin:
+-                  true,
+-
+-                createdAt:
+-                  true,
+-
+-                updatedAt:
+-                  true,
+-              },
+-            },
+-          },
+-        })
+-
+-
+-    if (!department) {
+-      throw createError({
+-        statusCode:
+-          404,
+-
+-        statusMessage:
+-          'DEPARTMENT_NOT_FOUND',
+-
+-        data: {
+-          code:
+-            'DEPARTMENT_NOT_FOUND',
+-
+-          message:
+-            'Активное подразделение Space не найдено.',
+-        },
+-      })
+-    }
+-
+-
+-    const resources =
+-      await prisma.accessResource
+-        .findMany({
+-          where: {
+-            isActive:
+-              true,
+-          },
+-
+-          orderBy: [
+-            {
+-              sortOrder:
+-                'asc',
+-            },
+-            {
+-              name:
+-                'asc',
+-            },
+-            {
+-              id:
+-                'asc',
+-            },
+-          ],
+-
+-          select: {
+-            id:
+-              true,
+-
+-            key:
+-              true,
+-
+-            name:
+-              true,
+-
+-            description:
+-              true,
+-
+-            type:
+-              true,
+-
+-            sortOrder:
+-              true,
+-
+-            departments: {
+-              select: {
+-                isOwner:
+-                  true,
+-
+-                department: {
+-                  select: {
+-                    id:
+-                      true,
+-
+-                    key:
+-                      true,
+-
+-                    name:
+-                      true,
+-                  },
+-                },
+-              },
+-            },
+-          },
+-        })
+-
+-
+-    const permissionMap =
+-      new Map(
+-        department.permissions
+-          .map(
+-            permission => [
+-              `${permission.resourceId}:${permission.action}`,
+-              permission,
+-            ],
+-          ),
+-      )
+-
+-
+-    const actions = [
+-      AccessAction.VIEW,
+-      AccessAction.CREATE,
+-      AccessAction.UPDATE,
+-      AccessAction.DELETE,
+-    ]
+-
+-
+-    const data =
+-      resources.map(
+-        resource => ({
+-          id:
+-            resource.id,
+-
+-          key:
+-            resource.key,
+-
+-          name:
+-            resource.name,
+-
+-          description:
+-            resource.description,
+-
+-          type:
+-            resource.type,
+-
+-          sortOrder:
+-            resource.sortOrder,
+-
+-          ownership:
+-            resource.departments
+-              .map(
+-                item => ({
+-                  departmentId:
+-                    item.department.id,
+-
+-                  departmentKey:
+-                    item.department.key,
+-
+-                  departmentName:
+-                    item.department.name,
+-
+-                  isOwner:
+-                    item.isOwner,
+-                }),
+-              ),
+-
+-          actions:
+-            Object.fromEntries(
+-              actions.map(
+-                action => {
+-                  const permission =
+-                    permissionMap.get(
+-                      `${resource.id}:${action}`,
+-                    )
+-
+-                  return [
+-                    action,
+-                    {
+-                      granted:
+-                        !!permission,
+-
+-                      permissionId:
+-                        permission?.id ??
+-                        null,
+-
+-                      grantedByLogin:
+-                        permission
+-                          ?.grantedByLogin ??
+-                        null,
+-
+-                      createdAt:
+-                        permission
+-                          ?.createdAt ??
+-                        null,
+-
+-                      updatedAt:
+-                        permission
+-                          ?.updatedAt ??
+-                        null,
+-                    },
+-                  ]
+-                },
+-              ),
+-            ),
+-        }),
+-      )
+-
+-
+-    return {
+-      success:
+-        true,
+-
+-      department: {
+-        id:
+-          department.id,
+-
+-        key:
+-          department.key,
+-
+-        name:
+-          department.name,
+-      },
+-
+-      actions,
+-
+-      data,
+-
+-      summary: {
+-        totalResources:
+-          data.length,
+-
+-        resourcesWithAnyPermission:
+-          data.filter(
+-            resource =>
+-              Object.values(
+-                resource.actions,
+-              )
+-                .some(
+-                  permission =>
+-                    permission.granted,
+-                ),
+-          )
+-            .length,
+-
+-        grantedPermissionsCount:
+-          department.permissions
+-            .length,
+-      },
+-    }
+-  },
+-)
++export default defineEventHandler(async event => {
++  const id = parseAccessId(getRouterParam(event, 'id'))
++  return readAccessSnapshot(event, 'department', id)
++})
+--- a/server/api/admin/departments/[id]/permissions.put.ts
++++ b/server/api/admin/departments/[id]/permissions.put.ts
+@@ -1,552 +1,10 @@
+-// server/api/admin/departments/[id]/permissions.put.ts
++import { defineEventHandler, getRouterParam, readBody } from 'h3'
++import { saveAccessChanges } from '~~/server/services/access-management.service'
++import { parseAccessId, parseAccessMutation, requireAccessMutationRequest } from '~~/server/services/access-input'
+ 
+-import {
+-  AccessAction,
+-} from '@prisma/client'
+-
+-import {
+-  createError,
+-  defineEventHandler,
+-  getRouterParam,
+-  readBody,
+-} from 'h3'
+-
+-import {
+-  prisma,
+-} from '~~/server/utils/prisma'
+-
+-import {
+-  requirePermission,
+-} from '~~/server/services/access-control.service'
+-
+-import {
+-  writeAuditEvent,
+-} from '~~/server/utils/auditLog'
+-
+-
+-const RESOURCE_KEY =
+-  'admin.department-permissions'
+-
+-
+-const ALLOWED_ACTIONS =
+-  new Set<AccessAction>([
+-    AccessAction.VIEW,
+-    AccessAction.CREATE,
+-    AccessAction.UPDATE,
+-    AccessAction.DELETE,
+-  ])
+-
+-
+-function reject(
+-  statusCode:
+-    number,
+-
+-  code:
+-    string,
+-
+-  message:
+-    string,
+-): never {
+-  throw createError({
+-    statusCode,
+-
+-    statusMessage:
+-      code,
+-
+-    data: {
+-      code,
+-      message,
+-    },
+-  })
+-}
+-
+-
+-function parsePositiveId(
+-  value:
+-    unknown,
+-
+-  code:
+-    string,
+-
+-  message:
+-    string,
+-): number {
+-  const text =
+-    String(
+-      value ?? '',
+-    )
+-
+-  const id =
+-    Number(text)
+-
+-  if (
+-    !/^[1-9]\d*$/.test(
+-      text,
+-    ) ||
+-    !Number.isSafeInteger(
+-      id,
+-    ) ||
+-    id >
+-      2_147_483_647
+-  ) {
+-    reject(
+-      400,
+-      code,
+-      message,
+-    )
+-  }
+-
+-  return id
+-}
+-
+-
+-interface PermissionBody {
+-  resourceId:
+-    number
+-
+-  action:
+-    AccessAction
+-
+-  granted:
+-    boolean
+-}
+-
+-
+-function parseBody(
+-  value:
+-    unknown,
+-): PermissionBody {
+-  if (
+-    typeof value !==
+-      'object' ||
+-    value === null ||
+-    Array.isArray(
+-      value,
+-    )
+-  ) {
+-    reject(
+-      400,
+-      'INVALID_DEPARTMENT_PERMISSION_BODY',
+-      'Ожидается объект с данными права.',
+-    )
+-  }
+-
+-
+-  const body =
+-    value as
+-      Record<
+-        string,
+-        unknown
+-      >
+-
+-
+-  const resourceId =
+-    parsePositiveId(
+-      body.resourceId,
+-      'INVALID_RESOURCE_ID',
+-      'Некорректный ID ресурса.',
+-    )
+-
+-
+-  if (
+-    typeof body.action !==
+-      'string' ||
+-    !ALLOWED_ACTIONS.has(
+-      body.action as
+-        AccessAction,
+-    )
+-  ) {
+-    reject(
+-      400,
+-      'INVALID_ACCESS_ACTION',
+-      'Некорректное действие доступа.',
+-    )
+-  }
+-
+-
+-  if (
+-    typeof body.granted !==
+-      'boolean'
+-  ) {
+-    reject(
+-      400,
+-      'INVALID_GRANTED_FLAG',
+-      'Поле granted должно быть boolean.',
+-    )
+-  }
+-
+-
+-  return {
+-    resourceId,
+-
+-    action:
+-      body.action as
+-        AccessAction,
+-
+-    granted:
+-      body.granted,
+-  }
+-}
+-
+-
+-export default defineEventHandler(
+-  async event => {
+-    const permission =
+-      await requirePermission(
+-        event,
+-        RESOURCE_KEY,
+-        AccessAction.UPDATE,
+-      )
+-
+-
+-    const departmentId =
+-      parsePositiveId(
+-        getRouterParam(
+-          event,
+-          'id',
+-        ),
+-        'INVALID_DEPARTMENT_ID',
+-        'Некорректный ID подразделения.',
+-      )
+-
+-
+-    const input =
+-      parseBody(
+-        await readBody<unknown>(
+-          event,
+-        ),
+-      )
+-
+-
+-    const actor =
+-      await prisma.user
+-        .findUnique({
+-          where: {
+-            id:
+-              permission.userId,
+-          },
+-
+-          select: {
+-            login:
+-              true,
+-
+-            email:
+-              true,
+-
+-            authType:
+-              true,
+-          },
+-        })
+-
+-
+-    const actorLogin =
+-      actor?.login ??
+-      null
+-
+-    const actorEmail =
+-      actor?.email ||
+-      actor?.login ||
+-      `user:${permission.userId}`
+-
+-
+-    return prisma.$transaction(
+-      async tx => {
+-        const [
+-          department,
+-          resource,
+-        ] =
+-          await Promise.all([
+-            tx.department
+-              .findFirst({
+-                where: {
+-                  id:
+-                    departmentId,
+-
+-                  isActive:
+-                    true,
+-                },
+-
+-                select: {
+-                  id:
+-                    true,
+-
+-                  name:
+-                    true,
+-                },
+-              }),
+-
+-            tx.accessResource
+-              .findFirst({
+-                where: {
+-                  id:
+-                    input.resourceId,
+-
+-                  isActive:
+-                    true,
+-                },
+-
+-                select: {
+-                  id:
+-                    true,
+-
+-                  key:
+-                    true,
+-
+-                  name:
+-                    true,
+-                },
+-              }),
+-          ])
+-
+-
+-        if (!department) {
+-          reject(
+-            404,
+-            'DEPARTMENT_NOT_FOUND',
+-            'Активное подразделение Space не найдено.',
+-          )
+-        }
+-
+-
+-        if (!resource) {
+-          reject(
+-            404,
+-            'ACCESS_RESOURCE_NOT_FOUND',
+-            'Активный ресурс доступа не найден.',
+-          )
+-        }
+-
+-
+-        const existing =
+-          await tx
+-            .departmentPermission
+-            .findUnique({
+-              where: {
+-                departmentId_resourceId_action: {
+-                  departmentId:
+-                    department.id,
+-
+-                  resourceId:
+-                    resource.id,
+-
+-                  action:
+-                    input.action,
+-                },
+-              },
+-            })
+-
+-
+-        if (
+-          input.granted &&
+-          !existing
+-        ) {
+-          const created =
+-            await tx
+-              .departmentPermission
+-              .create({
+-                data: {
+-                  departmentId:
+-                    department.id,
+-
+-                  resourceId:
+-                    resource.id,
+-
+-                  action:
+-                    input.action,
+-
+-                  grantedByLogin:
+-                    actorLogin,
+-                },
+-              })
+-
+-
+-          await writeAuditEvent({
+-            event,
+-
+-            db:
+-              tx,
+-
+-            category:
+-              'ADMIN',
+-
+-            result:
+-              'SUCCESS',
+-
+-            action:
+-              'CREATE',
+-
+-            resourceKey:
+-              RESOURCE_KEY,
+-
+-            entityType:
+-              'DepartmentPermission',
+-
+-            entityId:
+-              created.id,
+-
+-            actorUserId:
+-              permission.userId,
+-
+-            actorLogin,
+-
+-            actorEmail,
+-
+-            actorAuthType:
+-              actor?.authType ??
+-              null,
+-
+-            note:
+-              `Подразделению «${department.name}» выдано право ${input.action} на ресурс «${resource.name}».`,
+-
+-            changes: {
+-              granted: {
+-                before:
+-                  false,
+-
+-                after:
+-                  true,
+-              },
+-
+-              departmentId: {
+-                before:
+-                  null,
+-
+-                after:
+-                  department.id,
+-              },
+-
+-              resourceId: {
+-                before:
+-                  null,
+-
+-                after:
+-                  resource.id,
+-              },
+-
+-              action: {
+-                before:
+-                  null,
+-
+-                after:
+-                  input.action,
+-              },
+-            },
+-          })
+-
+-
+-          return {
+-            success:
+-              true,
+-
+-            granted:
+-              true,
+-
+-            permissionId:
+-              created.id,
+-
+-            message:
+-              'Право подразделения выдано.',
+-          }
+-        }
+-
+-
+-        if (
+-          !input.granted &&
+-          existing
+-        ) {
+-          await tx
+-            .departmentPermission
+-            .delete({
+-              where: {
+-                id:
+-                  existing.id,
+-              },
+-            })
+-
+-
+-          await writeAuditEvent({
+-            event,
+-
+-            db:
+-              tx,
+-
+-            category:
+-              'ADMIN',
+-
+-            result:
+-              'SUCCESS',
+-
+-            action:
+-              'DELETE',
+-
+-            resourceKey:
+-              RESOURCE_KEY,
+-
+-            entityType:
+-              'DepartmentPermission',
+-
+-            entityId:
+-              existing.id,
+-
+-            actorUserId:
+-              permission.userId,
+-
+-            actorLogin,
+-
+-            actorEmail,
+-
+-            actorAuthType:
+-              actor?.authType ??
+-              null,
+-
+-            note:
+-              `У подразделения «${department.name}» отозвано право ${input.action} на ресурс «${resource.name}».`,
+-
+-            changes: {
+-              granted: {
+-                before:
+-                  true,
+-
+-                after:
+-                  false,
+-              },
+-            },
+-          })
+-
+-
+-          return {
+-            success:
+-              true,
+-
+-            granted:
+-              false,
+-
+-            permissionId:
+-              null,
+-
+-            message:
+-              'Право подразделения отозвано.',
+-          }
+-        }
+-
+-
+-        return {
+-          success:
+-            true,
+-
+-          granted:
+-            input.granted,
+-
+-          permissionId:
+-            existing?.id ??
+-            null,
+-
+-          message:
+-            input.granted
+-              ? 'Право уже было выдано.'
+-              : 'Право уже отсутствовало.',
+-        }
+-      },
+-    )
+-  },
+-)
++export default defineEventHandler(async event => {
++  requireAccessMutationRequest(event)
++  const id = parseAccessId(getRouterParam(event, 'id'))
++  const input = parseAccessMutation(await readBody<unknown>(event))
++  return saveAccessChanges(event, 'department', id, input)
++})
+--- a/server/api/admin/users/[id]/access.get.ts
++++ b/server/api/admin/users/[id]/access.get.ts
+@@ -1,447 +1,8 @@
+-// server/api/admin/users/[id]/access.get.ts
++import { defineEventHandler, getRouterParam } from 'h3'
++import { readAccessSnapshot } from '~~/server/services/access-management.service'
++import { parseAccessId } from '~~/server/services/access-input'
+ 
+-import {
+-  AccessAction,
+-} from '@prisma/client'
+-
+-import {
+-  createError,
+-  defineEventHandler,
+-  getRouterParam,
+-} from 'h3'
+-
+-import {
+-  prisma,
+-} from '~~/server/utils/prisma'
+-
+-import {
+-  requirePermission,
+-} from '~~/server/services/access-control.service'
+-
+-
+-const RESOURCE_KEY =
+-  'admin.users'
+-
+-
+-function parseUserId(
+-  raw:
+-    string | undefined,
+-): number {
+-  const text =
+-    raw ?? ''
+-
+-  const id =
+-    Number(text)
+-
+-  if (
+-    !/^[1-9]\d*$/.test(
+-      text,
+-    ) ||
+-    !Number.isSafeInteger(
+-      id,
+-    ) ||
+-    id >
+-      2_147_483_647
+-  ) {
+-    throw createError({
+-      statusCode: 400,
+-
+-      statusMessage:
+-        'Некорректный ID пользователя',
+-
+-      data: {
+-        code:
+-          'INVALID_ADMIN_USER_ID',
+-
+-        message:
+-          'Некорректный ID пользователя.',
+-      },
+-    })
+-  }
+-
+-  return id
+-}
+-
+-
+-export default defineEventHandler(
+-  async event => {
+-    await requirePermission(
+-      event,
+-      RESOURCE_KEY,
+-      AccessAction.VIEW,
+-    )
+-
+-
+-    const userId =
+-      parseUserId(
+-        getRouterParam(
+-          event,
+-          'id',
+-        ),
+-      )
+-
+-
+-    try {
+-      const user =
+-        await prisma.user
+-          .findUnique({
+-            where: {
+-              id:
+-                userId,
+-            },
+-
+-            select: {
+-              id:
+-                true,
+-
+-              authType:
+-                true,
+-
+-              status:
+-                true,
+-
+-              login:
+-                true,
+-
+-              email:
+-                true,
+-
+-              fullName:
+-                true,
+-
+-              department: {
+-                select: {
+-                  id:
+-                    true,
+-
+-                  key:
+-                    true,
+-
+-                  name:
+-                    true,
+-                },
+-              },
+-
+-              permissions: {
+-                select: {
+-                  id:
+-                    true,
+-
+-                  action:
+-                    true,
+-
+-                  resourceId:
+-                    true,
+-
+-                  grantedByLogin:
+-                    true,
+-
+-                  createdAt:
+-                    true,
+-
+-                  updatedAt:
+-                    true,
+-                },
+-              },
+-            },
+-          })
+-
+-
+-      if (!user) {
+-        throw createError({
+-          statusCode: 404,
+-
+-          statusMessage:
+-            'Пользователь не найден',
+-
+-          data: {
+-            code:
+-              'ADMIN_USER_NOT_FOUND',
+-
+-            message:
+-              'Пользователь Space не найден.',
+-          },
+-        })
+-      }
+-
+-
+-      const resources =
+-        await prisma.accessResource
+-          .findMany({
+-            where: {
+-              isActive:
+-                true,
+-            },
+-
+-            orderBy: [
+-              {
+-                sortOrder:
+-                  'asc',
+-              },
+-              {
+-                name:
+-                  'asc',
+-              },
+-              {
+-                id:
+-                  'asc',
+-              },
+-            ],
+-
+-            select: {
+-              id:
+-                true,
+-
+-              key:
+-                true,
+-
+-              name:
+-                true,
+-
+-              description:
+-                true,
+-
+-              type:
+-                true,
+-
+-              sortOrder:
+-                true,
+-
+-              departments: {
+-                orderBy: [
+-                  {
+-                    isOwner:
+-                      'desc',
+-                  },
+-                  {
+-                    department: {
+-                      sortOrder:
+-                        'asc',
+-                    },
+-                  },
+-                  {
+-                    department: {
+-                      name:
+-                        'asc',
+-                    },
+-                  },
+-                ],
+-
+-                select: {
+-                  isOwner:
+-                    true,
+-
+-                  department: {
+-                    select: {
+-                      id:
+-                        true,
+-
+-                      key:
+-                        true,
+-
+-                      name:
+-                        true,
+-                    },
+-                  },
+-                },
+-              },
+-            },
+-          })
+-
+-
+-      const permissionMap =
+-        new Map<
+-          string,
+-          typeof user.permissions[number]
+-        >()
+-
+-
+-      for (
+-        const permission
+-        of user.permissions
+-      ) {
+-        permissionMap.set(
+-          `${permission.resourceId}:${permission.action}`,
+-          permission,
+-        )
+-      }
+-
+-
+-      const actions =
+-        [
+-          AccessAction.VIEW,
+-          AccessAction.CREATE,
+-          AccessAction.UPDATE,
+-          AccessAction.DELETE,
+-        ]
+-
+-
+-      const data =
+-        resources.map(
+-          resource => ({
+-            id:
+-              resource.id,
+-
+-            key:
+-              resource.key,
+-
+-            name:
+-              resource.name,
+-
+-            description:
+-              resource.description,
+-
+-            type:
+-              resource.type,
+-
+-            sortOrder:
+-              resource.sortOrder,
+-
+-            departments:
+-              resource.departments
+-                .map(
+-                  item => ({
+-                    id:
+-                      item.department.id,
+-
+-                    key:
+-                      item.department.key,
+-
+-                    name:
+-                      item.department.name,
+-
+-                    isOwner:
+-                      item.isOwner,
+-                  }),
+-                ),
+-
+-            actions:
+-              Object.fromEntries(
+-                actions.map(
+-                  action => {
+-                    const permission =
+-                      permissionMap.get(
+-                        `${resource.id}:${action}`,
+-                      )
+-
+-                    return [
+-                      action,
+-
+-                      {
+-                        granted:
+-                          !!permission,
+-
+-                        permissionId:
+-                          permission?.id ??
+-                          null,
+-
+-                        grantedByLogin:
+-                          permission
+-                            ?.grantedByLogin ??
+-                          null,
+-
+-                        createdAt:
+-                          permission
+-                            ?.createdAt ??
+-                          null,
+-
+-                        updatedAt:
+-                          permission
+-                            ?.updatedAt ??
+-                          null,
+-                      },
+-                    ]
+-                  },
+-                ),
+-              ),
+-          }),
+-        )
+-
+-
+-      const grantedPermissionsCount =
+-        user.permissions.length
+-
+-
+-      const resourcesWithAnyPermission =
+-        data.filter(
+-          resource =>
+-            Object.values(
+-              resource.actions,
+-            )
+-              .some(
+-                action =>
+-                  action.granted,
+-              ),
+-        )
+-          .length
+-
+-
+-      return {
+-        success: true,
+-
+-        user: {
+-          id:
+-            user.id,
+-
+-          authType:
+-            user.authType,
+-
+-          status:
+-            user.status,
+-
+-          login:
+-            user.login,
+-
+-          email:
+-            user.email,
+-
+-          fullName:
+-            user.fullName,
+-
+-          department:
+-            user.department,
+-        },
+-
+-        actions,
+-
+-        data,
+-
+-        summary: {
+-          totalResources:
+-            data.length,
+-
+-          resourcesWithAnyPermission,
+-
+-          grantedPermissionsCount,
+-        },
+-      }
+-
+-    } catch (error: any) {
+-      if (
+-        error?.statusCode
+-      ) {
+-        throw error
+-      }
+-
+-      console.error(
+-        `[admin/users/${userId}/access GET] Ошибка:`,
+-        error,
+-      )
+-
+-      throw createError({
+-        statusCode: 500,
+-
+-        statusMessage:
+-          'Не удалось загрузить права пользователя',
+-
+-        data: {
+-          code:
+-            'ADMIN_USER_ACCESS_LOAD_FAILED',
+-
+-          message:
+-            'Не удалось загрузить матрицу прав пользователя.',
+-        },
+-      })
+-    }
+-  },
+-)
++export default defineEventHandler(async event => {
++  const id = parseAccessId(getRouterParam(event, 'id'))
++  return readAccessSnapshot(event, 'user', id)
++})
+--- /dev/null
++++ b/server/api/admin/users/[id]/access.put.ts
+@@ -0,0 +1,10 @@
++import { defineEventHandler, getRouterParam, readBody } from 'h3'
++import { saveAccessChanges } from '~~/server/services/access-management.service'
++import { parseAccessId, parseAccessMutation, requireAccessMutationRequest } from '~~/server/services/access-input'
++
++export default defineEventHandler(async event => {
++  requireAccessMutationRequest(event)
++  const id = parseAccessId(getRouterParam(event, 'id'))
++  const input = parseAccessMutation(await readBody<unknown>(event))
++  return saveAccessChanges(event, 'user', id, input)
++})
+--- /dev/null
++++ b/server/services/access-catalog.ts
+@@ -0,0 +1,23 @@
++import { ACCESS_ACTIONS, type AccessActionName } from '../../shared/types/access-management'
++
++/** Explicit operations for non-table resources. Extend here when adding a feature. */
++const featureActions: Readonly<Record<string, readonly AccessActionName[]>> = {
++  'admin.center': ['VIEW'],
++  'admin.users': ['VIEW'],
++  'system.audit-log': ['VIEW'],
++  'admin.department-mapping': [],
++  'admin.ad-cache-refresh': ['UPDATE'],
++  // Reserved until scoped delegation is implemented; legacy grants can be revoked.
++  'admin.department-permissions': [],
++  'lab.event-journal': ['VIEW'],
++  'lab.incoming-control.edit-lock-override': ['UPDATE'],
++}
++
++/** Membership changes can indirectly grant permissions; keep them admin-only in v1. */
++export function isSystemAdminOperation(key: string): boolean {
++  return key === 'admin.department-permissions' || key === 'admin.department-mapping'
++}
++
++export function assignableActions(resource: { key: string; type: string }): readonly AccessActionName[] {
++  return featureActions[resource.key] ?? (resource.type === 'TABLE' ? ACCESS_ACTIONS : [])
++}
+--- a/server/services/access-control.service.ts
++++ b/server/services/access-control.service.ts
+@@ -1,525 +1,79 @@
+-import {
+-  AccessAction,
+-  UserStatus,
+-} from '@prisma/client';
++import { AccessAction, type Prisma } from '@prisma/client'
++import { createError, type H3Event } from 'h3'
++import { prisma } from '../utils/prisma'
++import { auditDenied } from '../utils/auditLog'
++import { decideAccess, isSystemAdminLogin } from '../../shared/utils/access-decision'
++import type { AccessSource } from '../../shared/types/access-management'
++import { isSystemAdminOperation } from './access-catalog'
+ 
+-import type { H3Event,} from 'h3';
+-import { createError,} from 'h3';
+-import { prisma,} from '../utils/prisma';
+-import { logger,} from '../utils/logger';
+-import {
+-  auditDenied,
+-} from '../utils/auditLog';
+-
+-type PermissionContext = {
+-  userId: number;
+-  login: string | null;
+-
+-  resourceId: number;
+-  resourceKey: string;
+-
+-  action: AccessAction;
+-
+-  isSystemAdmin: boolean;
+-
+-  source:
+-    | 'SYSTEM_ADMIN'
+-    | 'USER'
+-    | 'DEPARTMENT';
+-
+-  departmentId?: number;
+-};
+-
+-
+-/**
+- * Преобразуем NUXT_ADMIN_LOGINS в Set.
+- *
+- * Поддерживаем:
+- *
+- * ivanov,petrov
+- * ivanov;petrov
+- * ivanov petrov
+- */
+-function getAdminLogins(
+-  value: unknown,
+-): Set<string> {
+-  if (Array.isArray(value)) {
+-    return new Set(
+-      value
+-        .filter(
+-          (
+-            item,
+-          ): item is string =>
+-            typeof item === 'string',
+-        )
+-        .map(
+-          (item) =>
+-            item
+-              .trim()
+-              .toLowerCase(),
+-        )
+-        .filter(Boolean),
+-    );
+-  }
+-
+-
+-  if (
+-    typeof value !== 'string'
+-  ) {
+-    return new Set();
+-  }
+-
+-
+-  return new Set(
+-    value
+-      .split(
+-        /[,;\s]+/,
+-      )
+-      .map(
+-        (item) =>
+-          item
+-            .trim()
+-            .toLowerCase(),
+-      )
+-      .filter(Boolean),
+-  );
++export type PermissionContext = {
++  userId: number
++  login: string | null
++  resourceId: number
++  resourceKey: string
++  action: AccessAction
++  isSystemAdmin: boolean
++  source: AccessSource
++  sources: AccessSource[]
++  departmentId?: number
+ }
+ 
++export async function getAccessActor(event: H3Event, db: Prisma.TransactionClient = prisma) {
++  const session = await getUserSession(event)
++  const userId = session?.user?.id
++  if (typeof userId !== 'number' || !Number.isSafeInteger(userId) || userId <= 0) {
++    throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
++  }
++  const user = await db.user.findUnique({
++    where: { id: userId },
++    select: {
++      id: true, login: true, email: true, authType: true, status: true,
++      department: { select: { id: true, name: true, isActive: true } },
++    },
++  })
++  if (!user) throw createError({ statusCode: 401, statusMessage: 'User not found' })
++  if (user.status !== 'ACTIVE') {
++    throw createError({ statusCode: 403, statusMessage: 'User is not active',
++      data: { code: 'USER_INACTIVE', message: 'Учётная запись заблокирована или отключена.' } })
++  }
++  return { user, isSystemAdmin: isSystemAdminLogin(user.login, useRuntimeConfig(event).adminLogins) }
++}
+ 
+-/**
+- * ============================================================
+- * requirePermission()
+- * ============================================================
+- *
+- * Проверяет:
+- *
+- * session
+- *   ↓
+- * app_users
+- *   ↓
+- * ACTIVE
+- *   ↓
+- * SYSTEM ADMIN ?
+- *   ↓
+- * UserPermission
+- *   ↓
+- * DepartmentPermission
+- *   ↓
+- * ALLOW / 403
+- */
++/** Every call reads current DB state: revocation does not wait for a new login. */
+ export async function requirePermission(
+-  event: H3Event,
+-  resourceKey: string,
+-  action: AccessAction,
++  event: H3Event, resourceKey: string, action: AccessAction,
+ ): Promise<PermissionContext> {
+-
+-  /**
+-   * ----------------------------------------------------------
+-   * 1. Session
+-   * ----------------------------------------------------------
+-   */
+-  const session =
+-    await getUserSession(
+-      event,
+-    );
+-
+-
+-  const sessionUser =
+-    session?.user;
+-
+-
+-  const userId =
+-    sessionUser?.id;
+-
+-
+-  if (
+-    typeof userId !== 'number' ||
+-    !Number.isInteger(userId) ||
+-    userId <= 0
+-  ) {
+-    throw createError({
+-      statusCode: 401,
+-
+-      statusMessage:
+-        'Authentication required',
+-
+-      message:
+-        'Не удалось определить пользователя.',
+-    });
++  const actor = await getAccessActor(event)
++  const resource = await prisma.accessResource.findUnique({
++    where: { key: resourceKey }, select: { id: true, key: true, isActive: true },
++  })
++  if (!resource) throw createError({ statusCode: 500, statusMessage: 'Access resource configuration error' })
++  const departmentId = actor.user.department?.isActive ? actor.user.department.id : null
++  const [direct, inherited] = actor.isSystemAdmin ? [null, null] : await Promise.all([
++    prisma.userPermission.findFirst({
++      where: { userId: actor.user.id, resourceId: resource.id, action }, select: { id: true },
++    }),
++    departmentId ? prisma.departmentPermission.findFirst({
++      where: { departmentId, resourceId: resource.id, action }, select: { id: true },
++    }) : null,
++  ])
++  const decision = decideAccess({
++    userActive: actor.user.status === 'ACTIVE', resourceActive: resource.isActive,
++    systemAdmin: actor.isSystemAdmin, direct: !!direct,
++    systemAdminOnly: isSystemAdminOperation(resource.key),
++    departmentActive: !!departmentId, departmentGranted: !!inherited,
++  })
++  if (!decision.allowed) {
++    await auditDenied({ event, actorUserId: actor.user.id, actorLogin: actor.user.login,
++      actorEmail: actor.user.email, actorAuthType: actor.user.authType, resourceKey, action })
++    throw createError({ statusCode: 403, statusMessage: 'Permission denied',
++      data: { code: decision.blockedBy === 'RESOURCE_INACTIVE' ? 'RESOURCE_INACTIVE' : 'PERMISSION_DENIED',
++        resource: resourceKey, action, message: 'Недостаточно прав или ресурс отключён.' } })
+   }
+-
+-
+-  /**
+-   * ----------------------------------------------------------
+-   * 2. Проверяем локального пользователя
+-   * ----------------------------------------------------------
+-   *
+-   * Не доверяем одному только содержимому session.
+-   *
+-   * Статус мог измениться после создания cookie.
+-   */
+-  const appUser =
+-    await prisma.user.findUnique({
+-      where: {
+-        id: userId,
+-      },
+-
+-      select: {
+-        id: true,
+-        login: true,
+-        email: true,
+-        status: true,
+-
+-        departmentId: true,
+-
+-        department: {
+-          select: {
+-            id: true,
+-            isActive: true,
+-          },
+-        },
+-      },
+-    });
+-
+-
+-  if (!appUser) {
+-    logger.warn(
+-      `ACCESS DENIED: userId=${userId} отсутствует в app_users`,
+-    );
+-
+-
+-    throw createError({
+-      statusCode: 401,
+-
+-      statusMessage:
+-        'User not found',
+-
+-      message:
+-        'Учётная запись пользователя не найдена.',
+-    });
++  return {
++    userId: actor.user.id, login: actor.user.login?.trim().toLowerCase() ?? null,
++    resourceId: resource.id, resourceKey: resource.key, action,
++    isSystemAdmin: actor.isSystemAdmin, source: decision.sources[0]!, sources: decision.sources,
++    ...(departmentId && decision.sources.includes('DEPARTMENT') ? { departmentId } : {}),
+   }
+-
+-
+-  /**
+-   * Заблокированный пользователь не получает доступ,
+-   * даже если session была создана раньше.
+-   */
+-  if (
+-    appUser.status !==
+-    UserStatus.ACTIVE
+-  ) {
+-    logger.warn(
+-      `ACCESS DENIED: userId=${appUser.id}, status=${appUser.status}`,
+-    );
+-
+-
+-    throw createError({
+-      statusCode: 403,
+-
+-      statusMessage:
+-        'User is not active',
+-
+-      message:
+-        'Учётная запись пользователя заблокирована или отключена.',
+-    });
+-  }
+-
+-
+-  /**
+-   * ----------------------------------------------------------
+-   * 3. Проверяем ресурс
+-   * ----------------------------------------------------------
+-   */
+-  const resource =
+-    await prisma.accessResource.findUnique({
+-      where: {
+-        key: resourceKey,
+-      },
+-
+-      select: {
+-        id: true,
+-        key: true,
+-        isActive: true,
+-      },
+-    });
+-
+-
+-  /**
+-   * Если разработчик указал несуществующий resourceKey —
+-   * это ошибка конфигурации приложения,
+-   * а не отсутствие прав у пользователя.
+-   */
+-  if (!resource) {
+-    logger.error(
+-      `Неизвестный AccessResource: ${resourceKey}`,
+-    );
+-
+-
+-    throw createError({
+-      statusCode: 500,
+-
+-      statusMessage:
+-        'Access resource configuration error',
+-    });
+-  }
+-
+-
+-  if (!resource.isActive) {
+-    logger.warn(
+-      `ACCESS DENIED: resource=${resourceKey} отключён`,
+-    );
+-
+-
+-    throw createError({
+-      statusCode: 403,
+-
+-      statusMessage:
+-        'Resource unavailable',
+-
+-      message:
+-        'Доступ к ресурсу временно отключён.',
+-    });
+-  }
+-
+-
+-  /**
+-   * ----------------------------------------------------------
+-   * 4. Bootstrap SYSTEM ADMIN
+-   * ----------------------------------------------------------
+-   *
+-   * Пока полноценные административные роли
+-   * ещё не введены.
+-   *
+-   * ВАЖНО:
+-   * bypass идёт только ПОСЛЕ проверки ACTIVE.
+-   */
+-  const config =
+-    useRuntimeConfig(
+-      event,
+-    );
+-
+-
+-  const adminLogins =
+-    getAdminLogins(
+-      config.adminLogins,
+-    );
+-
+-
+-  const normalizedLogin =
+-    appUser.login
+-      ?.trim()
+-      .toLowerCase() ??
+-    null;
+-
+-    const actorIdentifier =
+-    normalizedLogin ||
+-    appUser.email
+-        ?.trim()
+-        .toLowerCase() ||
+-    `userId:${appUser.id}`;
+-
+-
+-  const isSystemAdmin =
+-    Boolean(
+-      normalizedLogin &&
+-      adminLogins.has(
+-        normalizedLogin,
+-      ),
+-    );
+-
+-
+-  if (isSystemAdmin) {
+-    return {
+-      userId:
+-        appUser.id,
+-
+-      login:
+-        normalizedLogin,
+-
+-      resourceId:
+-        resource.id,
+-
+-      resourceKey:
+-        resource.key,
+-
+-      action,
+-
+-      isSystemAdmin:
+-        true,
+-
+-      source:
+-        'SYSTEM_ADMIN',
+-    };
+-  }
+-
+-
+-  /**
+-   * ----------------------------------------------------------
+-   * 5. UserPermission + DepartmentPermission
+-   * ----------------------------------------------------------
+-   *
+-   * Effective permission сейчас аддитивный:
+-   *
+-   * UserPermission
+-   *       OR
+-   * DepartmentPermission активного подразделения пользователя.
+-   *
+-   * DENY пока намеренно не вводим.
+-   */
+-  const activeDepartmentId =
+-    appUser.department?.isActive
+-      ? appUser.department.id
+-      : null;
+-
+-
+-  const [
+-    userPermission,
+-    departmentPermission,
+-  ] =
+-    await Promise.all([
+-      prisma.userPermission.findFirst({
+-        where: {
+-          userId:
+-            appUser.id,
+-
+-          resourceId:
+-            resource.id,
+-
+-          action,
+-        },
+-
+-        select: {
+-          id: true,
+-        },
+-      }),
+-
+-      activeDepartmentId
+-        ? prisma.departmentPermission.findFirst({
+-            where: {
+-              departmentId:
+-                activeDepartmentId,
+-
+-              resourceId:
+-                resource.id,
+-
+-              action,
+-            },
+-
+-            select: {
+-              id: true,
+-            },
+-          })
+-        : Promise.resolve(null),
+-    ]);
+-
+-
+-  const grantedByUser =
+-    Boolean(
+-      userPermission,
+-    );
+-
+-
+-  const grantedByDepartment =
+-    Boolean(
+-      departmentPermission,
+-    );
+-
+-
+-  if (
+-    !grantedByUser &&
+-    !grantedByDepartment
+-  ) {
+-
+-    logger.warn(
+-      `ACCESS DENIED: userId=${appUser.id}, ` +
+-      `actor=${actorIdentifier}, ` +
+-      `departmentId=${activeDepartmentId ?? 'none'}, ` +
+-      `resource=${resource.key}, action=${action}`,
+-    );
+-
+-    await auditDenied({
+-      event,
+-
+-      actorUserId:
+-        appUser.id,
+-
+-      actorLogin:
+-        normalizedLogin,
+-
+-      actorEmail:
+-        appUser.email,
+-
+-      actorAuthType:
+-        sessionUser?.authType ??
+-        null,
+-
+-      resourceKey:
+-        resource.key,
+-
+-      action:
+-        String(action),
+-    });
+-
+-
+-    throw createError({
+-      statusCode: 403,
+-
+-      statusMessage:
+-        'Permission denied',
+-
+-      message:
+-        'Недостаточно прав для выполнения операции.',
+-
+-      data: {
+-        code:
+-          'PERMISSION_DENIED',
+-
+-        resource:
+-          resource.key,
+-
+-        action,
+-      },
+-    });
+-  }
+-
+-
+-  /**
+-   * ----------------------------------------------------------
+-   * 6. ACCESS GRANTED
+-   * ----------------------------------------------------------
+-   */
+-  return {
+-    userId:
+-      appUser.id,
+-
+-    login:
+-      normalizedLogin,
+-
+-    resourceId:
+-      resource.id,
+-
+-    resourceKey:
+-      resource.key,
+-
+-    action,
+-
+-    isSystemAdmin:
+-      false,
+-
+-    /**
+-     * Если право есть и персонально, и через подразделение,
+-     * для диагностики считаем персональное более конкретным.
+-     */
+-    source:
+-      grantedByUser
+-        ? 'USER'
+-        : 'DEPARTMENT',
+-
+-    ...(grantedByUser
+-      ? {}
+-      : {
+-          departmentId:
+-            activeDepartmentId!,
+-        }),
+-  };
+ }
+--- /dev/null
++++ b/server/services/access-input.ts
+@@ -0,0 +1,55 @@
++import { createError, getRequestHeader, type H3Event } from 'h3'
++import { ACCESS_ACTIONS, type AccessMutation } from '../../shared/types/access-management'
++
++export function accessError(statusCode: number, code: string, message: string): never {
++  throw createError({ statusCode, statusMessage: code, data: { code, message } })
++}
++
++export function parseAccessId(value: unknown): number {
++  const text = typeof value === 'number' || typeof value === 'string' ? String(value) : ''
++  const id = Number(text)
++  if (!/^[1-9]\d*$/.test(text) || !Number.isSafeInteger(id) || id > 2_147_483_647) {
++    accessError(400, 'INVALID_ACCESS_ID', 'Некорректный идентификатор.')
++  }
++  return id
++}
++
++export function parseAccessMutation(value: unknown): AccessMutation {
++  if (!value || typeof value !== 'object' || Array.isArray(value)) {
++    accessError(400, 'INVALID_ACCESS_BODY', 'Ожидается объект с изменениями прав.')
++  }
++  const body = value as Record<string, unknown>
++  if (typeof body.revision !== 'string' || !/^[a-f0-9]{64}$/.test(body.revision)) {
++    accessError(400, 'ACCESS_REVISION_REQUIRED', 'Обновите матрицу перед изменением прав.')
++  }
++  if (!Array.isArray(body.changes) || !body.changes.length || body.changes.length > 200) {
++    accessError(400, 'INVALID_ACCESS_CHANGES', 'Допустимо от 1 до 200 изменений.')
++  }
++  const seen = new Set<string>()
++  const changes = body.changes.map(item => {
++    if (!item || typeof item !== 'object' || Array.isArray(item)) {
++      accessError(400, 'INVALID_ACCESS_CHANGE', 'Некорректное изменение права.')
++    }
++    const change = item as Record<string, unknown>
++    const resourceId = parseAccessId(change.resourceId)
++    if (typeof change.action !== 'string' || !ACCESS_ACTIONS.includes(change.action as never)
++      || typeof change.granted !== 'boolean') {
++      accessError(400, 'INVALID_ACCESS_CHANGE', 'Некорректное действие или значение разрешения.')
++    }
++    const action = change.action as AccessMutation['changes'][number]['action']
++    const key = `${resourceId}:${action}`
++    if (seen.has(key)) accessError(400, 'DUPLICATE_ACCESS_CHANGE', 'Одно право указано несколько раз.')
++    seen.add(key)
++    return { resourceId, action, granted: change.granted }
++  })
++  return { revision: body.revision, changes }
++}
++
++/** A custom header prevents cross-site simple form submissions with a session cookie. */
++export function requireAccessMutationRequest(event: H3Event): void {
++  if (getRequestHeader(event, 'x-space-access-change') !== '1'
++    || getRequestHeader(event, 'sec-fetch-site') === 'cross-site'
++    || !getRequestHeader(event, 'content-type')?.toLowerCase().startsWith('application/json')) {
++    accessError(403, 'INVALID_ACCESS_REQUEST', 'Изменение прав разрешено только из интерфейса Space.')
++  }
++}
+--- /dev/null
++++ b/server/services/access-management.service.ts
+@@ -0,0 +1,193 @@
++import { createHash } from 'node:crypto'
++import { Prisma } from '@prisma/client'
++import type { H3Event } from 'h3'
++import { prisma } from '../utils/prisma'
++import { writeAuditEvent } from '../utils/auditLog'
++import { getAccessActor, requirePermission } from './access-control.service'
++import { accessError } from './access-input'
++import { assignableActions, isSystemAdminOperation } from './access-catalog'
++import { decideAccess, isSystemAdminLogin } from '../../shared/utils/access-decision'
++import { ACCESS_ACTIONS, type AccessCell, type AccessMutation, type AccessSnapshot,
++  type AccessSubjectKind, type AccessSubjectOption } from '../../shared/types/access-management'
++
++const permissionSelect = {
++  id: true, resourceId: true, action: true, grantedByLogin: true, updatedAt: true,
++} satisfies Prisma.UserPermissionSelect
++
++export async function buildAccessSnapshot(
++  db: Prisma.TransactionClient, kind: AccessSubjectKind, id: number,
++  adminLogins: unknown, canManage: boolean,
++): Promise<AccessSnapshot> {
++  const user = kind === 'user' ? await db.user.findUnique({
++    where: { id }, select: {
++      id: true, fullName: true, login: true, email: true, status: true,
++      department: { select: { id: true, name: true, isActive: true,
++        permissions: { select: permissionSelect, orderBy: { id: 'asc' } } } },
++      permissions: { select: permissionSelect, orderBy: { id: 'asc' } },
++    },
++  }) : null
++  const department = kind === 'department' ? await db.department.findUnique({
++    where: { id }, select: {
++      id: true, name: true, isActive: true,
++      permissions: { select: permissionSelect, orderBy: { id: 'asc' } },
++      _count: { select: { users: true } },
++    },
++  }) : null
++  if (!user && !department) accessError(404, 'ACCESS_SUBJECT_NOT_FOUND', 'Сотрудник или подразделение не найдены.')
++  const targetDepartment = user?.department ?? null
++  const direct = user?.permissions ?? department?.permissions ?? []
++  const inherited = targetDepartment?.permissions ?? []
++  const subject: AccessSnapshot['subject'] = {
++    kind, id,
++    name: user ? user.fullName || user.login || user.email || `Сотрудник #${id}` : department!.name,
++    isActive: user ? user.status === 'ACTIVE' : department!.isActive,
++    status: user ? user.status : department!.isActive ? 'ACTIVE' : 'DISABLED',
++    isSystemAdmin: !!user && isSystemAdminLogin(user.login, adminLogins),
++    department: targetDepartment ? {
++      id: targetDepartment.id, name: targetDepartment.name, isActive: targetDepartment.isActive,
++    } : null,
++    memberCount: department?._count.users ?? null,
++  }
++  // Include inactive resources so obsolete grants remain visible and revocable.
++  const resources = await db.accessResource.findMany({
++    orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }, { id: 'asc' }],
++    select: { id: true, key: true, name: true, description: true, type: true, isActive: true,
++      departments: { select: { isOwner: true, department: { select: { name: true } } } } },
++  })
++  const directMap = new Map(direct.map(p => [`${p.resourceId}:${p.action}`, p]))
++  const inheritedSet = new Set(inherited.map(p => `${p.resourceId}:${p.action}`))
++  const data = resources.map(resource => {
++    const supported = assignableActions(resource)
++    const actions = Object.fromEntries(ACCESS_ACTIONS.map(action => {
++      const key = `${resource.id}:${action}`
++      const own = directMap.get(key)
++      const inheritedGranted = !!targetDepartment?.isActive && inheritedSet.has(key)
++      const decision = decideAccess({
++        userActive: subject.isActive, resourceActive: resource.isActive,
++        systemAdmin: subject.isSystemAdmin, direct: kind === 'user' && !!own,
++        systemAdminOnly: isSystemAdminOperation(resource.key),
++        departmentActive: kind === 'department' ? subject.isActive : !!targetDepartment?.isActive,
++        departmentGranted: kind === 'department' ? !!own : inheritedGranted,
++      })
++      const cell: AccessCell = {
++        directGranted: !!own, inheritedGranted, systemGranted: subject.isSystemAdmin,
++        effectiveGranted: decision.allowed, sources: decision.sources, blockedBy: decision.blockedBy,
++        canGrant: canManage && resource.isActive && subject.isActive && supported.includes(action),
++        canRevoke: canManage && !!own,
++        grantedByLogin: own?.grantedByLogin ?? null,
++      }
++      return [action, cell]
++    })) as AccessSnapshot['data'][number]['actions']
++    return { id: resource.id, key: resource.key, name: resource.name,
++      description: resource.description, type: resource.type, isActive: resource.isActive,
++      group: resource.departments.filter(item => item.isOwner).map(item => item.department.name).sort().join(', ')
++        || (resource.key.startsWith('admin.') ? 'Администрирование' : 'Общие ресурсы'),
++      actions }
++  })
++  // Version includes inherited access, membership, status and catalog changes.
++  const revision = createHash('sha256').update(JSON.stringify({ subject, direct, inherited, data })).digest('hex')
++  return { success: true, revision, canManage, subject, actions: [...ACCESS_ACTIONS], data,
++    summary: {
++      totalResources: data.length,
++      directPermissions: data.reduce((n, row) => n + ACCESS_ACTIONS.filter(a => row.actions[a].directGranted).length, 0),
++      effectivePermissions: data.reduce((n, row) => n + ACCESS_ACTIONS.filter(a => row.actions[a].effectiveGranted).length, 0),
++    } }
++}
++
++export async function readAccessSnapshot(event: H3Event, kind: AccessSubjectKind, id: number) {
++  const viewer = await requirePermission(event, 'admin.users', 'VIEW')
++  return prisma.$transaction(tx => buildAccessSnapshot(
++    tx, kind, id, useRuntimeConfig(event).adminLogins, viewer.isSystemAdmin,
++  ), { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead })
++}
++
++export async function saveAccessChanges(event: H3Event, kind: AccessSubjectKind, id: number, input: AccessMutation) {
++  const viewer = await requirePermission(event, 'admin.users', 'VIEW')
++  if (!viewer.isSystemAdmin) accessError(403, 'ACCESS_MANAGEMENT_ADMIN_ONLY', 'Назначать права пока может только системный администратор.')
++  for (let attempt = 0; attempt < 3; attempt++) {
++    try {
++      return await prisma.$transaction(async tx => {
++        // Recheck the actor inside the same transaction as the grants and audit.
++        const actor = await getAccessActor(event, tx)
++        if (!actor.isSystemAdmin) accessError(403, 'ACCESS_MANAGEMENT_ADMIN_ONLY', 'Недостаточно полномочий для назначения прав.')
++        const snapshot = await buildAccessSnapshot(tx, kind, id, useRuntimeConfig(event).adminLogins, true)
++        if (snapshot.revision !== input.revision) {
++          accessError(409, 'ACCESS_REVISION_CONFLICT', 'Права, состав отдела или ресурс изменились. Обновите матрицу и повторите действие.')
++        }
++        const rows = new Map(snapshot.data.map(row => [row.id, row]))
++        // Validate the entire batch before changing the database.
++        for (const change of input.changes) {
++          const cell = rows.get(change.resourceId)?.actions[change.action]
++          if (!cell) accessError(400, 'ACCESS_RESOURCE_NOT_FOUND', 'Ресурс отсутствует в каталоге.')
++          if (change.granted && !cell.directGranted && !cell.canGrant) {
++            accessError(400, 'ACCESS_GRANT_UNAVAILABLE', 'Ресурс, получатель или выбранная операция недоступны для назначения.')
++          }
++        }
++        let changed = 0
++        for (const change of input.changes) {
++          const row = rows.get(change.resourceId)!
++          const previous = row.actions[change.action].directGranted
++          if (previous === change.granted) continue
++          const entityType = kind === 'user' ? 'UserPermission' : 'DepartmentPermission'
++          if (change.granted) {
++            const common = { resourceId: change.resourceId, action: change.action, grantedByLogin: actor.user.login }
++            if (kind === 'user') await tx.userPermission.create({ data: { ...common, userId: id } })
++            else await tx.departmentPermission.create({ data: { ...common, departmentId: id } })
++          } else if (kind === 'user') {
++            await tx.userPermission.deleteMany({ where: { userId: id, resourceId: change.resourceId, action: change.action } })
++          } else {
++            await tx.departmentPermission.deleteMany({ where: { departmentId: id, resourceId: change.resourceId, action: change.action } })
++          }
++          await writeAuditEvent({
++            event, db: tx, category: 'ADMIN', result: 'SUCCESS', action: change.granted ? 'CREATE' : 'DELETE',
++            resourceKey: row.key, entityType, targetUserId: kind === 'user' ? id : undefined,
++            actorUserId: actor.user.id, actorLogin: actor.user.login,
++            actorEmail: actor.user.email || actor.user.login || `user:${actor.user.id}`, actorAuthType: actor.user.authType,
++            note: `${change.granted ? 'Выдано' : 'Отозвано'} ${change.action}: ${snapshot.subject.name} — ${row.name}`,
++            changes: {
++              granted: { before: previous, after: change.granted },
++              subjectKind: { before: kind, after: kind }, subjectId: { before: id, after: id },
++              resourceId: { before: row.id, after: row.id }, action: { before: change.action, after: change.action },
++            },
++          })
++          changed++
++        }
++        const updated = await buildAccessSnapshot(tx, kind, id, useRuntimeConfig(event).adminLogins, true)
++        return { ...updated, changed }
++      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 5000, timeout: 10000 })
++    } catch (error) {
++      const code = error && typeof error === 'object' && 'code' in error ? error.code : null
++      if (code === 'P2034' && attempt < 2) continue
++      if (code === 'P2034' || code === 'P2002') {
++        accessError(409, 'ACCESS_REVISION_CONFLICT', 'Права изменены параллельно. Обновите матрицу.')
++      }
++      throw error
++    }
++  }
++  return accessError(409, 'ACCESS_REVISION_CONFLICT', 'Обновите матрицу.')
++}
++
++export async function listAccessSubjects(event: H3Event, kind: AccessSubjectKind, search: string) {
++  await requirePermission(event, 'admin.users', 'VIEW')
++  let items: AccessSubjectOption[]
++  if (kind === 'user') {
++    const users = await prisma.user.findMany({
++      where: search ? { OR: ['fullName', 'login', 'email'].map(field => ({ [field]: { contains: search, mode: 'insensitive' as const } })) } : {},
++      orderBy: [{ fullName: 'asc' }, { id: 'asc' }], take: 51,
++      select: { id: true, fullName: true, login: true, email: true, status: true,
++        department: { select: { name: true } } },
++    })
++    items = users.map(user => ({ id: user.id, name: user.fullName || user.login || user.email || `#${user.id}`,
++      detail: [user.login || user.email, user.department?.name, user.status].filter(Boolean).join(' · '),
++      isActive: user.status === 'ACTIVE' }))
++  } else {
++    const departments = await prisma.department.findMany({
++      where: search ? { name: { contains: search, mode: 'insensitive' } } : {},
++      orderBy: [{ name: 'asc' }, { id: 'asc' }], take: 51,
++      select: { id: true, name: true, isActive: true, _count: { select: { users: true } } },
++    })
++    items = departments.map(department => ({ id: department.id, name: department.name,
++      detail: `${department._count.users} сотрудников${department.isActive ? '' : ' · отключено'}`, isActive: department.isActive }))
++  }
++  return { items: items.slice(0, 50), hasMore: items.length > 50 }
++}
+--- /dev/null
++++ b/shared/types/access-management.ts
+@@ -0,0 +1,69 @@
++export const ACCESS_ACTIONS = ['VIEW', 'CREATE', 'UPDATE', 'DELETE'] as const
++export type AccessActionName = typeof ACCESS_ACTIONS[number]
++export type AccessSubjectKind = 'user' | 'department'
++export type AccessSource = 'SYSTEM_ADMIN' | 'USER' | 'DEPARTMENT'
++export type AccessBlock = 'USER_INACTIVE' | 'RESOURCE_INACTIVE' | 'ADMIN_REQUIRED' | 'NO_PERMISSION' | null
++
++export interface AccessCell {
++  directGranted: boolean
++  inheritedGranted: boolean
++  systemGranted: boolean
++  effectiveGranted: boolean
++  sources: AccessSource[]
++  blockedBy: AccessBlock
++  canGrant: boolean
++  canRevoke: boolean
++  grantedByLogin: string | null
++}
++
++export interface AccessRow {
++  id: number
++  key: string
++  name: string
++  description: string | null
++  type: string
++  isActive: boolean
++  group: string
++  actions: Record<AccessActionName, AccessCell>
++}
++
++export interface AccessSnapshot {
++  success: true
++  revision: string
++  canManage: boolean
++  subject: {
++    kind: AccessSubjectKind
++    id: number
++    name: string
++    isActive: boolean
++    status: string
++    isSystemAdmin: boolean
++    department: { id: number; name: string; isActive: boolean } | null
++    memberCount: number | null
++  }
++  actions: AccessActionName[]
++  data: AccessRow[]
++  summary: {
++    totalResources: number
++    directPermissions: number
++    effectivePermissions: number
++  }
++}
++
++export interface AccessChange {
++  resourceId: number
++  action: AccessActionName
++  granted: boolean
++}
++
++export interface AccessMutation {
++  revision: string
++  changes: AccessChange[]
++}
++
++export interface AccessSubjectOption {
++  id: number
++  name: string
++  detail: string
++  isActive: boolean
++}
+--- /dev/null
++++ b/shared/utils/access-decision.ts
+@@ -0,0 +1,31 @@
++import type { AccessBlock, AccessSource } from '../types/access-management'
++
++export function normalizeAdminLogins(value: unknown): Set<string> {
++  const values = Array.isArray(value) ? value : typeof value === 'string' ? value.split(/[,;\s]+/) : []
++  return new Set(values.filter((item): item is string => typeof item === 'string')
++    .map(item => item.trim().toLowerCase()).filter(Boolean))
++}
++
++export function isSystemAdminLogin(login: string | null, config: unknown): boolean {
++  return !!login && normalizeAdminLogins(config).has(login.trim().toLowerCase())
++}
++
++/** Used by the API guard and the administrative matrix. No client value grants access. */
++export function decideAccess(input: {
++  userActive: boolean
++  resourceActive: boolean
++  systemAdmin: boolean
++  systemAdminOnly?: boolean
++  direct: boolean
++  departmentActive: boolean
++  departmentGranted: boolean
++}): { allowed: boolean; sources: AccessSource[]; blockedBy: AccessBlock } {
++  if (!input.userActive) return { allowed: false, sources: [], blockedBy: 'USER_INACTIVE' }
++  if (!input.resourceActive) return { allowed: false, sources: [], blockedBy: 'RESOURCE_INACTIVE' }
++  if (input.systemAdminOnly && !input.systemAdmin) return { allowed: false, sources: [], blockedBy: 'ADMIN_REQUIRED' }
++  const sources: AccessSource[] = []
++  if (input.systemAdmin) sources.push('SYSTEM_ADMIN')
++  if (input.direct) sources.push('USER')
++  if (input.departmentActive && input.departmentGranted) sources.push('DEPARTMENT')
++  return { allowed: sources.length > 0, sources, blockedBy: sources.length ? null : 'NO_PERMISSION' }
++}

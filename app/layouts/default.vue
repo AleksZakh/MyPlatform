@@ -79,6 +79,7 @@ const isContainedMain =
     () =>
       route.path ===
         '/admin/users' ||
+      route.path === '/admin/access' ||
       route.path.startsWith(
         '/admin/users/',
       ),

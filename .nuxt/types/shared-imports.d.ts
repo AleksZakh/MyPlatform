@@ -6,6 +6,16 @@ declare global {
   const defineAppConfig: <C extends import('nuxt/schema').AppConfigInput>(config: C) => C
   const createError: typeof import('h3')['createError']
   const setResponseStatus: typeof import('h3')['setResponseStatus']
+  const ACCESS_ACTIONS: typeof import('../../shared/types/access-management').ACCESS_ACTIONS
+  const decideAccess: typeof import('../../shared/utils/access-decision').decideAccess
+  const isSystemAdminLogin: typeof import('../../shared/utils/access-decision').isSystemAdminLogin
   const locationNameKey: typeof import('../../shared/utils/lab-location-name').locationNameKey
+  const normalizeAdminLogins: typeof import('../../shared/utils/access-decision').normalizeAdminLogins
   const normalizeLocationName: typeof import('../../shared/utils/lab-location-name').normalizeLocationName
+}
+// for type re-export
+declare global {
+  // @ts-ignore
+  export type { AccessActionName, AccessSubjectKind, AccessSource, AccessBlock, AccessCell, AccessRow, AccessSnapshot, AccessChange, AccessMutation, AccessSubjectOption } from '../../shared/types/access-management'
+  import('../../shared/types/access-management')
 }

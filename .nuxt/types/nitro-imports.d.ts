@@ -1,4 +1,5 @@
 declare global {
+  const ACCESS_ACTIONS: typeof import('../../shared/types/access-management').ACCESS_ACTIONS
   const H3Error: typeof import('../../node_modules/h3/dist/index').H3Error
   const H3Event: typeof import('../../node_modules/h3/dist/index').H3Event
   const __buildAssetsURL: typeof import('../../node_modules/@nuxt/nitro-server/dist/runtime/utils/paths').buildAssetsURL
@@ -30,6 +31,7 @@ declare global {
   const createEvent: typeof import('../../node_modules/h3/dist/index').createEvent
   const createEventStream: typeof import('../../node_modules/h3/dist/index').createEventStream
   const createRouter: typeof import('../../node_modules/h3/dist/index').createRouter
+  const decideAccess: typeof import('../../shared/utils/access-decision').decideAccess
   const defaultContentType: typeof import('../../node_modules/h3/dist/index').defaultContentType
   const defineAppConfig: typeof import('../../node_modules/@nuxt/nitro-server/dist/runtime/utils/config').defineAppConfig
   const defineCachedEventHandler: typeof import('../../node_modules/nitropack/dist/runtime/internal/cache').defineCachedEventHandler
@@ -153,12 +155,14 @@ declare global {
   const isPreflightRequest: typeof import('../../node_modules/h3/dist/index').isPreflightRequest
   const isSafeBasename: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/path-safety').isSafeBasename
   const isStream: typeof import('../../node_modules/h3/dist/index').isStream
+  const isSystemAdminLogin: typeof import('../../shared/utils/access-decision').isSystemAdminLogin
   const isWebResponse: typeof import('../../node_modules/h3/dist/index').isWebResponse
   const lazyEventHandler: typeof import('../../node_modules/h3/dist/index').lazyEventHandler
   const locationNameKey: typeof import('../../shared/utils/lab-location-name').locationNameKey
   const logAudit: typeof import('../../server/utils/auditLog').logAudit
   const logger: typeof import('../../server/utils/logger').logger
   const nitroPlugin: typeof import('../../node_modules/nitropack/dist/runtime/internal/plugin').nitroPlugin
+  const normalizeAdminLogins: typeof import('../../shared/utils/access-decision').normalizeAdminLogins
   const normalizeLocationName: typeof import('../../shared/utils/lab-location-name').normalizeLocationName
   const normalizeRelative: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/path-safety').normalizeRelative
   const parseCookies: typeof import('../../node_modules/h3/dist/index').parseCookies
@@ -230,6 +234,9 @@ declare global {
   // @ts-ignore
   export type { EventHandler, EventHandlerRequest, EventHandlerResponse, EventHandlerObject, H3EventContext } from '../../node_modules/h3/dist/index'
   import('../../node_modules/h3/dist/index')
+  // @ts-ignore
+  export type { AccessActionName, AccessSubjectKind, AccessSource, AccessBlock, AccessCell, AccessRow, AccessSnapshot, AccessChange, AccessMutation, AccessSubjectOption } from '../../shared/types/access-management'
+  import('../../shared/types/access-management')
   // @ts-ignore
   export type { OAuthAppleConfig, OAuthAppleTokens, OAuthAppleUser } from '../../node_modules/nuxt-auth-utils/dist/runtime/server/lib/oauth/apple.d'
   import('../../node_modules/nuxt-auth-utils/dist/runtime/server/lib/oauth/apple.d')
@@ -399,7 +406,9 @@ export { defineNitroErrorHandler } from 'nitropack/runtime/internal/error/utils'
 export { buildAssetsURL as __buildAssetsURL, publicAssetsURL as __publicAssetsURL } from '/home/local_adm/Projects/MyPlatform/node_modules/@nuxt/nitro-server/dist/runtime/utils/paths';
 export { defineAppConfig } from '/home/local_adm/Projects/MyPlatform/node_modules/@nuxt/nitro-server/dist/runtime/utils/config';
 export { useImage } from '/home/local_adm/Projects/MyPlatform/node_modules/@nuxt/image/dist/runtime/server/utils/image';
+export { normalizeAdminLogins, isSystemAdminLogin, decideAccess } from '/home/local_adm/Projects/MyPlatform/shared/utils/access-decision';
 export { normalizeLocationName, locationNameKey } from '/home/local_adm/Projects/MyPlatform/shared/utils/lab-location-name';
+export { ACCESS_ACTIONS } from '/home/local_adm/Projects/MyPlatform/shared/types/access-management';
 export { defineOAuthAppleEventHandler } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-auth-utils/dist/runtime/server/lib/oauth/apple';
 export { defineOAuthAtlassianEventHandler } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-auth-utils/dist/runtime/server/lib/oauth/atlassian';
 export { defineOAuthAuth0EventHandler } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-auth-utils/dist/runtime/server/lib/oauth/auth0';

@@ -20,6 +20,8 @@ interface _GlobalComponents {
   Footer: typeof import("../../app/components/Footer.vue")['default']
   ResizableTable: typeof import("../../app/components/ResizableTable.vue")['default']
   Toast: typeof import("../../app/components/Toast.vue")['default']
+  AdminAccessMatrix: typeof import("../../app/components/admin/AccessMatrix.vue")['default']
+  AdminDomainGroupImport: typeof import("../../app/components/admin/DomainGroupImport.vue")['default']
   AdminUserDirectory: typeof import("../../app/components/admin/UserDirectory.vue")['default']
   AuthRegistrationRequestForm: typeof import("../../app/components/auth/RegistrationRequestForm.vue")['default']
   LabDocumentUploadField: typeof import("../../app/components/lab/DocumentUploadField.vue")['default']
@@ -211,6 +213,8 @@ interface _GlobalComponents {
   LazyFooter: LazyComponent<typeof import("../../app/components/Footer.vue")['default']>
   LazyResizableTable: LazyComponent<typeof import("../../app/components/ResizableTable.vue")['default']>
   LazyToast: LazyComponent<typeof import("../../app/components/Toast.vue")['default']>
+  LazyAdminAccessMatrix: LazyComponent<typeof import("../../app/components/admin/AccessMatrix.vue")['default']>
+  LazyAdminDomainGroupImport: LazyComponent<typeof import("../../app/components/admin/DomainGroupImport.vue")['default']>
   LazyAdminUserDirectory: LazyComponent<typeof import("../../app/components/admin/UserDirectory.vue")['default']>
   LazyAuthRegistrationRequestForm: LazyComponent<typeof import("../../app/components/auth/RegistrationRequestForm.vue")['default']>
   LazyLabDocumentUploadField: LazyComponent<typeof import("../../app/components/lab/DocumentUploadField.vue")['default']>
