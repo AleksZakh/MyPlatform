@@ -21,6 +21,7 @@ interface _GlobalComponents {
   ResizableTable: typeof import("../../app/components/ResizableTable.vue")['default']
   Toast: typeof import("../../app/components/Toast.vue")['default']
   AdminAccessMatrix: typeof import("../../app/components/admin/AccessMatrix.vue")['default']
+  AdminDepartmentMemberPicker: typeof import("../../app/components/admin/DepartmentMemberPicker.vue")['default']
   AdminDomainGroupImport: typeof import("../../app/components/admin/DomainGroupImport.vue")['default']
   AdminUserDirectory: typeof import("../../app/components/admin/UserDirectory.vue")['default']
   AuthRegistrationRequestForm: typeof import("../../app/components/auth/RegistrationRequestForm.vue")['default']
@@ -45,6 +46,8 @@ interface _GlobalComponents {
   LabResearch: typeof import("../../app/components/lab/research.vue")['default']
   LabViewModal: typeof import("../../app/components/lab/viewModal.vue")['default']
   NavigateTopnav: typeof import("../../app/components/navigate/topnav.vue")['default']
+  NavigationAdminCacheControl: typeof import("../../app/components/navigation/AdminCacheControl.vue")['default']
+  NavigationAppNavigation: typeof import("../../app/components/navigation/AppNavigation.vue")['default']
   SidebarMenuData: typeof import("../../app/components/sidebar/menu.data")['default']
   SidebarMenu: typeof import("../../app/components/sidebar/menu.vue")['default']
   UiTableSettings: typeof import("../../app/components/ui/Table/settings.vue")['default']
@@ -214,6 +217,7 @@ interface _GlobalComponents {
   LazyResizableTable: LazyComponent<typeof import("../../app/components/ResizableTable.vue")['default']>
   LazyToast: LazyComponent<typeof import("../../app/components/Toast.vue")['default']>
   LazyAdminAccessMatrix: LazyComponent<typeof import("../../app/components/admin/AccessMatrix.vue")['default']>
+  LazyAdminDepartmentMemberPicker: LazyComponent<typeof import("../../app/components/admin/DepartmentMemberPicker.vue")['default']>
   LazyAdminDomainGroupImport: LazyComponent<typeof import("../../app/components/admin/DomainGroupImport.vue")['default']>
   LazyAdminUserDirectory: LazyComponent<typeof import("../../app/components/admin/UserDirectory.vue")['default']>
   LazyAuthRegistrationRequestForm: LazyComponent<typeof import("../../app/components/auth/RegistrationRequestForm.vue")['default']>
@@ -238,6 +242,8 @@ interface _GlobalComponents {
   LazyLabResearch: LazyComponent<typeof import("../../app/components/lab/research.vue")['default']>
   LazyLabViewModal: LazyComponent<typeof import("../../app/components/lab/viewModal.vue")['default']>
   LazyNavigateTopnav: LazyComponent<typeof import("../../app/components/navigate/topnav.vue")['default']>
+  LazyNavigationAdminCacheControl: LazyComponent<typeof import("../../app/components/navigation/AdminCacheControl.vue")['default']>
+  LazyNavigationAppNavigation: LazyComponent<typeof import("../../app/components/navigation/AppNavigation.vue")['default']>
   LazySidebarMenuData: LazyComponent<typeof import("../../app/components/sidebar/menu.data")['default']>
   LazySidebarMenu: LazyComponent<typeof import("../../app/components/sidebar/menu.vue")['default']>
   LazyUiTableSettings: LazyComponent<typeof import("../../app/components/ui/Table/settings.vue")['default']>

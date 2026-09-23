@@ -4,7 +4,7 @@ import { accessError } from '~~/server/services/access-input'
 
 export default defineEventHandler(async event => {
   const query = getQuery(event)
-  if (query.kind !== 'user' && query.kind !== 'department' && query.kind !== 'domainGroup') {
+  if (query.kind !== 'user' && query.kind !== 'department' && query.kind !== 'domainGroup' && query.kind !== 'spaceGroup') {
     accessError(400, 'INVALID_ACCESS_KIND', 'Выберите тип получателя прав.')
   }
   if (query.search !== undefined && (typeof query.search !== 'string' || query.search.length > 120)) {

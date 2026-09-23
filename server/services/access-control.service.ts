@@ -1,3 +1,4 @@
+import { spaceGroupMembership } from './space-group-access.service'
 import { AccessAction, type Prisma } from '@prisma/client'
 import { createError, type H3Event } from 'h3'
 import { prisma } from '../utils/prisma'
@@ -64,15 +65,28 @@ export async function requirePermission(
     systemAdminOnly: isSystemAdminOperation(resource.key),
     departmentActive: !!departmentId, departmentGranted: !!inherited,
   })
+  if (!decision.allowed && decision.blockedBy === 'NO_PERMISSION') {
+    const localGrant = await prisma.spaceGroupPermission.findFirst({ where: {
+      resourceId: resource.id, action, group: spaceGroupMembership(actor.user.id),
+    } })
+    if (localGrant) decision = { allowed: true, sources: ['SPACE_GROUP'], blockedBy: null }
+  }
   if (!decision.allowed && decision.blockedBy === 'NO_PERMISSION' && actor.user.authType === 'DOMAIN') {
     const grants = await prisma.domainGroupPermission.findMany({
       where: { resourceId: resource.id, action, domainGroup: { isActive: true } },
       select: { domainGroup: { select: { directoryObjectId: true } } },
     })
-    if (grants.length) {
+    const linked = await prisma.spaceGroupPermission.count({ where: { resourceId: resource.id, action,
+      group: { isActive: true, domainGroups: { some: { domainGroup: { isActive: true } } } },
+    } })
+    if (grants.length || linked) {
       const membership = await getDomainGroupContext(event, actor.user)
       if (membership.warning) throw createError({ statusCode: 503, statusMessage: 'AD_GROUP_ACCESS_UNVERIFIED',
         data: { code: 'AD_GROUP_ACCESS_UNVERIFIED', message: membership.warning } })
+      const viaSpace = linked && await prisma.spaceGroupPermission.findFirst({ where: {
+        resourceId: resource.id, action, group: spaceGroupMembership(actor.user.id, membership.ids),
+      } })
+      if (viaSpace) decision = { allowed: true, sources: ['SPACE_GROUP'], blockedBy: null }
       if (grants.some(p => membership.ids.includes(p.domainGroup.directoryObjectId))) {
         decision = { allowed: true, sources: ['DOMAIN_GROUP'], blockedBy: null }
       }

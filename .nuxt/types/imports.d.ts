@@ -60,6 +60,7 @@ declare global {
   const locationNameKey: typeof import('../../shared/utils/lab-location-name').locationNameKey
   const loginNormal: typeof import('../../app/composables/loginNormal').loginNormal
   const markRaw: typeof import('vue').markRaw
+  const memberKey: typeof import('../../app/composables/useDepartmentMemberPicker').memberKey
   const navigateTo: typeof import('../../node_modules/nuxt/dist/app/composables/router').navigateTo
   const nextTick: typeof import('vue').nextTick
   const normalizeAdminLogins: typeof import('../../shared/utils/access-decision').normalizeAdminLogins
@@ -130,6 +131,7 @@ declare global {
   const useCookie: typeof import('../../node_modules/nuxt/dist/app/composables/cookie').useCookie
   const useCssModule: typeof import('vue').useCssModule
   const useCssVars: typeof import('vue').useCssVars
+  const useDepartmentMemberPicker: typeof import('../../app/composables/useDepartmentMemberPicker').useDepartmentMemberPicker
   const useDomainGroupImport: typeof import('../../app/composables/useDomainGroupImport').useDomainGroupImport
   const useError: typeof import('../../node_modules/nuxt/dist/app/composables/error').useError
   const useFetch: typeof import('../../node_modules/nuxt/dist/app/composables/fetch').useFetch
@@ -224,6 +226,7 @@ declare global {
   const useShadowRoot: typeof import('vue').useShadowRoot
   const useSlots: typeof import('vue').useSlots
   const useState: typeof import('../../node_modules/nuxt/dist/app/composables/state').useState
+  const useStructureAdmin: typeof import('../../app/composables/useStructureAdmin').useStructureAdmin
   const useTableFilterStore: typeof import('../../app/stores/tableFilter').useTableFilterStore
   const useTableSettings: typeof import('../../app/composables/useTableSettings').useTableSettings
   const useTemplateRef: typeof import('vue').useTemplateRef
@@ -271,6 +274,9 @@ declare global {
   // @ts-ignore
   export type { AccessActionName, AccessSubjectKind, AccessSource, AccessBlock, AccessCell, AccessRow, AccessSnapshot, AccessChange, AccessMutation, AccessSubjectOption } from '../../shared/types/access-management'
   import('../../shared/types/access-management')
+  // @ts-ignore
+  export type { StructureMember } from '../../shared/types/structure-member'
+  import('../../shared/types/structure-member')
 }
 // for vue template auto import
 import { UnwrapRef } from 'vue'
@@ -335,6 +341,7 @@ declare module 'vue' {
     readonly locationNameKey: UnwrapRef<typeof import('../../shared/utils/lab-location-name')['locationNameKey']>
     readonly loginNormal: UnwrapRef<typeof import('../../app/composables/loginNormal')['loginNormal']>
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
+    readonly memberKey: UnwrapRef<typeof import('../../app/composables/useDepartmentMemberPicker')['memberKey']>
     readonly navigateTo: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/router')['navigateTo']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
     readonly normalizeAdminLogins: UnwrapRef<typeof import('../../shared/utils/access-decision')['normalizeAdminLogins']>
@@ -405,6 +412,7 @@ declare module 'vue' {
     readonly useCookie: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/cookie')['useCookie']>
     readonly useCssModule: UnwrapRef<typeof import('vue')['useCssModule']>
     readonly useCssVars: UnwrapRef<typeof import('vue')['useCssVars']>
+    readonly useDepartmentMemberPicker: UnwrapRef<typeof import('../../app/composables/useDepartmentMemberPicker')['useDepartmentMemberPicker']>
     readonly useDomainGroupImport: UnwrapRef<typeof import('../../app/composables/useDomainGroupImport')['useDomainGroupImport']>
     readonly useError: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/error')['useError']>
     readonly useFetch: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/fetch')['useFetch']>
@@ -499,6 +507,7 @@ declare module 'vue' {
     readonly useShadowRoot: UnwrapRef<typeof import('vue')['useShadowRoot']>
     readonly useSlots: UnwrapRef<typeof import('vue')['useSlots']>
     readonly useState: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/state')['useState']>
+    readonly useStructureAdmin: UnwrapRef<typeof import('../../app/composables/useStructureAdmin')['useStructureAdmin']>
     readonly useTableFilterStore: UnwrapRef<typeof import('../../app/stores/tableFilter')['useTableFilterStore']>
     readonly useTableSettings: UnwrapRef<typeof import('../../app/composables/useTableSettings')['useTableSettings']>
     readonly useTemplateRef: UnwrapRef<typeof import('vue')['useTemplateRef']>

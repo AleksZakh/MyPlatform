@@ -20,6 +20,7 @@ export function decideAccess(input: {
   departmentActive: boolean
   departmentGranted: boolean
   domainGroupGranted?: boolean
+  spaceGroupGranted?: boolean
 }): { allowed: boolean; sources: AccessSource[]; blockedBy: AccessBlock } {
   if (!input.userActive) return { allowed: false, sources: [], blockedBy: 'USER_INACTIVE' }
   if (!input.resourceActive) return { allowed: false, sources: [], blockedBy: 'RESOURCE_INACTIVE' }
@@ -28,6 +29,7 @@ export function decideAccess(input: {
   if (input.systemAdmin) sources.push('SYSTEM_ADMIN')
   if (input.direct) sources.push('USER')
   if (input.departmentActive && input.departmentGranted) sources.push('DEPARTMENT')
+  if (input.spaceGroupGranted) sources.push('SPACE_GROUP')
   if (input.domainGroupGranted) sources.push('DOMAIN_GROUP')
   return { allowed: sources.length > 0, sources, blockedBy: sources.length ? null : 'NO_PERMISSION' }
 }

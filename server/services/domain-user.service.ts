@@ -72,7 +72,7 @@ function normalizeEmail(
  * - permissions
  *
  * Поэтому status / departmentId / permissions
- * здесь никогда не изменяются.
+ * у существующих пользователей здесь не изменяются. Новый пользователь получает отдел по подтверждённому mapping.
  */
 export async function ensureDomainUser(
   directoryUser: DirectoryUser,
@@ -292,6 +292,11 @@ export async function ensureDomainUser(
      * 5. Первый вход DOMAIN-пользователя.
      * ------------------------------------------------------
      */
+    // Only first registration: existing assignments change through the audited preview/apply flow.
+    const directoryDepartment = directoryUser.department?.normalize('NFC').replace(/\s+/g, ' ').trim()
+    const departmentMapping = directoryDepartment ? await db.directoryDepartmentMapping.findUnique({
+      where: { directoryName: directoryDepartment }, include: { department: true },
+    }) : null
     return await db.user.create({
       data: {
         authType:
@@ -310,12 +315,7 @@ export async function ensureDomainUser(
 
         position,
 
-        /**
-         * departmentId пока не определяем автоматически.
-         *
-         * AD.department ещё предстоит связать
-         * с нашими Department через mapping.
-         */
+        departmentId: departmentMapping?.department.isActive ? departmentMapping.departmentId : null,
       },
     });
   }

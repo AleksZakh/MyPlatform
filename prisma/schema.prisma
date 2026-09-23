@@ -96,6 +96,8 @@ model Plp {
   deletedAt DateTime? @db.Date
   deletedBy String?   @db.VarChar(255)
 
+  
+
   samplingTests SamplingTest[]
 
   @@map("plps")
@@ -490,6 +492,7 @@ model Department {
 // ============================================================
 
 model AccessResource {
+  spaceGroupPermissions SpaceGroupPermission[]
   id Int @id @default(autoincrement())
 
   // Стабильный программный ключ.
@@ -704,6 +707,7 @@ enum AccessAction {
 }
 
 model User {
+  spaceGroups SpaceGroupUser[]
   id Int @id @default(autoincrement())
 
   authType UserAuthType
@@ -735,6 +739,7 @@ model User {
   registrationRequest   RegistrationRequest? @relation(fields: [registrationRequestId], references: [id], onDelete: SetNull)
 
   permissions UserPermission[]
+  
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -824,6 +829,7 @@ model DomainGroupPermission {
 }
 
 model DomainGroup {
+  spaceGroups SpaceGroupDomain[]
   id                Int                     @id @default(autoincrement())
   directoryObjectId String                  @unique @db.VarChar(36)
   name              String                  @db.VarChar(255)
@@ -832,9 +838,61 @@ model DomainGroup {
   permissions       DomainGroupPermission[]
   createdAt         DateTime                @default(now())
   updatedAt         DateTime                @updatedAt
+  
 
   @@map("domain_groups")
 }
 
 
 
+
+
+model SpaceGroup {
+  id Int @id @default(autoincrement())
+  name String @unique @db.VarChar(255)
+  isActive Boolean @default(true)
+  users SpaceGroupUser[]
+  domainGroups SpaceGroupDomain[]
+  permissions SpaceGroupPermission[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("space_groups")
+}
+
+
+model SpaceGroupUser {
+  groupId Int
+  userId Int
+  group SpaceGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@id([groupId, userId])
+  @@index([userId])
+  @@map("space_group_users")
+}
+
+
+model SpaceGroupDomain {
+  groupId Int
+  domainGroupId Int
+  group SpaceGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  domainGroup DomainGroup @relation(fields: [domainGroupId], references: [id], onDelete: Cascade)
+  @@id([groupId, domainGroupId])
+  @@index([domainGroupId])
+  @@map("space_group_domains")
+}
+
+
+model SpaceGroupPermission {
+  id Int @id @default(autoincrement())
+  groupId Int
+  resourceId Int
+  action AccessAction
+  grantedByLogin String? @db.VarChar(150)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  group SpaceGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  resource AccessResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  @@unique([groupId, resourceId, action])
+  @@index([resourceId, action])
+  @@map("space_group_permissions")
+}

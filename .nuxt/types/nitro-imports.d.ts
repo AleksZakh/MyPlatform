@@ -27,6 +27,7 @@ declare global {
   const containsPathTraversal: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/path-safety').containsPathTraversal
   const createApp: typeof import('../../node_modules/h3/dist/index').createApp
   const createAppEventHandler: typeof import('../../node_modules/h3/dist/index').createAppEventHandler
+  const createCacheRefreshRunner: typeof import('../../server/utils/cache-refresh-runner').createCacheRefreshRunner
   const createError: typeof import('../../node_modules/h3/dist/index').createError
   const createEvent: typeof import('../../node_modules/h3/dist/index').createEvent
   const createEventStream: typeof import('../../node_modules/h3/dist/index').createEventStream
@@ -237,6 +238,9 @@ declare global {
   // @ts-ignore
   export type { AccessActionName, AccessSubjectKind, AccessSource, AccessBlock, AccessCell, AccessRow, AccessSnapshot, AccessChange, AccessMutation, AccessSubjectOption } from '../../shared/types/access-management'
   import('../../shared/types/access-management')
+  // @ts-ignore
+  export type { StructureMember } from '../../shared/types/structure-member'
+  import('../../shared/types/structure-member')
   // @ts-ignore
   export type { OAuthAppleConfig, OAuthAppleTokens, OAuthAppleUser } from '../../node_modules/nuxt-auth-utils/dist/runtime/server/lib/oauth/apple.d'
   import('../../node_modules/nuxt-auth-utils/dist/runtime/server/lib/oauth/apple.d')
@@ -463,6 +467,7 @@ export { sessionHooks, getUserSession, setUserSession, replaceUserSession, clear
 export { getUserGroups } from '/home/local_adm/Projects/MyPlatform/server/utils/ad';
 export { adCache } from '/home/local_adm/Projects/MyPlatform/server/utils/adCache';
 export { logAudit, computeChangedFields, getActorEmail, getRequestMeta, softDelete, buildCreateAuditDelta, computeAuditDelta, writeAuditEvent, auditDataChange, auditDenied } from '/home/local_adm/Projects/MyPlatform/server/utils/auditLog';
+export { createCacheRefreshRunner } from '/home/local_adm/Projects/MyPlatform/server/utils/cache-refresh-runner';
 export { handleFileUpload, cleanOldFilesFromDisk, parseDate, updateFilePathsInData } from '/home/local_adm/Projects/MyPlatform/server/utils/fileUploadHandler';
 export { getFullFilePath, fileExists, getFileInfo, deleteUploadedFile } from '/home/local_adm/Projects/MyPlatform/server/utils/fileUtils';
 export { folderNameGenerator } from '/home/local_adm/Projects/MyPlatform/server/utils/folderNameGenerator';

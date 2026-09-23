@@ -24,6 +24,9 @@ declare module "nitropack/types" {
     '/api/admin/ad-cache/refresh': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/ad-cache/refresh.post').default>>>>
     }
+    '/api/admin/ad-cache/status': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/ad-cache/status.get').default>>>>
+    }
     '/api/admin/audit-log': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/audit-log/index.get').default>>>>
     }
@@ -36,6 +39,21 @@ declare module "nitropack/types" {
     }
     '/api/admin/directory-departments/mapping': {
       'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/directory-departments/mapping.put').default>>>>
+    }
+    '/api/admin/directory-departments/sync': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/directory-departments/sync.post').default>>>>
+    }
+    '/api/admin/directory-users/activate': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/directory-users/activate.post').default>>>>
+    }
+    '/api/admin/directory-users/browse': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/directory-users/browse.get').default>>>>
+    }
+    '/api/admin/directory-users/candidates': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/directory-users/candidates.get').default>>>>
+    }
+    '/api/admin/directory-users/provision': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/directory-users/provision.post').default>>>>
     }
     '/api/admin/domain-groups/:id/permissions': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/domain-groups/[id]/permissions.get').default>>>>
@@ -61,6 +79,17 @@ declare module "nitropack/types" {
     }
     '/api/admin/registration-requests': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/registration-requests/index.get').default>>>>
+    }
+    '/api/admin/space-groups/:id': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/space-groups/[id].get').default>>>>
+      'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/space-groups/[id].put').default>>>>
+    }
+    '/api/admin/space-groups/:id/permissions': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/space-groups/[id]/permissions.get').default>>>>
+      'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/space-groups/[id]/permissions.put').default>>>>
+    }
+    '/api/admin/space-groups': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/space-groups/index.post').default>>>>
     }
     '/api/admin/users/:id/access': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/users/[id]/access.get').default>>>>
@@ -236,6 +265,9 @@ declare module "nitropack/types" {
     '/api/lab/test-protocol': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/test-protocol/index.get').default>>>>
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/test-protocol/index.post').default>>>>
+    }
+    '/api/navigation': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/navigation.get').default>>>>
     }
     '/api/public/registration-resources': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/public/registration-resources.get').default>>>>

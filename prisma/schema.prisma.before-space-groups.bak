@@ -1,0 +1,840 @@
+generator client {
+  // provider = "prisma-client"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model sessions {
+  id        Int    @id @default(autoincrement())
+  userId    Int
+  sessionId String @unique(map: "sessions_sessionid_unique") @db.VarChar(255)
+  timestamp BigInt // Без кастинга
+  users     users  @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "sessions_userid_foreign")
+
+  @@index([sessionId], map: "idx_sessions_sessionId")
+}
+
+model users {
+  id       Int        @id @default(autoincrement())
+  userName String     @unique(map: "users_username_unique") @db.VarChar(255)
+  password String     @db.VarChar(255)
+  login    String     @unique @db.VarChar(255)
+  email    String     @unique @db.VarChar(255)
+  role     String     @db.VarChar(100)
+  sessions sessions[]
+
+  @@index([userName], map: "idx_users_userName")
+}
+
+model AEng {
+  id Int @id @default(autoincrement())
+
+  // Основные данные из CSV
+  plp                  String    @db.Text
+  objectName           String    @db.Text
+  samplingActNumber    String    @db.Text
+  samplingDate         DateTime  @db.Date
+  samplingPlace        String    @db.Text
+  personProvidedSample String    @db.Text
+  materialReceiptDate  DateTime? @db.Date
+  materialName         String    @db.Text
+
+  // Документы (старое поле для обратной совместимости)
+  qualityDocument String @db.Text
+
+  // Новые поля для документов
+  sDocPath        String?   @db.Text
+  qualDocPath     String?   @db.Text
+  testDocPath     String?   @db.Text
+  protocolDocPath String?   @db.Text
+  qualDocNumber   String?   @db.Text
+  qualDocDate     DateTime? @db.Date
+  authorEmail     String?   @db.Text
+  editorEmail     String?   @db.Text
+
+  // Остальные данные из CSV
+  manufacturer   String?   @db.Text
+  protocolNumber String    @db.Text
+  protocolDate   DateTime? @db.Date
+  testResult     String    @db.Text
+  note           String?   @db.Text
+
+  // Системные поля
+  createdAt DateTime  @default(now())
+  editedAt  DateTime? @db.Date // Дата редактирования (только при обновлении через форму)
+
+  @@index([samplingActNumber])
+  @@index([protocolNumber])
+  @@index([editedAt])
+  @@map("aeng")
+}
+
+// ===== НОВЫЕ ТАБЛИЦЫ (ВЕРСИЯ 5) =====
+
+// ============================================
+// СПРАВОЧНИКИ
+// ============================================
+
+// 1. ПЛП
+model Plp {
+  id   Int     @id @default(autoincrement())
+  name String  @unique @db.VarChar(255)
+  note String? @db.Text
+
+  // Системные поля
+  createdAt   DateTime  @default(now())
+  authorEmail String?   @db.VarChar(255)
+  editedAt    DateTime? @updatedAt
+  editorEmail String?   @db.VarChar(255)
+
+  // Поля для мягкого удаления
+  deletedAt DateTime? @db.Date
+  deletedBy String?   @db.VarChar(255)
+
+  samplingTests SamplingTest[]
+
+  @@map("plps")
+}
+
+// 2. Инспектор
+model Inspector {
+  id   Int     @id @default(autoincrement())
+  name String  @unique @db.VarChar(255)
+  note String? @db.Text
+
+  // Системные поля
+  createdAt   DateTime  @default(now())
+  authorEmail String?   @db.VarChar(255)
+  editedAt    DateTime? @updatedAt
+  editorEmail String?   @db.VarChar(255)
+
+  // Поля для мягкого удаления
+  deletedAt DateTime? @db.Date
+  deletedBy String?   @db.VarChar(255)
+
+  samplingTests SamplingTest[]
+
+  @@map("inspectors")
+}
+
+// 3. Производитель
+model Manufacturer {
+  id   Int     @id @default(autoincrement())
+  name String  @unique @db.Text
+  note String? @db.Text
+
+  // Один производитель может встречаться во многих поступлениях материалов
+  receipts ReceiptMaterial[]
+
+  // Системные поля
+  createdAt   DateTime  @default(now())
+  authorEmail String?   @db.VarChar(255)
+  editedAt    DateTime? @updatedAt
+  editorEmail String?   @db.VarChar(255)
+
+  // Мягкое удаление
+  deletedAt DateTime? @db.Date
+  deletedBy String?   @db.VarChar(255)
+
+  @@map("manufacturers")
+}
+
+// 4. Материал
+model Material {
+  id   Int     @id @default(autoincrement())
+  name String  @unique @db.Text
+  note String? @db.Text
+
+  // Материал не закреплён за одним производителем.
+  // Производитель хранится в конкретном ReceiptMaterial.
+  receipts ReceiptMaterial[]
+
+  // Системные поля
+  createdAt   DateTime  @default(now())
+  authorEmail String?   @db.VarChar(255)
+  editedAt    DateTime? @updatedAt
+  editorEmail String?   @db.VarChar(255)
+
+  // Мягкое удаление
+  deletedAt DateTime? @db.Date
+  deletedBy String?   @db.VarChar(255)
+
+  @@map("materials")
+}
+
+// ============================================
+// 5. Поступление материала
+// ============================================
+model ReceiptMaterial {
+  id Int @id @default(autoincrement())
+
+  // Поступление материала
+  // Nullable в БД для корректного хранения исторических данных.
+  // Для новых записей обязательность проверяет API.
+  receiptDate DateTime? @db.Date
+
+  // Документ о качестве может отсутствовать полностью
+  qualityDocumentDate   DateTime? @db.Date
+  qualityDocumentNumber String?   @db.VarChar(255)
+  qualityDocumentPath   String?   @db.Text
+
+  note String? @db.Text
+
+  materialId Int
+  material   Material @relation(fields: [materialId], references: [id])
+
+  // Производитель относится к конкретному поступлению, а не к виду материала
+  manufacturerId Int?
+  manufacturer   Manufacturer? @relation(fields: [manufacturerId], references: [id])
+
+  // Обратная сторона связи 1:1 с записью Реестра
+  samplingTest SamplingTest?
+
+  // Системные поля
+  createdAt   DateTime  @default(now())
+  authorEmail String?   @db.VarChar(255)
+  editedAt    DateTime? @updatedAt
+  editorEmail String?   @db.VarChar(255)
+
+  // Мягкое удаление
+  deletedAt DateTime? @db.Date
+  deletedBy String?   @db.VarChar(255)
+
+  @@index([receiptDate])
+  @@index([qualityDocumentDate])
+  @@index([materialId])
+  @@index([manufacturerId])
+  @@map("receipt_materials")
+}
+
+// 6. Объект испытаний
+model TestObject {
+  id       Int     @id @default(autoincrement())
+  name     String  @unique @db.Text
+  fullName String? @db.Text
+  note     String? @db.Text
+
+  // Системные поля
+  createdAt   DateTime  @default(now())
+  authorEmail String?   @db.VarChar(255)
+  editedAt    DateTime? @updatedAt
+  editorEmail String?   @db.VarChar(255)
+
+  // Поля для мягкого удаления
+  deletedAt DateTime? @db.Date
+  deletedBy String?   @db.VarChar(255)
+
+  locations TestLocation[]
+
+  @@index([name])
+  @@map("test_objects")
+}
+
+// 7. Место отбора
+model TestLocation {
+  id   Int     @id @default(autoincrement())
+  name String  @db.Text
+  note String? @db.Text
+
+  testObjectId Int
+  testObject   TestObject @relation(fields: [testObjectId], references: [id])
+
+  // Системные поля
+  createdAt   DateTime  @default(now())
+  authorEmail String?   @db.VarChar(255)
+  editedAt    DateTime? @updatedAt
+  editorEmail String?   @db.VarChar(255)
+
+  // Поля для мягкого удаления
+  deletedAt DateTime? @db.Date
+  deletedBy String?   @db.VarChar(255)
+
+  samplingTests SamplingTest[]
+
+  @@unique([testObjectId, name])
+  @@index([name])
+  @@map("test_locations")
+}
+
+// 8. Протокол испытаний
+model TestProtocol {
+  id Int @id @default(autoincrement())
+
+  // Nullable в БД ради честного хранения исторических данных.
+  // Для новых протоколов обязательность проверяет API.
+  protocolNumber       String?   @db.VarChar(255)
+  protocolDate         DateTime? @db.Date
+  protocolDocumentPath String?   @db.Text
+  testResult           String?   @db.Text
+  note                 String?   @db.Text
+
+  // Протокол относится к записи Реестра напрямую через SamplingTest.
+  // Связи TestProtocol -> ReceiptMaterial больше нет.
+  samplingTest SamplingTest?
+
+  // Системные поля
+  createdAt   DateTime  @default(now())
+  authorEmail String?   @db.VarChar(255)
+  editedAt    DateTime? @updatedAt
+  editorEmail String?   @db.VarChar(255)
+
+  // Мягкое удаление
+  deletedAt DateTime? @db.Date
+  deletedBy String?   @db.VarChar(255)
+
+  @@index([protocolNumber])
+  @@index([protocolDate])
+  @@map("test_protocols")
+}
+
+// ============================================
+// ГЛАВНАЯ ТАБЛИЦА - АКТЫ ОТБОРА ПРОБ
+// ============================================
+model SamplingTest {
+  id Int @id @default(autoincrement())
+
+  // Отбор проб
+  samplingActNumber    String   @db.VarChar(255)
+  samplingDate         DateTime @db.Date
+  samplingDocumentPath String?  @db.Text
+  note                 String?  @db.Text
+
+  // Справочники
+  plpId Int
+  plp   Plp @relation(fields: [plpId], references: [id])
+
+  inspectorId Int
+  inspector   Inspector @relation(fields: [inspectorId], references: [id])
+
+  // Место отбора обязательно. Объект определяется через TestLocation.testObjectId.
+  // testObjectId здесь намеренно НЕ дублируем.
+  testLocationId Int
+  testLocation   TestLocation @relation(fields: [testLocationId], references: [id])
+
+  // Одно поступление материала на одну запись Реестра
+  receiptMaterialId Int             @unique
+  receiptMaterial   ReceiptMaterial @relation(fields: [receiptMaterialId], references: [id])
+
+  // Один протокол максимум; до проведения испытания его может не быть
+  testProtocolId Int?          @unique
+  testProtocol   TestProtocol? @relation(fields: [testProtocolId], references: [id])
+
+  // Версия бизнес-правил и источник исторического импорта
+  businessRulesVersion Int     @default(1)
+  importSource         String? @db.VarChar(255)
+  importRowNumber      Int?
+
+  // Системные поля
+  createdAt   DateTime  @default(now())
+  authorEmail String?   @db.VarChar(255)
+  editedAt    DateTime? @updatedAt
+  editorEmail String?   @db.VarChar(255)
+
+  // Мягкое удаление
+  deletedAt DateTime? @db.Date
+  deletedBy String?   @db.VarChar(255)
+
+  @@unique([importSource, importRowNumber])
+  @@index([samplingActNumber])
+  @@index([samplingDate])
+  @@index([testLocationId])
+  @@map("sampling_tests")
+}
+
+// ============================================
+// 9. ЖУРНАЛ АУДИТА (AuditLog)
+// ============================================
+model AuditLog {
+  id Int @id @default(autoincrement())
+
+  // Старые поля.
+  // Для ACCESS/AUTH событий сущности БД может не быть.
+  entityType String? @db.VarChar(50)
+  entityId   Int?
+
+  // Что пытались сделать:
+  // CREATE / UPDATE / DELETE / VIEW / LOGIN / ...
+  action String @db.VarChar(20)
+
+  // Новый Event Log
+  category    String? @db.VarChar(20)
+  result      String? @db.VarChar(20)
+  resourceKey String? @db.VarChar(150)
+
+  actorUserId   Int?
+  actorLogin    String? @db.VarChar(255)
+  actorAuthType String? @db.VarChar(30)
+
+  targetUserId Int?
+
+  requestId String? @db.VarChar(100)
+  method    String? @db.VarChar(10)
+  route     String? @db.VarChar(500)
+
+  // Старое поле пока сохраняем
+  actorEmail String @db.VarChar(255)
+
+  timestamp DateTime @default(now())
+
+  note          String? @db.Text
+  beforeData    Json?
+  afterData     Json?
+  changedFields Json?
+  changes       Json?
+
+  ipAddress String? @db.VarChar(45)
+  userAgent String? @db.Text
+
+  @@index([entityType, entityId])
+  @@index([timestamp])
+  @@index([actorEmail])
+  @@index([action])
+  // Новые индексы
+  @@index([category])
+  @@index([result])
+  @@index([resourceKey])
+  @@index([actorUserId])
+  @@index([targetUserId])
+  @@map("audit_logs")
+}
+
+// ============================================
+// ШАБЛОНЫ ФИЛЬТРОВ ДЛЯ ТАБЛИЦЫ ОТБОРОВ ПРОБ
+// ============================================
+model FilterTemplate {
+  id Int @id @default(autoincrement())
+
+  // Уникальный идентификатор (дата создания в мс) — для сортировки и ссылок
+  timestamp BigInt @unique
+
+  // Название шаблона
+  name String @db.VarChar(255)
+
+  // Автор шаблона (email из сессии)
+  authorEmail String @db.VarChar(255)
+
+  // Сам фильтр в виде JSON
+  // Структура: { plp, objName, samplActNumber, sDateStart, ... }
+  filters Json
+
+  // Признак "по умолчанию" — один на пользователя (проверяется в API)
+  isDefault Boolean @default(false)
+
+  // Системные поля
+  createdAt   DateTime  @default(now())
+  editedAt    DateTime? @updatedAt
+  editorEmail String?   @db.VarChar(255)
+
+  // Мягкое удаление
+  deletedAt DateTime? @db.Date
+  deletedBy String?   @db.VarChar(255)
+
+  // Уникальность: один автор не может иметь два шаблона с одинаковым именем
+  @@unique([authorEmail, name])
+  @@index([authorEmail])
+  @@index([isDefault])
+  @@index([timestamp])
+  @@map("filter_templates")
+}
+
+// ============================================================
+// ПОДРАЗДЕЛЕНИЯ SPACE
+// ============================================================
+
+model Department {
+  id Int @id @default(autoincrement())
+
+  // Стабильный программный ключ.
+  // Например:
+  // laboratory-control
+  // diagnostics
+  // supply
+  // it
+  // hr
+  // transport
+  key String @unique @db.VarChar(100)
+
+  // Отображаемое название
+  name String @unique @db.VarChar(255)
+
+  description String? @db.Text
+
+  // Можно ли использовать подразделение в системе
+  isActive Boolean @default(true)
+
+  // Порядок отображения
+  sortOrder Int @default(0)
+
+  // Связанные ресурсы
+  resources         DepartmentResource[]
+  permissions       DepartmentPermission[]
+  directoryMappings DirectoryDepartmentMapping[]
+
+  users User[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([sortOrder])
+  @@map("departments")
+}
+
+// ============================================================
+// РЕСУРСЫ SPACE, НА КОТОРЫЕ МОЖНО ВЫДАВАТЬ ПРАВА
+// ============================================================
+
+model AccessResource {
+  id Int @id @default(autoincrement())
+
+  // Стабильный программный ключ.
+  //
+  // Например:
+  // lab.sampling-tests
+  // lab.materials
+  // lab.test-protocols
+  key String @unique @db.VarChar(150)
+
+  // Название для UI
+  name String @db.VarChar(255)
+
+  description String? @db.Text
+
+  // Тип ресурса
+  type AccessResourceType @default(TABLE)
+
+  // Доступен ли ресурс в системе прав
+  isActive Boolean @default(true)
+
+  // Порядок отображения
+  sortOrder Int @default(0)
+
+  // Подразделения, использующие этот ресурс
+  departments DepartmentResource[]
+
+  registrationRequests RegistrationRequestResource[]
+
+  permissions UserPermission[]
+
+  departmentPermissions DepartmentPermission[]
+
+  domainGroupPermissions DomainGroupPermission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([type])
+  @@index([sortOrder])
+  @@map("access_resources")
+}
+
+// ============================================================
+// СВЯЗЬ ПОДРАЗДЕЛЕНИЙ С РЕСУРСАМИ
+// ============================================================
+//
+// many-to-many:
+//
+// одно подразделение имеет много ресурсов,
+// один ресурс может использоваться несколькими подразделениями.
+//
+
+model DepartmentResource {
+  departmentId Int
+  resourceId   Int
+
+  department Department     @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  resource   AccessResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  // Является ли подразделение владельцем ресурса.
+  //
+  // Например:
+  // "Материалы" принадлежат Лабораторному контролю,
+  // но позже могут быть доступны и другим подразделениям.
+
+  isOwner Boolean @default(false)
+
+  @@id([departmentId, resourceId])
+  @@index([resourceId])
+  @@map("department_resources")
+}
+
+// ============================================================
+// ТИПЫ РЕСУРСОВ
+// ============================================================
+
+enum AccessResourceType {
+  // Таблица / набор данных
+  TABLE
+
+  // Целый функциональный раздел приложения
+  SECTION
+
+  // Отдельная функция системы
+  FEATURE
+}
+
+// ============================================================
+// ЗАЯВКИ НА РЕГИСТРАЦИЮ
+// ============================================================
+
+model RegistrationRequest {
+  id Int @id @default(autoincrement())
+
+  // Данные заявителя
+  fullName     String @db.VarChar(255)
+  organization String @db.VarChar(255)
+  position     String @db.VarChar(255)
+  email        String @db.VarChar(255)
+
+  // Можно будет добавить в форму чуть позже
+  accessReason String? @db.Text
+
+  // Состояние заявки
+  status RegistrationRequestStatus @default(EMAIL_PENDING)
+
+  // Подтверждение электронной почты
+  emailVerifiedAt DateTime?
+
+  // Храним SHA-256 hash токена, а не сам токен
+  verificationTokenHash String? @unique @db.VarChar(64)
+
+  verificationExpiresAt DateTime?
+  verificationSentAt    DateTime?
+
+  // Рассмотрение заявки
+  reviewedAt      DateTime?
+  reviewedByLogin String?   @db.VarChar(255)
+  adminComment    String?   @db.Text
+
+  // Какие ресурсы запросил пользователь
+  requestedResources RegistrationRequestResource[]
+
+  createdUser User?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
+  @@index([email, status])
+  @@map("registration_requests")
+}
+
+// ============================================================
+// РЕСУРСЫ, ЗАПРОШЕННЫЕ В ЗАЯВКЕ
+// ============================================================
+
+model RegistrationRequestResource {
+  id Int @id @default(autoincrement())
+
+  registrationRequestId Int
+  resourceId            Int
+
+  registrationRequest RegistrationRequest @relation(fields: [registrationRequestId], references: [id], onDelete: Cascade)
+  resource            AccessResource      @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  // null  -> администратор ещё не рассмотрел
+  // true  -> доступ к ресурсу одобрен
+  // false -> доступ к ресурсу отклонён
+  approved Boolean?
+
+  // При желании администратор сможет оставить
+  // комментарий по конкретному ресурсу
+  adminComment String? @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@unique([registrationRequestId, resourceId])
+  @@index([registrationRequestId])
+  @@index([resourceId])
+  @@map("registration_request_resources")
+}
+
+// ============================================================
+// СОСТОЯНИЯ ЗАЯВКИ
+// ============================================================
+
+enum RegistrationRequestStatus {
+  // Ждём подтверждения email
+  EMAIL_PENDING
+
+  // Email подтверждён, ждём рассмотрения
+  PENDING_REVIEW
+
+  // Все запрошенные ресурсы одобрены
+  APPROVED
+
+  // Одобрена только часть ресурсов
+  PARTIALLY_APPROVED
+
+  // Заявка отклонена
+  REJECTED
+
+  // Истёк срок подтверждения email
+  EXPIRED
+
+  // Пользователь создан, регистрация завершена
+  COMPLETED
+}
+
+enum UserAuthType {
+  DOMAIN
+  EXTERNAL
+}
+
+enum UserStatus {
+  PENDING_ACTIVATION
+  ACTIVE
+  BLOCKED
+  DISABLED
+}
+
+enum AccessAction {
+  VIEW
+  CREATE
+  UPDATE
+  DELETE
+}
+
+model User {
+  id Int @id @default(autoincrement())
+
+  authType UserAuthType
+  status   UserStatus   @default(PENDING_ACTIVATION)
+
+  // Для DOMAIN
+  login String? @unique @db.VarChar(255)
+
+  // objectGUID / другой стабильный ID каталога
+  directoryObjectId String? @unique @db.VarChar(255)
+
+  // Для EXTERNAL и как возможный кэш для DOMAIN
+  email        String? @unique @db.VarChar(255)
+  fullName     String? @db.VarChar(255)
+  organization String? @db.VarChar(255)
+  position     String? @db.VarChar(255)
+
+  // Только EXTERNAL
+  passwordHash        String?   @db.VarChar(255)
+  activationTokenHash String?   @unique @db.VarChar(64)
+  activationExpiresAt DateTime?
+  activationSentAt    DateTime?
+  activatedAt         DateTime?
+
+  departmentId Int?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  registrationRequestId Int?                 @unique
+  registrationRequest   RegistrationRequest? @relation(fields: [registrationRequestId], references: [id], onDelete: SetNull)
+
+  permissions UserPermission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([authType])
+  @@index([departmentId])
+  @@map("app_users")
+}
+
+model UserPermission {
+  id Int @id @default(autoincrement())
+
+  userId     Int
+  resourceId Int
+  action     AccessAction
+
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resource AccessResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  grantedByLogin String? @db.VarChar(255)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, resourceId, action])
+  @@index([userId])
+  @@index([resourceId])
+  @@index([action])
+  @@map("user_permissions")
+}
+
+model DepartmentPermission {
+  id Int @id @default(autoincrement())
+
+  departmentId Int
+  resourceId   Int
+  action       AccessAction
+
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  resource AccessResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  grantedByLogin String? @db.VarChar(255)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([departmentId, resourceId, action])
+  @@index([departmentId])
+  @@index([resourceId])
+  @@index([action])
+  @@map("department_permissions")
+}
+
+model DirectoryDepartmentMapping {
+  id Int @id @default(autoincrement())
+
+  // Точное название department из Active Directory
+  directoryName String @unique @db.VarChar(255)
+
+  departmentId Int
+
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([departmentId])
+  @@map("directory_department_mappings")
+}
+
+model DomainGroupPermission {
+  id             Int            @id @default(autoincrement())
+  domainGroupId  Int
+  resourceId     Int
+  action         AccessAction
+  grantedByLogin String?        @db.VarChar(150)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  domainGroup    DomainGroup    @relation(fields: [domainGroupId], references: [id], onDelete: Cascade)
+  resource       AccessResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@unique([domainGroupId, resourceId, action])
+  @@index([resourceId, action])
+  @@map("domain_group_permissions")
+}
+
+model DomainGroup {
+  id                Int                     @id @default(autoincrement())
+  directoryObjectId String                  @unique @db.VarChar(36)
+  name              String                  @db.VarChar(255)
+  distinguishedName String                  @db.Text
+  isActive          Boolean                 @default(true)
+  permissions       DomainGroupPermission[]
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  @@map("domain_groups")
+}
+
+
+

@@ -1,10 +1,14 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { AccessSubjectKind, AccessSubjectOption } from '~~/shared/types/access-management'
 
 useSeoMeta({ title: 'Space — управление правами' })
 const route = useRoute()
-const kind = ref<AccessSubjectKind>(route.query.kind === 'domainGroup' ? 'domainGroup' : 'department')
+const router = useRouter()
+const kind = computed<AccessSubjectKind>({
+  get: () => ['user', 'department', 'domainGroup', 'spaceGroup'].includes(String(route.query.kind)) ? route.query.kind as AccessSubjectKind : 'department',
+  set: value => { void router.replace({ query: { ...route.query, kind: value } }) },
+})
 const search = ref('')
 const subjects = ref<AccessSubjectOption[]>([])
 const selected = ref<AccessSubjectOption | null>(null)
@@ -41,10 +45,10 @@ onBeforeUnmount(() => { disposed = true; sequence++; clearTimeout(timer) })
 
 <template>
   <div class="access-page">
-    <header><div><NuxtLink to="/admin/users">← Сотрудники и подразделения</NuxtLink><h1>Управление правами</h1></div></header>
+    <header><div><NuxtLink to="/admin/users">← Сотрудники и подразделения</NuxtLink><h1>Управление правами</h1><NuxtLink to="/admin/structure">Отделы из AD и группы Space →</NuxtLink></div></header>
     <div class="access-layout">
       <aside aria-label="Получатель прав">
-        <label>Назначить права<select v-model="kind"><option value="department">Подразделению</option><option value="user">Сотруднику</option><option value="domainGroup">Доменной группе</option></select></label>
+        <label>Назначить права<select v-model="kind"><option value="department">Подразделению</option><option value="user">Сотруднику</option><option value="spaceGroup">Группе Space</option><option value="domainGroup">Доменной группе</option></select></label>
         <AdminDomainGroupImport v-if="kind === 'domainGroup'" @imported="selected = $event; search = ''; load()" />
         <label>Поиск<input v-model="search" type="search" maxlength="120" placeholder="Название, имя или логин" /></label>
         <p v-if="loading" role="status">Загрузка…</p>

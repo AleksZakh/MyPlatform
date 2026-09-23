@@ -265,106 +265,11 @@
                   </span>
                 </template>
 
-                <div
-                  class="location-input-shell"
-                >
-                  <UInput
-                    v-model="
-                      state.samplingTest
-                        .testLocationName
-                    "
-                    class="w-full min-w-0 shadow-sm"
-                    autocomplete="off"
-                    @focus="
-                      openLocationSuggestions
-                    "
-                    @blur="
-                      closeLocationSuggestionsDelayed
-                    "
-                  />
-
-                  <div
-                    v-if="
-                      locationSuggestionOpen &&
-                      (
-                        locationSuggestions.length > 0 ||
-                        locationSuggestionHint
-                      )
-                    "
-                    class="location-suggestions"
-                  >
-                    <button
-                      v-for="item in locationSuggestions"
-                      :key="item.id"
-                      type="button"
-                      class="location-suggestion-item"
-                      @mousedown.prevent="
-                        selectLocationSuggestion(
-                          item,
-                        )
-                      "
-                    >
-                      <Icon
-                        name="i-heroicons-map-pin"
-                        size="15"
-                        class="shrink-0 text-sky-600"
-                      />
-
-                      <span
-                        class="location-suggestion-name"
-                      >
-                        {{ item.name }}
-                      </span>
-
-                      <span
-                        v-if="
-                          locationMatchStatus ===
-                            'existing' &&
-                          locationMatchId ===
-                            item.id
-                        "
-                        class="location-suggestion-badge"
-                      >
-                        точное совпадение
-                      </span>
-                    </button>
-
-                    <div
-                      v-if="locationSuggestionHint"
-                      class="location-suggestion-hint"
-                      :class="{
-                        'location-suggestion-hint--warning':
-                          locationMatchStatus ===
-                            'deleted' ||
-                          locationMatchStatus ===
-                            'ambiguous',
-                        'location-suggestion-hint--new':
-                          locationMatchStatus ===
-                            'new',
-                      }"
-                    >
-                      <Icon
-                        :name="
-                          locationMatchStatus ===
-                            'new'
-                            ? 'i-heroicons-plus-circle'
-                            : locationMatchStatus ===
-                                'existing'
-                              ? 'i-heroicons-check-circle'
-                              : 'i-heroicons-exclamation-triangle'
-                        "
-                        size="16"
-                        class="shrink-0"
-                      />
-
-                      <span>
-                        {{
-                          locationSuggestionHint
-                        }}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                <UInput
+                  v-model="state.samplingTest.testLocationName"
+                  class="w-full min-w-0 shadow-sm"
+                  autocomplete="off"
+                />
               </UFormField>
 
 
@@ -699,26 +604,17 @@
                   protocolSectionDisabled,
               }"
             >
-              <p
-                v-if="isCreateMode"
-                class="text-xs text-gray-400 mb-1"
-              >
-                Протокол станет доступен после
-                первого сохранения записи.
+              <p v-if="isCreateMode" class="text-xs text-gray-500 mb-1">
+                Протокол можно заполнить сразу или добавить позже.
+                Его дата не должна быть раньше остальных дат записи.
               </p>
-
               <p
                 v-else-if="protocolLockHint"
                 class="text-xs mb-2"
-                :class="
-                  protocolSectionDisabled
-                    ? 'text-red-600'
-                    : 'text-gray-500'
-                "
+                :class="protocolSectionDisabled ? 'text-red-600' : 'text-gray-500'"
               >
                 {{ protocolLockHint }}
               </p>
-
 
               <UFormField
                 name="testProtocol.protocolDate"
@@ -996,37 +892,6 @@ interface TestObjectOption {
 }
 
 
-interface LocationSuggestion {
-  id: number
-  name: string
-  testObjectId: number
-}
-
-
-type LocationMatchStatus =
-  | 'empty'
-  | 'existing'
-  | 'ambiguous'
-  | 'deleted'
-  | 'new'
-
-
-interface LocationSuggestionsResponse {
-  success: boolean
-  testObjectId: number
-
-  data: LocationSuggestion[]
-  total: number
-
-  match: {
-    status: LocationMatchStatus
-    locationId: number | null
-  }
-
-  nameAvailable: boolean
-}
-
-
 interface EditWindowState {
   exists: boolean
   lockedByTime: boolean
@@ -1108,6 +973,8 @@ const editLocks =
  * Разница между часами сервера и браузера.
  * Countdown поэтому не зависит от часов пользователя.
  */
+const editWindowMinutes = computed(() => editLocks.value?.windowMinutes ?? 30)
+
 const serverClockOffsetMs =
   ref(0)
 
@@ -1153,36 +1020,7 @@ const testObjectOptions =
   ref<TestObjectOption[]>([])
 
 
-const locationSuggestions =
-  ref<LocationSuggestion[]>([])
-
-const locationMatchStatus =
-  ref<LocationMatchStatus>(
-    'empty',
-  )
-
-const locationMatchId =
-  ref<number | null>(
-    null,
-  )
-
-const locationSuggestionOpen =
-  ref(false)
-
-const locationSuggestionsLoading =
-  ref(false)
-
-let locationSuggestionTimer:
-  ReturnType<
-    typeof setTimeout
-  > | null = null
-
-let locationSuggestionRequestId =
-  0
-
-let suppressObjectLocationReset =
-  false
-
+let suppressObjectLocationReset = false
 
 const inspectorItems =
   ref<string[]>([])
@@ -1198,234 +1036,6 @@ const testResultItems =
     'Соответствует',
     'Не соответствует',
   ])
-
-
-const selectedTestObject =
-  computed(
-    () =>
-      testObjectOptions.value
-        .find(
-          item =>
-            item.name ===
-            state
-              .samplingTest
-              .testObjectName,
-        ) ??
-      null,
-  )
-
-
-const locationSuggestionHint =
-  computed(() => {
-    const value =
-      state
-        .samplingTest
-        .testLocationName
-        .trim()
-
-    if (
-      !value ||
-      !selectedTestObject.value
-    ) {
-      return ''
-    }
-
-    if (
-      locationSuggestionsLoading.value
-    ) {
-      return 'Поиск существующих мест...'
-    }
-
-    switch (
-      locationMatchStatus.value
-    ) {
-      case 'existing':
-        return 'Такое место уже есть в выбранном объекте. При сохранении будет использована существующая запись.'
-
-      case 'new':
-        return 'Такого места пока нет. Оно будет создано только после успешного сохранения Реестра.'
-
-      case 'deleted':
-        return 'Совпадающее место было мягко удалено. Автоматическое восстановление запрещено.'
-
-      case 'ambiguous':
-        return 'Найдено несколько эквивалентных мест. Сначала необходимо уточнить справочник.'
-
-      default:
-        return ''
-    }
-  })
-
-
-function clearLocationSuggestionState() {
-  locationSuggestions.value =
-    []
-
-  locationMatchStatus.value =
-    'empty'
-
-  locationMatchId.value =
-    null
-}
-
-
-function openLocationSuggestions() {
-  locationSuggestionOpen.value =
-    true
-
-  scheduleLocationSuggestions()
-}
-
-
-function closeLocationSuggestionsDelayed() {
-  setTimeout(
-    () => {
-      locationSuggestionOpen.value =
-        false
-    },
-    150,
-  )
-}
-
-
-function selectLocationSuggestion(
-  item: LocationSuggestion,
-) {
-  state.samplingTest
-    .testLocationName =
-      item.name
-
-  locationSuggestionOpen.value =
-    false
-
-  locationSuggestions.value =
-    [item]
-
-  locationMatchStatus.value =
-    'existing'
-
-  locationMatchId.value =
-    item.id
-}
-
-
-function scheduleLocationSuggestions() {
-  if (locationSuggestionTimer) {
-    clearTimeout(
-      locationSuggestionTimer,
-    )
-  }
-
-  locationSuggestionTimer =
-    setTimeout(
-      () => {
-        void loadLocationSuggestions()
-      },
-      250,
-    )
-}
-
-
-async function loadLocationSuggestions() {
-  const object =
-    selectedTestObject.value
-
-  const search =
-    state.samplingTest
-      .testLocationName
-      .trim()
-
-  if (
-    !object ||
-    !search
-  ) {
-    clearLocationSuggestionState()
-    return
-  }
-
-
-  const requestId =
-    ++locationSuggestionRequestId
-
-  locationSuggestionsLoading.value =
-    true
-
-  try {
-    const response =
-      await $fetch<
-        LocationSuggestionsResponse
-      >(
-        '/api/lab/locations/suggestions',
-        {
-          query: {
-            testObjectId:
-              object.id,
-
-            search,
-          },
-        },
-      )
-
-
-    /**
-     * Пользователь мог успеть изменить объект/текст,
-     * пока предыдущий запрос был в сети.
-     */
-    if (
-      requestId !==
-      locationSuggestionRequestId
-    ) {
-      return
-    }
-
-
-    locationSuggestions.value =
-      response.data ?? []
-
-    locationMatchStatus.value =
-      response.match
-        ?.status ??
-      'empty'
-
-    locationMatchId.value =
-      response.match
-        ?.locationId ??
-      null
-
-  } catch (error: any) {
-    /**
-     * Подсказки — UX, а не источник истины.
-     * Серверный resolver всё равно проверит место при SAVE.
-     *
-     * Поэтому временная ошибка подсказок не блокирует ввод.
-     */
-    if (
-      requestId ===
-      locationSuggestionRequestId
-    ) {
-      clearLocationSuggestionState()
-    }
-
-    if (
-      error?.statusCode !== 403 &&
-      error?.status !== 403
-    ) {
-      console.warn(
-        'Не удалось загрузить подсказки мест отбора:',
-        error,
-      )
-    }
-
-  } finally {
-    if (
-      requestId ===
-      locationSuggestionRequestId
-    ) {
-      locationSuggestionsLoading.value =
-        false
-    }
-  }
-}
 
 
 const isCreateMode =
@@ -1466,7 +1076,6 @@ const hasProtocolInput =
 const shouldSendProtocol =
   computed(
     () =>
-      !isCreateMode.value &&
       (
         hasExistingProtocol.value ||
         hasProtocolInput.value
@@ -1477,7 +1086,6 @@ const shouldSendProtocol =
 const requiresNewProtocol =
   computed(
     () =>
-      !isCreateMode.value &&
       !hasExistingProtocol.value &&
       hasProtocolInput.value,
   )
@@ -1575,7 +1183,7 @@ const baseSectionDisabled =
 const protocolSectionDisabled =
   computed(() => {
     if (isCreateMode.value) {
-      return true
+      return false
     }
 
     if (!editLocks.value) {
@@ -1584,8 +1192,8 @@ const protocolSectionDisabled =
 
     /**
      * Протокол ещё НЕ создан:
-     * он доступен сразу после первого сохранения записи,
-     * даже если базовые 10 минут уже закончились.
+     * он доступен при создании и после сохранения записи,
+     * даже если базовые 30 минут уже закончились.
      */
     if (!hasExistingProtocol.value) {
       return false
@@ -1656,7 +1264,7 @@ const baseLockHint =
       baseSectionDisabled.value
     ) {
       return (
-        '10-минутный срок редактирования истёк.'
+        `${editWindowMinutes.value}-минутный срок редактирования истёк.`
       )
     }
 
@@ -1677,7 +1285,7 @@ const protocolLockHint =
 
     if (!hasExistingProtocol.value) {
       return (
-        'Протокол ещё не создан. Его можно добавить сейчас; после первого сохранения начнутся отдельные 10 минут.'
+        `Протокол ещё не создан. Его можно добавить сейчас; после первого сохранения начнутся отдельные ${editWindowMinutes.value} минут.`
       )
     }
 
@@ -1696,7 +1304,7 @@ const protocolLockHint =
       protocolSectionDisabled.value
     ) {
       return (
-        '10-минутный срок редактирования протокола истёк.'
+        `${editWindowMinutes.value}-минутный срок редактирования протокола истёк.`
       )
     }
 
@@ -1974,78 +1582,28 @@ const state =
   )
 
 
-const chronologyFieldErrors =
-  computed(() => {
-    const samplingDate =
-      dateToApiValue(
-        state.samplingTest
-          .samplingDate,
-      )
+function getChronologyErrors(formState: Schema) {
+  const samplingDate = dateToApiValue(formState.samplingTest.samplingDate)
+  const receiptDate = dateToApiValue(formState.receiptMaterial.receiptDate)
+  const qualityDocumentDate = dateToApiValue(formState.receiptMaterial.qualityDocumentDate)
+  const protocolDate = dateToApiValue(formState.testProtocol.protocolDate)
+  const later = (left: string | null, right: string | null) => Boolean(left && right && left > right)
+  const qualitySampling = later(qualityDocumentDate, samplingDate)
+  const samplingReceipt = later(samplingDate, receiptDate)
+  const qualityProtocol = later(qualityDocumentDate, protocolDate)
+  const samplingProtocol = later(samplingDate, protocolDate)
+  const receiptProtocol = later(receiptDate, protocolDate)
+  return {
+    qualityDocumentDate: qualitySampling || qualityProtocol,
+    samplingDate: qualitySampling || samplingReceipt || samplingProtocol,
+    receiptDate: samplingReceipt || receiptProtocol,
+    protocolDate: qualityProtocol || samplingProtocol || receiptProtocol,
+    qualitySampling,
+    samplingReceipt,
+  }
+}
 
-    const receiptDate =
-      dateToApiValue(
-        state.receiptMaterial
-          .receiptDate,
-      )
-
-    const qualityDocumentDate =
-      dateToApiValue(
-        state.receiptMaterial
-          .qualityDocumentDate,
-      )
-
-    const protocolDate =
-      dateToApiValue(
-        state.testProtocol
-          .protocolDate,
-      )
-
-
-    const qualitySamplingConflict =
-      !!(
-        qualityDocumentDate &&
-        samplingDate &&
-        qualityDocumentDate >
-          samplingDate
-      )
-
-
-    const samplingReceiptConflict =
-      !!(
-        samplingDate &&
-        receiptDate &&
-        samplingDate >
-          receiptDate
-      )
-
-
-    const receiptProtocolConflict =
-      !!(
-        shouldSendProtocol.value &&
-        receiptDate &&
-        protocolDate &&
-        receiptDate >
-          protocolDate
-      )
-
-
-    return {
-      qualityDocumentDate:
-        qualitySamplingConflict,
-
-      samplingDate:
-        qualitySamplingConflict ||
-        samplingReceiptConflict,
-
-      receiptDate:
-        samplingReceiptConflict ||
-        receiptProtocolConflict,
-
-      protocolDate:
-        receiptProtocolConflict,
-    }
-  })
-
+const chronologyFieldErrors = computed(() => getChronologyErrors(state))
 
 function resetForm() {
   Object.assign(
@@ -2190,9 +1748,7 @@ async function loadReferenceData() {
 
 
   /**
-   * Для подсказок места нужен стабильный ID объекта.
-   * Старый loadReference() возвращает только строки,
-   * поэтому ID загружаем отдельно, не ломая его контракт.
+   * Уточняем список объектов через API, исключающий мягко удалённые записи.
    */
   try {
     const response =
@@ -2219,7 +1775,7 @@ async function loadReferenceData() {
     }
   } catch (error) {
     console.warn(
-      'Не удалось загрузить ID объектов для подсказок мест:',
+      'Не удалось загрузить актуальный список объектов:',
       error,
     )
 
@@ -2522,74 +2078,13 @@ watch(
 )
 
 
-function validateChronology(
-  formState: Schema,
-): string | null {
-  const samplingDate =
-    dateToApiValue(
-      formState.samplingTest
-        .samplingDate,
-    )
-
-  const receiptDate =
-    dateToApiValue(
-      formState.receiptMaterial
-        .receiptDate,
-    )
-
-  const qualityDocumentDate =
-    dateToApiValue(
-      formState.receiptMaterial
-        .qualityDocumentDate,
-    )
-
-  const protocolDate =
-    dateToApiValue(
-      formState.testProtocol
-        .protocolDate,
-    )
-
-
-  if (
-    qualityDocumentDate &&
-    samplingDate &&
-    qualityDocumentDate >
-      samplingDate
-  ) {
-    return (
-      'Дата документа о качестве не может быть позже даты отбора проб.'
-    )
-  }
-
-
-  if (
-    samplingDate &&
-    receiptDate &&
-    samplingDate >
-      receiptDate
-  ) {
-    return (
-      'Дата отбора проб не может быть позже даты поступления материала.'
-    )
-  }
-
-
-  if (
-    shouldSendProtocol.value &&
-    receiptDate &&
-    protocolDate &&
-    receiptDate >
-      protocolDate
-  ) {
-    return (
-      'Дата протокола не может быть раньше даты поступления материала.'
-    )
-  }
-
-
+function validateChronology(formState: Schema): string | null {
+  const errors = getChronologyErrors(formState)
+  if (errors.qualitySampling) return 'Дата документа о качестве не может быть позже даты отбора проб.'
+  if (errors.samplingReceipt) return 'Дата отбора проб не может быть позже даты поступления материала.'
+  if (errors.protocolDate) return 'Дата протокола не может быть раньше даты документа о качестве, отбора проб или поступления материала.'
   return null
 }
-
 
 function getApiErrorInfo(
   error: unknown,
@@ -2823,28 +2318,11 @@ watch(
       .testLocationName =
         ''
 
-    locationSuggestionRequestId++
-
-    clearLocationSuggestionState()
   },
 
   {
     flush:
       'sync',
-  },
-)
-
-
-watch(
-  () =>
-    state.samplingTest
-      .testLocationName,
-
-  () => {
-    locationSuggestionOpen.value =
-      true
-
-    scheduleLocationSuggestions()
   },
 )
 
@@ -2867,15 +2345,6 @@ onMounted(
 
 onUnmounted(
   () => {
-    if (locationSuggestionTimer) {
-      clearTimeout(
-        locationSuggestionTimer,
-      )
-
-      locationSuggestionTimer =
-        null
-    }
-
     if (editLockTimer) {
       clearInterval(
         editLockTimer,
@@ -2943,7 +2412,7 @@ defineExpose({
 
 /*
  * overflow:hidden здесь НЕ используем:
- * иначе выпадающий список места отбора обрезается границей fieldset.
+ * чтобы всплывающие элементы полей не обрезались границей fieldset.
  */
 .parent > fieldset {
   overflow: visible;
@@ -2978,97 +2447,6 @@ defineExpose({
 .parent :deep([data-slot='content']) {
   min-width: 0;
   max-width: 100%;
-}
-
-/* ==========================================================
- * ПОДСКАЗКИ МЕСТ ОТБОРА
- * ========================================================== */
-
-.location-input-shell {
-  position: relative;
-  min-width: 0;
-  max-width: 100%;
-}
-
-.location-suggestions {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  z-index: 80;
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
-  max-height: min(260px, 36vh);
-  overflow-x: hidden;
-  overflow-y: auto;
-  background: #fff;
-  border: 1px solid #cbd5e1;
-  border-radius: 0.5rem;
-  box-shadow:
-    0 12px 30px
-    rgb(15 23 42 / 16%);
-}
-
-.location-suggestion-item {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  min-width: 0;
-  gap: 0.5rem;
-  padding: 0.55rem 0.7rem;
-  color: #0f172a;
-  text-align: left;
-  background: #fff;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.location-suggestion-item:hover {
-  background: #f0f9ff;
-}
-
-.location-suggestion-name {
-  min-width: 0;
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.location-suggestion-badge {
-  flex: 0 0 auto;
-  max-width: 42%;
-  padding: 0.1rem 0.35rem;
-  overflow: hidden;
-  font-size: 0.68rem;
-  color: #0369a1;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  background: #e0f2fe;
-  border-radius: 999px;
-}
-
-.location-suggestion-hint {
-  display: flex;
-  align-items: flex-start;
-  min-width: 0;
-  gap: 0.45rem;
-  padding: 0.55rem 0.7rem;
-  overflow-wrap: anywhere;
-  font-size: 0.75rem;
-  line-height: 1.35;
-  color: #0369a1;
-  background: #f0f9ff;
-}
-
-.location-suggestion-hint--new {
-  color: #166534;
-  background: #f0fdf4;
-}
-
-.location-suggestion-hint--warning {
-  color: #991b1b;
-  background: #fef2f2;
 }
 
 /* ==========================================================
@@ -3141,13 +2519,6 @@ defineExpose({
     padding-bottom: 0.35rem;
   }
 
-  .location-suggestions {
-    max-height:
-      min(
-        210px,
-        30vh
-      );
-  }
 }
 
 .parent > *:last-child {

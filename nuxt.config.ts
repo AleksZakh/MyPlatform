@@ -80,7 +80,7 @@ export default defineNuxtConfig({
     },
     scheduledTasks: {
       // Обновление кэша каждый час
-      '*/60 * * * *': ['ad:refresh-ad-cache'],
+      '*/15 * * * *': ['ad:refresh-ad-cache'],
     },
   },
   vite: {

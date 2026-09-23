@@ -10,37 +10,6 @@
 
       <div class="cache-toolbar">
         <NuxtLink to="/admin/access" class="access-navigation-link">Управление правами</NuxtLink>
-        <div
-          class="cache-state"
-          :class="cacheStateClass"
-          :title="cacheStateTitle"
-        >
-          <span
-            class="cache-dot"
-            :class="cacheDotClass"
-          />
-
-          <div>
-            <span class="cache-title">AD</span>
-
-            <div class="cache-text">
-              {{ cacheStateText }}
-            </div>
-
-
-          </div>
-        </div>
-
-        <UButton
-          v-if="capabilities.canRefreshDirectoryCache"
-          label="Обновить AD"
-          icon="i-heroicons-arrow-path"
-          color="primary"
-          variant="outline"
-          :loading="isRefreshingDirectoryCache"
-          :disabled="isRefreshingDirectoryCache"
-          @click="refreshDirectoryCache"
-        />
       </div>
     </header>
 
@@ -846,11 +815,11 @@
               </h3>
 
               <p class="access-hint">
-                Сотрудники этого AD-подразделения будут связаны
-                с выбранным подразделением Space.
+                Сопоставление задаёт отдел для новых пользователей. Для существующих сотрудников примените синхронизацию с предпросмотром.
               </p>
             </div>
 
+            <NuxtLink to="/admin/structure">Создать отдел из кэша и синхронизировать сотрудников →</NuxtLink>
             <div class="mapping-controls">
               <select
                 v-model="selectedSpaceDepartmentId"
@@ -1061,6 +1030,7 @@
 import {
   computed,
   onMounted,
+  onBeforeUnmount,
   reactive,
   ref,
   watch,
@@ -1426,10 +1396,6 @@ const capabilities =
   })
 
 
-const isRefreshingDirectoryCache =
-  ref(false)
-
-
 const tabs = [
   {
     value:
@@ -1482,116 +1448,6 @@ const activeTab =
     typeof tabs[number]['value']
   >(
     'profile',
-  )
-
-
-const cacheStateText =
-  computed(
-    () => {
-      const cache =
-        responseMeta
-          .directoryCache
-
-      switch (
-        cache.state
-      ) {
-        case 'fresh':
-          return cache.ageMinutes ===
-            null
-              ? 'Кэш актуален'
-              : `Кэш актуален · ${cache.ageMinutes} мин.`
-
-        case 'stale':
-          return cache.ageMinutes ===
-            null
-              ? 'Кэш устарел'
-              : `Кэш устарел · ${cache.ageMinutes} мин.`
-
-        case 'missing':
-        default:
-          return 'Кэш отсутствует или недоступен'
-      }
-    },
-  )
-
-
-const cacheStateTitle =
-  computed(
-    () => {
-      const cache =
-        responseMeta
-          .directoryCache
-
-      switch (
-        cache.state
-      ) {
-        case 'fresh':
-          return (
-            'Данные Active Directory загружены из актуального кэша.'
-          )
-
-        case 'stale':
-          return (
-            `Кэш старше ${cache.expiresAfterMinutes} минут. ` +
-            'Каталог отображается, но данные AD могут быть неактуальны.'
-          )
-
-        case 'missing':
-        default:
-          return (
-            'Кэш Active Directory отсутствует или не удалось его прочитать. ' +
-            'DOMAIN-пользователи из app_users по-прежнему отображаются.'
-          )
-      }
-    },
-  )
-
-
-const cacheDotClass =
-  computed(
-    () => ({
-      'cache-dot--fresh':
-        responseMeta
-          .directoryCache
-          .state ===
-        'fresh',
-
-      'cache-dot--stale':
-        responseMeta
-          .directoryCache
-          .state ===
-        'stale',
-
-      'cache-dot--missing':
-        responseMeta
-          .directoryCache
-          .state ===
-        'missing',
-    }),
-  )
-
-
-const cacheStateClass =
-  computed(
-    () => ({
-      'cache-state--fresh':
-        responseMeta
-          .directoryCache
-          .state ===
-        'fresh',
-
-      'cache-state--stale':
-        responseMeta
-          .directoryCache
-          .state ===
-        'stale',
-
-      'cache-state--missing':
-        responseMeta
-          .directoryCache
-          .state ===
-        'missing',
-    }),
   )
 
 
@@ -1798,78 +1654,6 @@ async function saveDepartmentMapping() {
 
   } finally {
     isSavingDepartmentMapping.value =
-      false
-  }
-}
-
-
-async function refreshDirectoryCache() {
-  if (
-    !capabilities
-      .canRefreshDirectoryCache ||
-    isRefreshingDirectoryCache.value
-  ) {
-    return
-  }
-
-
-  isRefreshingDirectoryCache.value =
-    true
-
-  try {
-    const response =
-      await $fetch<{
-        success: boolean
-
-        data: {
-          usersCount: number
-          refreshedAt: string
-          durationMs: number
-        }
-
-        message: string
-      }>(
-        '/api/admin/ad-cache/refresh',
-        {
-          method:
-            'POST',
-        },
-      )
-
-
-    showTost(
-      'Active Directory',
-      response.message,
-      'success',
-      'i-heroicons-check-circle',
-      5000,
-    )
-
-
-    page.value =
-      1
-
-    await loadUsers()
-
-  } catch (error) {
-    console.error(
-      '[AdminCenter AD cache refresh] Ошибка:',
-      error,
-    )
-
-    showTost(
-      'Ошибка',
-      getApiErrorMessage(
-        error,
-        'Не удалось обновить кэш Active Directory',
-      ),
-      'error',
-      'fxemoji:warningsign',
-      6000,
-    )
-
-  } finally {
-    isRefreshingDirectoryCache.value =
       false
   }
 }
@@ -2205,6 +1989,9 @@ watch(
 )
 
 
+onMounted(() => window.addEventListener('space-ad-cache-updated', loadUsers))
+onBeforeUnmount(() => window.removeEventListener('space-ad-cache-updated', loadUsers))
+
 onMounted(
   () => {
     void loadUsers()
@@ -2214,7 +2001,7 @@ onMounted(
 
 
 <style scoped>
-.access-navigation-link { color: #2563b8; font-size: 14px; font-weight: 600; white-space: nowrap; }
+.access-navigation-link { color: #2563b8; font-size: 16px; font-weight: 600; white-space: nowrap; }
 
 .admin-shell {
   display: flex;
@@ -2244,7 +2031,7 @@ onMounted(
 
 .eyebrow {
   margin: 0 0 3px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 750;
   letter-spacing: 0.09em;
   color: #64748b;
@@ -2261,7 +2048,7 @@ onMounted(
 
 .page-subtitle {
   margin: 5px 0 0;
-  font-size: 13px;
+  font-size: 15px;
   color: #64748b;
 }
 
@@ -2329,21 +2116,21 @@ onMounted(
 }
 
 .cache-title {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   color: #334155;
 }
 
 .cache-text {
   margin-top: 1px;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 650;
   color: #64748b;
 }
 
 .cache-updated {
   margin-top: 2px;
-  font-size: 8px;
+  font-size: 10px;
   color: #94a3b8;
 }
 
@@ -2374,7 +2161,7 @@ onMounted(
 }
 
 .stat-label {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 750;
   letter-spacing: 0.05em;
   color: #94a3b8;
@@ -2417,7 +2204,7 @@ onMounted(
   min-width: 0;
   height: 38px;
   padding: 0 10px;
-  font-size: 12px;
+  font-size: 14px;
   color: #0f172a;
   background: #fff;
   border: 1px solid #cbd5e1;
@@ -2449,7 +2236,7 @@ onMounted(
   align-items: center;
   gap: 6px;
   padding: 7px 10px;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   color: #64748b;
   background: #fff;
@@ -2542,7 +2329,7 @@ onMounted(
 
 .department-row-name {
   overflow: hidden;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   color: #0f172a;
   text-overflow: ellipsis;
@@ -2551,7 +2338,7 @@ onMounted(
 
 .department-row-meta {
   margin-top: 2px;
-  font-size: 9px;
+  font-size: 11px;
   color: #94a3b8;
 }
 
@@ -2559,7 +2346,7 @@ onMounted(
   display: inline-flex;
   flex: 0 0 auto;
   padding: 3px 6px;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 750;
   color: #92400e;
   background: #fef3c7;
@@ -2665,7 +2452,7 @@ onMounted(
   top: 0;
   z-index: 2;
   padding: 8px 9px;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 750;
   color: #64748b;
   text-align: left;
@@ -2675,7 +2462,7 @@ onMounted(
 
 .members-table td {
   padding: 8px 9px;
-  font-size: 10px;
+  font-size: 12px;
   color: #475569;
   border-bottom: 1px solid #f1f5f9;
 }
@@ -2730,20 +2517,20 @@ onMounted(
 
 .panel-title {
   margin: 0;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 740;
   color: #0f172a;
 }
 
 .panel-subtitle {
   margin: 2px 0 0;
-  font-size: 10px;
+  font-size: 12px;
   color: #94a3b8;
 }
 
 .page-badge {
   padding: 4px 7px;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   color: #475569;
   background: #f8fafc;
@@ -2797,13 +2584,13 @@ onMounted(
 .avatar {
   width: 34px;
   height: 34px;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .detail-avatar {
   width: 50px;
   height: 50px;
-  font-size: 16px;
+  font-size: 18px;
 }
 
 .user-main {
@@ -2812,7 +2599,7 @@ onMounted(
 
 .user-name {
   overflow: hidden;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   color: #0f172a;
   text-overflow: ellipsis;
@@ -2825,7 +2612,7 @@ onMounted(
   min-width: 0;
   gap: 5px;
   margin-top: 2px;
-  font-size: 10px;
+  font-size: 12px;
   color: #64748b;
 }
 
@@ -2838,7 +2625,7 @@ onMounted(
 .user-submeta {
   margin-top: 2px;
   overflow: hidden;
-  font-size: 9px;
+  font-size: 11px;
   color: #94a3b8;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2856,7 +2643,7 @@ onMounted(
   display: inline-flex;
   align-items: center;
   padding: 2px 6px;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 750;
   border-radius: 999px;
 }
@@ -2897,7 +2684,7 @@ onMounted(
 }
 
 .directory-disabled {
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 700;
   color: #b91c1c;
 }
@@ -2913,7 +2700,7 @@ onMounted(
 }
 
 .page-text {
-  font-size: 10px;
+  font-size: 12px;
   color: #64748b;
 }
 
@@ -2926,7 +2713,7 @@ onMounted(
   min-height: 180px;
   gap: 9px;
   color: #94a3b8;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .spinner {
@@ -2976,7 +2763,7 @@ onMounted(
 
 .detail-identity {
   margin-top: 2px;
-  font-size: 11px;
+  font-size: 13px;
   color: #64748b;
 }
 
@@ -3000,7 +2787,7 @@ onMounted(
   align-items: center;
   gap: 5px;
   padding: 6px 9px;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 650;
   color: #64748b;
   border-radius: 7px;
@@ -3042,7 +2829,7 @@ onMounted(
 
 .info-label {
   margin-bottom: 3px;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 750;
   letter-spacing: 0.05em;
   color: #94a3b8;
@@ -3051,7 +2838,7 @@ onMounted(
 
 .info-card strong {
   overflow: hidden;
-  font-size: 11px;
+  font-size: 13px;
   color: #334155;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -3065,7 +2852,7 @@ onMounted(
 
 .block-title {
   margin: 0 0 8px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 740;
   color: #0f172a;
 }
@@ -3087,7 +2874,7 @@ onMounted(
   min-width: 0;
   gap: 10px;
   padding: 8px 9px;
-  font-size: 10px;
+  font-size: 12px;
   color: #64748b;
   border: 1px solid #e2e8f0;
   border-radius: 7px;
@@ -3107,7 +2894,7 @@ onMounted(
     SFMono-Regular,
     Menlo,
     monospace;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .access-section {
@@ -3125,7 +2912,7 @@ onMounted(
 
 .access-hint {
   margin: 2px 0 0;
-  font-size: 9px;
+  font-size: 11px;
   color: #94a3b8;
 }
 
@@ -3138,7 +2925,7 @@ onMounted(
 
 .access-summary span {
   padding: 4px 7px;
-  font-size: 9px;
+  font-size: 11px;
   color: #64748b;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
@@ -3171,7 +2958,7 @@ onMounted(
   top: 0;
   z-index: 2;
   padding: 8px 9px;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 750;
   letter-spacing: 0.04em;
   color: #64748b;
@@ -3183,7 +2970,7 @@ onMounted(
 
 .access-table td {
   padding: 8px 9px;
-  font-size: 10px;
+  font-size: 12px;
   color: #475569;
   vertical-align: middle;
   border-bottom: 1px solid #f1f5f9;
@@ -3216,7 +3003,7 @@ onMounted(
     SFMono-Regular,
     Menlo,
     monospace;
-  font-size: 8px;
+  font-size: 10px;
   color: #94a3b8;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -3225,7 +3012,7 @@ onMounted(
 .resource-type {
   display: inline-flex;
   padding: 2px 5px;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 700;
   color: #475569;
   background: #f1f5f9;
@@ -3241,7 +3028,7 @@ onMounted(
 .department-chip {
   display: inline-flex;
   padding: 2px 5px;
-  font-size: 8px;
+  font-size: 10px;
   color: #475569;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
@@ -3301,7 +3088,7 @@ onMounted(
 .placeholder-section h3,
 .empty-detail h3 {
   margin: 9px 0 4px;
-  font-size: 14px;
+  font-size: 16px;
   color: #334155;
 }
 
@@ -3309,14 +3096,14 @@ onMounted(
 .empty-detail p {
   max-width: 430px;
   margin: 0;
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.5;
 }
 
 .placeholder-number {
   margin-top: 12px;
   padding: 7px 10px;
-  font-size: 10px;
+  font-size: 12px;
   color: #475569;
   background: #f8fafc;
   border-radius: 7px;
@@ -3403,12 +3190,12 @@ onMounted(
 .page-title { font-size: 21px; }
 .cache-state { min-width: 0; padding: 5px 8px; }
 .cache-state > div { display: flex; align-items: center; gap: 5px; }
-.cache-text { margin: 0; font-size: 11px; }
-.access-navigation-link { font-size: 12px; }
+.cache-text { margin: 0; font-size: 13px; }
+.access-navigation-link { font-size: 14px; }
 .stats-grid { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 9px; }
 .stat-card { flex-direction: row; align-items: baseline; gap: 6px; padding: 0; border: 0; background: transparent; }
-.stat-label { font-size: 11px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #64748b; }
-.stat-value { margin: 0; font-size: 14px; }
+.stat-label { font-size: 13px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #64748b; }
+.stat-value { margin: 0; font-size: 16px; }
 .stat-card--warning .stat-value { color: #b45309; }
 .filters, .admin-mode-tabs, .workspace, .departments-workspace { margin-top: 8px; }
 .detail-header { padding: 10px 14px; }

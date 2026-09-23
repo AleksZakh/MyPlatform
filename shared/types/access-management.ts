@@ -1,13 +1,14 @@
 export const ACCESS_ACTIONS = ['VIEW', 'CREATE', 'UPDATE', 'DELETE'] as const
 export type AccessActionName = typeof ACCESS_ACTIONS[number]
-export type AccessSubjectKind = 'user' | 'department' | 'domainGroup'
-export type AccessSource = 'SYSTEM_ADMIN' | 'USER' | 'DEPARTMENT' | 'DOMAIN_GROUP'
+export type AccessSubjectKind = 'user' | 'department' | 'domainGroup' | 'spaceGroup'
+export type AccessSource = 'SYSTEM_ADMIN' | 'USER' | 'DEPARTMENT' | 'DOMAIN_GROUP' | 'SPACE_GROUP'
 export type AccessBlock = 'USER_INACTIVE' | 'RESOURCE_INACTIVE' | 'ADMIN_REQUIRED' | 'NO_PERMISSION' | null
 
 export interface AccessCell {
   directGranted: boolean
   inheritedGranted: boolean
   domainGroups: { id: number; name: string }[]
+  spaceGroups?: { id: number; name: string }[]
   systemGranted: boolean
   effectiveGranted: boolean
   sources: AccessSource[]

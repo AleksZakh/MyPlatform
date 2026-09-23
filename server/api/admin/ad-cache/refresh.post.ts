@@ -1,3 +1,5 @@
+import { structureAdmin } from '../../../services/structure-admin.service'
+import { requireAccessMutationRequest } from '../../../services/access-input'
 // server/api/admin/ad-cache/refresh.post.ts
 
 import {
@@ -17,13 +19,7 @@ import {
   requirePermission,
 } from '~~/server/services/access-control.service'
 
-import {
-  listDomainUsers,
-} from '~~/server/services/ad-directory.service'
-
-import {
-  adCache,
-} from '~~/server/utils/adCache'
+import { refreshAdCache } from '../../../services/ad-cache-refresh.service'
 
 import {
   writeAuditEvent,
@@ -36,6 +32,8 @@ const RESOURCE_KEY =
 
 export default defineEventHandler(
   async event => {
+    requireAccessMutationRequest(event)
+    await structureAdmin(event)
     const permission =
       await requirePermission(
         event,
@@ -53,16 +51,7 @@ export default defineEventHandler(
        * Используем единый нормализованный Directory service.
        * В кэш попадает уже DirectoryUser[], а не сырой LDAP-ответ.
        */
-      const users =
-        await listDomainUsers(
-          event,
-        )
-
-
-      await adCache.set(
-        users,
-      )
-
+      const users = await refreshAdCache('manual')
 
       const actor =
         await prisma.user
@@ -113,7 +102,7 @@ export default defineEventHandler(
           'ActiveDirectoryCache',
 
         entityId:
-          null,
+          undefined,
 
         actorUserId:
           permission.userId,

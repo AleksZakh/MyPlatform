@@ -18,4 +18,7 @@ declare global {
   // @ts-ignore
   export type { AccessActionName, AccessSubjectKind, AccessSource, AccessBlock, AccessCell, AccessRow, AccessSnapshot, AccessChange, AccessMutation, AccessSubjectOption } from '../../shared/types/access-management'
   import('../../shared/types/access-management')
+  // @ts-ignore
+  export type { StructureMember } from '../../shared/types/structure-member'
+  import('../../shared/types/structure-member')
 }
