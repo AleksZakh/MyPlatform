@@ -74,6 +74,10 @@ export default defineEventHandler(async (event) => {
     path === '/api/dev/test-email' ||
     path.startsWith('/api/dev/test-email/');
 
+  const isFileUpload =
+    path === '/api/lab/sampling-test' ||
+    path.startsWith('/api/lab/sampling-test/');
+
   const isDevRefreshAdCache =
   process.env.NODE_ENV ===
     'development' &&
@@ -148,6 +152,7 @@ export default defineEventHandler(async (event) => {
     isNuxtAsset ||
     isPublicFile ||
     isDevTestEmail ||
+    isFileUpload ||
     isActivateAccountPage ||
     isExternalLogin ||
     isDevRefreshAdCache ||
