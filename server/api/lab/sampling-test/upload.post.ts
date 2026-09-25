@@ -7,7 +7,7 @@ import * as path from 'node:path';
 const prisma = new PrismaClient();
 
 // Папка на сервере, куда физически будут складываться PDF-документы
-const UPLOAD_DIR = path.join(process.cwd(), 'uploads/sampling-documents');
+const UPLOAD_DIR = path.join(process.cwd(), 'public/files');
 
 export default defineEventHandler(async (event) => {
   // Выводим яркое сообщение в терминал запущенного сервера Nuxt 3
