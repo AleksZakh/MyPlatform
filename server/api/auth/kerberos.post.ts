@@ -6,6 +6,7 @@ import { ensureDomainUser, assertDomainUserCanLogin } from '../../services/domai
 
 /** nginx validates SPNEGO. Nitro must only be reachable through the trusted proxy. */
 export default defineEventHandler(async event => {
+  console.log('event ===>', event)
   const requestId = randomUUID()
   let stage = 'proxy'
   setResponseHeader(event, 'Cache-Control', 'no-store')

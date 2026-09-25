@@ -1,24 +1,21 @@
-// server/api/lab/sampling-test/index.get.ts
+// server/api/lab/sampling-test/summary.get.ts
 import { AccessAction, type Prisma } from '@prisma/client';
 import { createError, defineEventHandler, getQuery } from 'h3';
 import { requirePermission } from '../../../services/access-control.service';
 import { prisma } from '../../../utils/prisma';
 
-const samplingInclude = {
-  plp: true,
-  inspector: true,
+// Select only the data needed for the response.
+const samplingSelect = {
+  id: true,
+  samplingActNumber: true,
+  samplingDate: true,
   testLocation: {
-    include: { testObject: true },
-  },
-  // Both entities belong directly to SamplingTest.
-  testProtocol: true,
-  receiptMaterial: {
-    include: {
-      material: true,
-      manufacturer: true,
+    select: {
+      name: true,
+      testObject: { select: { name: true } },
     },
   },
-} satisfies Prisma.SamplingTestInclude;
+} satisfies Prisma.SamplingTestSelect;
 
 function queryString(value: unknown): string {
   return typeof value === 'string' ? value : '';
@@ -46,7 +43,9 @@ function sorting(
     case 'note': return { note: direction };
     case 'plp': return { plp: { name: direction } };
     case 'inspector': return { inspector: { name: direction } };
+    case 'objectName':
     case 'object': return { testLocation: { testObject: { name: direction } } };
+    case 'samplingPlace':
     case 'location': return { testLocation: { name: direction } };
     case 'protocolNumber': return { testProtocol: { protocolNumber: direction } };
     case 'protocolDate': return { testProtocol: { protocolDate: direction } };
@@ -97,11 +96,23 @@ export default defineEventHandler(async (event) => {
 
   try {
     const [data, total] = await Promise.all([
-      prisma.samplingTest.findMany({ where, orderBy, skip, take: pageSize, include: samplingInclude }),
+      prisma.samplingTest.findMany({ where, orderBy, skip, take: pageSize, select: samplingSelect }),
       prisma.samplingTest.count({ where }),
     ]);
 
-    return { success: true, data, total, page, pageSize };
+    return {
+      success: true,
+      data: data.map((row) => ({
+        id: row.id,
+        samplingActNumber: row.samplingActNumber,
+        samplingDate: row.samplingDate.toISOString().slice(0, 10).split('-').reverse().join('.'),
+        objectName: row.testLocation.testObject.name,
+        samplingPlace: row.testLocation.name,
+      })),
+      total,
+      page,
+      pageSize,
+    };
   } catch (error: unknown) {
     console.error('Ошибка при получении списка актов отбора:', error);
     throw createError({
