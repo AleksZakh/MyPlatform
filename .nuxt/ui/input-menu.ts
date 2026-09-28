@@ -1,3 +1,8 @@
+const fieldGroup = [
+  "horizontal",
+  "vertical"
+] as const
+
 const size = [
   "xs",
   "sm",
@@ -74,12 +79,10 @@ export default {
   "variants": {
     "fieldGroup": {
       "horizontal": {
-        "root": "group has-focus-visible:z-[1]",
-        "base": "group-not-only:group-first:rounded-e-none group-not-only:group-last:rounded-s-none group-not-last:group-not-first:rounded-none"
+        "root": "group has-focus-visible:z-[1]"
       },
       "vertical": {
-        "root": "group has-focus-visible:z-[1]",
-        "base": "group-not-only:group-first:rounded-b-none group-not-only:group-last:rounded-t-none group-not-last:group-not-first:rounded-none"
+        "root": "group has-focus-visible:z-[1]"
       }
     },
     "size": {
@@ -226,6 +229,34 @@ export default {
     }
   },
   "compoundVariants": [
+    {
+      "multiple": false,
+      "fieldGroup": "horizontal" as typeof fieldGroup[number],
+      "class": {
+        "base": "group-not-only:group-first:rounded-e-none group-not-only:group-last:rounded-s-none group-not-last:group-not-first:rounded-none"
+      }
+    },
+    {
+      "multiple": false,
+      "fieldGroup": "vertical" as typeof fieldGroup[number],
+      "class": {
+        "base": "group-not-only:group-first:rounded-b-none group-not-only:group-last:rounded-t-none group-not-last:group-not-first:rounded-none"
+      }
+    },
+    {
+      "multiple": true,
+      "fieldGroup": "horizontal" as typeof fieldGroup[number],
+      "class": {
+        "base": "not-only:first:rounded-e-none not-only:last:rounded-s-none not-last:not-first:rounded-none focus-visible:z-[1]"
+      }
+    },
+    {
+      "multiple": true,
+      "fieldGroup": "vertical" as typeof fieldGroup[number],
+      "class": {
+        "base": "not-only:first:rounded-b-none not-only:last:rounded-t-none not-last:not-first:rounded-none focus-visible:z-[1]"
+      }
+    },
     {
       "variant": "soft" as typeof variant[number],
       "multiple": true,

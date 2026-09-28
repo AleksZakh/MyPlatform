@@ -1,3 +1,9 @@
+## 1.12.2 (2026-09-25)
+
+### Bug fixes
+
+Fix a bug that caused `StepMap.mapResult` to set deletion flags for insertions adjacent to the mapped position.
+
 ## 1.12.1 (2026-09-02)
 
 ### Bug fixes

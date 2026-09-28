@@ -1,3 +1,11 @@
+const size = [
+  "xs",
+  "sm",
+  "md",
+  "lg",
+  "xl"
+] as const
+
 export default {
   "base": "relative",
   "variants": {
@@ -12,5 +20,8 @@ export default {
       "horizontal": "inline-flex -space-x-px",
       "vertical": "flex flex-col -space-y-px"
     }
+  },
+  "defaultVariants": {
+    "size": "md" as typeof size[number]
   }
 }

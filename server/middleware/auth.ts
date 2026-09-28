@@ -75,8 +75,8 @@ export default defineEventHandler(async (event) => {
     path.startsWith('/api/dev/test-email/');
 
   const isFileUpload =
-    path === '/api/lab/sampling-test' ||
-    path.startsWith('/api/lab/sampling-test/');
+    path === '/api/lab/sampling-test/upload' ||
+    path.startsWith('/api/lab/sampling-test/upload/');
 
   const isDevRefreshAdCache =
   process.env.NODE_ENV ===
