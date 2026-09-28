@@ -104,7 +104,7 @@ export default defineEventHandler(async (event) => {
     fs.writeFileSync(serverFilePath, fileBuffer);
 
     // Веб-ссылка относительно корня public (папка public опускается)
-    const publicPath = `/files/${safeObject}/${safeLocation}/${safeDate}/${safeFileName}`;
+    const publicPath = `/${safeObject}/${safeLocation}/${safeDate}/${safeFileName}`;
 
     // 🏆 ВЫПОЛНЯЕМ ТОЧЕЧНОЕ ОБНОВЛЕНИЕ В БД ПО ID ЧЕРЕЗ PRISMA
     const updatedRecord = await prisma.samplingTest.update({
