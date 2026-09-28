@@ -6,24 +6,19 @@ import * as path from 'node:path';
 
 const prisma = new PrismaClient();
 
-// Папка на сервере, куда физически будут складываться PDF-документы
-const UPLOAD_DIR = path.join(process.cwd(), 'public/files');
+// Корневая директория хранения статики в Nuxt 3
+const BASE_UPLOAD_DIR = path.join(process.cwd(), 'public/files');
 
 export default defineEventHandler(async (event) => {
-  // Выводим яркое сообщение в терминал запущенного сервера Nuxt 3
   console.log('\n======================================================');
-  console.log(`[🔗 СВЯЗЬ ПРОВЕРЕНА] Получен тестовый запрос на запись файла!`);
-  console.log(`Время запроса: ${new Date().toLocaleTimeString()}`);
-  console.log(`Метод: ${event.node.req.method} | URL: ${event.node.req.url}`);
+  console.log(`[💾 БОЕВАЯ ЗАПИСЬ БД] Получен запрос миграции файла с обновлением по ID`);
   console.log('======================================================\n');
 
   try {
-    // Гарантируем, что папка для файлов существует на сервере
-    if (!fs.existsSync(UPLOAD_DIR)) {
-        fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+    if (!fs.existsSync(BASE_UPLOAD_DIR)) {
+        fs.mkdirSync(BASE_UPLOAD_DIR, { recursive: true });
     }
 
-    // Читаем данные формы multipart/form-data
     const formData = await readMultipartFormData(event);
     if (!formData) {
       throw createError({ statusCode: 400, statusMessage: 'Данные формы не переданы' });
@@ -31,93 +26,100 @@ export default defineEventHandler(async (event) => {
 
     let fileBuffer: Buffer | null = null;
     let fileName = '';
+    
+    // Переменные для текстовых полей формы
+    let dbRecordIdStr = '';
     let actNumber = '';
     let actDate = '';
     let objectName = '';
     let actLocation = '';
-    console.log('formData ===> ', formData);
 
-    // Разбираем поля из пришедшей формы
+    // Разбираем пришедшие поля формы
     for (const field of formData) {
-      switch (field.name ) {
+      switch (field.name) {
         case 'file':
-          if(field.filename){
+          if (field.filename) {
             fileBuffer = field.data;
             fileName = field.filename;
           }          
           break;
+        case 'dbRecordId':
+          dbRecordIdStr = field.data.toString('utf-8').trim();
+          break;
         case 'actNumber':
-          actNumber = field.data.toString('utf-8');
+          actNumber = field.data.toString('utf-8').trim();
           break;
         case 'date':
-          actDate = field.data.toString('utf-8');
+          actDate = field.data.toString('utf-8').trim();
           break;
         case 'objectName':
-          objectName = field.data.toString('utf-8');
+          objectName = field.data.toString('utf-8').trim();
           break;
         case 'location':
-          actLocation = field.data.toString('utf-8');
+          actLocation = field.data.toString('utf-8').trim();
           break;
         default:
           break;
       }
     }
 
-    if (!fileBuffer || !actNumber) {
-      throw createError({ statusCode: 400, statusMessage: 'Отсутствует файл или номер акта' });
+    // Проверяем наличие критических параметров для сохранения и апдейта в БД
+    if (!fileBuffer || !dbRecordIdStr || !actNumber) {
+      throw createError({ statusCode: 400, statusMessage: 'Отсутствует файл, ID записи или номер акта' });
     }
 
-    // ФУНКЦИЯ ОЧИСТКИ СТРОК: Удаляет или заменяет спецсимволы (\, /, *, ?, :, ", <, >, |), 
-    // которые запрещены файловой системой Linux/Windows или ломают URL путей.
+    const dbRecordId = parseInt(dbRecordIdStr, 10);
+    if (isNaN(dbRecordId)) {
+      throw createError({ statusCode: 400, statusMessage: 'Некорректный формат Идентификатора БД (ID)' });
+    }
+
+    // Функция очистки имен для безопасной работы с путями файловой системы Linux
     const sanitize = (text: string) => {
         return text
-            .replace(/[\/\\?%*:|"<>]/g, '_') // Заменяем опасные символы на подчеркивание
-            .replace(/\s+/g, '_')            // Заменяем пробелы на подчеркивания для красоты путей
-            .substring(0, 50);               // Ограничиваем длину (на случай слишком длинных имен объектов)
+            .replace(/[\/\\?%*:|"<>]/g, '_') // Убираем запрещенные символы
+            .replace(/\s+/g, '_')            // Заменяем пробелы для читаемости путей
+            .substring(0, 50);               // Ограничиваем длину директорий
     };
 
-    // Генерируем компоненты пути на основе пришедших данных let actLocation = '';
     const safeAct = sanitize(actNumber);
     const safeDate = sanitize(actDate) || 'no-date';
     const safeObject = sanitize(objectName) || 'general-object';
-    const safeLocation = sanitize(actLocation) || 'general-object';
+    const safeLocation = sanitize(actLocation) || 'general-location';
 
-    // Формируем безопасное имя файла на сервере и путь для сохранения
-    const safeFileName = `act_${actNumber.replace(/\//g, '_')}_${Date.now()}.pdf`;
-    // const serverFilePath = path.join(UPLOAD_DIR, safeFileName);
+    // Формируем имя файла
+    const safeFileName = `act_${safeAct}_${Date.now()}.pdf`;
 
-    // ВАРИАНТ Б (Альтернативный): Если вы хотите раскладывать файлы на сервере по ФИЗИЧЕСКИМ ПОДПАПКАМ объектов:
-    const customObjectDir = path.join(UPLOAD_DIR, safeObject);
-    const customLocation = path.join(customObjectDir, safeLocation);
-    const customActDate = path.join(customLocation, safeDate)
+    // Создаем каскадную вложенность папок: public/files/Имя_Объекта/Локация/Дата
+    const customObjectDir = path.join(BASE_UPLOAD_DIR, safeObject);
+    const customLocationDir = path.join(customObjectDir, safeLocation);
+    const targetFolder = path.join(customLocationDir, safeDate);
 
-    if (!fs.existsSync(customActDate)) fs.mkdirSync(customActDate, { recursive: true });
-    const serverFilePath = path.join(customActDate, safeFileName);
+    // Принудительно создаем дерево папок на сервере, если его еще нет
+    if (!fs.existsSync(targetFolder)) {
+        fs.mkdirSync(targetFolder, { recursive: true });
+    }
 
-    // Текущий целевой путь для сохранения на жесткий диск сервера
-    // const serverFilePath = path.join(UPLOAD_DIR, safeFileName);
-
-    // 1. Физически записываем файл на жесткий диск целевого сервера
+    // Полный путь для записи файла на сервере
+    const serverFilePath = path.join(targetFolder, safeFileName);
     fs.writeFileSync(serverFilePath, fileBuffer);
 
-    // Относительный путь, который мы сохраним в БД (чтобы фронтенд мог его скачать)
-    const publicPath = `/uploads/sampling-documents/${safeFileName}`;
+    // Веб-ссылка относительно корня public (папка public опускается)
+    const publicPath = `/files/${safeObject}/${safeLocation}/${safeDate}/${safeFileName}`;
 
-    // 2. Обновляем запись в базе данных через Prisma
-    // const updatedRecord = await prisma.samplingTest.updateMany({
-    //     where: {
-    //         samplingActNumber: actNumber.trim()
-    //     },
-    //     data: {
-    //         samplingDocumentPath: publicPath // Прописываем путь к файлу в схему БД
-    //     }
-    // });
+    // 🏆 ВЫПОЛНЯЕМ ТОЧЕЧНОЕ ОБНОВЛЕНИЕ В БД ПО ID ЧЕРЕЗ PRISMA
+    const updatedRecord = await prisma.samplingTest.update({
+        where: {
+            id: dbRecordId
+        },
+        data: {
+            samplingDocumentPath: publicPath 
+        }
+    });
 
     return {
       success: true,
-      message: `Файл успешно загружен на сервер и привязан к акту ${actNumber}`,
-      path: publicPath,
-    //   updatedCount: updatedRecord.count
+      message: `Файл сохранен и привязан по ID=${dbRecordId} к акту ${updatedRecord.samplingActNumber}`,
+      path: publicPath
     };
     
   } catch (error) {
@@ -125,19 +127,11 @@ export default defineEventHandler(async (event) => {
     const statusCode = typeof error === 'object' && error !== null && 'statusCode' in error
       ? (error as { statusCode?: number }).statusCode
       : undefined;
-    const statusMessage = error instanceof Error
-      ? error.message
-      : 'Внутренняя ошибка сервера при загрузке файла';
+    const statusMessage = error instanceof Error ? error.message : 'Ошибка при сохранении файла';
+    
     throw createError({
         statusCode: statusCode || 500,
         statusMessage,
     });
-    
   }
-  
 });
-
-
-
-
-
