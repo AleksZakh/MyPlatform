@@ -32,16 +32,34 @@ export default defineEventHandler(async (event) => {
     let fileBuffer: Buffer | null = null;
     let fileName = '';
     let actNumber = '';
+    let actDate = '';
+    let objectName = '';
+    let actLocation = '';
     console.log('formData ===> ', formData);
 
     // Разбираем поля из пришедшей формы
     for (const field of formData) {
-      if (field.name === 'file' && field.filename) {
-        fileBuffer = field.data;
-        fileName = field.filename;
-      }
-      if (field.name === 'actNumber') {
-        actNumber = field.data.toString('utf-8');
+      switch (field.name ) {
+        case 'file':
+          if(field.filename){
+            fileBuffer = field.data;
+            fileName = field.filename;
+          }          
+          break;
+        case 'actNumber':
+          actNumber = field.data.toString('utf-8');
+          break;
+        case 'date':
+          actDate = field.data.toString('utf-8');
+          break;
+        case 'objectName':
+          objectName = field.data.toString('utf-8');
+          break;
+        case 'location':
+          actLocation = field.data.toString('utf-8');
+          break;
+        default:
+          break;
       }
     }
 
@@ -49,9 +67,35 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, statusMessage: 'Отсутствует файл или номер акта' });
     }
 
+    // ФУНКЦИЯ ОЧИСТКИ СТРОК: Удаляет или заменяет спецсимволы (\, /, *, ?, :, ", <, >, |), 
+    // которые запрещены файловой системой Linux/Windows или ломают URL путей.
+    const sanitize = (text: string) => {
+        return text
+            .replace(/[\/\\?%*:|"<>]/g, '_') // Заменяем опасные символы на подчеркивание
+            .replace(/\s+/g, '_')            // Заменяем пробелы на подчеркивания для красоты путей
+            .substring(0, 50);               // Ограничиваем длину (на случай слишком длинных имен объектов)
+    };
+
+    // Генерируем компоненты пути на основе пришедших данных let actLocation = '';
+    const safeAct = sanitize(actNumber);
+    const safeDate = sanitize(actDate) || 'no-date';
+    const safeObject = sanitize(objectName) || 'general-object';
+    const safeLocation = sanitize(actLocation) || 'general-object';
+
     // Формируем безопасное имя файла на сервере и путь для сохранения
     const safeFileName = `act_${actNumber.replace(/\//g, '_')}_${Date.now()}.pdf`;
-    const serverFilePath = path.join(UPLOAD_DIR, safeFileName);
+    // const serverFilePath = path.join(UPLOAD_DIR, safeFileName);
+
+    // ВАРИАНТ Б (Альтернативный): Если вы хотите раскладывать файлы на сервере по ФИЗИЧЕСКИМ ПОДПАПКАМ объектов:
+    const customObjectDir = path.join(UPLOAD_DIR, safeObject);
+    const customLocation = path.join(customObjectDir, safeLocation);
+    const customActDate = path.join(customLocation, safeDate)
+
+    if (!fs.existsSync(customActDate)) fs.mkdirSync(customActDate, { recursive: true });
+    const serverFilePath = path.join(customActDate, safeFileName);
+
+    // Текущий целевой путь для сохранения на жесткий диск сервера
+    // const serverFilePath = path.join(UPLOAD_DIR, safeFileName);
 
     // 1. Физически записываем файл на жесткий диск целевого сервера
     fs.writeFileSync(serverFilePath, fileBuffer);
