@@ -32,6 +32,7 @@ export default defineEventHandler(async (event) => {
     let fileBuffer: Buffer | null = null;
     let fileName = '';
     let actNumber = '';
+    console.log('formData ===> ', formData);
 
     // Разбираем поля из пришедшей формы
     for (const field of formData) {
