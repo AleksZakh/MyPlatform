@@ -67,7 +67,7 @@ export default defineEventHandler(async (event) => {
     const sortKey =
       typeof query.sortKey === 'string'
         ? query.sortKey
-        : 'samplingDate';
+        : 'createdAt';
 
 
     // ============================================================
@@ -485,6 +485,12 @@ export default defineEventHandler(async (event) => {
         };
         break;
 
+      case 'createdAt':
+        orderBy = {
+          createdAt: sortOrder,
+        };
+        break;
+
       case 'location':
         orderBy = {
           testLocation: {
@@ -545,7 +551,7 @@ export default defineEventHandler(async (event) => {
 
       default:
         orderBy = {
-          samplingDate: 'desc',
+          createdAt: 'desc',
         };
     }
 
@@ -584,7 +590,10 @@ export default defineEventHandler(async (event) => {
 
           skip,
           take: pageSize,
-          orderBy,
+          orderBy: [
+            orderBy,
+            { id: 'desc' },
+          ],
         }),
 
         prisma.samplingTest.count({
