@@ -1717,7 +1717,6 @@ function fillFormWithData(
   suppressObjectLocationReset =
     false
 
-  clearLocationSuggestionState()
 }
 
 

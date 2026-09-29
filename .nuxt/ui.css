@@ -1,4 +1,4 @@
-@source "C:/Projects/Nuxt/MyPlatform/app/**/*";
+@source "/home/local_adm/Projects/MyPlatform/app/**/*";
 @source inline("isolate");
 @source "./ui";
 

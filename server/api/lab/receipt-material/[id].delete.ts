@@ -19,13 +19,7 @@ export default defineEventHandler(async (event) => {
     // Проверяем существование записи
     const existingReceipt = await prisma.receiptMaterial.findUnique({
       where: { id },
-      include: {
-        _count: {
-          select: {
-            testProtocols: true,
-          },
-        },
-      },
+      include: { samplingTest: { select: { id: true } } },
     });
 
     if (!existingReceipt) {
@@ -36,10 +30,10 @@ export default defineEventHandler(async (event) => {
     }
 
     // Проверяем, есть ли связанные протоколы
-    if (existingReceipt._count.testProtocols > 0) {
+    if (existingReceipt.samplingTest !== null) {
       throw createError({
         statusCode: 409,
-        statusMessage: `Невозможно удалить поступление, так как оно используется в ${existingReceipt._count.testProtocols} протоколах испытаний`,
+        statusMessage: `Невозможно удалить поступление, так как оно связано с актом отбора ID=${existingReceipt.samplingTest.id}`,
       });
     }
 

@@ -1,5 +1,5 @@
 // server/api/lab/sampling-test/[id].put.ts
-import { PrismaClient } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { defineEventHandler, getRouterParam, readMultipartFormData } from 'h3';
 import { handleFileUpload, parseDate } from '~~/server/utils/fileUploadHandler';
 import { AccessAction,} from '@prisma/client';
@@ -14,7 +14,7 @@ import {
   getRequestMeta,
 } from '~~/server/utils/auditLog';
 
-const prisma = new PrismaClient();
+import { prisma } from '../../../utils/prisma';
 
 export default defineEventHandler(async (event) => {
   await requirePermission(
@@ -93,8 +93,8 @@ export default defineEventHandler(async (event) => {
       }> = [];
 
       // ----- 3.1 Подготовка данных для SamplingTest -----
-      const updateSamplingTestData: any = {};
-      const relationUpdates: any = {};
+      const updateSamplingTestData: Prisma.SamplingTestUncheckedUpdateInput = {};
+      const relationUpdates: Prisma.SamplingTestUncheckedUpdateInput = {};
 
       // --- Проверка ПЛП ---
       if (body.plpId) {
@@ -164,10 +164,10 @@ export default defineEventHandler(async (event) => {
       }
 
       // --- Проверка уникальности номера акта ---
-      if (body.sActNumber?.trim() && body.sActNumber.trim() !== beforeSamplingTest.sActNumber) {
+      if (body.sActNumber?.trim() && body.sActNumber.trim() !== beforeSamplingTest.samplingActNumber) {
         const duplicate = await tx.samplingTest.findFirst({
           where: {
-            sActNumber: body.sActNumber.trim(),
+            samplingActNumber: body.sActNumber.trim(),
             deletedAt: null,
             id: { not: id },
           },
@@ -178,7 +178,7 @@ export default defineEventHandler(async (event) => {
             statusMessage: `Акт с номером "${body.sActNumber}" уже существует`,
           });
         }
-        updateSamplingTestData.sActNumber = body.sActNumber.trim();
+        updateSamplingTestData.samplingActNumber = body.sActNumber.trim();
       }
 
       // ----- 3.2 Обновление ReceiptMaterial -----
@@ -211,9 +211,9 @@ export default defineEventHandler(async (event) => {
 
           const createdReceipt = await tx.receiptMaterial.create({
             data: {
-              qualDate: body.qualDate ? parseDate(body.qualDate) : null,
-              qualDocNumber: body.qualDocNumber || null,
-              qualDocPath: fileDbPaths.qualDoc || null,
+              receiptDate: body.qualDate ? parseDate(body.qualDate) : null,
+              qualityDocumentNumber: body.qualDocNumber || null,
+              qualityDocumentPath: fileDbPaths.qualDoc || null,
               note: body.receiptNote || null,
               materialId,
               authorEmail: editorEmail,
@@ -227,12 +227,12 @@ export default defineEventHandler(async (event) => {
             entityType: 'ReceiptMaterial',
             entityId: createdReceipt.id,
             action: 'CREATE',
-            note: `Создано поступление материала "${material.name}" (акт № ${beforeSamplingTest.sActNumber})`,
+            note: `Создано поступление материала "${material.name}" (акт № ${beforeSamplingTest.samplingActNumber})`,
             afterData: createdReceipt,
           });
         } else {
           // Обновление существующего поступления
-          const receiptUpdateData: any = {};
+          const receiptUpdateData: Prisma.ReceiptMaterialUncheckedUpdateInput = {};
 
           if (body.materialId) {
             const materialId = parseInt(body.materialId);
@@ -247,16 +247,16 @@ export default defineEventHandler(async (event) => {
           }
 
           if (body.qualDate !== undefined) {
-            receiptUpdateData.qualDate = body.qualDate ? parseDate(body.qualDate) : null;
+            receiptUpdateData.receiptDate = body.qualDate ? parseDate(body.qualDate) : null;
           }
           if (body.qualDocNumber !== undefined) {
-            receiptUpdateData.qualDocNumber = body.qualDocNumber || null;
+            receiptUpdateData.qualityDocumentNumber = body.qualDocNumber || null;
           }
           if (body.receiptNote !== undefined) {
             receiptUpdateData.note = body.receiptNote || null;
           }
           if (fileDbPaths.qualDoc) {
-            receiptUpdateData.qualDocPath = fileDbPaths.qualDoc;
+            receiptUpdateData.qualityDocumentPath = fileDbPaths.qualDoc;
           }
 
           if (Object.keys(receiptUpdateData).length > 0) {
@@ -314,10 +314,9 @@ export default defineEventHandler(async (event) => {
             data: {
               protocolNumber: body.protocolNumber || `Без номера-${Date.now()}`,
               protocolDate: body.protocolDate ? parseDate(body.protocolDate) : null,
-              protocolDocPath: fileDbPaths.protocolDoc || null,
+              protocolDocumentPath: fileDbPaths.protocolDoc || null,
               testResult: body.testResult || 'Не указан',
               note: body.protocolNote || null,
-              receiptMaterialId,
               authorEmail: editorEmail,
               createdAt: new Date(),
             },
@@ -329,12 +328,12 @@ export default defineEventHandler(async (event) => {
             entityType: 'TestProtocol',
             entityId: createdProtocol.id,
             action: 'CREATE',
-            note: `Создан протокол № ${createdProtocol.protocolNumber} (акт № ${beforeSamplingTest.sActNumber})`,
+            note: `Создан протокол № ${createdProtocol.protocolNumber} (акт № ${beforeSamplingTest.samplingActNumber})`,
             afterData: createdProtocol,
           });
         } else {
           // Обновление существующего протокола
-          const protocolUpdateData: any = {};
+          const protocolUpdateData: Prisma.TestProtocolUncheckedUpdateInput = {};
 
           if (body.protocolNumber !== undefined) {
             protocolUpdateData.protocolNumber = body.protocolNumber || null;
@@ -349,7 +348,7 @@ export default defineEventHandler(async (event) => {
             protocolUpdateData.note = body.protocolNote || null;
           }
           if (fileDbPaths.protocolDoc) {
-            protocolUpdateData.protocolDocPath = fileDbPaths.protocolDoc;
+            protocolUpdateData.protocolDocumentPath = fileDbPaths.protocolDoc;
           }
 
           if (Object.keys(protocolUpdateData).length > 0) {
@@ -385,13 +384,13 @@ export default defineEventHandler(async (event) => {
 
       // ----- 3.4 Обновление самой SamplingTest -----
       if (body.sActDate) {
-        updateSamplingTestData.sActDate = parseDate(body.sActDate);
+        updateSamplingTestData.samplingDate = parseDate(body.sActDate) || beforeSamplingTest.samplingDate;
       }
       if (body.note !== undefined) {
         updateSamplingTestData.note = body.note || null;
       }
       if (fileDbPaths.sDoc) {
-        updateSamplingTestData.sDocPath = fileDbPaths.sDoc;
+        updateSamplingTestData.samplingDocumentPath = fileDbPaths.sDoc;
       }
 
       const finalData = {

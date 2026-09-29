@@ -12,7 +12,7 @@ const scrypt =
 
 const KEY_LENGTH = 64;
 
-export const hashPassword = async (
+export const hashSpacePassword = async (
   password: string,
 ): Promise<string> => {
   const salt =
@@ -33,7 +33,7 @@ export const hashPassword = async (
 };
 
 
-export const verifyPassword = async (
+export const verifySpacePassword = async (
   password: string,
   storedHash: string,
 ): Promise<boolean> => {

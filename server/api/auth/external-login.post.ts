@@ -5,7 +5,7 @@ import {
 } from '@prisma/client';
 
 import {
-  verifyPassword,
+  verifySpacePassword,
 } from '../../utils/password';
 
 const prisma =
@@ -121,7 +121,7 @@ export default defineEventHandler(
         }
 
         const passwordIsValid =
-        await verifyPassword(
+        await verifySpacePassword(
             password,
             passwordHash,
         );

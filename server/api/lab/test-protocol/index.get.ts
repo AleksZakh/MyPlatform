@@ -1,126 +1,36 @@
-// server/api/lab/test-protocol/index.get.ts
-import { PrismaClient } from '@prisma/client';
-import { defineEventHandler, getQuery } from 'h3';
-
-const prisma = new PrismaClient();
+import type { Prisma } from '@prisma/client';
+import { defineEventHandler, getQuery, createError } from 'h3';
+import { prisma } from '../../../utils/prisma';
+import { protocolHandbookInclude, protocolHandbookDto } from '../../../utils/lab-handbook-dto';
 
 export default defineEventHandler(async (event) => {
-  try {
-    const query = getQuery(event);
-    const page = parseInt(query.page as string) || 1;
-    const pageSize = parseInt(query.pageSize as string) || 10;
-    const search = (query.search as string) || '';
-    const sortKey = (query.sortKey as string) || 'protocolNumber';
-    const sortOrder = (query.sortOrder as string) || 'asc';
-
-    // Формируем условия поиска
-    const where: any = {};
-    if (search) {
-      where.OR = [
-        { protocolNumber: { contains: search, mode: 'insensitive' as const } },
-        { testResult: { contains: search, mode: 'insensitive' as const } },
-        { note: { contains: search, mode: 'insensitive' as const } },
-        { 
-          receiptMaterial: { 
-            material: { 
-              name: { contains: search, mode: 'insensitive' as const } 
-            } 
-          } 
-        },
-        { 
-          receiptMaterial: { 
-            material: { 
-              manufacturer: { 
-                name: { contains: search, mode: 'insensitive' as const } 
-              } 
-            } 
-          } 
-        },
-        {
-          samplingTests: {
-            some: {
-              sActNumber: { contains: search, mode: 'insensitive' as const }
-            }
-          }
-        }
-      ];
-    }
-
-    // Формируем сортировку
-    let orderBy: any = {};
-    if (sortKey === 'material') {
-      orderBy = {
-        receiptMaterial: {
-          material: {
-            name: sortOrder === 'asc' ? 'asc' : 'desc',
-          },
-        },
-      };
-    } else if (sortKey === 'manufacturer') {
-      orderBy = {
-        receiptMaterial: {
-          material: {
-            manufacturer: {
-              name: sortOrder === 'asc' ? 'asc' : 'desc',
-            },
-          },
-        },
-      };
-    } else {
-      orderBy = {
-        [sortKey]: sortOrder === 'asc' ? 'asc' : 'desc',
-      };
-    }
-
-    // Выполняем запросы параллельно
-    const [data, total] = await Promise.all([
-      prisma.testProtocol.findMany({
-        where,
-        orderBy,
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-        include: {
-          receiptMaterial: {
-            include: {
-              material: {
-                include: {
-                  manufacturer: true,
-                },
-              },
-            },
-          },
-          samplingTests: {
-            select: {
-              id: true,
-              sActNumber: true,
-              sActDate: true,
-            },
-            take: 5,
-          },
-          _count: {
-            select: {
-              samplingTests: true,
-            },
-          },
-        },
-      }),
-      prisma.testProtocol.count({ where }),
-    ]);
-
-    return {
-      success: true,
-      data,
-      total,
-      page,
-      pageSize,
-    };
-
-  } catch (error: any) {
-    console.error('Ошибка при получении списка протоколов:', error);
-    
-    throw createError({
-      statusCode: 500,
-      statusMessage: error.message || 'Ошибка при получении списка протоколов',
-    });
+  const query = getQuery(event);
+  const page = Number(query.page || 1);
+  const pageSize = Number(query.pageSize || 10);
+  if (!Number.isSafeInteger(page) || page < 1 || !Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > 1000 || (page - 1) * pageSize > 2147483647) {
+    throw createError({ statusCode: 400, statusMessage: 'Invalid pagination' });
   }
+  const search = String(query.search || '').trim();
+  const text = { contains: search, mode: 'insensitive' as const };
+  const where: Prisma.TestProtocolWhereInput = search ? { OR: [
+    { protocolNumber: text }, { testResult: text }, { note: text },
+    { samplingTest: { samplingActNumber: text } },
+    { samplingTest: { receiptMaterial: { material: { name: text } } } },
+    { samplingTest: { receiptMaterial: { manufacturer: { name: text } } } },
+  ] } : {};
+  const direction: Prisma.SortOrder = query.sortOrder === 'desc' ? 'desc' : 'asc';
+  const sortFields: Record<string, Prisma.TestProtocolOrderByWithRelationInput> = {
+    id: { id: direction }, protocolNumber: { protocolNumber: direction },
+    protocolDate: { protocolDate: direction }, testResult: { testResult: direction }, createdAt: { createdAt: direction },
+    material: { samplingTest: { receiptMaterial: { material: { name: direction } } } },
+    manufacturer: { samplingTest: { receiptMaterial: { manufacturer: { name: direction } } } },
+  };
+  const sortKey = String(query.sortKey || 'protocolNumber');
+  const orderBy = Object.hasOwn(sortFields, sortKey) ? sortFields[sortKey]! : sortFields.protocolNumber!;
+  const [rows, total] = await Promise.all([
+    prisma.testProtocol.findMany({ where, orderBy: [orderBy, { id: 'asc' }],
+      skip: (page - 1) * pageSize, take: pageSize, include: protocolHandbookInclude }),
+    prisma.testProtocol.count({ where }),
+  ]);
+  return { success: true, data: rows.map(protocolHandbookDto), total, page, pageSize };
 });

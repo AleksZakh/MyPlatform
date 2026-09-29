@@ -375,10 +375,10 @@ const { showTost } = useAppToasts();
 
 interface Protocol {
   id: number;
-  protocolNumber: string;
+  protocolNumber: string | null;
   protocolDate: string | null;
   protocolDocPath: string | null;
-  testResult: string;
+  testResult: string | null;
   note: string | null;
   receiptMaterial: {
     id: number;
@@ -476,7 +476,7 @@ function getFileName(path: string): string {
   return parts[parts.length - 1] || path;
 }
 
-function getResultBadgeClass(result: string): string {
+function getResultBadgeClass(result: string | null): string {
   if (!result) return 'bg-gray-100 text-gray-600';
   const lower = result.toLowerCase();
   if (lower.includes('не соответствует')) return 'bg-red-100 text-red-700';
@@ -484,7 +484,7 @@ function getResultBadgeClass(result: string): string {
   return 'bg-gray-100 text-gray-600';
 }
 
-function getResultDotClass(result: string): string {
+function getResultDotClass(result: string | null): string {
   if (!result) return 'bg-gray-400';
   const lower = result.toLowerCase();
   if (lower.includes('не соответствует')) return 'bg-red-500';

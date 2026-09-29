@@ -454,6 +454,8 @@ import {
   resolveComponent,
 } from 'vue'
 
+import type { PropType } from 'vue'
+
 import fViewerModal from '~/components/lab/FileViewerModal.vue'
 
 import type {
@@ -519,7 +521,7 @@ const InfoValue =
         type: [
           String,
           Number,
-        ],
+        ] as PropType<string | number | null>,
         default: null,
       },
 
@@ -567,7 +569,7 @@ const InfoValue =
                     : '',
                 ],
               },
-              componentProps.value ||
+              componentProps.value ??
                 '—',
             ),
           ],
@@ -589,7 +591,7 @@ const FileValue =
       },
 
       path: {
-        type: String,
+        type: String as PropType<string | null>,
         default: null,
       },
     },

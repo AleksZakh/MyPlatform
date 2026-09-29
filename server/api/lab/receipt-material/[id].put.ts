@@ -1,9 +1,9 @@
 // server/api/lab/receipt-material/[id].put.ts
-import { PrismaClient } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { defineEventHandler, getRouterParam, readMultipartFormData } from 'h3';
 import { handleFileUpload, parseDate } from '~~/server/utils/fileUploadHandler';
 
-const prisma = new PrismaClient();
+import { prisma } from '../../../utils/prisma';
 
 export default defineEventHandler(async (event) => {
   try {
@@ -64,12 +64,12 @@ export default defineEventHandler(async (event) => {
     }
 
     // Проверка на дубликат (если номер документа изменился)
-    if (body.qualDocNumber?.trim() && body.qualDocNumber.trim() !== existingReceipt.qualDocNumber) {
+    if (body.qualDocNumber?.trim() && body.qualDocNumber.trim() !== existingReceipt.qualityDocumentNumber) {
       const materialId = body.materialId ? parseInt(body.materialId) : existingReceipt.materialId;
       
       const duplicate = await prisma.receiptMaterial.findFirst({
         where: {
-          qualDocNumber: body.qualDocNumber.trim(),
+          qualityDocumentNumber: body.qualDocNumber.trim(),
           materialId: materialId,
           id: { not: id },
         },
@@ -86,16 +86,16 @@ export default defineEventHandler(async (event) => {
     const editorEmail = body.editorEmail || event.context.user?.email || 'system@user';
 
     // Подготавливаем данные для обновления
-    const updateData: any = {
+    const updateData: Prisma.ReceiptMaterialUncheckedUpdateInput = {
       editorEmail: editorEmail,
       editedAt: new Date(),
     };
 
     if (body.qualDate !== undefined) {
-      updateData.qualDate = parseDate(body.qualDate);
+      updateData.receiptDate = parseDate(body.qualDate);
     }
     if (body.qualDocNumber !== undefined) {
-      updateData.qualDocNumber = body.qualDocNumber?.trim() || null;
+      updateData.qualityDocumentNumber = body.qualDocNumber?.trim() || null;
     }
     if (body.note !== undefined) {
       updateData.note = body.note || null;
@@ -104,7 +104,7 @@ export default defineEventHandler(async (event) => {
       updateData.materialId = parseInt(body.materialId);
     }
     if (fileDbPaths.qualDoc) {
-      updateData.qualDocPath = fileDbPaths.qualDoc;
+      updateData.qualityDocumentPath = fileDbPaths.qualDoc;
     }
 
     // Обновляем поступление

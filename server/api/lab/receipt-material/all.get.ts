@@ -1,58 +1,26 @@
-
-// server/api/lab/receipt-material/all.get.ts
-import { PrismaClient } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { defineEventHandler, getQuery } from 'h3';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../../utils/prisma';
 
 export default defineEventHandler(async (event) => {
-  try {
-    const query = getQuery(event);
-    const search = (query.search as string) || '';
-    const sortKey = (query.sortKey as string) || 'qualDate';
-    const sortOrder = (query.sortOrder as string) || 'desc';
-
-    const where: any = {};
-    if (search) {
-      where.OR = [
-        { qualDocNumber: { contains: search, mode: 'insensitive' as const } },
-        { note: { contains: search, mode: 'insensitive' as const } },
-        { material: { name: { contains: search, mode: 'insensitive' as const } } },
-      ];
-    }
-
-    const receipts = await prisma.receiptMaterial.findMany({
-      where,
-      orderBy: {
-        [sortKey]: sortOrder === 'asc' ? 'asc' : 'desc',
-      },
-      select: {
-        id: true,
-        qualDate: true,
-        qualDocNumber: true,
-        qualDocPath: true,
-        note: true,
-        material: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-    });
-
-    return {
-      success: true,
-      data: receipts,
-      total: receipts.length,
-    };
-
-  } catch (error: any) {
-    console.error('Ошибка при получении списка поступлений:', error);
-    
-    throw createError({
-      statusCode: 500,
-      statusMessage: error.message || 'Ошибка при получении списка поступлений',
-    });
-  }
+  const query = getQuery(event);
+  const search = String(query.search || '').trim();
+  const text = { contains: search, mode: 'insensitive' as const };
+  const where: Prisma.ReceiptMaterialWhereInput = search ? { OR: [
+    { qualityDocumentNumber: text }, { note: text }, { material: { name: text } },
+  ] } : {};
+  const direction: Prisma.SortOrder = query.sortOrder === 'asc' ? 'asc' : 'desc';
+  const sorts: Record<string, Prisma.ReceiptMaterialOrderByWithRelationInput> = {
+    id: { id: direction }, qualDate: { receiptDate: direction }, receiptDate: { receiptDate: direction },
+    qualDocNumber: { qualityDocumentNumber: direction }, qualityDocumentNumber: { qualityDocumentNumber: direction },
+    material: { material: { name: direction } },
+  };
+  const sortKey = String(query.sortKey || 'qualDate');
+  const orderBy = Object.hasOwn(sorts, sortKey) ? sorts[sortKey]! : sorts.qualDate!;
+  const rows = await prisma.receiptMaterial.findMany({ where, orderBy,
+    select: { id: true, receiptDate: true, qualityDocumentNumber: true, qualityDocumentPath: true,
+      note: true, material: { select: { id: true, name: true } } } });
+  const data = rows.map(row => ({ ...row, qualDate: row.receiptDate,
+    qualDocNumber: row.qualityDocumentNumber, qualDocPath: row.qualityDocumentPath }));
+  return { success: true, data, total: data.length };
 });

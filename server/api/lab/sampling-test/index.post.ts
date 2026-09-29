@@ -1,5 +1,5 @@
 // server/api/lab/sampling-test/index.post.ts
-import { PrismaClient } from '@prisma/client';
+
 import { defineEventHandler, readMultipartFormData } from 'h3';
 import { handleFileUpload, parseDate } from '~~/server/utils/fileUploadHandler';
 import { logAudit, getActorEmail, getRequestMeta } from '~~/server/utils/auditLog';
@@ -9,7 +9,7 @@ import {
   requirePermission,
 } from '../../../services/access-control.service';
 
-const prisma = new PrismaClient();
+import { prisma } from '../../../utils/prisma';
 
 export default defineEventHandler(async (event) => {
   await requirePermission(
@@ -89,7 +89,7 @@ export default defineEventHandler(async (event) => {
     // Проверяем уникальность номера акта
     const existingAct = await prisma.samplingTest.findFirst({
       where: {
-        sActNumber: body.sActNumber.trim(),
+        samplingActNumber: body.sActNumber.trim(),
         deletedAt: null,  // ← не считаем удалённые дубликатами
       },
     });
@@ -162,6 +162,10 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    if (receiptMaterialId === null) {
+      throw createError({ statusCode: 400, statusMessage: 'Receipt required', message: 'Для акта отбора необходимо выбрать поступление материала.' });
+    }
+
     const authorEmail = body.authorEmail || event.context.user?.email || 'system@user';
 
     // ========================================
@@ -169,15 +173,15 @@ export default defineEventHandler(async (event) => {
     // ========================================
     const newSamplingTest = await prisma.samplingTest.create({
       data: {
-        sActNumber: body.sActNumber.trim(),
-        sActDate: parseDate(body.sActDate) || new Date(),
-        sDocPath: fileDbPaths.sDoc || null,
+        samplingActNumber: body.sActNumber.trim(),
+        samplingDate: parseDate(body.sActDate) || new Date(),
+        samplingDocumentPath: fileDbPaths.sDoc || null,
         note: body.note || null,
         plpId: parseInt(body.plpId),
         inspectorId: parseInt(body.inspectorId),
         testLocationId: parseInt(body.testLocationId),
-        testProtocolId: body.testProtocolId ? parseInt(body.testProtocolId) : null,
-        receiptMaterialId: body.receiptMaterialId ? parseInt(body.receiptMaterialId) : null,
+        testProtocolId,
+        receiptMaterialId,
         authorEmail,
         createdAt: new Date(),
       },
@@ -189,7 +193,7 @@ export default defineEventHandler(async (event) => {
       entityId: newSamplingTest.id,
       action: 'CREATE',
       actorEmail: authorEmail,
-      note: `Создан акт отбора № ${newSamplingTest.sActNumber}`,
+      note: `Создан акт отбора № ${newSamplingTest.samplingActNumber}`,
       afterData: newSamplingTest as any,
       ...getRequestMeta(event),
     });

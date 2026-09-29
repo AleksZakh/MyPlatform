@@ -1,9 +1,9 @@
 // server/api/lab/test-protocol/index.post.ts
-import { PrismaClient } from '@prisma/client';
+
 import { defineEventHandler, readMultipartFormData } from 'h3';
 import { handleFileUpload, parseDate } from '~~/server/utils/fileUploadHandler';
 
-const prisma = new PrismaClient();
+import { prisma } from '../../../utils/prisma';
 
 export default defineEventHandler(async (event) => {
   try {
@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Проверка на дубликат номера протокола
-    const existing = await prisma.testProtocol.findUnique({
+    const existing = await prisma.testProtocol.findFirst({
       where: { protocolNumber: body.protocolNumber.trim() },
     });
 
@@ -46,7 +46,7 @@ export default defineEventHandler(async (event) => {
       data: {
         protocolNumber: body.protocolNumber.trim(),
         protocolDate: parseDate(body.protocolDate),
-        protocolDocPath: fileDbPaths.protocolDoc || null,
+        protocolDocumentPath: fileDbPaths.protocolDoc || null,
         testResult: body.testResult || null,
         note: body.note || null,
         authorEmail: authorEmail,

@@ -1,3 +1,4 @@
+import { hashSpacePassword } from '../../utils/password';
 import {
   createHash,
 } from 'node:crypto';
@@ -150,7 +151,7 @@ export default defineEventHandler(
     // --------------------------------------------------------
 
     const passwordHash =
-      await hashPassword(password);
+      await hashSpacePassword(password);
 
     // --------------------------------------------------------
     // 7. Активируем пользователя

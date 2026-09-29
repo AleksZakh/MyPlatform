@@ -1,9 +1,9 @@
 // server/api/lab/receipt-material/index.post.ts
-import { PrismaClient } from '@prisma/client';
+
 import { defineEventHandler, readMultipartFormData } from 'h3';
 import { handleFileUpload, parseDate } from '~~/server/utils/fileUploadHandler';
 
-const prisma = new PrismaClient();
+import { prisma } from '../../../utils/prisma';
 
 export default defineEventHandler(async (event) => {
   try {
@@ -51,7 +51,7 @@ export default defineEventHandler(async (event) => {
     if (body.qualDocNumber?.trim()) {
       const existing = await prisma.receiptMaterial.findFirst({
         where: {
-          qualDocNumber: body.qualDocNumber.trim(),
+          qualityDocumentNumber: body.qualDocNumber.trim(),
           materialId: materialId,
         },
       });
@@ -69,9 +69,9 @@ export default defineEventHandler(async (event) => {
     // Создаем поступление
     const newReceipt = await prisma.receiptMaterial.create({
       data: {
-        qualDate: parseDate(body.qualDate),
-        qualDocNumber: body.qualDocNumber?.trim() || null,
-        qualDocPath: fileDbPaths.qualDoc || null,
+        receiptDate: parseDate(body.qualDate),
+        qualityDocumentNumber: body.qualDocNumber?.trim() || null,
+        qualityDocumentPath: fileDbPaths.qualDoc || null,
         note: body.note || null,
         materialId: materialId,
         authorEmail: authorEmail,

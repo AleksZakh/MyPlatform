@@ -35,28 +35,8 @@ export default defineEventHandler(async (event) => {
             testObject: true,
           },
         },
-        testProtocol: {
-          include: {
-            receiptMaterial: {
-              include: {
-                material: {
-                  include: {
-                    manufacturer: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-        receiptMaterial: {
-          include: {
-            material: {
-              include: {
-                manufacturer: true,
-              },
-            },
-          },
-        },
+        testProtocol: true,
+        receiptMaterial: { include: { material: true, manufacturer: true } },
       },
     });
 

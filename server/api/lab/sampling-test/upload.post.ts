@@ -1,137 +1,65 @@
-// server/api/lab/sampling-test/upload.post.ts
-import { PrismaClient } from '@prisma/client';
+import { AccessAction } from '@prisma/client';
 import { defineEventHandler, readMultipartFormData, createError } from 'h3';
-import * as fs from 'node:fs';
+import { mkdir, writeFile, unlink } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import * as path from 'node:path';
+import { prisma } from '../../../utils/prisma';
+import { requirePermission } from '../../../services/access-control.service';
 
-const prisma = new PrismaClient();
+const BASE_UPLOAD_DIR = path.resolve(process.env.LAB_FILES_ROOT || '/var/www/uploads-storage/files');
 
-// Корневая директория хранения статики в Nuxt 3
-const BASE_UPLOAD_DIR = path.join(process.cwd(), 'public/files');
+// Retain the existing object / location / date layout. Database paths are relative
+// to /files/, as expected by FileViewerModal and the shared upload handler.
+function safeSegment(value: string): string {
+  const cleaned = value.normalize('NFC').replace(/[\/\\?%*:|"<>\x00-\x1f\x7f]/g, '_')
+    .replace(/\s+/g, '_').replace(/^\.+|\.+$/g, '').slice(0, 50);
+  return cleaned || 'unnamed';
+}
 
 export default defineEventHandler(async (event) => {
-  console.log('\n======================================================');
-  console.log(`[💾 БОЕВАЯ ЗАПИСЬ БД] Получен запрос миграции файла с обновлением по ID`);
-  console.log('======================================================\n');
-
-  try {
-    if (!fs.existsSync(BASE_UPLOAD_DIR)) {
-        fs.mkdirSync(BASE_UPLOAD_DIR, { recursive: true });
-    }
-
-    const formData = await readMultipartFormData(event);
-    if (!formData) {
-      throw createError({ statusCode: 400, statusMessage: 'Данные формы не переданы' });
-    }
-
-    let fileBuffer: Buffer | null = null;
-    let fileName = '';
-    
-    // Переменные для текстовых полей формы
-    let dbRecordIdStr = '';
-    let actNumber = '';
-    let actDate = '';
-    let objectName = '';
-    let actLocation = '';
-
-    // Разбираем пришедшие поля формы
-    for (const field of formData) {
-      switch (field.name) {
-        case 'file':
-          if (field.filename) {
-            fileBuffer = field.data;
-            fileName = field.filename;
-          }          
-          break;
-        case 'dbRecordId':
-          dbRecordIdStr = field.data.toString('utf-8').trim();
-          break;
-        case 'actNumber':
-          actNumber = field.data.toString('utf-8').trim();
-          break;
-        case 'date':
-          actDate = field.data.toString('utf-8').trim();
-          break;
-        case 'objectName':
-          objectName = field.data.toString('utf-8').trim();
-          break;
-        case 'location':
-          actLocation = field.data.toString('utf-8').trim();
-          break;
-        default:
-          break;
-      }
-    }
-
-    // Проверяем наличие критических параметров для сохранения и апдейта в БД
-    if (!fileBuffer || !dbRecordIdStr || !actNumber) {
-      throw createError({ statusCode: 400, statusMessage: 'Отсутствует файл, ID записи или номер акта' });
-    }
-
-    const dbRecordId = parseInt(dbRecordIdStr, 10);
-    if (isNaN(dbRecordId)) {
-      throw createError({ statusCode: 400, statusMessage: 'Некорректный формат Идентификатора БД (ID)' });
-    }
-
-    // Функция очистки имен для безопасной работы с путями файловой системы Linux
-    const sanitize = (text: string) => {
-        return text
-            .replace(/[\/\\?%*:|"<>]/g, '_') // Убираем запрещенные символы
-            .replace(/\s+/g, '_')            // Заменяем пробелы для читаемости путей
-            .substring(0, 50);               // Ограничиваем длину директорий
-    };
-
-    const safeAct = sanitize(actNumber);
-    const safeDate = sanitize(actDate) || 'no-date';
-    const safeObject = sanitize(objectName) || 'general-object';
-    const safeLocation = sanitize(actLocation) || 'general-location';
-
-    // Формируем имя файла
-    const safeFileName = `act_${safeAct}_${Date.now()}.pdf`;
-
-    // Создаем каскадную вложенность папок: public/files/Имя_Объекта/Локация/Дата
-    const customObjectDir = path.join(BASE_UPLOAD_DIR, safeObject);
-    const customLocationDir = path.join(customObjectDir, safeLocation);
-    const targetFolder = path.join(customLocationDir, safeDate);
-
-    // Принудительно создаем дерево папок на сервере, если его еще нет
-    if (!fs.existsSync(targetFolder)) {
-        fs.mkdirSync(targetFolder, { recursive: true });
-    }
-
-    // Полный путь для записи файла на сервере
-    const serverFilePath = path.join(targetFolder, safeFileName);
-    fs.writeFileSync(serverFilePath, fileBuffer);
-
-    // Веб-ссылка относительно корня public (папка public опускается)
-    const publicPath = `/${safeObject}/${safeLocation}/${safeDate}/${safeFileName}`;
-
-    // 🏆 ВЫПОЛНЯЕМ ТОЧЕЧНОЕ ОБНОВЛЕНИЕ В БД ПО ID ЧЕРЕЗ PRISMA
-    const updatedRecord = await prisma.samplingTest.update({
-        where: {
-            id: dbRecordId
-        },
-        data: {
-            samplingDocumentPath: publicPath 
-        }
-    });
-
-    return {
-      success: true,
-      message: `Файл сохранен и привязан по ID=${dbRecordId} к акту ${updatedRecord.samplingActNumber}`,
-      path: publicPath
-    };
-    
-  } catch (error) {
-    console.error('Ошибка на сервере при приеме файла:', error);
-    const statusCode = typeof error === 'object' && error !== null && 'statusCode' in error
-      ? (error as { statusCode?: number }).statusCode
-      : undefined;
-    const statusMessage = error instanceof Error ? error.message : 'Ошибка при сохранении файла';
-    
-    throw createError({
-        statusCode: statusCode || 500,
-        statusMessage,
-    });
+  await requirePermission(event, 'lab.sampling-tests', AccessAction.UPDATE);
+  const form = await readMultipartFormData(event);
+  if (!form) throw createError({ statusCode: 400, statusMessage: 'Form required' });
+  const files = form.filter(field => field.name === 'file' && field.filename);
+  if (files.length !== 1 || !files[0]?.data.length) {
+    throw createError({ statusCode: 400, statusMessage: 'Exactly one file required' });
   }
+  const file = files[0];
+  if (file.data.length > 50 * 1024 * 1024) throw createError({ statusCode: 413, statusMessage: 'File too large' });
+  // This migration endpoint accepts PDF documents, as does the migration script.
+  if (!file.data.subarray(0, 1024).includes(Buffer.from('%PDF-'))) {
+    throw createError({ statusCode: 415, statusMessage: 'PDF required', message: 'Получен не PDF: проверьте авторизацию на старом портале.' });
+  }
+  const ids = form.filter(field => !field.filename && ['dbRecordId', 'samplingTestId'].includes(field.name || ''))
+    .map(field => Number(field.data.toString('utf8').trim()));
+  const id = ids[0];
+  if (id === undefined || !Number.isSafeInteger(id) || id <= 0 || ids.some(value => value !== id)) {
+    throw createError({ statusCode: 400, statusMessage: 'Invalid or conflicting record ID' });
+  }
+  const row = await prisma.samplingTest.findFirst({ where: { id, deletedAt: null },
+    include: { testLocation: { include: { testObject: true } } } });
+  if (!row) throw createError({ statusCode: 404, statusMessage: 'Sampling record not found' });
+  // Metadata is taken from the selected Space record, not from untrusted form fields.
+  const segments = [safeSegment(row.testLocation.testObject.name), safeSegment(row.testLocation.name),
+    row.samplingDate.toISOString().slice(0, 10)];
+  const name = `act_${safeSegment(row.samplingActNumber)}_${id}_${randomUUID()}.pdf`;
+  const directory = path.join(BASE_UPLOAD_DIR, ...segments);
+  const diskPath = path.join(directory, name);
+  const relativePath = [...segments, name].join('/');
+  await mkdir(directory, { recursive: true });
+  await writeFile(diskPath, file.data, { flag: 'wx' });
+  try {
+    // Do not overwrite a link changed by another request while the file was saved.
+    const changed = await prisma.samplingTest.updateMany({
+      where: { id, deletedAt: null, samplingDocumentPath: row.samplingDocumentPath },
+      data: { samplingDocumentPath: relativePath },
+    });
+    if (changed.count !== 1) throw createError({ statusCode: 409, statusMessage: 'Record changed; retry after review' });
+  } catch (error) {
+    await unlink(diskPath).catch(() => undefined);
+    throw error;
+  }
+  return { success: true, attached: true, samplingTestId: id,
+    message: `Файл сохранён и привязан к акту ${row.samplingActNumber} (ID=${id})`,
+    path: relativePath, url: '/files/' + relativePath.split('/').map(encodeURIComponent).join('/') };
 });

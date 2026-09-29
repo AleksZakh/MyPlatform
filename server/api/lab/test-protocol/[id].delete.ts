@@ -19,13 +19,7 @@ export default defineEventHandler(async (event) => {
     // Проверяем существование записи
     const existingProtocol = await prisma.testProtocol.findUnique({
       where: { id },
-      include: {
-        _count: {
-          select: {
-            samplingTests: true,
-          },
-        },
-      },
+      include: { samplingTest: { select: { id: true } } },
     });
 
     if (!existingProtocol) {
@@ -40,10 +34,10 @@ export default defineEventHandler(async (event) => {
     // Но сначала нужно проверить связи
     
     // Проверяем, есть ли связанные акты отбора
-    if (existingProtocol._count.samplingTests > 0) {
+    if (existingProtocol.samplingTest !== null) {
       throw createError({
         statusCode: 409,
-        statusMessage: `Невозможно удалить протокол, так как он используется в ${existingProtocol._count.samplingTests} актах отбора проб`,
+        statusMessage: `Невозможно удалить протокол, так как он связан с актом отбора ID=${existingProtocol.samplingTest.id}`,
       });
     }
 

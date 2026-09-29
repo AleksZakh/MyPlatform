@@ -3,9 +3,9 @@ import type { ComponentProps } from "../../node_modules/vue-component-type-helpe
 
 declare module 'nuxt/app' {
   interface NuxtLayouts {
-    auth: ComponentProps<typeof import("C:/Projects/Nuxt/MyPlatform/app/layouts/auth.vue").default>
-    default: ComponentProps<typeof import("C:/Projects/Nuxt/MyPlatform/app/layouts/default.vue").default>
-    loader: ComponentProps<typeof import("C:/Projects/Nuxt/MyPlatform/app/layouts/loader.vue").default>
+    auth: ComponentProps<typeof import("/home/local_adm/Projects/MyPlatform/app/layouts/auth.vue").default>
+    default: ComponentProps<typeof import("/home/local_adm/Projects/MyPlatform/app/layouts/default.vue").default>
+    loader: ComponentProps<typeof import("/home/local_adm/Projects/MyPlatform/app/layouts/loader.vue").default>
   }
   export type LayoutKey = keyof NuxtLayouts extends never ? string : keyof NuxtLayouts
   interface PageMeta {
