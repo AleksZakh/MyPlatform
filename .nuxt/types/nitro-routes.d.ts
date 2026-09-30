@@ -272,6 +272,15 @@ declare module "nitropack/types" {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/test-protocol/index.get').default>>>>
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/test-protocol/index.post').default>>>>
     }
+    '/api/lab/test-protocol/migration/:id': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/test-protocol/migration/[id].get').default>>>>
+    }
+    '/api/lab/test-protocol/migration/summary': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/test-protocol/migration/summary.get').default>>>>
+    }
+    '/api/lab/test-protocol/migration/upload': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/test-protocol/migration/upload.post').default>>>>
+    }
     '/api/navigation': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/navigation.get').default>>>>
     }
