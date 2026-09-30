@@ -16,6 +16,17 @@ function safeSegment(value: string): string {
   return cleaned || 'unnamed';
 }
 
+function detectDocument(bytes: Buffer): { extension: 'pdf' | 'jpg'; mime: string } | null {
+  // Detect the bytes, never trust the filename or the remote Content-Type alone.
+  if (bytes.length >= 4 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return { extension: 'jpg', mime: 'image/jpeg' };
+  }
+  if (bytes.subarray(0, 1024).includes(Buffer.from('%PDF-'))) {
+    return { extension: 'pdf', mime: 'application/pdf' };
+  }
+  return null;
+}
+
 export default defineEventHandler(async (event) => {
   await requirePermission(event, 'lab.sampling-tests', AccessAction.UPDATE);
   const form = await readMultipartFormData(event);
@@ -26,9 +37,9 @@ export default defineEventHandler(async (event) => {
   }
   const file = files[0];
   if (file.data.length > 50 * 1024 * 1024) throw createError({ statusCode: 413, statusMessage: 'File too large' });
-  // This migration endpoint accepts PDF documents, as does the migration script.
-  if (!file.data.subarray(0, 1024).includes(Buffer.from('%PDF-'))) {
-    throw createError({ statusCode: 415, statusMessage: 'PDF required', message: 'Получен не PDF: проверьте авторизацию на старом портале.' });
+  const document = detectDocument(file.data);
+  if (!document) {
+    throw createError({ statusCode: 415, statusMessage: 'PDF or JPEG required', message: 'Допускаются документы PDF и JPEG.' });
   }
   const ids = form.filter(field => !field.filename && ['dbRecordId', 'samplingTestId'].includes(field.name || ''))
     .map(field => Number(field.data.toString('utf8').trim()));
@@ -42,7 +53,7 @@ export default defineEventHandler(async (event) => {
   // Metadata is taken from the selected Space record, not from untrusted form fields.
   const segments = [safeSegment(row.testLocation.testObject.name), safeSegment(row.testLocation.name),
     row.samplingDate.toISOString().slice(0, 10)];
-  const name = `act_${safeSegment(row.samplingActNumber)}_${id}_${randomUUID()}.pdf`;
+  const name = `act_${safeSegment(row.samplingActNumber)}_${id}_${randomUUID()}.${document.extension}`;
   const directory = path.join(BASE_UPLOAD_DIR, ...segments);
   const diskPath = path.join(directory, name);
   const relativePath = [...segments, name].join('/');
