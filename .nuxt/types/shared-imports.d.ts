@@ -7,6 +7,8 @@ declare global {
   const createError: typeof import('h3')['createError']
   const setResponseStatus: typeof import('h3')['setResponseStatus']
   const ACCESS_ACTIONS: typeof import('../../shared/types/access-management').ACCESS_ACTIONS
+  const EXPORT_COLUMNS: typeof import('../../shared/types/lab-export').EXPORT_COLUMNS
+  const EXPORT_KINDS: typeof import('../../shared/types/lab-export').EXPORT_KINDS
   const decideAccess: typeof import('../../shared/utils/access-decision').decideAccess
   const isSystemAdminLogin: typeof import('../../shared/utils/access-decision').isSystemAdminLogin
   const locationNameKey: typeof import('../../shared/utils/lab-location-name').locationNameKey
@@ -18,6 +20,9 @@ declare global {
   // @ts-ignore
   export type { AccessActionName, AccessSubjectKind, AccessSource, AccessBlock, AccessCell, AccessRow, AccessSnapshot, AccessChange, AccessMutation, AccessSubjectOption } from '../../shared/types/access-management'
   import('../../shared/types/access-management')
+  // @ts-ignore
+  export type { ExportKind, ExportStatus, ExportJobView } from '../../shared/types/lab-export'
+  import('../../shared/types/lab-export')
   // @ts-ignore
   export type { StructureMember } from '../../shared/types/structure-member'
   import('../../shared/types/structure-member')

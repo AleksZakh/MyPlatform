@@ -9,8 +9,25 @@
         <UInput
           v-model="search"
           class="min-w-80 text-lg"
-          placeholder="быстрый поиск ..."
-        />
+          placeholder="Быстрый поиск по всем полям…"
+          aria-label="Быстрый поиск по всем полям реестра"
+          @keydown.esc.prevent="clearSearch"
+          @keydown.enter.prevent="applySearch"
+        >
+          <template #trailing>
+            <button
+              v-if="search.length > 0"
+              type="button"
+              class="pointer-events-auto flex h-6 w-6 items-center justify-center rounded text-gray-500 hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-2 focus-visible:outline-blue-500"
+              aria-label="Очистить поиск"
+              title="Очистить поиск (Esc)"
+              @mousedown.prevent
+              @click="clearSearch"
+            >
+              <Icon name="lucide:x" size="16" aria-hidden="true" />
+            </button>
+          </template>
+        </UInput>
       </div>
 
 
@@ -112,10 +129,21 @@
 
 
     <div
+      v-else-if="errorMessage"
+      role="alert"
+      class="text-center py-12 text-red-600"
+    >
+      <p>{{ errorMessage }}</p>
+      <UButton class="mt-3" variant="outline" @click="reloadCurrentPage">
+        Повторить загрузку
+      </UButton>
+    </div>
+
+    <div
       v-else-if="originalData.length === 0"
       class="text-center py-12 text-gray-500"
     >
-      <p>Нет данных</p>
+      <p>{{ search.trim() ? 'По вашему запросу ничего не найдено' : 'Нет данных' }}</p>
     </div>
 
 
@@ -281,7 +309,7 @@
 
 
     <div
-      v-if="originalData.length > 0"
+      v-if="!loading && !errorMessage && originalData.length > 0"
       class="flex justify-between items-center mt-4 text-md data-info shrink-0 pt-3 border-t border-gray-200"
     >
       <div
@@ -379,8 +407,8 @@ import FilterPanelModal from './FilterPanelModal.vue'
 import TableSettingsModal from '~/components/lab/TableSettingsModal.vue'
 
 import {
-  useLabDataLoader,
-} from '~/composables/useLabDataLoader'
+  useIncomingControlRegistryLoader,
+} from '~/composables/useIncomingControlRegistryLoader'
 
 import type {
   IncomingControlRecord,
@@ -420,6 +448,7 @@ declare module '@tanstack/table-core' {
 
 const {
   loading,
+  errorMessage,
   originalData,
 
   totalCount,
@@ -428,12 +457,14 @@ const {
   pageSize,
 
   search,
+  clearSearch,
+  applySearch,
 
   loadData,
   changePage,
   changePageSize,
   reloadCurrentPage,
-} = useLabDataLoader()
+} = useIncomingControlRegistryLoader()
 
 
 const {
@@ -855,39 +886,11 @@ watch(
 )
 
 
-let searchTimer:
-  ReturnType<
-    typeof setTimeout
-  > | null = null
-
-
-watch(
-  search,
-  () => {
-    if (searchTimer) {
-      clearTimeout(
-        searchTimer,
-      )
-    }
-
-    searchTimer =
-      setTimeout(
-        async () => {
-          rowSelectedId.value =
-            null
-
-          selectedRecord.value =
-            null
-
-          await loadData(
-            1,
-            pageSize.value,
-          )
-        },
-        350,
-      )
-  },
-)
+watch(search, () => {
+  rowSelectedId.value = null
+  selectedRecord.value = null
+  contextMenuRecord.value = null
+}, { flush: 'sync' })
 
 
 function getHeaderByColumnId(
@@ -1154,7 +1157,7 @@ function handleDblClick(
 
 
 async function exportRecordsOpen() {
-  modalExportRecords.open({})
+  modalExportRecords.open({ columns: [...orderedVisibleColumnIds.value] })
 }
 
 

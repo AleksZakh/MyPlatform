@@ -1,5 +1,7 @@
 declare global {
   const ACCESS_ACTIONS: typeof import('../../shared/types/access-management').ACCESS_ACTIONS
+  const EXPORT_COLUMNS: typeof import('../../shared/types/lab-export').EXPORT_COLUMNS
+  const EXPORT_KINDS: typeof import('../../shared/types/lab-export').EXPORT_KINDS
   const H3Error: typeof import('../../node_modules/h3/dist/index').H3Error
   const H3Event: typeof import('../../node_modules/h3/dist/index').H3Event
   const __buildAssetsURL: typeof import('../../node_modules/@nuxt/nitro-server/dist/runtime/utils/paths').buildAssetsURL
@@ -14,7 +16,10 @@ declare global {
   const assertMethod: typeof import('../../node_modules/h3/dist/index').assertMethod
   const auditDataChange: typeof import('../../server/utils/auditLog').auditDataChange
   const auditDenied: typeof import('../../server/utils/auditLog').auditDenied
+  const auditExport: typeof import('../../server/utils/lab-export-access').auditExport
   const buildCreateAuditDelta: typeof import('../../server/utils/auditLog').buildCreateAuditDelta
+  const buildIncomingControlSearch: typeof import('../../server/utils/incoming-control-search').buildIncomingControlSearch
+  const buildRegistryFilter: typeof import('../../server/utils/incoming-control-filter').buildRegistryFilter
   const cachedEventHandler: typeof import('../../node_modules/nitropack/dist/runtime/internal/cache').cachedEventHandler
   const cachedFunction: typeof import('../../node_modules/nitropack/dist/runtime/internal/cache').cachedFunction
   const callNodeListener: typeof import('../../node_modules/h3/dist/index').callNodeListener
@@ -101,9 +106,12 @@ declare global {
   const deleteCookie: typeof import('../../node_modules/h3/dist/index').deleteCookie
   const deleteFile: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/storage').deleteFile
   const deleteUploadedFile: typeof import('../../server/utils/fileUtils').deleteUploadedFile
+  const describeRegistryFilters: typeof import('../../server/utils/incoming-control-filter').describeRegistryFilters
   const dynamicEventHandler: typeof import('../../node_modules/h3/dist/index').dynamicEventHandler
   const ensureSafeBasename: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/path-safety').ensureSafeBasename
   const eventHandler: typeof import('../../node_modules/h3/dist/index').eventHandler
+  const exportActor: typeof import('../../server/utils/lab-export-access').exportActor
+  const exportJobForRequest: typeof import('../../server/utils/lab-export-access').exportJobForRequest
   const fetchWithEvent: typeof import('../../node_modules/h3/dist/index').fetchWithEvent
   const fileExists: typeof import('../../server/utils/fileUtils').fileExists
   const folderNameGenerator: typeof import('../../server/utils/folderNameGenerator').folderNameGenerator
@@ -147,6 +155,7 @@ declare global {
   const handleCacheHeaders: typeof import('../../node_modules/h3/dist/index').handleCacheHeaders
   const handleCors: typeof import('../../node_modules/h3/dist/index').handleCors
   const handleFileUpload: typeof import('../../server/utils/fileUploadHandler').handleFileUpload
+  const hasRegistryFilter: typeof import('../../server/utils/incoming-control-filter').hasRegistryFilter
   const hashPassword: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/password').hashPassword
   const hashSpacePassword: typeof import('../../server/utils/password').hashSpacePassword
   const isCorsOriginAllowed: typeof import('../../node_modules/h3/dist/index').isCorsOriginAllowed
@@ -170,6 +179,7 @@ declare global {
   const parseCookies: typeof import('../../node_modules/h3/dist/index').parseCookies
   const parseDataUrl: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/storage').parseDataUrl
   const parseDate: typeof import('../../server/utils/fileUploadHandler').parseDate
+  const parseRegistrySearchDate: typeof import('../../server/utils/incoming-control-search').parseRegistrySearchDate
   const passwordNeedsReHash: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/password').passwordNeedsReHash
   const prisma: typeof import('../../server/utils/prisma').prisma
   const promisifyNodeListener: typeof import('../../node_modules/h3/dist/index').promisifyNodeListener
@@ -180,6 +190,7 @@ declare global {
   const readFormData: typeof import('../../node_modules/h3/dist/index').readFormData
   const readMultipartFormData: typeof import('../../node_modules/h3/dist/index').readMultipartFormData
   const readRawBody: typeof import('../../node_modules/h3/dist/index').readRawBody
+  const readRegistryFilters: typeof import('../../server/utils/incoming-control-filter').readRegistryFilters
   const readValidatedBody: typeof import('../../node_modules/h3/dist/index').readValidatedBody
   const receiptHandbookDto: typeof import('../../server/utils/lab-handbook-dto').receiptHandbookDto
   const receiptHandbookInclude: typeof import('../../server/utils/lab-handbook-dto').receiptHandbookInclude
@@ -244,6 +255,9 @@ declare global {
   // @ts-ignore
   export type { AccessActionName, AccessSubjectKind, AccessSource, AccessBlock, AccessCell, AccessRow, AccessSnapshot, AccessChange, AccessMutation, AccessSubjectOption } from '../../shared/types/access-management'
   import('../../shared/types/access-management')
+  // @ts-ignore
+  export type { ExportKind, ExportStatus, ExportJobView } from '../../shared/types/lab-export'
+  import('../../shared/types/lab-export')
   // @ts-ignore
   export type { StructureMember } from '../../shared/types/structure-member'
   import('../../shared/types/structure-member')
@@ -419,6 +433,7 @@ export { useImage } from '/home/local_adm/Projects/MyPlatform/node_modules/@nuxt
 export { normalizeAdminLogins, isSystemAdminLogin, decideAccess } from '/home/local_adm/Projects/MyPlatform/shared/utils/access-decision';
 export { normalizeLocationName, locationNameKey } from '/home/local_adm/Projects/MyPlatform/shared/utils/lab-location-name';
 export { ACCESS_ACTIONS } from '/home/local_adm/Projects/MyPlatform/shared/types/access-management';
+export { EXPORT_KINDS, EXPORT_COLUMNS } from '/home/local_adm/Projects/MyPlatform/shared/types/lab-export';
 export { defineOAuthAppleEventHandler } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-auth-utils/dist/runtime/server/lib/oauth/apple';
 export { defineOAuthAtlassianEventHandler } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-auth-utils/dist/runtime/server/lib/oauth/atlassian';
 export { defineOAuthAuth0EventHandler } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-auth-utils/dist/runtime/server/lib/oauth/auth0';
@@ -477,6 +492,9 @@ export { createCacheRefreshRunner } from '/home/local_adm/Projects/MyPlatform/se
 export { handleFileUpload, cleanOldFilesFromDisk, parseDate, updateFilePathsInData } from '/home/local_adm/Projects/MyPlatform/server/utils/fileUploadHandler';
 export { getFullFilePath, fileExists, getFileInfo, deleteUploadedFile } from '/home/local_adm/Projects/MyPlatform/server/utils/fileUtils';
 export { folderNameGenerator } from '/home/local_adm/Projects/MyPlatform/server/utils/folderNameGenerator';
+export { readRegistryFilters, buildRegistryFilter, hasRegistryFilter, describeRegistryFilters } from '/home/local_adm/Projects/MyPlatform/server/utils/incoming-control-filter';
+export { parseRegistrySearchDate, buildIncomingControlSearch } from '/home/local_adm/Projects/MyPlatform/server/utils/incoming-control-search';
+export { exportActor, exportJobForRequest, auditExport } from '/home/local_adm/Projects/MyPlatform/server/utils/lab-export-access';
 export { receiptHandbookInclude, protocolHandbookInclude, receiptHandbookDto, protocolHandbookDto } from '/home/local_adm/Projects/MyPlatform/server/utils/lab-handbook-dto';
 export { logger } from '/home/local_adm/Projects/MyPlatform/server/utils/logger';
 export { sendActivationEmail, sendVerificationEmail } from '/home/local_adm/Projects/MyPlatform/server/utils/mailer';

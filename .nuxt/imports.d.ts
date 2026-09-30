@@ -44,6 +44,7 @@ export { memberKey, useDepartmentMemberPicker } from '../app/composables/useDepa
 export { useDomainGroupImport } from '../app/composables/useDomainGroupImport';
 export { useFilters, Filters } from '../app/composables/useFilters';
 export { useIncomingControl } from '../app/composables/useIncomingControl';
+export { useIncomingControlRegistryLoader } from '../app/composables/useIncomingControlRegistryLoader';
 export { useLabDataLoader, IncomingControlReference, IncomingControlRecord } from '../app/composables/useLabDataLoader';
 export { useRecordDelete, DeleteOptions } from '../app/composables/useRecordDelete';
 export { useRecordUpdate, UpdateOptions } from '../app/composables/useRecordUpdate';
@@ -53,6 +54,7 @@ export { LAB_TABLE_COLUMNS, useTableSettings, LabTableColumnDefinition } from '.
 export { normalizeAdminLogins, isSystemAdminLogin, decideAccess } from '../shared/utils/access-decision';
 export { normalizeLocationName, locationNameKey } from '../shared/utils/lab-location-name';
 export { ACCESS_ACTIONS, AccessActionName, AccessSubjectKind, AccessSource, AccessBlock, AccessCell, AccessRow, AccessSnapshot, AccessChange, AccessMutation, AccessSubjectOption } from '../shared/types/access-management';
+export { EXPORT_KINDS, EXPORT_COLUMNS, ExportKind, ExportStatus, ExportJobView } from '../shared/types/lab-export';
 export { StructureMember } from '../shared/types/structure-member';
 export { useAuthStore, actions, useIsLoadingStore } from '../app/stores/auth.store';
 export { useTableFilterStore } from '../app/stores/tableFilter';

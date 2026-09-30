@@ -145,6 +145,22 @@ declare module "nitropack/types" {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/[id].get').default>>>>
       'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/[id].put').default>>>>
     }
+    '/api/incoming-control/exports/:id/cancel': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/exports/[id]/cancel.post').default>>>>
+    }
+    '/api/incoming-control/exports/:id/confirm': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/exports/[id]/confirm.post').default>>>>
+    }
+    '/api/incoming-control/exports/:id/download': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/exports/[id]/download.get').default>>>>
+    }
+    '/api/incoming-control/exports/:id': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/exports/[id]/index.get').default>>>>
+    }
+    '/api/incoming-control/exports': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/exports/index.get').default>>>>
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/exports/index.post').default>>>>
+    }
     '/api/incoming-control/fieldsInfo': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/fieldsInfo.get').default>>>>
     }

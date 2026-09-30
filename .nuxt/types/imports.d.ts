@@ -3,6 +3,8 @@ export {}
 declare global {
   const $fetch: typeof import('../fetch.mjs').$fetch
   const ACCESS_ACTIONS: typeof import('../../shared/types/access-management').ACCESS_ACTIONS
+  const EXPORT_COLUMNS: typeof import('../../shared/types/lab-export').EXPORT_COLUMNS
+  const EXPORT_KINDS: typeof import('../../shared/types/lab-export').EXPORT_KINDS
   const LAB_TABLE_COLUMNS: typeof import('../../app/composables/useTableSettings').LAB_TABLE_COLUMNS
   const abortNavigation: typeof import('../../node_modules/nuxt/dist/app/composables/router').abortNavigation
   const acceptHMRUpdate: typeof import('../../node_modules/@pinia/nuxt/dist/runtime/composables').acceptHMRUpdate
@@ -145,6 +147,7 @@ declare global {
   const useId: typeof import('vue').useId
   const useImage: typeof import('../../node_modules/@nuxt/image/dist/runtime/composables').useImage
   const useIncomingControl: typeof import('../../app/composables/useIncomingControl').useIncomingControl
+  const useIncomingControlRegistryLoader: typeof import('../../app/composables/useIncomingControlRegistryLoader').useIncomingControlRegistryLoader
   const useIsLoadingStore: typeof import('../../app/stores/auth.store').useIsLoadingStore
   const useKbd: typeof import('../../node_modules/@nuxt/ui/dist/runtime/composables/useKbd').useKbd
   const useLabDataLoader: typeof import('../../app/composables/useLabDataLoader').useLabDataLoader
@@ -275,6 +278,9 @@ declare global {
   export type { AccessActionName, AccessSubjectKind, AccessSource, AccessBlock, AccessCell, AccessRow, AccessSnapshot, AccessChange, AccessMutation, AccessSubjectOption } from '../../shared/types/access-management'
   import('../../shared/types/access-management')
   // @ts-ignore
+  export type { ExportKind, ExportStatus, ExportJobView } from '../../shared/types/lab-export'
+  import('../../shared/types/lab-export')
+  // @ts-ignore
   export type { StructureMember } from '../../shared/types/structure-member'
   import('../../shared/types/structure-member')
 }
@@ -284,6 +290,8 @@ declare module 'vue' {
   interface ComponentCustomProperties {
     readonly $fetch: UnwrapRef<typeof import('../fetch.mjs')['$fetch']>
     readonly ACCESS_ACTIONS: UnwrapRef<typeof import('../../shared/types/access-management')['ACCESS_ACTIONS']>
+    readonly EXPORT_COLUMNS: UnwrapRef<typeof import('../../shared/types/lab-export')['EXPORT_COLUMNS']>
+    readonly EXPORT_KINDS: UnwrapRef<typeof import('../../shared/types/lab-export')['EXPORT_KINDS']>
     readonly LAB_TABLE_COLUMNS: UnwrapRef<typeof import('../../app/composables/useTableSettings')['LAB_TABLE_COLUMNS']>
     readonly abortNavigation: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/router')['abortNavigation']>
     readonly acceptHMRUpdate: UnwrapRef<typeof import('../../node_modules/@pinia/nuxt/dist/runtime/composables')['acceptHMRUpdate']>
@@ -426,6 +434,7 @@ declare module 'vue' {
     readonly useId: UnwrapRef<typeof import('vue')['useId']>
     readonly useImage: UnwrapRef<typeof import('../../node_modules/@nuxt/image/dist/runtime/composables')['useImage']>
     readonly useIncomingControl: UnwrapRef<typeof import('../../app/composables/useIncomingControl')['useIncomingControl']>
+    readonly useIncomingControlRegistryLoader: UnwrapRef<typeof import('../../app/composables/useIncomingControlRegistryLoader')['useIncomingControlRegistryLoader']>
     readonly useIsLoadingStore: UnwrapRef<typeof import('../../app/stores/auth.store')['useIsLoadingStore']>
     readonly useKbd: UnwrapRef<typeof import('../../node_modules/@nuxt/ui/dist/runtime/composables/useKbd')['useKbd']>
     readonly useLabDataLoader: UnwrapRef<typeof import('../../app/composables/useLabDataLoader')['useLabDataLoader']>
