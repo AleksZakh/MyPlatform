@@ -13,7 +13,7 @@ export default defineEventHandler(async event => {
   await auditExport(event, job.ownerId, job.id, 'EXPORT_DOWNLOAD')
   setResponseHeaders(event, {
     'Content-Type': 'application/zip',
-    'Content-Disposition': `attachment; filename="Space-export-${job.createdAt.slice(0, 10)}.zip"`,
+    'Content-Disposition': `attachment; filename="Reestr-export-${job.createdAt.slice(0, 10)}.zip"`,
     'Content-Length': String(info.size), 'Cache-Control': 'private, no-store',
     'X-Content-Type-Options': 'nosniff',
   })
