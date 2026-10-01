@@ -9,9 +9,9 @@
       <!-- Форма добавления/редактирования -->
       <form
         @submit.prevent="saveManufacturer"
-        class="bg-gray-50 rounded-lg px-6 py-4 mb-2"
+        class="bg-gray-50 rounded-lg px-4 py-2 shadow mb-2"
       >
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
           <div class="md:col-span-2 w-full">
             <label class="block text-sm font-medium text-gray-700 mb-1">
               Название производителя <span class="text-red-500">*</span>
@@ -20,7 +20,7 @@
               v-model="currentManufacturer.name"
               type="text"
               required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Введите название производителя"
             />
           </div>
@@ -32,17 +32,17 @@
             <input
               v-model="currentManufacturer.note"
               type="text"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Дополнительная информация о производителе"
             />
           </div>
         </div>
 
-        <div class="mt-4 flex gap-3">
+        <div class="mt-2 flex gap-3">
           <button
             type="submit"
             :class="[
-              'px-6 py-2 rounded-md text-white font-medium transition-colors',
+              'px-4 py-1 rounded-md text-white font-medium transition-colors',
               isEditing
                 ? 'bg-yellow-500 hover:bg-yellow-600'
                 : 'bg-green-500 hover:bg-green-600',
@@ -54,7 +54,7 @@
             v-if="isEditing"
             @click="cancelEdit"
             type="button"
-            class="px-6 py-2 bg-gray-400 hover:bg-gray-500 text-white rounded-md font-medium transition-colors"
+            class="px-4 py-1 bg-gray-400 hover:bg-gray-500 text-white rounded-md font-medium transition-colors"
           >
             Отмена
           </button>
@@ -69,13 +69,13 @@
               v-model="search"
               type="text"
               placeholder="Поиск производителей..."
-              class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-4 py-1 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <svg
               class="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
-              viewBox="0 0 24 24"
+              viewBox="0 0 26 26"
               stroke="currentColor"
             >
               <path
@@ -89,7 +89,7 @@
         </div>
 
         <!-- Таблица -->
-        <div class="overflow-x-auto shadow-md rounded-lg border border-gray-200 overflow-y-auto absolute top-13 bottom-15 left-0 right-0">
+        <div class="overflow-x-auto shadow-md rounded-lg border border-gray-200 overflow-y-auto absolute top-11 bottom-13 left-0 right-0">
           <!-- Индикатор загрузки -->
           <div v-if="isLoading" class="flex justify-center items-center py-8">
             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -102,7 +102,7 @@
                 <th
                   v-for="header in headers"
                   :key="header.key"
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  class="px-6 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   :class="header.sortable ? 'cursor-pointer hover:text-gray-700' : 'cursor-default'"
                   @click="sortBy(header.key)"
                 >
@@ -122,13 +122,13 @@
                 </td>
               </tr>
               <tr v-for="manufacturer in manufacturers" :key="manufacturer.id">
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                <td class="px-6 py-1.5 whitespace-nowrap text-sm text-gray-900 font-medium">
                   {{ manufacturer.name }}
                 </td>
-                <td class="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
+                <td class="px-6 py-1.5 text-sm text-gray-600 max-w-xs truncate">
                   {{ manufacturer.note || '—' }}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td class="px-6 py-1.5 whitespace-nowrap text-sm text-gray-500">
                   <span
                     class="text-xs bg-gray-100 px-2 py-1 rounded"
                     :title="getReceiptCount(manufacturer) === null
@@ -138,7 +138,7 @@
                     {{ getReceiptCount(manufacturer) ?? '—' }}
                   </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <td class="px-6 py-1.5 whitespace-nowrap text-sm font-medium">
                   <button
                     @click="editManufacturer(manufacturer)"
                     class="text-blue-600 hover:text-blue-900 mr-3 transition-colors"

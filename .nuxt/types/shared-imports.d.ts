@@ -10,6 +10,7 @@ declare global {
   const EXPORT_COLUMNS: typeof import('../../shared/types/lab-export').EXPORT_COLUMNS
   const EXPORT_KINDS: typeof import('../../shared/types/lab-export').EXPORT_KINDS
   const decideAccess: typeof import('../../shared/utils/access-decision').decideAccess
+  const detectMigrationDocument: typeof import('../../shared/utils/migration-document').detectMigrationDocument
   const isSystemAdminLogin: typeof import('../../shared/utils/access-decision').isSystemAdminLogin
   const locationNameKey: typeof import('../../shared/utils/lab-location-name').locationNameKey
   const normalizeAdminLogins: typeof import('../../shared/utils/access-decision').normalizeAdminLogins
@@ -17,6 +18,9 @@ declare global {
 }
 // for type re-export
 declare global {
+  // @ts-ignore
+  export type { MigrationDocument } from '../../shared/utils/migration-document'
+  import('../../shared/utils/migration-document')
   // @ts-ignore
   export type { AccessActionName, AccessSubjectKind, AccessSource, AccessBlock, AccessCell, AccessRow, AccessSnapshot, AccessChange, AccessMutation, AccessSubjectOption } from '../../shared/types/access-management'
   import('../../shared/types/access-management')

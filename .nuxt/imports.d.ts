@@ -53,6 +53,7 @@ export { useStructureAdmin } from '../app/composables/useStructureAdmin';
 export { LAB_TABLE_COLUMNS, useTableSettings, LabTableColumnDefinition } from '../app/composables/useTableSettings';
 export { normalizeAdminLogins, isSystemAdminLogin, decideAccess } from '../shared/utils/access-decision';
 export { normalizeLocationName, locationNameKey } from '../shared/utils/lab-location-name';
+export { detectMigrationDocument, MigrationDocument } from '../shared/utils/migration-document';
 export { ACCESS_ACTIONS, AccessActionName, AccessSubjectKind, AccessSource, AccessBlock, AccessCell, AccessRow, AccessSnapshot, AccessChange, AccessMutation, AccessSubjectOption } from '../shared/types/access-management';
 export { EXPORT_KINDS, EXPORT_COLUMNS, ExportKind, ExportStatus, ExportJobView } from '../shared/types/lab-export';
 export { StructureMember } from '../shared/types/structure-member';
