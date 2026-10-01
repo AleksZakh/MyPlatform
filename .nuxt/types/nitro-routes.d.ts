@@ -261,6 +261,18 @@ declare module "nitropack/types" {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/receipt-material/index.get').default>>>>
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/receipt-material/index.post').default>>>>
     }
+    '/api/lab/receipt-material/migration/:id': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/receipt-material/migration/[id].get').default>>>>
+    }
+    '/api/lab/receipt-material/migration/summary': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/receipt-material/migration/summary.get').default>>>>
+    }
+    '/api/lab/receipt-material/migration/upload': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/receipt-material/migration/upload.post').default>>>>
+    }
+    '/api/lab/receipt-material/migration/verify/:id': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/receipt-material/migration/verify/[id].get').default>>>>
+    }
     '/api/lab/sampling-test/:id': {
       'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/sampling-test/[id].delete').default>>>>
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/sampling-test/[id].get').default>>>>

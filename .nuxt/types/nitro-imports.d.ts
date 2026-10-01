@@ -159,6 +159,8 @@ declare global {
   const hasRegistryFilter: typeof import('../../server/utils/incoming-control-filter').hasRegistryFilter
   const hashPassword: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/password').hashPassword
   const hashSpacePassword: typeof import('../../server/utils/password').hashSpacePassword
+  const inspectMigrationFile: typeof import('../../server/utils/migration-stored-file').inspectMigrationFile
+  const inspectProtocolFile: typeof import('../../server/utils/protocol-migration-file').inspectProtocolFile
   const isCorsOriginAllowed: typeof import('../../node_modules/h3/dist/index').isCorsOriginAllowed
   const isError: typeof import('../../node_modules/h3/dist/index').isError
   const isEvent: typeof import('../../node_modules/h3/dist/index').isEvent
@@ -503,8 +505,10 @@ export { exportActor, exportJobForRequest, auditExport } from '/home/local_adm/P
 export { receiptHandbookInclude, protocolHandbookInclude, receiptHandbookDto, protocolHandbookDto } from '/home/local_adm/Projects/MyPlatform/server/utils/lab-handbook-dto';
 export { logger } from '/home/local_adm/Projects/MyPlatform/server/utils/logger';
 export { sendActivationEmail, sendVerificationEmail } from '/home/local_adm/Projects/MyPlatform/server/utils/mailer';
+export { inspectMigrationFile } from '/home/local_adm/Projects/MyPlatform/server/utils/migration-stored-file';
 export { hashSpacePassword, verifySpacePassword } from '/home/local_adm/Projects/MyPlatform/server/utils/password';
 export { prisma } from '/home/local_adm/Projects/MyPlatform/server/utils/prisma';
+export { inspectProtocolFile } from '/home/local_adm/Projects/MyPlatform/server/utils/protocol-migration-file';
 export { requireAdmin } from '/home/local_adm/Projects/MyPlatform/server/utils/require-admin';
 export { normalizeRelative, isSafeBasename, ensureSafeBasename, containsPathTraversal, resolveAndEnsureInside } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-file-storage/dist/runtime/server/utils/path-safety';
 export { storeFileLocally, getFileLocally, getFilesLocally, deleteFile, parseDataUrl, retrieveFileLocally } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-file-storage/dist/runtime/server/utils/storage';
