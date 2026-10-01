@@ -12,6 +12,10 @@ export function receiptMigrationDto(row: Prisma.ReceiptMaterialGetPayload<{ sele
     qualityDocumentNumber: row.qualityDocumentNumber, qualityDocumentPath: row.qualityDocumentPath,
     materialName: row.material.name, manufacturerName: row.manufacturer?.name ?? null,
     samplingActNumber: row.samplingTest?.samplingActNumber ?? null,
+    samplingId: row.samplingTest?.id ?? null,
+    samplingDate: row.samplingTest?.samplingDate.toISOString().slice(0, 10) ?? null,
+    samplingObject: row.samplingTest?.testLocation.testObject.name ?? null,
+    samplingLocation: row.samplingTest?.testLocation.name ?? null,
     canStore: !!row.samplingTest && row.samplingTest.deletedAt === null }
 }
 export function receiptStorageSegment(value: string): string {

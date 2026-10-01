@@ -45,7 +45,7 @@ export default defineEventHandler(async event => {
   const row = await prisma.receiptMaterial.findFirst({ where: { id, deletedAt: null }, select: receiptMigrationSelect })
   if (!row) throw createError({ statusCode: 404, statusMessage: 'Receipt not found' })
   const dto = receiptMigrationDto(row)
-  if (['receiptDate', 'qualityDocumentDate', 'qualityDocumentNumber', 'materialName', 'manufacturerName', 'samplingActNumber'].some(key => check[key] !== dto[key as keyof typeof dto])) throw createError({ statusCode: 409, statusMessage: 'Receipt changed; review required' })
+  if (['receiptDate', 'qualityDocumentDate', 'qualityDocumentNumber', 'materialName', 'manufacturerName', 'samplingActNumber', 'samplingId', 'samplingDate', 'samplingObject', 'samplingLocation'].some(key => check[key] !== dto[key as keyof typeof dto])) throw createError({ statusCode: 409, statusMessage: 'Receipt changed; review required' })
   if (repair) {
     if (row.qualityDocumentPath !== repair.path) throw createError({ statusCode: 409, statusMessage: 'Recovery path changed' })
     if ((await inspectMigrationFile(repair.path)).state !== 'MISSING') throw createError({ statusCode: 409, statusMessage: 'Recovery requires a confirmed missing file' })
@@ -68,7 +68,7 @@ export default defineEventHandler(async event => {
           qualityDocumentNumber: row.qualityDocumentNumber, qualityDocumentDate: row.qualityDocumentDate, receiptDate: row.receiptDate, materialId: row.materialId, manufacturerId: row.manufacturerId,
           material: { is: { name: row.material.name } },
           manufacturer: row.manufacturer ? { is: { name: row.manufacturer.name } } : { is: null }, editedAt: row.editedAt,
-          samplingTest: { is: { id: sampling.id, deletedAt: null, testLocationId: sampling.testLocationId, samplingDate: sampling.samplingDate, samplingActNumber: sampling.samplingActNumber } },
+          samplingTest: { is: { id: sampling.id, deletedAt: null, testLocationId: sampling.testLocationId, samplingDate: sampling.samplingDate, samplingActNumber: sampling.samplingActNumber, testLocation: { is: { name: sampling.testLocation.name, testObject: { is: { name: sampling.testLocation.testObject.name } } } } } },
         },
         data: { qualityDocumentPath: relativePath, editorEmail: actorEmail },
       })
