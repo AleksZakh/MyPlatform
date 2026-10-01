@@ -297,6 +297,9 @@ declare module "nitropack/types" {
     '/api/lab/test-protocol/migration/upload': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/test-protocol/migration/upload.post').default>>>>
     }
+    '/api/lab/test-protocol/migration/verify/:id': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/test-protocol/migration/verify/[id].get').default>>>>
+    }
     '/api/navigation': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/navigation.get').default>>>>
     }

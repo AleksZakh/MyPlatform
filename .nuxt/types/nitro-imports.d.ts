@@ -107,6 +107,7 @@ declare global {
   const deleteFile: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/storage').deleteFile
   const deleteUploadedFile: typeof import('../../server/utils/fileUtils').deleteUploadedFile
   const describeRegistryFilters: typeof import('../../server/utils/incoming-control-filter').describeRegistryFilters
+  const detectMigrationDocument: typeof import('../../shared/utils/migration-document').detectMigrationDocument
   const dynamicEventHandler: typeof import('../../node_modules/h3/dist/index').dynamicEventHandler
   const ensureSafeBasename: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/path-safety').ensureSafeBasename
   const eventHandler: typeof import('../../node_modules/h3/dist/index').eventHandler
@@ -252,6 +253,9 @@ declare global {
   // @ts-ignore
   export type { EventHandler, EventHandlerRequest, EventHandlerResponse, EventHandlerObject, H3EventContext } from '../../node_modules/h3/dist/index'
   import('../../node_modules/h3/dist/index')
+  // @ts-ignore
+  export type { MigrationDocument } from '../../shared/utils/migration-document'
+  import('../../shared/utils/migration-document')
   // @ts-ignore
   export type { AccessActionName, AccessSubjectKind, AccessSource, AccessBlock, AccessCell, AccessRow, AccessSnapshot, AccessChange, AccessMutation, AccessSubjectOption } from '../../shared/types/access-management'
   import('../../shared/types/access-management')
@@ -432,6 +436,7 @@ export { defineAppConfig } from '/home/local_adm/Projects/MyPlatform/node_module
 export { useImage } from '/home/local_adm/Projects/MyPlatform/node_modules/@nuxt/image/dist/runtime/server/utils/image';
 export { normalizeAdminLogins, isSystemAdminLogin, decideAccess } from '/home/local_adm/Projects/MyPlatform/shared/utils/access-decision';
 export { normalizeLocationName, locationNameKey } from '/home/local_adm/Projects/MyPlatform/shared/utils/lab-location-name';
+export { detectMigrationDocument } from '/home/local_adm/Projects/MyPlatform/shared/utils/migration-document';
 export { ACCESS_ACTIONS } from '/home/local_adm/Projects/MyPlatform/shared/types/access-management';
 export { EXPORT_KINDS, EXPORT_COLUMNS } from '/home/local_adm/Projects/MyPlatform/shared/types/lab-export';
 export { defineOAuthAppleEventHandler } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-auth-utils/dist/runtime/server/lib/oauth/apple';

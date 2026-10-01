@@ -1,3 +1,4 @@
+import { detectMigrationDocument } from '~~/shared/utils/migration-document'
 import { AccessAction } from '@prisma/client'
 import { defineEventHandler, readMultipartFormData, createError } from 'h3'
 import { mkdir, writeFile, unlink } from 'node:fs/promises'
@@ -6,7 +7,7 @@ import * as path from 'node:path'
 import { prisma } from '~~/server/utils/prisma'
 import { requirePermission } from '~~/server/services/access-control.service'
 import { auditDataChange, computeAuditDelta } from '~~/server/utils/auditLog'
-import { protocolMigrationSelect, protocolMigrationDto, protocolDocumentFormat, protocolStorageSegment } from '~~/server/services/lab/protocol-migration.service'
+import { protocolMigrationSelect, protocolMigrationDto, protocolStorageSegment } from '~~/server/services/lab/protocol-migration.service'
 
 const ROOT = path.resolve(process.env.LAB_FILES_ROOT || '/var/www/uploads-storage/files')
 export default defineEventHandler(async event => {
@@ -17,8 +18,8 @@ export default defineEventHandler(async event => {
   if (files.length !== 1 || files[0]?.name !== 'file' || !files[0].data.length) throw createError({ statusCode: 400, statusMessage: 'Exactly one file required' })
   const file = files[0]
   if (file.data.length > 50 * 1024 * 1024) throw createError({ statusCode: 413, statusMessage: 'File too large' })
-  const extension = protocolDocumentFormat(file.data)
-  if (!extension) throw createError({ statusCode: 415, statusMessage: 'PDF or JPEG required' })
+  const extension = detectMigrationDocument(file.data)?.extension
+  if (!extension) throw createError({ statusCode: 415, statusMessage: 'PDF, JPEG, PNG or XLSX required' })
   const ids = form.filter(field => !field.filename && ['dbRecordId', 'testProtocolId'].includes(field.name || '')).map(field => Number(field.data.toString('utf8').trim()))
   const id = ids[0]
   if (!id || !Number.isSafeInteger(id) || id <= 0 || ids.some(value => value !== id)) throw createError({ statusCode: 400, statusMessage: 'Invalid protocol ID' })
@@ -56,7 +57,15 @@ export default defineEventHandler(async event => {
         note: 'Импорт документа протокола из старой системы', actorEmail,
         changes: computeAuditDelta({ protocolDocumentPath: row.protocolDocumentPath }, { protocolDocumentPath: relativePath }),
       })
-    })
-  } catch (error) { await unlink(diskPath).catch(() => undefined); throw error }
+    }, { maxWait: 10_000, timeout: 30_000 })
+  } catch (error) {
+    // A transport error at commit does not prove that the DB rolled back.
+    // Remove our new file only after confirming that it is not referenced.
+    try {
+      const saved = await prisma.testProtocol.findUnique({ where: { id }, select: { protocolDocumentPath: true } })
+      if (saved?.protocolDocumentPath !== relativePath) await unlink(diskPath).catch(() => undefined)
+    } catch { /* Keep the file for reconciliation if the DB is unavailable. */ }
+    throw error
+  }
   return { success: true, attached: true, testProtocolId: id, path: relativePath, url: '/files/' + relativePath.split('/').map(encodeURIComponent).join('/') }
 })
