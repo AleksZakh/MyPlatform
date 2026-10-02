@@ -189,6 +189,7 @@ export async function manufacturerWriteTransaction<T>(
     try {
       return await prisma.$transaction(operation, {
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        maxWait: 10_000, timeout: 30_000,
       });
     } catch (error: unknown) {
       const isConflict = error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034';

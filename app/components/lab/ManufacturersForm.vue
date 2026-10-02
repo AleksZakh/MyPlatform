@@ -161,6 +161,7 @@
                   </button>
                   <button
                     @click="deleteManufacturer(manufacturer.id)"
+                    :disabled="!canDelete || isLoading"
                     class="text-red-600 hover:text-red-900 transition-colors"
                     title="Удалить"
                   >
@@ -228,6 +229,9 @@
 </template>
 
 <script setup lang="ts">
+import { useDeletePermission } from '~/composables/useDeletePermission';
+import { requestDeletionReason, deletionErrorMessage } from '~/composables/useDeletionReason';
+const { canDelete, refreshDeletePermission } = useDeletePermission('lab.manufacturers');
 import { ref, computed, reactive, onMounted, watch } from 'vue';
 
 // Поля, используемые из GET /api/lab/manufacturer.
@@ -462,6 +466,7 @@ const editManufacturer = (manufacturer: Manufacturer): void => {
 
 // Удаление производителя
 const deleteManufacturer = async (id: number): Promise<void> => {
+  if (isLoading.value || !await refreshDeletePermission()) return;
   const manufacturer = manufacturers.value.find(m => m.id === id);
   const receiptCount = getReceiptCount(manufacturer);
 
@@ -489,12 +494,14 @@ const deleteManufacturer = async (id: number): Promise<void> => {
     return;
   }
 
-  if (!confirm('Вы уверены, что хотите удалить этого производителя?')) return;
+  const reason = requestDeletionReason(manufacturer?.name || `Запись №${id}`);
+  if (reason === null) return;
 
   isLoading.value = true;
   try {
     const response = await $fetch<ManufacturerMutationResponse>(`/api/lab/manufacturer/${id}`, {
       method: 'delete',
+      body: { reason },
     });
 
     if (response?.success) {
@@ -512,7 +519,7 @@ const deleteManufacturer = async (id: number): Promise<void> => {
     console.error('Ошибка удаления производителя:', error);
     showTost(
       'Ошибка!',
-      error instanceof Error ? error.message : 'Не удалось удалить производителя',
+      deletionErrorMessage(error),
       'error',
       'fxemoji:warningsign',
       5000

@@ -474,6 +474,8 @@ const {
 
 const {
   deleteRecordWithRefresh,
+  canDelete,
+  loading: deleteLoading,
 } = useRecordDelete()
 
 
@@ -1038,8 +1040,7 @@ const itemHead:
   ]
 
 
-const items:
-  ContextMenuItem[][] = [
+const items = computed<ContextMenuItem[][]>(() => [
     [
       {
         label:
@@ -1096,27 +1097,27 @@ const items:
           'error' as const,
         icon:
           'streamline-freehand-color:delete-bin-2',
-        disabled: true,
-        onClick:
+        disabled: !canDelete.value || deleteLoading.value,
+        onSelect:
           () =>
             handleDelete(
-              selectedRecord.value,
+              contextMenuRecord.value,
             ),
       },
     ],
-  ]
+  ])
 
 
 async function handleDelete(
   record:
     IncomingControlRecord | null,
 ) {
-  if (!record) {
+  if (!record || !canDelete.value || deleteLoading.value) {
     return
   }
 
   const recordName =
-    record.testLocation
+    record.samplingActNumber || record.testLocation
       ?.testObject
       ?.name ||
     `запись #${record.id}`
@@ -1125,7 +1126,11 @@ async function handleDelete(
     record.id,
     recordName,
     async () => {
+      if (originalData.value.length === 1 && currentPage.value > 1) {
+        currentPage.value -= 1
+      }
       await reloadCurrentPage()
+      contextMenuRecord.value = null
 
       selectedRecord.value =
         null

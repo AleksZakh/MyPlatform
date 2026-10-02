@@ -40,6 +40,8 @@ export { useADUsers } from '../app/composables/useADUsers';
 export { useAccessMatrix } from '../app/composables/useAccessMatrix';
 export { useAppToasts } from '../app/composables/useAppToasts';
 export { useAuth } from '../app/composables/useAuth';
+export { useDeletePermission } from '../app/composables/useDeletePermission';
+export { requestDeletionReason, deletionErrorMessage } from '../app/composables/useDeletionReason';
 export { memberKey, useDepartmentMemberPicker } from '../app/composables/useDepartmentMemberPicker';
 export { useDomainGroupImport } from '../app/composables/useDomainGroupImport';
 export { useFilters, Filters } from '../app/composables/useFilters';

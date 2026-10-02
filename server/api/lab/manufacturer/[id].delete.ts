@@ -1,3 +1,4 @@
+import { readDeletionReason } from '~~/server/utils/deletion-input';
 // server/api/lab/manufacturer/[id].delete.ts
 import { AccessAction } from '@prisma/client';
 import { defineEventHandler, getRouterParam } from 'h3';
@@ -17,6 +18,7 @@ import {
 export default defineEventHandler(async (event) => {
   const permission = await requirePermission(event, MANUFACTURER_RESOURCE_KEY, AccessAction.DELETE);
   const id = parseManufacturerId(getRouterParam(event, 'id'));
+  const reason = await readDeletionReason(event);
   try {
     return await manufacturerWriteTransaction(async (tx) => {
       const current = await tx.manufacturer.findUnique({ where: { id } });
@@ -70,7 +72,7 @@ export default defineEventHandler(async (event) => {
         entityType: 'Manufacturer',
         entityId: id,
         ...actor,
-        note: `Мягко удалён производитель «${current.name}». Действующих связей нет.`,
+        note: `Мягко удалён производитель «${current.name}». Действующих связей нет. Причина: ${reason}`,
         // computeAuditDelta исключает deletedAt/deletedBy, поэтому delta явная.
         changes: {
           deletedAt: { before: null, after: deleted.deletedAt?.toISOString() ?? null },

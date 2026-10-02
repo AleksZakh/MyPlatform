@@ -1,3 +1,4 @@
+import { readDeletionReason } from '~~/server/utils/deletion-input';
 // server/api/lab/locations/[id].delete.ts
 import { AccessAction } from '@prisma/client';
 import { defineEventHandler, getRouterParam } from 'h3';
@@ -7,8 +8,9 @@ import { deleteLocation } from '~~/server/services/lab/objects-locations-write.s
 
 export default defineEventHandler(async event => {
   const permission = await requirePermission(event, LOCATION_RESOURCE_KEY, AccessAction.DELETE);
+  const reason = await readDeletionReason(event);
   try {
     const id = catalogId(getRouterParam(event, 'id')); 
-    return await deleteLocation(event, permission.userId, id);
+    return await deleteLocation(event, permission.userId, id, reason);
   } catch (error: unknown) { rethrowCatalogError(error, 'location', 'delete'); }
 });

@@ -7,37 +7,16 @@
     }"
   >
     <template #header>
-      <div
-        class="flex items-center justify-between w-full"
-      >
-        <div
-          class="flex items-center gap-3"
-        >
-          <div
-            class="text-2xl text-blue-500"
-          >
-            <Icon
-              name="streamline-freehand-color:book-bookmark"
-              size="28"
-            />
+      <div class="flex items-center justify-between w-full" >
+        <div class="flex items-center gap-3" >
+          <div class="text-2xl text-blue-500" >
+            <Icon name="streamline-freehand-color:book-bookmark" size="28" />
           </div>
-
           <div>
-            <h3
-              class="text-lg font-semibold text-gray-900 dark:text-white"
-            >
-              Просмотр записи — Акт №
-              {{ data?.samplingActNumber || '—' }}
-            </h3>
-
-            <p
-              class="text-sm text-gray-500 dark:text-gray-400"
-            >
-              Просмотр данных записи
-            </p>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white" > Просмотр записи — Акт № {{ data?.samplingActNumber || '—' }} </h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400" > Просмотр данных записи </p>
           </div>
         </div>
-
         <UButton
           variant="ghost"
           color="neutral"
@@ -111,17 +90,13 @@
 
               <InfoValue
                 label="Номер акта отбора проб"
-                :value="
-                  data.samplingActNumber
-                "
+                :value="data.samplingActNumber"
                 mono
               />
 
               <FileValue
                 label="Документ отбора проб"
-                :path="
-                  data.samplingDocumentPath
-                "
+                :path="data.samplingDocumentPath"
                 @open="
                   fileViewerOpen
                 "
@@ -468,6 +443,14 @@ type DetailResponse = {
   data: IncomingControlRecord
 }
 
+const pdfIcon = 'vscode-icons:file-type-pdf2';
+// const jpgIcon = 'streamline-ultimate-color:image-file-jpg';
+const webpIcon = 'vscode-icons:file-type-webp';
+const imgIcon = 'streamline-ultimate-color:picture-sun';
+const xlsIcon = 'vscode-icons:file-type-excel2';
+const docIcon = 'vscode-icons:file-type-word';
+
+
 
 const props =
   defineProps<{
@@ -580,9 +563,7 @@ const InfoValue =
 
 const FileValue =
   defineComponent({
-    emits: [
-      'open',
-    ],
+    emits: ['open',],
 
     props: {
       label: {
@@ -629,11 +610,13 @@ const FileValue =
                     variant:
                       'ghost',
                     color:
-                      'primary',
+                      'info',
                     size:
                       'sm',
-                    class:
-                      'px-0 w-fit',
+                    type: 'button',
+                    title: getFileName(componentProps.path!),
+                    'aria-label': `Открыть ${componentProps.label}: ${getFileName(componentProps.path!)}`,
+                    class: 'mt-1 p-2 w-fit rounded-md focus-visible:outline-2 focus-visible:outline-blue-500',
                     onClick:
                       () =>
                         emitComponent(
@@ -642,11 +625,11 @@ const FileValue =
                         ),
                   },
                   {
-                    default:
-                      () =>
-                        getFileName(
-                          componentProps.path!,
-                        ),
+                    default: () => h(resolveComponent('Icon'), {
+                      name: getFileIcon(componentProps.path!),
+                      size: '32',
+                      'aria-hidden': 'true',
+                    }),
                   },
                 )
               : h(
@@ -723,16 +706,28 @@ function formatDateTime(
 }
 
 
-function getFileName(
-  path: string,
-): string {
-  return (
-    path
-      .split('/')
-      .filter(Boolean)
-      .at(-1) ||
-    path
-  )
+function getFileName(path: string): string {
+  // Query/hash не относятся к расширению; закодированные имена читаем корректно.
+  const pathname = path.split(/[?#]/, 1)[0] || path;
+  const name = pathname.replaceAll('\\', '/').split('/').filter(Boolean).at(-1) || pathname;
+  try { return decodeURIComponent(name); }
+  catch { return name; }
+}
+
+function getFileIcon(path: string): string {
+  const extension = getFileName(path).split('.').at(-1)?.toLowerCase();
+  switch (extension) {
+    case 'pdf': return pdfIcon;
+    case 'webp': return webpIcon;
+    case 'jpg': case 'jpeg': case 'png': case 'gif':
+    case 'bmp': case 'tif': case 'tiff': case 'svg': case 'avif':
+      return imgIcon;
+    case 'xls': case 'xlsx': case 'xlsm': case 'ods': case 'csv':
+      return xlsIcon;
+    case 'doc': case 'docx': case 'docm': case 'odt': case 'rtf':
+      return docIcon;
+    default: return 'heroicons:document';
+  }
 }
 
 

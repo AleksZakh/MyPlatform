@@ -180,6 +180,7 @@
                   </button>
                   <button
                     @click="deleteMaterial(material.id)"
+                    :disabled="!canDelete || isLoading"
                     class="text-red-600 hover:text-red-900 transition-colors"
                     title="Удалить"
                   >
@@ -247,6 +248,9 @@
 </template>
 
 <script setup>
+import { useDeletePermission } from '~/composables/useDeletePermission';
+import { requestDeletionReason, deletionErrorMessage } from '~/composables/useDeletionReason';
+const { canDelete, refreshDeletePermission } = useDeletePermission('lab.materials');
 import { ref, computed, reactive, onMounted, watch } from 'vue';
 
 // ============================================
@@ -456,6 +460,7 @@ const editMaterial = (material) => {
 
 // Удаление материала
 const deleteMaterial = async (id) => {
+  if (isLoading.value || !await refreshDeletePermission()) return;
   const material = materials.value.find(m => m.id === id);
   if (material?._count?.receipts > 0) {
     showTost(
@@ -468,12 +473,14 @@ const deleteMaterial = async (id) => {
     return;
   }
 
-  if (!confirm('Вы уверены, что хотите удалить этот материал?')) return;
+  const reason = requestDeletionReason(material?.name || `Запись №${id}`);
+  if (reason === null) return;
 
   isLoading.value = true;
   try {
     const response = await $fetch(`/api/lab/material/${id}`, {
       method: 'delete',
+      body: { reason },
     });
 
     if (response?.success) {
@@ -490,7 +497,7 @@ const deleteMaterial = async (id) => {
     console.error('Ошибка удаления материала:', error);
     showTost(
       'Ошибка!',
-      `${error.message || 'Не удалось удалить материал'}`,
+      deletionErrorMessage(error),
       'error',
       'fxemoji:warningsign',
       5000

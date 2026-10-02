@@ -191,7 +191,7 @@
                   type="button"
                   class="icon-button icon-button--delete"
                   title="Удалить объект"
-                  v-if="canDeleteObject" @click.stop="deleteObject(object)"
+                  @click.stop="deleteObject(object)"
                 >
                   <Icon
                     name="i-heroicons-trash"
@@ -331,7 +331,7 @@
             icon="i-heroicons-trash"
             color="error"
             variant="outline"
-            v-if="canDeleteObject" @click="deleteObject(selectedObject)"
+            @click="deleteObject(selectedObject)"
           />
         </div>
       </div>
@@ -514,7 +514,7 @@
                   type="button"
                   class="icon-button icon-button--delete"
                   title="Удалить место"
-                  v-if="canDeleteLocation" @click="deleteLocation(location)"
+                  @click="deleteLocation(location)"
                 >
                   <Icon
                     name="i-heroicons-trash"
@@ -820,12 +820,6 @@
 </template>
 
 <script setup lang="ts">
-// space-delete-reason-v1
-import { useDeletePermission } from '~/composables/useDeletePermission';
-import { requestDeletionReason } from '~/composables/useDeletionReason';
-const { canDelete: canDeleteObject, refreshDeletePermission: checkObjectDelete } = useDeletePermission('lab.test-objects');
-const { canDelete: canDeleteLocation, refreshDeletePermission: checkLocationDelete } = useDeletePermission('lab.test-locations');
-
 import {
   computed,
   onMounted,
@@ -1299,7 +1293,6 @@ async function saveObject() {
 async function deleteObject(
   object: ObjectRow,
 ) {
-  if (!await checkObjectDelete()) return;
   const locationsCount =
     object._count?.locations ??
     0
@@ -1317,8 +1310,13 @@ async function deleteObject(
   }
 
 
-  const reason = requestDeletionReason(object.name);
-  if (reason === null) return;
+  if (
+    !confirm(
+      `Удалить объект «${object.name}»?`,
+    )
+  ) {
+    return
+  }
 
 
   try {
@@ -1329,7 +1327,6 @@ async function deleteObject(
       }>(
         `/api/lab/objects/${object.id}`,
         {
-          body: { reason },
           method:
             'DELETE',
         },
@@ -1785,7 +1782,6 @@ async function saveLocation() {
 async function deleteLocation(
   location: LocationRow,
 ) {
-  if (!await checkLocationDelete()) return;
   const samplingTests =
     location._count
       ?.samplingTests ??
@@ -1804,8 +1800,13 @@ async function deleteLocation(
   }
 
 
-  const reason = requestDeletionReason(location.name);
-  if (reason === null) return;
+  if (
+    !confirm(
+      `Удалить место «${location.name}»?`,
+    )
+  ) {
+    return
+  }
 
 
   try {
@@ -1816,7 +1817,6 @@ async function deleteLocation(
       }>(
         `/api/lab/locations/${location.id}`,
         {
-          body: { reason },
           method:
             'DELETE',
         },

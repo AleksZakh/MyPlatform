@@ -1,3 +1,4 @@
+import { readDeletionReason } from '~~/server/utils/deletion-input';
 // Установить как server/api/lab/material/[id].delete.ts
 import { AccessAction, Prisma } from '@prisma/client';
 import { createError, defineEventHandler, getRouterParam, isError } from 'h3';
@@ -36,6 +37,7 @@ export default defineEventHandler(async (event) => {
   // Не доверяем авторству и правам, переданным в теле запроса.
   const permission = await requirePermission(event, RESOURCE_KEY, AccessAction.DELETE);
 
+  const reason = await readDeletionReason(event);
   const idParam = getRouterParam(event, 'id') ?? '';
   const id = Number(idParam);
   if (!/^[1-9]\d*$/.test(idParam) || !Number.isSafeInteger(id) || id > MAX_DATABASE_INT) {
@@ -128,7 +130,7 @@ export default defineEventHandler(async (event) => {
             actorLogin: actor.login,
             actorEmail: actorIdentifier,
             actorAuthType: actor.authType,
-            note: `Мягко удалён материал «${material.name}». Действующих связей нет.`,
+            note: `Мягко удалён материал «${material.name}». Действующих связей нет. Причина: ${reason}`,
             changes: {
               deletedAt: { before: null, after: deletedMaterial.deletedAt?.toISOString() ?? null },
               deletedBy: { before: material.deletedBy, after: deletedMaterial.deletedBy },
@@ -143,6 +145,7 @@ export default defineEventHandler(async (event) => {
           };
         }, {
           isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          maxWait: 10_000, timeout: 30_000,
         });
       } catch (error: unknown) {
         const retryable =

@@ -1,11 +1,12 @@
+import { validateDeletionReason } from '~~/server/utils/deletion-input';
 import type { H3Event } from 'h3';
 import { normalizeLocationName } from '~~/shared/utils/lab-location-name';
 import { computeAuditDelta, buildCreateAuditDelta } from '~~/server/utils/auditLog';
 import {
   catalogError, catalogTransaction, catalogActor, catalogAudit, lockObject, lockLocation,
   assertObjectNameAvailable, assertLocationNameAvailable, rethrowCatalogNameConflict,
-} from './objects-locations-api.service';
-import type { CatalogInput, LocationInput } from './objects-locations-api.service';
+} from '~~/server/services/lab/objects-locations-api.service';
+import type { CatalogInput, LocationInput } from '~~/server/services/lab/objects-locations-api.service';
 
 export async function createObject(event: H3Event, userId: number, input: CatalogInput) {
   return catalogTransaction(async tx => {
@@ -126,7 +127,8 @@ export async function updateObject(event: H3Event, userId: number, id: number, i
   });
 }
 
-export async function deleteObject(event: H3Event, userId: number, id: number) {
+export async function deleteObject(event: H3Event, userId: number, id: number, reason: string) {
+  reason = validateDeletionReason(reason);
   return catalogTransaction(async tx => {
     const current = await lockObject(tx, id, false);
     if (current.deletedAt !== null) return { success: true, id, alreadyDeleted: true, message: 'Объект уже удалён.' };
@@ -143,7 +145,7 @@ export async function deleteObject(event: H3Event, userId: number, id: number) {
     const updated = await tx.testObject.update({ where: { id }, data: {
       deletedAt: new Date(), deletedBy: actor.actorEmail, editorEmail: actor.actorEmail,
     } });
-    await catalogAudit(event, tx, actor, 'object', 'DELETE', id, `Мягко удалён объект «${current.name}».`, {
+    await catalogAudit(event, tx, actor, 'object', 'DELETE', id, `Мягко удалён объект «${current.name}». Причина: ${reason}`, {
       deletedAt: { before: null, after: updated.deletedAt?.toISOString() ?? null },
       deletedBy: { before: current.deletedBy, after: updated.deletedBy },
     });
@@ -195,7 +197,8 @@ export async function updateLocation(event: H3Event, userId: number, id: number,
   });
 }
 
-export async function deleteLocation(event: H3Event, userId: number, id: number) {
+export async function deleteLocation(event: H3Event, userId: number, id: number, reason: string) {
+  reason = validateDeletionReason(reason);
   return catalogTransaction(async tx => {
     // Для удаления допускаем помеченного удалённым родителя: можно исправить старую несогласованность.
     const current = await lockLocation(tx, id, false);
@@ -207,7 +210,7 @@ export async function deleteLocation(event: H3Event, userId: number, id: number)
     const updated = await tx.testLocation.update({ where: { id }, data: {
       deletedAt: new Date(), deletedBy: actor.actorEmail, editorEmail: actor.actorEmail,
     } });
-    await catalogAudit(event, tx, actor, 'location', 'DELETE', id, `Мягко удалено место отбора «${current.name}».`, {
+    await catalogAudit(event, tx, actor, 'location', 'DELETE', id, `Мягко удалено место отбора «${current.name}». Причина: ${reason}`, {
       deletedAt: { before: null, after: updated.deletedAt?.toISOString() ?? null },
       deletedBy: { before: current.deletedBy, after: updated.deletedBy },
     });

@@ -106,6 +106,8 @@ declare global {
   const deleteCookie: typeof import('../../node_modules/h3/dist/index').deleteCookie
   const deleteFile: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/storage').deleteFile
   const deleteUploadedFile: typeof import('../../server/utils/fileUtils').deleteUploadedFile
+  const deletionError: typeof import('../../server/utils/deletion-input').deletionError
+  const deletionId: typeof import('../../server/utils/deletion-input').deletionId
   const describeRegistryFilters: typeof import('../../server/utils/incoming-control-filter').describeRegistryFilters
   const detectMigrationDocument: typeof import('../../shared/utils/migration-document').detectMigrationDocument
   const dynamicEventHandler: typeof import('../../node_modules/h3/dist/index').dynamicEventHandler
@@ -190,6 +192,7 @@ declare global {
   const protocolHandbookInclude: typeof import('../../server/utils/lab-handbook-dto').protocolHandbookInclude
   const proxyRequest: typeof import('../../node_modules/h3/dist/index').proxyRequest
   const readBody: typeof import('../../node_modules/h3/dist/index').readBody
+  const readDeletionReason: typeof import('../../server/utils/deletion-input').readDeletionReason
   const readFormData: typeof import('../../node_modules/h3/dist/index').readFormData
   const readMultipartFormData: typeof import('../../node_modules/h3/dist/index').readMultipartFormData
   const readRawBody: typeof import('../../node_modules/h3/dist/index').readRawBody
@@ -245,6 +248,7 @@ declare global {
   const useRuntimeConfig: typeof import('../../node_modules/nitropack/dist/runtime/internal/config').useRuntimeConfig
   const useSession: typeof import('../../node_modules/h3/dist/index').useSession
   const useStorage: typeof import('../../node_modules/nitropack/dist/runtime/internal/storage').useStorage
+  const validateDeletionReason: typeof import('../../server/utils/deletion-input').validateDeletionReason
   const verifyPassword: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/password').verifyPassword
   const verifySpacePassword: typeof import('../../server/utils/password').verifySpacePassword
   const writeAuditEvent: typeof import('../../server/utils/auditLog').writeAuditEvent
@@ -496,6 +500,7 @@ export { getUserGroups } from '/home/local_adm/Projects/MyPlatform/server/utils/
 export { adCache } from '/home/local_adm/Projects/MyPlatform/server/utils/adCache';
 export { logAudit, computeChangedFields, getActorEmail, getRequestMeta, softDelete, buildCreateAuditDelta, computeAuditDelta, writeAuditEvent, auditDataChange, auditDenied } from '/home/local_adm/Projects/MyPlatform/server/utils/auditLog';
 export { createCacheRefreshRunner } from '/home/local_adm/Projects/MyPlatform/server/utils/cache-refresh-runner';
+export { deletionError, deletionId, validateDeletionReason, readDeletionReason } from '/home/local_adm/Projects/MyPlatform/server/utils/deletion-input';
 export { handleFileUpload, cleanOldFilesFromDisk, parseDate, updateFilePathsInData } from '/home/local_adm/Projects/MyPlatform/server/utils/fileUploadHandler';
 export { getFullFilePath, fileExists, getFileInfo, deleteUploadedFile } from '/home/local_adm/Projects/MyPlatform/server/utils/fileUtils';
 export { folderNameGenerator } from '/home/local_adm/Projects/MyPlatform/server/utils/folderNameGenerator';

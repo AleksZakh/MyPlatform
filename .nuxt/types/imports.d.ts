@@ -36,6 +36,7 @@ declare global {
   const definePayloadReviver: typeof import('../../node_modules/nuxt/dist/app/composables/payload').definePayloadReviver
   const defineShortcuts: typeof import('../../node_modules/@nuxt/ui/dist/runtime/composables/defineShortcuts').defineShortcuts
   const defineStore: typeof import('../../node_modules/@pinia/nuxt/dist/runtime/composables').defineStore
+  const deletionErrorMessage: typeof import('../../app/composables/useDeletionReason').deletionErrorMessage
   const detectMigrationDocument: typeof import('../../shared/utils/migration-document').detectMigrationDocument
   const effect: typeof import('vue').effect
   const effectScope: typeof import('vue').effectScope
@@ -100,6 +101,7 @@ declare global {
   const refreshCookie: typeof import('../../node_modules/nuxt/dist/app/composables/cookie').refreshCookie
   const refreshNuxtData: typeof import('../../node_modules/nuxt/dist/app/composables/asyncData').refreshNuxtData
   const reloadNuxtApp: typeof import('../../node_modules/nuxt/dist/app/composables/chunk').reloadNuxtApp
+  const requestDeletionReason: typeof import('../../app/composables/useDeletionReason').requestDeletionReason
   const requestIdleCallback: typeof import('../../node_modules/nuxt/dist/app/compat/idle-callback').requestIdleCallback
   const resolveComponent: typeof import('vue').resolveComponent
   const searchUserInAD: typeof import('../../app/composables/searchUserInAD').searchUserInAD
@@ -134,6 +136,7 @@ declare global {
   const useCookie: typeof import('../../node_modules/nuxt/dist/app/composables/cookie').useCookie
   const useCssModule: typeof import('vue').useCssModule
   const useCssVars: typeof import('vue').useCssVars
+  const useDeletePermission: typeof import('../../app/composables/useDeletePermission').useDeletePermission
   const useDepartmentMemberPicker: typeof import('../../app/composables/useDepartmentMemberPicker').useDepartmentMemberPicker
   const useDomainGroupImport: typeof import('../../app/composables/useDomainGroupImport').useDomainGroupImport
   const useError: typeof import('../../node_modules/nuxt/dist/app/composables/error').useError
@@ -327,6 +330,7 @@ declare module 'vue' {
     readonly definePayloadReviver: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/payload')['definePayloadReviver']>
     readonly defineShortcuts: UnwrapRef<typeof import('../../node_modules/@nuxt/ui/dist/runtime/composables/defineShortcuts')['defineShortcuts']>
     readonly defineStore: UnwrapRef<typeof import('../../node_modules/@pinia/nuxt/dist/runtime/composables')['defineStore']>
+    readonly deletionErrorMessage: UnwrapRef<typeof import('../../app/composables/useDeletionReason')['deletionErrorMessage']>
     readonly detectMigrationDocument: UnwrapRef<typeof import('../../shared/utils/migration-document')['detectMigrationDocument']>
     readonly effect: UnwrapRef<typeof import('vue')['effect']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
@@ -391,6 +395,7 @@ declare module 'vue' {
     readonly refreshCookie: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/cookie')['refreshCookie']>
     readonly refreshNuxtData: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/asyncData')['refreshNuxtData']>
     readonly reloadNuxtApp: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/chunk')['reloadNuxtApp']>
+    readonly requestDeletionReason: UnwrapRef<typeof import('../../app/composables/useDeletionReason')['requestDeletionReason']>
     readonly requestIdleCallback: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/compat/idle-callback')['requestIdleCallback']>
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
     readonly searchUserInAD: UnwrapRef<typeof import('../../app/composables/searchUserInAD')['searchUserInAD']>
@@ -425,6 +430,7 @@ declare module 'vue' {
     readonly useCookie: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/cookie')['useCookie']>
     readonly useCssModule: UnwrapRef<typeof import('vue')['useCssModule']>
     readonly useCssVars: UnwrapRef<typeof import('vue')['useCssVars']>
+    readonly useDeletePermission: UnwrapRef<typeof import('../../app/composables/useDeletePermission')['useDeletePermission']>
     readonly useDepartmentMemberPicker: UnwrapRef<typeof import('../../app/composables/useDepartmentMemberPicker')['useDepartmentMemberPicker']>
     readonly useDomainGroupImport: UnwrapRef<typeof import('../../app/composables/useDomainGroupImport')['useDomainGroupImport']>
     readonly useError: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/error')['useError']>
