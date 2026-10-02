@@ -528,24 +528,20 @@
                   </span>
                 </template>
 
-                <USelectMenu
-                  v-model="
-                    state.receiptMaterial
-                      .manufacturerName
-                  "
-                  :items="
-                    manufacturerItems.slice(
-                      0,
-                      200,
-                    )
-                  "
-                  :searchable="true"
-                  :search-input="{
-                    placeholder:
-                      'Введите производителя...',
-                  }"
+                <UInput
+                  v-model="state.receiptMaterial.manufacturerName"
+                  :list="manufacturerListId"
+                  placeholder="Введите или выберите производителя..."
+                  autocomplete="off"
                   class="w-full min-w-0"
                 />
+                <datalist :id="manufacturerListId">
+                  <option
+                    v-for="name in manufacturerSuggestions"
+                    :key="name"
+                    :value="name"
+                  />
+                </datalist>
               </UFormField>
 
 
@@ -855,6 +851,7 @@ import {
   reactive,
   ref,
   watch,
+  useId,
 } from 'vue'
 
 import {
@@ -1030,6 +1027,28 @@ const materialItems =
 
 const manufacturerItems =
   ref<string[]>([])
+
+// Unique per modal instance, including server rendering and hydration.
+const manufacturerListId = `manufacturer-options-${useId()}`
+
+const manufacturerNames = computed(() => {
+  const names = new Map<string, string>()
+  for (const value of manufacturerItems.value) {
+    const name = value.trim()
+    const key = name.toLocaleLowerCase('ru-RU')
+    if (name && !names.has(key)) names.set(key, name)
+  }
+  return [...names.values()]
+})
+
+const manufacturerSuggestions = computed(() => {
+  const query = state.receiptMaterial.manufacturerName
+    .trim().toLocaleLowerCase('ru-RU')
+  // Search the entire loaded reference list BEFORE limiting the suggestions.
+  return manufacturerNames.value
+    .filter(name => !query || name.toLocaleLowerCase('ru-RU').includes(query))
+    .slice(0, 50)
+})
 
 const testResultItems =
   ref([

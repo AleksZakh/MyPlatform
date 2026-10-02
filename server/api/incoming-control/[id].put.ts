@@ -53,6 +53,8 @@ import {
 } from '~~/server/services/lab/incoming-control-location.service'
 
 
+import { resolveIncomingControlManufacturer } from '~~/server/services/lab/incoming-control-manufacturer.service'
+
 const RESOURCE_KEY =
   'lab.sampling-tests'
 
@@ -1003,36 +1005,12 @@ export default defineEventHandler(
                 foundMaterial
 
 
-              const manufacturerName =
-                payload
-                  .receiptMaterial
-                  .manufacturerName
-
-
-              if (manufacturerName) {
-                manufacturer =
-                  await tx.manufacturer
-                    .findUnique({
-                      where: {
-                        name:
-                          manufacturerName,
-                      },
-                    })
-
-
-                if (
-                  !manufacturer ||
-                  manufacturer.deletedAt
-                ) {
-                  throw createError({
-                    statusCode: 400,
-
-                    statusMessage:
-                      `Производитель "${manufacturerName}" не найден`,
-                  })
-                }
-              }
-
+              manufacturer = await resolveIncomingControlManufacturer({
+                event,
+                tx,
+                rawName: payload.receiptMaterial.manufacturerName,
+                actorEmail,
+              })
 
               testLocation =
                 await resolveIncomingControlLocation({
