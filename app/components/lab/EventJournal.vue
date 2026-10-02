@@ -1,5 +1,6 @@
 <template>
   <div class="journal-page">
+    <DeletionJournal />
     <section class="journal-card">
       <header class="journal-header">
         <div>
@@ -593,6 +594,7 @@
 
 
 <script setup lang="ts">
+import DeletionJournal from './DeletionJournal.vue';
 import {
   computed,
   onMounted,

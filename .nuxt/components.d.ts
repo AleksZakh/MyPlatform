@@ -25,6 +25,7 @@ export const AdminDepartmentMemberPicker: typeof import("../app/components/admin
 export const AdminDomainGroupImport: typeof import("../app/components/admin/DomainGroupImport.vue")['default']
 export const AdminUserDirectory: typeof import("../app/components/admin/UserDirectory.vue")['default']
 export const AuthRegistrationRequestForm: typeof import("../app/components/auth/RegistrationRequestForm.vue")['default']
+export const LabDeletionJournal: typeof import("../app/components/lab/DeletionJournal.vue")['default']
 export const LabDocumentUploadField: typeof import("../app/components/lab/DocumentUploadField.vue")['default']
 export const LabEventJournal: typeof import("../app/components/lab/EventJournal.vue")['default']
 export const LabExportRecordsModal: typeof import("../app/components/lab/ExportRecordsModal.vue")['default']
@@ -221,6 +222,7 @@ export const LazyAdminDepartmentMemberPicker: LazyComponent<typeof import("../ap
 export const LazyAdminDomainGroupImport: LazyComponent<typeof import("../app/components/admin/DomainGroupImport.vue")['default']>
 export const LazyAdminUserDirectory: LazyComponent<typeof import("../app/components/admin/UserDirectory.vue")['default']>
 export const LazyAuthRegistrationRequestForm: LazyComponent<typeof import("../app/components/auth/RegistrationRequestForm.vue")['default']>
+export const LazyLabDeletionJournal: LazyComponent<typeof import("../app/components/lab/DeletionJournal.vue")['default']>
 export const LazyLabDocumentUploadField: LazyComponent<typeof import("../app/components/lab/DocumentUploadField.vue")['default']>
 export const LazyLabEventJournal: LazyComponent<typeof import("../app/components/lab/EventJournal.vue")['default']>
 export const LazyLabExportRecordsModal: LazyComponent<typeof import("../app/components/lab/ExportRecordsModal.vue")['default']>

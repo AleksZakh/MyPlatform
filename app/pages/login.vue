@@ -427,6 +427,10 @@
                 >
               </label>
 
+              <NuxtLink to="/forgot-password" class="block text-sm text-sky-700 hover:underline">
+                Забыли пароль?
+              </NuxtLink>
+
               <div
                 v-if="externalError"
                 class="

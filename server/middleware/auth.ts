@@ -1,3 +1,4 @@
+import { checkExternalSession } from '../utils/external-session';
 // server/middleware/auth.ts
 
 import { logger } from '../utils/logger';
@@ -139,7 +140,10 @@ export default defineEventHandler(async (event) => {
     path === '/robots.txt' ||
     path === '/apple-touch-icon.png';
 
+  const isPasswordRecovery = ['/forgot-password', '/reset-password', '/api/auth/forgot-password', '/api/auth/reset-password'].includes(path);
+
   const isPublicRoute =
+    isPasswordRecovery ||
     isLoginPage ||
     isPasswordLogin ||
     isKerberosLogin ||
@@ -160,6 +164,11 @@ export default defineEventHandler(async (event) => {
 //   isActivateAccountPage,
 //   isPublicRoute,
 // });
+  // Проверяем отзыв cookie до публичного /api/_auth/session, иначе UI увидит старый вход.
+  // Статика и восстановление пароля не требуют чтения пользовательской БД.
+  if (!isNuxtAsset && !isPublicFile && !isPasswordRecovery) {
+    await checkExternalSession(event);
+  }
   if (isPublicRoute) {
     return;
   }
@@ -177,7 +186,7 @@ export default defineEventHandler(async (event) => {
     /**
      * Авторизованный пользователь.
      */
-    if (session?.user) {
+    if (session?.user && !event.context.externalSessionRevoked) {
       event.context.user = session.user;
 
       return;

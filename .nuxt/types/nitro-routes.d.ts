@@ -104,6 +104,9 @@ declare module "nitropack/types" {
     '/api/auth/external-login': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/auth/external-login.post').default>>>>
     }
+    '/api/auth/forgot-password': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/auth/forgot-password.post').default>>>>
+    }
     '/api/auth/kerberos': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/auth/kerberos.post').default>>>>
     }
@@ -121,6 +124,9 @@ declare module "nitropack/types" {
     }
     '/api/auth/register': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/auth/register.post').default>>>>
+    }
+    '/api/auth/reset-password': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/auth/reset-password.post').default>>>>
     }
     '/api/auth/session': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/auth/session.get').default>>>>
@@ -170,6 +176,9 @@ declare module "nitropack/types" {
     }
     '/api/lab/event-journal/:type/:id/history': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/event-journal/[type]/[id]/history.get').default>>>>
+    }
+    '/api/lab/event-journal/deletions': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/event-journal/deletions.get').default>>>>
     }
     '/api/lab/event-journal': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/event-journal/index.get').default>>>>

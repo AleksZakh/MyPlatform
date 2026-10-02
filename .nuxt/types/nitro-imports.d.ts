@@ -23,6 +23,7 @@ declare global {
   const cachedEventHandler: typeof import('../../node_modules/nitropack/dist/runtime/internal/cache').cachedEventHandler
   const cachedFunction: typeof import('../../node_modules/nitropack/dist/runtime/internal/cache').cachedFunction
   const callNodeListener: typeof import('../../node_modules/h3/dist/index').callNodeListener
+  const checkExternalSession: typeof import('../../server/utils/external-session').checkExternalSession
   const cleanOldFilesFromDisk: typeof import('../../server/utils/fileUploadHandler').cleanOldFilesFromDisk
   const clearResponseHeaders: typeof import('../../node_modules/h3/dist/index').clearResponseHeaders
   const clearSession: typeof import('../../node_modules/h3/dist/index').clearSession
@@ -215,6 +216,7 @@ declare global {
   const sendError: typeof import('../../node_modules/h3/dist/index').sendError
   const sendIterable: typeof import('../../node_modules/h3/dist/index').sendIterable
   const sendNoContent: typeof import('../../node_modules/h3/dist/index').sendNoContent
+  const sendPasswordResetEmail: typeof import('../../server/utils/password-reset-mail').sendPasswordResetEmail
   const sendProxy: typeof import('../../node_modules/h3/dist/index').sendProxy
   const sendRedirect: typeof import('../../node_modules/h3/dist/index').sendRedirect
   const sendStream: typeof import('../../node_modules/h3/dist/index').sendStream
@@ -501,6 +503,7 @@ export { adCache } from '/home/local_adm/Projects/MyPlatform/server/utils/adCach
 export { logAudit, computeChangedFields, getActorEmail, getRequestMeta, softDelete, buildCreateAuditDelta, computeAuditDelta, writeAuditEvent, auditDataChange, auditDenied } from '/home/local_adm/Projects/MyPlatform/server/utils/auditLog';
 export { createCacheRefreshRunner } from '/home/local_adm/Projects/MyPlatform/server/utils/cache-refresh-runner';
 export { deletionError, deletionId, validateDeletionReason, readDeletionReason } from '/home/local_adm/Projects/MyPlatform/server/utils/deletion-input';
+export { checkExternalSession } from '/home/local_adm/Projects/MyPlatform/server/utils/external-session';
 export { handleFileUpload, cleanOldFilesFromDisk, parseDate, updateFilePathsInData } from '/home/local_adm/Projects/MyPlatform/server/utils/fileUploadHandler';
 export { getFullFilePath, fileExists, getFileInfo, deleteUploadedFile } from '/home/local_adm/Projects/MyPlatform/server/utils/fileUtils';
 export { folderNameGenerator } from '/home/local_adm/Projects/MyPlatform/server/utils/folderNameGenerator';
@@ -511,6 +514,7 @@ export { receiptHandbookInclude, protocolHandbookInclude, receiptHandbookDto, pr
 export { logger } from '/home/local_adm/Projects/MyPlatform/server/utils/logger';
 export { sendActivationEmail, sendVerificationEmail } from '/home/local_adm/Projects/MyPlatform/server/utils/mailer';
 export { inspectMigrationFile } from '/home/local_adm/Projects/MyPlatform/server/utils/migration-stored-file';
+export { sendPasswordResetEmail } from '/home/local_adm/Projects/MyPlatform/server/utils/password-reset-mail';
 export { hashSpacePassword, verifySpacePassword } from '/home/local_adm/Projects/MyPlatform/server/utils/password';
 export { prisma } from '/home/local_adm/Projects/MyPlatform/server/utils/prisma';
 export { inspectProtocolFile } from '/home/local_adm/Projects/MyPlatform/server/utils/protocol-migration-file';

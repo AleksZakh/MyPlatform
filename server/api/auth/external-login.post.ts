@@ -1,5 +1,4 @@
 import {
-  PrismaClient,
   UserAuthType,
   UserStatus,
 } from '@prisma/client';
@@ -8,8 +7,7 @@ import {
   verifySpacePassword,
 } from '../../utils/password';
 
-const prisma =
-  new PrismaClient();
+import { prisma } from '~~/server/utils/prisma';
 
 type ExternalLoginBody = {
   email?: unknown;
@@ -62,6 +60,7 @@ export default defineEventHandler(
           status: true,
 
           passwordHash: true,
+          externalSessionVersion: true,
 
           departmentId: true,
         },
@@ -159,6 +158,7 @@ export default defineEventHandler(
 
             authType:
                 'EXTERNAL',
+            externalSessionVersion: user.externalSessionVersion,
             },
         },
         );
