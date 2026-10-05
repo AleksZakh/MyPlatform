@@ -31,6 +31,8 @@ import {
 
 import {
   assertBaseChronology,
+  assertFullChronology,
+  assertNewProtocolComplete,
   getPayloadDates,
   parseIncomingControlPayload,
 } from '~~/server/services/lab/incoming-control-rules.service'
@@ -175,21 +177,11 @@ export default defineEventHandler(
       }
 
 
-      /**
-       * Главное правило CREATE:
-       * протокол на первом сохранении существовать не может.
-       */
-      if (
-        payload.testProtocol !== null ||
-        hasProtocolDocument
-      ) {
-        throw createError({
-          statusCode: 400,
-          statusMessage:
-            'Протокол испытаний нельзя создавать одновременно с записью Реестра',
-        })
+      if (payload.testProtocol) {
+        assertNewProtocolComplete(payload, hasProtocolDocument)
+      } else if (hasProtocolDocument) {
+        throw createError({ statusCode: 400, statusMessage: 'Для файла протокола необходимо заполнить данные протокола' })
       }
-
 
       const dates =
         getPayloadDates(
@@ -201,6 +193,8 @@ export default defineEventHandler(
         dates,
       )
 
+
+      if (payload.testProtocol) assertFullChronology(dates)
 
       // DTO валиден — теперь сохраняем файлы.
       const upload =
@@ -222,6 +216,11 @@ export default defineEventHandler(
           .samplingDocumentFile ||
         null
 
+
+      const protocolDocumentPath = upload.fileDbPaths.protocolDocumentFile || null
+      if (payload.testProtocol && !protocolDocumentPath) {
+        throw createError({ statusCode: 400, statusMessage: 'Для нового протокола обязателен файл документа' })
+      }
 
       const qualityDocumentPath =
         upload.fileDbPaths
@@ -398,6 +397,20 @@ export default defineEventHandler(
                         .samplingTest
                         .note ||
                       null,
+
+                    ...(payload.testProtocol ? {
+                      testProtocol: {
+                        create: {
+                          protocolNumber: payload.testProtocol.protocolNumber,
+                          protocolDate: dates.protocolDate,
+                          protocolDocumentPath,
+                          testResult: payload.testProtocol.testResult,
+                          note: payload.testProtocol.note || null,
+                          authorEmail: actorEmail,
+                          editorEmail: actorEmail,
+                        },
+                      },
+                    } : {}),
 
                     businessRulesVersion:
                       1,
@@ -595,6 +608,19 @@ export default defineEventHandler(
               actorEmail,
             })
 
+
+            if (created.testProtocol) {
+              await auditDataChange({
+                event, db: tx, resourceKey: RESOURCE_KEY,
+                entityType: 'TestProtocol', entityId: created.testProtocol.id,
+                action: 'CREATE', note: 'Создан протокол испытаний вместе с записью Реестра',
+                changes: buildCreateAuditDelta(
+                  created.testProtocol as unknown as Record<string, unknown>,
+                  ['protocolNumber', 'protocolDate', 'protocolDocumentPath', 'testResult', 'note'],
+                ),
+                actorEmail,
+              })
+            }
 
             return created
           },
