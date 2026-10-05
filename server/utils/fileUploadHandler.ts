@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { folderNameGenerator } from './folderNameGenerator';
+import { randomUUID } from 'node:crypto';
 
 export interface FileUploadResult {
   folderName: string;
@@ -31,13 +31,13 @@ export async function handleFileUpload(
 ): Promise<FileUploadResult> {
   const {
     fileFields = ['sDoc', 'qualDoc', 'protocolDoc'],
-    baseUploadDir = '/var/www/uploads-storage/files',
+    baseUploadDir = process.env.LAB_FILES_ROOT || '/var/www/uploads-storage/files',
     cleanOldFiles = false,
     oldFilePaths = {},
   } = options;
 
   // Генерируем подкаталог
-  const folderName = folderNameGenerator();
+  const folderName = `lab/uploads/${randomUUID()}`;
   const targetDir = path.join(baseUploadDir, folderName);
 
   // Создаем директории, если их нет
@@ -79,7 +79,7 @@ export async function handleFileUpload(
     // console.log('fullPath ===> ', fullPath)
 
     // Записываем файл на диск
-    fs.writeFileSync(fullPath, item.data);
+    fs.writeFileSync(fullPath, item.data, { flag: 'wx' });
 
     // Сохраняем относительный путь для БД
     fileDbPaths[fieldName] = path.join(folderName, newFilename);

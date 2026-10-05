@@ -1234,6 +1234,15 @@ onMounted(
     )
   },
 )
+// Direct navigation from the file manager opens the requested registry card.
+const storageRoute = useRoute()
+async function openStorageRecord(value: unknown) {
+  const id = Number(value)
+  if (!Number.isSafeInteger(id) || id < 1) return
+  modalView.open({ record: { id, action: 'view' }, onClose: () => modalView.close() })
+}
+onMounted(() => openStorageRecord(storageRoute.query.storageRecordId))
+watch(() => storageRoute.query.storageRecordId, openStorageRecord)
 </script>
 
 

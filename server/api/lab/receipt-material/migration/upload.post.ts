@@ -52,7 +52,7 @@ export default defineEventHandler(async event => {
   } else if (row.qualityDocumentPath?.trim() && row.qualityDocumentPath.trim() !== '-') throw createError({ statusCode: 409, statusMessage: 'Receipt already has a document' })
   const sampling = row.samplingTest
   if (!sampling || sampling.deletedAt) throw createError({ statusCode: 409, statusMessage: 'Active sampling record required' })
-  const segments = [receiptStorageSegment(sampling.testLocation.testObject.name), receiptStorageSegment(sampling.testLocation.name), sampling.samplingDate.toISOString().slice(0, 10)]
+  const segments = ['lab', receiptStorageSegment(sampling.testLocation.testObject.name), receiptStorageSegment(sampling.testLocation.name), sampling.samplingDate.toISOString().slice(0, 10)]
   const name = `quality_${receiptStorageSegment(row.qualityDocumentNumber || String(id))}_${id}_${randomUUID()}.${extension}`
   const relativePath = [...segments, name].join('/')
   const directory = path.join(ROOT, ...segments), diskPath = path.join(directory, name)

@@ -298,6 +298,7 @@ model TestProtocol {
 // ГЛАВНАЯ ТАБЛИЦА - АКТЫ ОТБОРА ПРОБ
 // ============================================
 model SamplingTest {
+  attachments FileAttachment[]
   id Int @id @default(autoincrement())
 
   // Отбор проб
@@ -908,4 +909,25 @@ model PasswordResetLimit {
   count Int
   @@index([startedAt])
   @@map("password_reset_limits")
+}
+
+// Additional documents of a registry record; built-in document fields remain intact.
+model FileAttachment {
+  id Int @id @default(autoincrement())
+  samplingTestId Int
+  samplingTest SamplingTest @relation(fields: [samplingTestId], references: [id])
+  name String @db.VarChar(255)
+  path String @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([samplingTestId])
+  @@map("file_attachments")
+}
+
+// Commit marker used to reconcile filesystem operations after a crash.
+model FileStorageOperation {
+  id String @id @db.VarChar(36)
+  kind String @db.VarChar(30)
+  createdAt DateTime @default(now())
+  @@map("file_storage_operations")
 }

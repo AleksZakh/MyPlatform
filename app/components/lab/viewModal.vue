@@ -391,6 +391,11 @@
           </div>
         </div>
       </div>
+      <fieldset v-if="storageAttachments.length" class="border border-gray-200 rounded-md m-4 p-3">
+        <legend>Дополнительные документы</legend>
+        <a v-for="file in storageAttachments" :key="file.id" :href="file.url" target="_blank" rel="noopener noreferrer" class="block text-blue-600 my-2">{{ file.name }}</a>
+      </fieldset>
+      <p v-if="storageAttachmentError" class="m-4 text-red-600" role="alert">{{ storageAttachmentError }}</p>
     </template>
 
 
@@ -889,6 +894,13 @@ onMounted(
     }
   },
 )
+const storageAttachments = ref<{ id: number; name: string; url: string }[]>([])
+const storageAttachmentError = ref('')
+onMounted(async () => {
+  if (!props.record.id) return
+  try { storageAttachments.value = await $fetch<{ id: number; name: string; url: string }[]>(`/api/incoming-control/${props.record.id}/attachments` as string) }
+  catch { storageAttachmentError.value = 'Не удалось загрузить дополнительные документы.' }
+})
 </script>
 
 

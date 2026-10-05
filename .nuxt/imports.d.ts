@@ -51,6 +51,7 @@ export { useLabDataLoader, IncomingControlReference, IncomingControlRecord } fro
 export { useRecordDelete, DeleteOptions } from '../app/composables/useRecordDelete';
 export { useRecordUpdate, UpdateOptions } from '../app/composables/useRecordUpdate';
 export { useReferenceDataLoader } from '../app/composables/useReferenceDataLoader';
+export { useStorageManager, StorageReference, StorageItem } from '../app/composables/useStorageManager';
 export { useStructureAdmin } from '../app/composables/useStructureAdmin';
 export { LAB_TABLE_COLUMNS, useTableSettings, LabTableColumnDefinition } from '../app/composables/useTableSettings';
 export { normalizeAdminLogins, isSystemAdminLogin, decideAccess } from '../shared/utils/access-decision';

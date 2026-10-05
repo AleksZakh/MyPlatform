@@ -65,6 +65,21 @@ declare module "nitropack/types" {
     '/api/admin/domain-groups/search': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/domain-groups/search.get').default>>>>
     }
+    '/api/admin/files/content': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/files/content.get').default>>>>
+    }
+    '/api/admin/files': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/files/index.get').default>>>>
+    }
+    '/api/admin/files/mutate': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/files/mutate.post').default>>>>
+    }
+    '/api/admin/files/records': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/files/records.get').default>>>>
+    }
+    '/api/admin/files/upload': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/files/upload.post').default>>>>
+    }
     '/api/admin/guard': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/guard.get').default>>>>
     }
@@ -150,6 +165,9 @@ declare module "nitropack/types" {
       'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/[id].delete').default>>>>
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/[id].get').default>>>>
       'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/[id].put').default>>>>
+    }
+    '/api/incoming-control/:id/attachments': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/[id]/attachments.get').default>>>>
     }
     '/api/incoming-control/exports/:id/cancel': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/exports/[id]/cancel.post').default>>>>

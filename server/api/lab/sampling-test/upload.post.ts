@@ -51,7 +51,7 @@ export default defineEventHandler(async (event) => {
     include: { testLocation: { include: { testObject: true } } } });
   if (!row) throw createError({ statusCode: 404, statusMessage: 'Sampling record not found' });
   // Metadata is taken from the selected Space record, not from untrusted form fields.
-  const segments = [safeSegment(row.testLocation.testObject.name), safeSegment(row.testLocation.name),
+  const segments = ['lab', safeSegment(row.testLocation.testObject.name), safeSegment(row.testLocation.name),
     row.samplingDate.toISOString().slice(0, 10)];
   const name = `act_${safeSegment(row.samplingActNumber)}_${id}_${randomUUID()}.${document.extension}`;
   const directory = path.join(BASE_UPLOAD_DIR, ...segments);

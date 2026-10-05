@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const BASE_UPLOAD_DIR = '/var/www/uploads-storage/files';
+const BASE_UPLOAD_DIR = process.env.LAB_FILES_ROOT || '/var/www/uploads-storage/files';
 
 /**
  * Получить полный путь к файлу по относительному пути

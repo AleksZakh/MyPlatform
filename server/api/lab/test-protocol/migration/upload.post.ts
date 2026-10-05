@@ -52,7 +52,7 @@ export default defineEventHandler(async event => {
   } else if (row.protocolDocumentPath?.trim() && row.protocolDocumentPath.trim() !== '-') throw createError({ statusCode: 409, statusMessage: 'Protocol already has a document' })
   const sampling = row.samplingTest
   if (!sampling || sampling.deletedAt) throw createError({ statusCode: 409, statusMessage: 'Active sampling record required' })
-  const segments = [protocolStorageSegment(sampling.testLocation.testObject.name), protocolStorageSegment(sampling.testLocation.name), sampling.samplingDate.toISOString().slice(0, 10)]
+  const segments = ['lab', protocolStorageSegment(sampling.testLocation.testObject.name), protocolStorageSegment(sampling.testLocation.name), sampling.samplingDate.toISOString().slice(0, 10)]
   const name = `protocol_${protocolStorageSegment(row.protocolNumber || String(id))}_${id}_${randomUUID()}.${extension}`
   const relativePath = [...segments, name].join('/')
   const directory = path.join(ROOT, ...segments), diskPath = path.join(directory, name)

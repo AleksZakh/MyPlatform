@@ -9,6 +9,7 @@ export const departmentPages = [
   { key: 'lab', label: 'Лабораторный контроль', to: '/departments/lab' },
 ] as const
 export const toolPages = [
+  { label: 'Файловое хранилище', to: '/admin/files', description: 'Каталоги, документы и связи с записями реестра.', icon: 'lucide:folder-open', adminOnly: true },
   { label: 'Пользователи', to: '/admin/users', description: 'Учётные записи, профили и состояние сотрудников.', icon: 'lucide:users', resource: 'admin.users' },
   { label: 'Подразделения', to: '/admin/structure?tab=departments', description: 'Отделы из department в AD, сопоставление и состав.', icon: 'lucide:building-2', adminOnly: true },
   { label: 'Группы Space', to: '/admin/structure?tab=groups', description: 'Внутренние группы: пользователи и включённые группы AD.', icon: 'lucide:group', adminOnly: true },

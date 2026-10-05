@@ -233,6 +233,7 @@ declare global {
   const useShadowRoot: typeof import('vue').useShadowRoot
   const useSlots: typeof import('vue').useSlots
   const useState: typeof import('../../node_modules/nuxt/dist/app/composables/state').useState
+  const useStorageManager: typeof import('../../app/composables/useStorageManager').useStorageManager
   const useStructureAdmin: typeof import('../../app/composables/useStructureAdmin').useStructureAdmin
   const useTableFilterStore: typeof import('../../app/stores/tableFilter').useTableFilterStore
   const useTableSettings: typeof import('../../app/composables/useTableSettings').useTableSettings
@@ -275,6 +276,9 @@ declare global {
   // @ts-ignore
   export type { UpdateOptions } from '../../app/composables/useRecordUpdate'
   import('../../app/composables/useRecordUpdate')
+  // @ts-ignore
+  export type { StorageReference, StorageItem } from '../../app/composables/useStorageManager'
+  import('../../app/composables/useStorageManager')
   // @ts-ignore
   export type { LabTableColumnDefinition } from '../../app/composables/useTableSettings'
   import('../../app/composables/useTableSettings')
@@ -527,6 +531,7 @@ declare module 'vue' {
     readonly useShadowRoot: UnwrapRef<typeof import('vue')['useShadowRoot']>
     readonly useSlots: UnwrapRef<typeof import('vue')['useSlots']>
     readonly useState: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/state')['useState']>
+    readonly useStorageManager: UnwrapRef<typeof import('../../app/composables/useStorageManager')['useStorageManager']>
     readonly useStructureAdmin: UnwrapRef<typeof import('../../app/composables/useStructureAdmin')['useStructureAdmin']>
     readonly useTableFilterStore: UnwrapRef<typeof import('../../app/stores/tableFilter')['useTableFilterStore']>
     readonly useTableSettings: UnwrapRef<typeof import('../../app/composables/useTableSettings')['useTableSettings']>
