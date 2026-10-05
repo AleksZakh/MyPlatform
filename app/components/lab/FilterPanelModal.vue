@@ -249,7 +249,7 @@
                   </template>
                   <USelectMenu
                     v-model="localFilters.manufacturer as any"
-                    :items="manufacturer_items.slice(0, 200)"
+                    :items="manufacturer_items"
                     :searchable="true"
                     :search-input="{ placeholder: 'Введите производителя...' }"
                     class="max-w-120 w-full shadow-sm"
