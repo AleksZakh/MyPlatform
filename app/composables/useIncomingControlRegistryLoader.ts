@@ -24,6 +24,8 @@ export function useIncomingControlRegistryLoader() {
   const currentPage = ref(1)
   const pageSize = ref(25)
   const search = ref('')
+  const sortKey = ref('createdAt')
+  const sortOrder = ref<'asc' | 'desc'>('desc')
 
   let requestId = 0
   let disposed = false
@@ -53,8 +55,8 @@ export function useIncomingControlRegistryLoader() {
       page: String(currentPage.value),
       pageSize: String(pageSize.value),
       search: search.value.trim(),
-      sortKey: 'createdAt',
-      sortOrder: 'desc',
+      sortKey: sortKey.value,
+      sortOrder: sortOrder.value,
     })
 
     try {
@@ -102,6 +104,19 @@ export function useIncomingControlRegistryLoader() {
     }, 350)
   }, { flush: 'sync' })
 
+  async function changeSort(key: string): Promise<void> {
+    if (sortKey.value !== key) {
+      sortKey.value = key
+      sortOrder.value = 'asc'
+    } else if (sortOrder.value === 'asc') {
+      sortOrder.value = 'desc'
+    } else {
+      sortKey.value = 'createdAt'
+      sortOrder.value = 'desc'
+    }
+    await loadData(1, pageSize.value)
+  }
+
   function clearSearch(): void {
     if (search.value !== '') search.value = ''
   }
@@ -130,6 +145,7 @@ export function useIncomingControlRegistryLoader() {
   })
 
   return {
+    sortKey, sortOrder, changeSort,
     loading, errorMessage, originalData, totalCount, totalPages,
     currentPage, pageSize, search, loadData, changePage, changePageSize,
     reloadCurrentPage, clearSearch, applySearch,

@@ -92,6 +92,7 @@ export default defineEventHandler(async (event) => {
     let orderBy: Prisma.SamplingTestOrderByWithRelationInput;
 
     switch (sortKey) {
+      case 'plp.name':
       case 'plp':
         orderBy = {
           plp: {
@@ -100,6 +101,7 @@ export default defineEventHandler(async (event) => {
         };
         break;
 
+      case 'inspector.name':
       case 'inspector':
         orderBy = {
           inspector: {
@@ -108,6 +110,7 @@ export default defineEventHandler(async (event) => {
         };
         break;
 
+      case 'testLocation.testObject.name':
       case 'object':
         orderBy = {
           testLocation: {
@@ -124,6 +127,7 @@ export default defineEventHandler(async (event) => {
         };
         break;
 
+      case 'testLocation.name':
       case 'location':
         orderBy = {
           testLocation: {
@@ -132,6 +136,7 @@ export default defineEventHandler(async (event) => {
         };
         break;
 
+      case 'receiptMaterial.material.name':
       case 'material':
         orderBy = {
           receiptMaterial: {
@@ -142,6 +147,7 @@ export default defineEventHandler(async (event) => {
         };
         break;
 
+      case 'receiptMaterial.manufacturer.name':
       case 'manufacturer':
         orderBy = {
           receiptMaterial: {
@@ -166,6 +172,7 @@ export default defineEventHandler(async (event) => {
         };
         break;
 
+      case 'receiptMaterial.receiptDate':
       case 'receiptDate':
         orderBy = {
           receiptMaterial: {
@@ -174,6 +181,7 @@ export default defineEventHandler(async (event) => {
         };
         break;
 
+      case 'testProtocol.protocolDate':
       case 'protocolDate':
         orderBy = {
           testProtocol: {
@@ -182,6 +190,18 @@ export default defineEventHandler(async (event) => {
         };
         break;
 
+      case 'receiptMaterial.qualityDocumentDate':
+        orderBy = { receiptMaterial: { qualityDocumentDate: { sort: sortOrder, nulls: 'last' } } };
+        break;
+      case 'testProtocol.protocolNumber':
+        orderBy = { testProtocol: { protocolNumber: sortOrder } };
+        break;
+      case 'testProtocol.testResult':
+        orderBy = { testProtocol: { testResult: { sort: sortOrder, nulls: 'last' } } };
+        break;
+      case 'note':
+        orderBy = { note: { sort: sortOrder, nulls: 'last' } };
+        break;
       default:
         orderBy = {
           createdAt: 'desc',

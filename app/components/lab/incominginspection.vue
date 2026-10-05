@@ -180,6 +180,7 @@
               >
                 <th
                   :key="columnId"
+                  :aria-sort="sortKey === columnId ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'"
                   :style="{
                     width: `${
                       getHeaderByColumnId(
@@ -213,6 +214,16 @@
                         )!.getContext()
                       "
                     />
+                    <button
+                      v-if="LAB_TABLE_COLUMNS.find(c => c.id === columnId)?.kind !== 'document'"
+                      type="button"
+                      class="shrink-0 rounded px-1 text-base hover:bg-gray-200 focus-visible:outline-2 focus-visible:outline-blue-500"
+                      :aria-label="`Сортировать: ${LAB_TABLE_COLUMNS.find(c => c.id === columnId)?.label}`"
+                      title="Сортировка: по возрастанию → по убыванию → сброс"
+                      @mousedown.stop
+                      @touchstart.stop
+                      @click.stop="changeSort(columnId)"
+                    >{{ sortKey === columnId ? (sortOrder === 'asc' ? '↑' : '↓') : '↕' }}</button>
                   </div>
 
 
@@ -460,6 +471,9 @@ const {
   clearSearch,
   applySearch,
 
+  sortKey,
+  sortOrder,
+  changeSort,
   loadData,
   changePage,
   changePageSize,

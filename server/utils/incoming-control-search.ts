@@ -19,6 +19,32 @@ export function parseRegistrySearchDate(value: string): Date | null {
     && date.getUTCDate() === day ? date : null;
 }
 
+/** Recognize an exact day, a calendar month or a calendar year. */
+export function parseRegistrySearchDateRange(value: string): { gte: Date; lt: Date } | null {
+  const input = value.trim();
+  let start = parseRegistrySearchDate(input);
+  let unit: 'day' | 'month' | 'year' = 'day';
+  if (!start) {
+    const month = /^(\d{2})\.(\d{4})$/.exec(input);
+    const isoMonth = /^(\d{4})-(\d{2})$/.exec(input);
+    if (month || isoMonth) {
+      const year = month ? month[2] : isoMonth![1];
+      const number = month ? month[1] : isoMonth![2];
+      start = parseRegistrySearchDate(`01.${number}.${year}`);
+      unit = 'month';
+    } else if (/^\d{4}$/.test(input)) {
+      start = parseRegistrySearchDate(`01.01.${input}`);
+      unit = 'year';
+    }
+  }
+  if (!start) return null;
+  const end = new Date(start);
+  if (unit === 'day') end.setUTCDate(end.getUTCDate() + 1);
+  else if (unit === 'month') end.setUTCMonth(end.getUTCMonth() + 1);
+  else end.setUTCFullYear(end.getUTCFullYear() + 1);
+  return { gte: start, lt: end };
+}
+
 /** One phrase, OR across all persisted fields of the create/edit form. */
 export function buildIncomingControlSearch(value: unknown): Prisma.SamplingTestWhereInput | null {
   if (typeof value !== 'string' || !value.trim()) return null;
@@ -47,7 +73,7 @@ export function buildIncomingControlSearch(value: unknown): Prisma.SamplingTestW
     { testProtocol: { note: text } },
   ];
 
-  const date = parseRegistrySearchDate(search);
+  const date = parseRegistrySearchDateRange(search);
   if (date) {
     OR.push(
       { samplingDate: date },
