@@ -104,30 +104,14 @@ function getMultipartText(
 }
 
 
-function cleanupDirectory(
-  targetDir:
-    | string
-    | null,
-) {
-  if (!targetDir) {
-    return
-  }
-
-  try {
-    fs.rmSync(
-      targetDir,
-      {
-        recursive: true,
-        force: true,
-      },
-    )
-  } catch (error) {
-    console.error(
-      '[incoming-control PUT] Не удалось очистить каталог загрузки:',
-      error,
-    )
+function cleanupDirectory(_targetDir: string | null, createdFiles: string[]) {
+  for (const file of createdFiles) {
+    try { fs.rmSync(file, { force: true }) }
+    catch (error) { console.error('Не удалось удалить новый файл после ошибки:', error) }
   }
 }
+
+
 
 
 function normalizeText(
@@ -585,6 +569,7 @@ export default defineEventHandler(
     }
 
 
+    const createdFiles: string[] = []
     let uploadDirectory:
       string | null = null
 
@@ -717,10 +702,16 @@ export default defineEventHandler(
           {
             fileFields:
               FILE_FIELDS,
+            storageFolder: {
+              objectName: payload.samplingTest.testObjectName,
+              locationName: payload.samplingTest.testLocationName,
+              samplingDate: dates.samplingDate,
+            },
           },
         )
 
 
+      createdFiles.push(...upload.createdFilePaths)
       uploadDirectory =
         upload.targetDir
 
@@ -1551,7 +1542,7 @@ export default defineEventHandler(
        */
       if (!hasAnyUploadedFile) {
         cleanupDirectory(
-          uploadDirectory,
+          uploadDirectory, createdFiles,
         )
 
         uploadDirectory = null
@@ -1570,7 +1561,7 @@ export default defineEventHandler(
 
     } catch (error: any) {
       cleanupDirectory(
-        uploadDirectory,
+        uploadDirectory, createdFiles,
       )
 
 

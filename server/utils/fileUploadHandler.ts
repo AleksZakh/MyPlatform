@@ -1,8 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { labPath, normalizeStoragePath } from '../services/storage/paths';
 
 export interface FileUploadResult {
+  createdFilePaths: string[];
   folderName: string;
   targetDir: string;
   fileDbPaths: Record<string, string>;
@@ -10,6 +12,7 @@ export interface FileUploadResult {
 }
 
 export interface FileProcessingOptions {
+  storageFolder?: { objectName: string; locationName: string; samplingDate: Date };
   // Поля, которые могут содержать файлы
   fileFields?: string[];
   // Базовый путь для загрузки
@@ -37,7 +40,12 @@ export async function handleFileUpload(
   } = options;
 
   // Генерируем подкаталог
-  const folderName = `lab/uploads/${randomUUID()}`;
+  const folderName = options.storageFolder
+    ? labPath([options.storageFolder.objectName, options.storageFolder.locationName,
+        options.storageFolder.samplingDate.toISOString().slice(0, 10)])
+    : `lab/uploads/${randomUUID()}`;
+  normalizeStoragePath(folderName);
+  const createdFilePaths: string[] = [];
   const targetDir = path.join(baseUploadDir, folderName);
 
   // Создаем директории, если их нет
@@ -61,6 +69,7 @@ export async function handleFileUpload(
   }
 
   // 2. Обрабатываем и сохраняем файлы
+  try {
   for (const item of multipartData) {
     if (!item.name || !item.filename) continue;
 
@@ -74,15 +83,21 @@ export async function handleFileUpload(
     const fileExt = path.extname(rawFilename).toLowerCase();
 
     // Формируем новое имя файла
-    const newFilename = `${fieldName}${fileExt}`;
+    const newFilename = `${fieldName}_${randomUUID()}${fileExt}`;
     const fullPath = path.join(targetDir, newFilename);
     // console.log('fullPath ===> ', fullPath)
 
     // Записываем файл на диск
     fs.writeFileSync(fullPath, item.data, { flag: 'wx' });
+    createdFilePaths.push(fullPath);
 
     // Сохраняем относительный путь для БД
-    fileDbPaths[fieldName] = path.join(folderName, newFilename);
+    fileDbPaths[fieldName] = path.posix.join(folderName, newFilename);
+  }
+
+  } catch (error) {
+    for (const file of createdFilePaths) fs.rmSync(file, { force: true });
+    throw error;
   }
 
   // 3. Если нужно удалить старые файлы
@@ -91,6 +106,7 @@ export async function handleFileUpload(
   }
 
   return {
+    createdFilePaths,
     folderName,
     targetDir,
     fileDbPaths,
