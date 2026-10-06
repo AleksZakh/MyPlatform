@@ -1,3 +1,4 @@
+import { getExportRecordLimit, assertExportRecordLimit } from './lab-export-settings'
 import path from 'node:path'
 import { constants, createReadStream, createWriteStream } from 'node:fs'
 import { mkdir, readFile, writeFile, rm, stat, realpath, open, rename, statfs } from 'node:fs/promises'
@@ -47,11 +48,14 @@ function sameFile(a: Fingerprint, b: Fingerprint): boolean {
 async function prepare(job: ExportJob): Promise<void> {
   job.snapshotAt = new Date().toISOString()
   // Only database reads in this bounded transaction; files and ZIP are processed later.
+  const recordLimit = await getExportRecordLimit()
   const records = await prisma.$transaction(tx => tx.samplingTest.findMany({
+    take: recordLimit + 1,
     where: job.where, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     include: { plp: true, inspector: true, testLocation: { include: { testObject: true } },
       receiptMaterial: { include: { material: true, manufacturer: true } }, testProtocol: true },
   }), { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 60_000, maxWait: 10_000 })
+  assertExportRecordLimit(records.length, recordLimit)
   job.total = records.length
   const rows: SnapshotRow[] = []
   for (const record of records) {
@@ -100,6 +104,7 @@ async function build(job: ExportJob): Promise<void> {
   await checkpoint(job)
   const directory = jobDir(job.id)
   const rows = JSON.parse(await readFile(path.join(directory, 'snapshot.json'), 'utf8')) as SnapshotRow[]
+  assertExportRecordLimit(rows.length, await getExportRecordLimit())
   const disk = await statfs(EXPORT_ROOT)
   const largest = rows.reduce((max, row) => Math.max(max, ...row.docs.map(d => d.fingerprint?.size ?? 0)), 0)
   if (disk.bavail * disk.bsize < job.bytes + largest + 128 * 1024 * 1024) throw new Error('Недостаточно свободного места для экспорта')

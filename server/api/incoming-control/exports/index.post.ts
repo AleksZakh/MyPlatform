@@ -1,3 +1,5 @@
+import { prisma } from '../../../utils/prisma'
+import { getExportRecordLimit, assertExportRecordLimit } from '../../../services/lab-export-settings'
 import { defineEventHandler, readBody, setResponseHeader } from 'h3'
 import { exportActor, auditExport } from '../../../utils/lab-export-access'
 import { buildRegistryFilter, hasRegistryFilter, readRegistryFilters, describeRegistryFilters } from '../../../utils/incoming-control-filter'
@@ -7,6 +9,8 @@ export default defineEventHandler(async event => {
   const options = parseOptions(await readBody(event))
   const filters = readRegistryFilters(event)
   const where = buildRegistryFilter(filters)
+  const limit = await getExportRecordLimit()
+  assertExportRecordLimit(await prisma.samplingTest.count({ where }), limit)
   const job = await createJob(actor, options, where, hasRegistryFilter(where), describeRegistryFilters(filters))
   await auditExport(event, actor, job.id, 'EXPORT_PREPARE')
   setResponseHeader(event, 'Cache-Control', 'private, no-store')

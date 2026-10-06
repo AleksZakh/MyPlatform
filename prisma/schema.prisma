@@ -931,3 +931,11 @@ model FileStorageOperation {
   createdAt DateTime @default(now())
   @@map("file_storage_operations")
 }
+
+model LabExportSettings {
+  id Int @id @default(1)
+  recordLimit Int @default(500)
+  updatedAt DateTime @updatedAt
+  editorLogin String?
+  @@map("lab_export_settings")
+}

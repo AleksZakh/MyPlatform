@@ -65,6 +65,10 @@ declare module "nitropack/types" {
     '/api/admin/domain-groups/search': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/domain-groups/search.get').default>>>>
     }
+    '/api/admin/export-settings': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/export-settings/index.get').default>>>>
+      'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/export-settings/index.put').default>>>>
+    }
     '/api/admin/files/content': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/files/content.get').default>>>>
     }
@@ -184,6 +188,9 @@ declare module "nitropack/types" {
     '/api/incoming-control/exports': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/exports/index.get').default>>>>
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/exports/index.post').default>>>>
+    }
+    '/api/incoming-control/exports/preview': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/exports/preview.get').default>>>>
     }
     '/api/incoming-control/fieldsInfo': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/incoming-control/fieldsInfo.get').default>>>>

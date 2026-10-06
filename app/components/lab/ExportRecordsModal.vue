@@ -33,7 +33,12 @@
             <label class="inline-flex items-center gap-2"><input v-model="columnMode" type="radio" value="all" />Все поля реестра</label>
           </fieldset>
           <p class="text-xs py-2 text-gray-500">Сначала подготовим состав и размер выгрузки. Сборка ZIP начнётся после подтверждения. Готовые архивы доступны сутки.</p>
-          <UButton :disabled="!kinds.length || saving" :loading="saving" @click="prepare">Подготовить выгрузку</UButton>
+          <p v-if="preview" class="py-2" :class="preview.allowed ? 'text-gray-600' : 'text-red-700'">
+            Записей по фильтру: {{ preview.total }}. Лимит: {{ preview.recordLimit }}.
+            <span v-if="!preview.allowed">Сузьте выборку в «Настройке фильтра».</span>
+          </p>
+          <p v-else class="py-2 text-gray-500">{{ previewLoading ? 'Проверяем количество записей…' : 'Количество записей не проверено.' }}</p>
+          <UButton :disabled="!kinds.length || saving || !preview?.allowed || previewLoading" :loading="saving" @click="prepare">Подготовить выгрузку</UButton>
         </template>
         <template v-else>
           <div class="space-y-2 rounded border bg-white p-4" aria-live="polite">
@@ -88,6 +93,17 @@ const emit = defineEmits<{ (e: 'close'): void; (e: 'save'): void }>()
 const kinds = ref<ExportKind[]>(['reestr'])
 const columnMode = ref(props.columns.length ? 'visible' : 'all')
 const saving = ref(false)
+const preview = ref<{ total: number; recordLimit: number; allowed: boolean } | null>(null)
+const previewLoading = ref(true)
+async function refreshPreview(): Promise<void> {
+  previewLoading.value = true
+  try {
+    const result = await $fetch<{ total: number; recordLimit: number; allowed: boolean }>('/api/incoming-control/exports/preview', { signal: pollController.signal })
+    if (alive) preview.value = result
+  } catch {
+    if (alive) { preview.value = null; errorMessage.value = 'Не удалось проверить лимит выгрузки. Повторяем запрос.' }
+  } finally { if (alive) previewLoading.value = false }
+}
 const errorMessage = ref('')
 const jobs = ref<ExportJobView[]>([])
 const selectedId = ref<string | null>(null)
@@ -123,7 +139,7 @@ async function refresh(): Promise<void> {
   if (alive) jobs.value = data
 }
 async function poll(): Promise<void> {
-  try { await refresh() }
+  try { await refresh(); if (!currentJob.value) await refreshPreview() }
   catch { if (alive) errorMessage.value = 'Не удалось обновить состояние выгрузок. Повторяем запрос.' }
   finally { if (alive) timer = setTimeout(() => void poll(), 4000) }
 }
@@ -138,6 +154,7 @@ async function action(run: () => Promise<void>): Promise<void> {
   } finally { saving.value = false }
 }
 async function prepare(): Promise<void> {
+  if (previewLoading.value || !preview.value?.allowed) return
   await action(async () => {
     const columns = columnMode.value === 'all' ? EXPORT_COLUMNS.map(c => c[0]) : [...props.columns]
     const optionsKey = JSON.stringify({ kinds: kinds.value, columns })

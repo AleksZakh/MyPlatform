@@ -186,6 +186,7 @@ declare global {
   const parseDataUrl: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/storage').parseDataUrl
   const parseDate: typeof import('../../server/utils/fileUploadHandler').parseDate
   const parseRegistrySearchDate: typeof import('../../server/utils/incoming-control-search').parseRegistrySearchDate
+  const parseRegistrySearchDateRange: typeof import('../../server/utils/incoming-control-search').parseRegistrySearchDateRange
   const passwordNeedsReHash: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/password').passwordNeedsReHash
   const prisma: typeof import('../../server/utils/prisma').prisma
   const promisifyNodeListener: typeof import('../../node_modules/h3/dist/index').promisifyNodeListener
@@ -508,7 +509,7 @@ export { handleFileUpload, cleanOldFilesFromDisk, parseDate, updateFilePathsInDa
 export { getFullFilePath, fileExists, getFileInfo, deleteUploadedFile } from '/home/local_adm/Projects/MyPlatform/server/utils/fileUtils';
 export { folderNameGenerator } from '/home/local_adm/Projects/MyPlatform/server/utils/folderNameGenerator';
 export { readRegistryFilters, buildRegistryFilter, hasRegistryFilter, describeRegistryFilters } from '/home/local_adm/Projects/MyPlatform/server/utils/incoming-control-filter';
-export { parseRegistrySearchDate, buildIncomingControlSearch } from '/home/local_adm/Projects/MyPlatform/server/utils/incoming-control-search';
+export { parseRegistrySearchDate, parseRegistrySearchDateRange, buildIncomingControlSearch } from '/home/local_adm/Projects/MyPlatform/server/utils/incoming-control-search';
 export { exportActor, exportJobForRequest, auditExport } from '/home/local_adm/Projects/MyPlatform/server/utils/lab-export-access';
 export { receiptHandbookInclude, protocolHandbookInclude, receiptHandbookDto, protocolHandbookDto } from '/home/local_adm/Projects/MyPlatform/server/utils/lab-handbook-dto';
 export { logger } from '/home/local_adm/Projects/MyPlatform/server/utils/logger';

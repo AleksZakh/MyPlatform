@@ -1,3 +1,4 @@
+import { getExportRecordLimit, assertExportRecordLimit } from './lab-export-settings'
 import { createHash, randomUUID } from 'node:crypto'
 import path from 'node:path'
 import { mkdir, readFile, writeFile, rename, readdir, rm, open, stat, realpath } from 'node:fs/promises'
@@ -123,6 +124,7 @@ export async function cancelJob(job: ExportJob): Promise<void> {
 export async function confirmJob(job: ExportJob, confirmAll: boolean): Promise<void> {
   if (await cancelled(job.id)) throw createError({ statusCode: 409, message: 'Выгрузка отменена' })
   if (['QUEUED', 'RUNNING', 'READY'].includes(job.status)) return
+  assertExportRecordLimit(job.total, await getExportRecordLimit())
   if (job.status !== 'AWAITING_CONFIRMATION') throw createError({ statusCode: 409, message: 'Дождитесь подготовки состава выгрузки' })
   if (!job.hasFilter && !confirmAll) throw createError({ statusCode: 400, message: 'Подтвердите выгрузку всего реестра' })
   // Marker only: worker is the sole writer of mutable job state.
