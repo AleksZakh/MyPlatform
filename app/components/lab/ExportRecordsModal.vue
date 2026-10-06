@@ -35,10 +35,10 @@
           <p class="text-xs py-2 text-gray-500">Сначала подготовим состав и размер выгрузки. Сборка ZIP начнётся после подтверждения. Готовые архивы доступны сутки.</p>
           <p v-if="preview" class="py-2" :class="preview.allowed ? 'text-gray-600' : 'text-red-700'">
             Записей по фильтру: {{ preview.total }}. Лимит: {{ preview.recordLimit }}.
-            <span v-if="!preview.allowed">Сузьте выборку в «Настройке фильтра».</span>
+            <span v-if="!preview.allowed">Уменьшите выборку в «Настройке фильтра».</span>
           </p>
           <p v-else class="py-2 text-gray-500">{{ previewLoading ? 'Проверяем количество записей…' : 'Количество записей не проверено.' }}</p>
-          <UButton :disabled="!kinds.length || saving || !preview?.allowed || previewLoading" :loading="saving" @click="prepare">Подготовить выгрузку</UButton>
+          <UButton class="mb-1" :disabled="!kinds.length || saving || !preview?.allowed || previewLoading" :loading="saving" @click="prepare">Подготовить выгрузку</UButton>
         </template>
         <template v-else>
           <div class="space-y-2 rounded border bg-white p-4" aria-live="polite">
