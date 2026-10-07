@@ -50,7 +50,7 @@ export default defineNuxtConfig({
     session: {
       // Preserve nuxt-auth-utils' actual default cookie name.
       name: 'nuxt-session',
-      password: ')hH0^|M*bRLZ=dniZtj^yYgH@wD:8VVM',
+      password: '',
       maxAge: 60 * 60 * 24 * 7,
       cookie: { sameSite: 'lax', httpOnly: true },
     },
@@ -119,7 +119,7 @@ export default defineNuxtConfig({
   // @ts-ignore: fileStorage is added by nuxt-file-storage module typings at runtime
   fileStorage: {
     // use environment variables (recommended)
-    mount: process.env.FILE_STORAGE_PATH,
+    mount: process.env.FILE_STORAGE_PATH || '',
     // you need to set the mount in your .env file at the root of your project
   },
 

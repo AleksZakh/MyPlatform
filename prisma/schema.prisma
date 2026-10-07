@@ -713,6 +713,8 @@ model User {
   passwordResetRequestedAt DateTime?
   externalSessionVersion   Int @default(0)
 
+  chatMemberships ChatMember[]
+  chatMessages ChatMessage[]
   spaceGroups SpaceGroupUser[]
   id Int @id @default(autoincrement())
 
@@ -938,4 +940,37 @@ model LabExportSettings {
   updatedAt DateTime @updatedAt
   editorLogin String?
   @@map("lab_export_settings")
+}
+
+
+model ChatConversation {
+  id Int @id @default(autoincrement())
+  pairKey String @unique @db.VarChar(64)
+  updatedAt DateTime @default(now())
+  members ChatMember[]
+  messages ChatMessage[]
+  @@map("chat_conversations")
+}
+model ChatMember {
+  conversationId Int
+  userId Int
+  readThrough Int @default(0)
+  conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  @@id([conversationId, userId])
+  @@index([userId, conversationId])
+  @@map("chat_members")
+}
+model ChatMessage {
+  id Int @id @default(autoincrement())
+  conversationId Int
+  senderId Int
+  clientId String @db.Uuid
+  body String @db.VarChar(4000)
+  createdAt DateTime @default(now())
+  conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender User @relation(fields: [senderId], references: [id], onDelete: Restrict)
+  @@unique([senderId, clientId])
+  @@index([conversationId, id])
+  @@map("chat_messages")
 }

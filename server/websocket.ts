@@ -1,13 +1,32 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import http from 'node:http';
 import { secret, verify, type Identity } from './realtime/token.js';
+import { verifyNotification } from './realtime/notification.js';
 const key = secret();
 const origins = new Set((process.env.WS_ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean));
 if (!origins.size) throw new Error('Set WS_ALLOWED_ORIGINS to exact browser origins');
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
+  if (req.method === 'POST' && req.url === '/internal/chat') {
+    try {
+      let body = '';
+      for await (const chunk of req) { body += chunk.toString(); if (Buffer.byteLength(body) > 4096) { res.writeHead(413).end(); return; } }
+      if (!verifyNotification(body, key, String(req.headers['x-space-time'] || ''), String(req.headers['x-space-signature'] || ''))) { res.writeHead(403).end(); return; }
+      const data = JSON.parse(body);
+      if (!Number.isSafeInteger(data.conversationId) || data.conversationId <= 0 || !Array.isArray(data.recipients) || data.recipients.length !== 2 || data.recipients.some((id: unknown) => typeof id !== 'string' || !/^(DOMAIN|EXTERNAL):[1-9][0-9]*$/.test(id))) { res.writeHead(400).end(); return; }
+      const message = JSON.stringify({ type: 'chat:changed', conversationId: data.conversationId });
+      for (const [ws, client] of clients) {
+        if (client.user && client.exp * 1000 > Date.now() && data.recipients.includes(client.user.id) && ws.readyState === WebSocket.OPEN) {
+          if (ws.bufferedAmount > 1024 * 1024) ws.terminate(); else ws.send(message);
+        }
+      }
+      res.writeHead(204).end();
+    } catch { res.writeHead(400).end(); }
+    return;
+  }
   res.writeHead(req.url === '/health' ? 200 : 404, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ ok: req.url === '/health' }));
+  res.end(JSON.stringify({ ok: req.url === '/health', release: process.env.SPACE_RELEASE_ID || 'development' }));
 });
+server.requestTimeout = 5000;
 const wss = new WebSocketServer({ noServer: true, maxPayload: 8192, perMessageDeflate: false });
 type Client = { user?: Identity; exp: number; activity: number; alive: boolean; count: number; timer: ReturnType<typeof setTimeout> };
 const clients = new Map<WebSocket, Client>();

@@ -37,7 +37,7 @@ export default defineNuxtPlugin(() => {
                 if (current === generation && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'auth', ticket: result.ticket }));
               } catch { socket.close(); }
             }, 60000);
-          } else if (message.type === 'presence' && Array.isArray(message.users)) store.users = message.users;
+          } else if (message.type === 'chat:changed') { store.chatRevision++; } else if (message.type === 'presence' && Array.isArray(message.users)) store.users = message.users;
         } catch { socket.close(); }
       };
       socket.onerror = () => socket.close();

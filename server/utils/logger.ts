@@ -19,7 +19,7 @@ const consoleFormat = winston.format.combine(
 
 // Определяем путь к папке с логами на сервере Ubuntu
 // Логи будут создаваться в корне проекта в папке /logs
-const logDir = path.join(process.cwd(), 'logs')
+const logDir = process.env.SPACE_LOG_DIR || path.join(process.cwd(), 'logs')
 
 export const logger = winston.createLogger({
   level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',

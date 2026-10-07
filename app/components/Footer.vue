@@ -65,6 +65,9 @@
         aria-label="GitHub"
       />
     </template> -->
+    <template #right>
+      <ChatLauncher />
+    </template>
   </UFooter>
 </template>
 <script setup lang="ts">

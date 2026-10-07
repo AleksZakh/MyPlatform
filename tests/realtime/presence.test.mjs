@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { WebSocket } from 'ws';
 import { issue, verify } from '../../dist-server/realtime/token.js';
+import { signNotification } from '../../dist-server/realtime/notification.js';
 const key = 'test-secret-at-least-thirty-two-characters';
 const user = { id: 'DOMAIN:1', login: 'test', name: 'Test' };
 test('ticket: signature, expiry, audience and malformed data', () => {
@@ -45,6 +46,17 @@ test('authentication, origin, tabs, disconnect and identity isolation', async ()
     const c = await open(); const joined = message(c, d => d.type === 'presence');
     c.send(JSON.stringify({ type: 'auth', ticket: issue({ ...user, id: 'DOMAIN:2', login: 'other' }, key) }));
     assert.equal((await joined).users.length, 2);
+    let leaked = false;
+    c.on('message', raw => { if (JSON.parse(raw).type === 'chat:changed') leaked = true; });
+    const notification = message(b, d => d.type === 'chat:changed');
+    const payload = JSON.stringify({ conversationId: 10, recipients: ['DOMAIN:1', 'EXTERNAL:99'] });
+    const stamp = String(Date.now());
+    const denied = await fetch('http://127.0.0.1:15050/internal/chat', { method: 'POST', body: payload });
+    assert.equal(denied.status, 403);
+    const delivered = await fetch('http://127.0.0.1:15050/internal/chat', { method: 'POST', body: payload, headers: { 'x-space-time': stamp, 'x-space-signature': signNotification(payload, key, stamp) } });
+    assert.equal(delivered.status, 204); assert.equal((await notification).conversationId, 10);
+    await new Promise(resolve => setTimeout(resolve, 100));
+    assert.equal(leaked, false);
     const changed = once(b, 'close');
     b.send(JSON.stringify({ type: 'auth', ticket: issue({ ...user, id: 'DOMAIN:3' }, key) }));
     assert.equal((await changed)[0], 4401);
