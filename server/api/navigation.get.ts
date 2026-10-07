@@ -14,7 +14,7 @@ export default defineEventHandler(async event => {
   const departments = await prisma.department.findMany({ where: { isActive: true }, select: { key: true, name: true }, orderBy: { name: 'asc' } })
   const tools = canView('admin.center') ? toolPages.filter(t => t.adminOnly ? actor.isSystemAdmin : !!t.resource && canView(t.resource))
     .map(({ label, to, description, icon }) => ({ label, to, description, icon })) : []
-  const sections: NavigationData['sections'] = [{ label: 'Главная', to: '/' }]
+  const sections: NavigationData['sections'] = [{ label: 'Главная', to: '/' }, { label: 'Пользователи online', to: '/online' }]
   // Existing general department landing pages remain discoverable for authenticated users.
   for (const page of departmentPages) {
     if (page.key === 'lab' && !snapshot.data.some(r => r.key.startsWith('lab.') && r.actions.VIEW.effectiveGranted)) continue

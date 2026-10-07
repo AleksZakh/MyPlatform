@@ -45,7 +45,7 @@ export function breadcrumbs(path: string, query: Record<string, unknown>, depart
     }
     return result
   }
-  const names: Record<string,string> = { '/profile': 'Профиль', '/settings': 'Настройки', '/access-denied': 'Доступ ограничен' }
+  const names: Record<string,string> = { '/online': 'Пользователи online', '/profile': 'Профиль', '/settings': 'Настройки', '/access-denied': 'Доступ ограничен' }
   result.push({ label: customLabel || names[clean] || 'Текущая страница', to: clean })
   return result
 }
