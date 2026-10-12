@@ -12,11 +12,11 @@ export function conversationId(event: H3Event) {
   if (!Number.isSafeInteger(id) || id <= 0 || id > 2147483647) throw createError({ statusCode: 400 });
   return id;
 }
-export async function input<T extends z.ZodType>(event: H3Event, schema: T): Promise<z.infer<T>> {
+export async function input<T extends z.ZodType>(event: H3Event, schema: T, message = 'Проверьте поля сообщения (не более 4000 символов).'): Promise<z.infer<T>> {
   if (getHeader(event, 'x-space-chat') !== '1') throw createError({ statusCode: 403 });
   const body = await readBody(event);
   const parsed = schema.safeParse(body);
-  if (!parsed.success) throw createError({ statusCode: 400, message: 'Проверьте поля сообщения (не более 4000 символов).' });
+  if (!parsed.success) throw createError({ statusCode: 400, message });
   return parsed.data;
 }
 export { membership, openDialog, saveMessage, markRead } from './repository';

@@ -77,7 +77,7 @@ test('invitation migration, delivery, limits, AD activation and account restrict
   await assert.rejects(resolveAuthenticatedDomainUser(profile), failure(403));
   await assert.rejects(inviteDomainContact({} as any, sender.id, failed.id), failure(429));
   smtpFails = false;
-  profile = directory(randomUUID(), 'not-yet-in-space');
+  profile = directory('s-71-29333743916866-72048014-29952050', 'not-yet-in-space');
   const newId = await provisionInvitationContact({} as any, sender.id, profile.login);
   assert.equal((await prisma.user.findUniqueOrThrow({ where: { id: newId } })).status, 'PENDING_ACTIVATION');
   await assert.rejects(resolveAuthenticatedDomainUser(profile), failure(403));
