@@ -84,6 +84,7 @@ export default defineEventHandler(
       await prisma.user.findUnique({
         where: {
           activationTokenHash,
+          authType: 'EXTERNAL',
         },
 
         select: {
