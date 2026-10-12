@@ -25,7 +25,7 @@ const bundled = await build({ entryPoints: ['server/services/chat/invitations.ts
 const { writeFile, unlink } = await import('node:fs/promises');
 const output = new URL('./.invitations-bundle.mjs', import.meta.url);
 await writeFile(output, bundled.outputFiles[0].text);
-const { inviteDomainContact } = await import(output.href);
+const { inviteDomainContact, provisionInvitationContact } = await import(output.href);
 await unlink(output);
 function directory(guid: string, login: string) { return { directoryObjectId: guid, login, email: `${login}@example.test`, fullName: login, position: null, department: null, accountDisabled: false, userPrincipalName: null }; }
 const failure = (code: number) => (e: any) => e.statusCode === code;
@@ -76,5 +76,19 @@ test('invitation migration, delivery, limits, AD activation and account restrict
   assert.equal((await prisma.domainChatInvitation.findUniqueOrThrow({ where: { recipientId: failed.id } })).sentAt, null);
   await assert.rejects(resolveAuthenticatedDomainUser(profile), failure(403));
   await assert.rejects(inviteDomainContact({} as any, sender.id, failed.id), failure(429));
+  smtpFails = false;
+  profile = directory(randomUUID(), 'not-yet-in-space');
+  const newId = await provisionInvitationContact({} as any, sender.id, profile.login);
+  assert.equal((await prisma.user.findUniqueOrThrow({ where: { id: newId } })).status, 'PENDING_ACTIVATION');
+  await assert.rejects(resolveAuthenticatedDomainUser(profile), failure(403));
+  assert.equal(await provisionInvitationContact({} as any, sender.id, profile.login, profile.directoryObjectId), newId);
+  await inviteDomainContact({} as any, sender.id, newId);
+  assert.equal((await resolveAuthenticatedDomainUser(profile)).status, 'ACTIVE');
+  await prisma.user.update({ where: { id: newId }, data: { status: 'BLOCKED' } });
+  await assert.rejects(provisionInvitationContact({} as any, sender.id, profile.login, profile.directoryObjectId), failure(409));
+  await assert.rejects(provisionInvitationContact({} as any, sender.id, profile.login, randomUUID()), failure(409));
+  profile = { ...directory(randomUUID(), 'no-mail'), email: null };
+  await assert.rejects(provisionInvitationContact({} as any, sender.id, profile.login, profile.directoryObjectId), failure(409));
+  assert.equal(await prisma.user.count({ where: { login: 'no-mail' } }), 0);
  } finally { await prisma.$disconnect(); }
 });

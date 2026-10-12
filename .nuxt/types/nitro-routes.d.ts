@@ -153,6 +153,23 @@ declare module "nitropack/types" {
     '/api/auth/verify-email': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/auth/verify-email.post').default>>>>
     }
+    '/api/chat/contacts': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/chat/contacts.get').default>>>>
+    }
+    '/api/chat/conversations/:id/messages': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/chat/conversations/[id]/messages.get').default>>>>
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/chat/conversations/[id]/messages.post').default>>>>
+    }
+    '/api/chat/conversations/:id/read': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/chat/conversations/[id]/read.post').default>>>>
+    }
+    '/api/chat/conversations': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/chat/conversations/index.get').default>>>>
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/chat/conversations/index.post').default>>>>
+    }
+    '/api/chat/invitations': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/chat/invitations.post').default>>>>
+    }
     '/api/convert': {
       'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/convert').default>>>>
     }
@@ -349,8 +366,14 @@ declare module "nitropack/types" {
     '/api/navigation': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/navigation.get').default>>>>
     }
+    '/api/public/health': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/public/health.get').default>>>>
+    }
     '/api/public/registration-resources': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/public/registration-resources.get').default>>>>
+    }
+    '/api/realtime/ticket': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/realtime/ticket.post').default>>>>
     }
     '/api/test/domain-connection': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/test/domain-connection.get').default>>>>

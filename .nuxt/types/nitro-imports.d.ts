@@ -214,6 +214,7 @@ declare global {
   const sealSession: typeof import('../../node_modules/h3/dist/index').sealSession
   const send: typeof import('../../node_modules/h3/dist/index').send
   const sendActivationEmail: typeof import('../../server/utils/mailer').sendActivationEmail
+  const sendChatInvitationEmail: typeof import('../../server/utils/chat-invitation-mail').sendChatInvitationEmail
   const sendError: typeof import('../../node_modules/h3/dist/index').sendError
   const sendIterable: typeof import('../../node_modules/h3/dist/index').sendIterable
   const sendNoContent: typeof import('../../node_modules/h3/dist/index').sendNoContent
@@ -268,6 +269,9 @@ declare global {
   // @ts-ignore
   export type { AccessActionName, AccessSubjectKind, AccessSource, AccessBlock, AccessCell, AccessRow, AccessSnapshot, AccessChange, AccessMutation, AccessSubjectOption } from '../../shared/types/access-management'
   import('../../shared/types/access-management')
+  // @ts-ignore
+  export type { ChatPerson, ChatMessageDto, ChatDialog, ChatInbox, ChatHistory, ChatContacts } from '../../shared/types/chat'
+  import('../../shared/types/chat')
   // @ts-ignore
   export type { ExportKind, ExportStatus, ExportJobView } from '../../shared/types/lab-export'
   import('../../shared/types/lab-export')
@@ -503,6 +507,7 @@ export { getUserGroups } from '/home/local_adm/Projects/MyPlatform/server/utils/
 export { adCache } from '/home/local_adm/Projects/MyPlatform/server/utils/adCache';
 export { logAudit, computeChangedFields, getActorEmail, getRequestMeta, softDelete, buildCreateAuditDelta, computeAuditDelta, writeAuditEvent, auditDataChange, auditDenied } from '/home/local_adm/Projects/MyPlatform/server/utils/auditLog';
 export { createCacheRefreshRunner } from '/home/local_adm/Projects/MyPlatform/server/utils/cache-refresh-runner';
+export { sendChatInvitationEmail } from '/home/local_adm/Projects/MyPlatform/server/utils/chat-invitation-mail';
 export { deletionError, deletionId, validateDeletionReason, readDeletionReason } from '/home/local_adm/Projects/MyPlatform/server/utils/deletion-input';
 export { checkExternalSession } from '/home/local_adm/Projects/MyPlatform/server/utils/external-session';
 export { handleFileUpload, cleanOldFilesFromDisk, parseDate, updateFilePathsInData } from '/home/local_adm/Projects/MyPlatform/server/utils/fileUploadHandler';

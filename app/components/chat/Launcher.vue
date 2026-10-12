@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useMessenger } from '~/composables/useMessenger';
 const chat = useMessenger();
-const { invitee, inviting, invitationNotice, contactsMore, contactsLoading, open, search, tab, inbox, active, messages, error, sending, loading, hasOlder, draft, myId, people, presence, retrying } = chat;
+const { contactsWarning, invitee, inviting, invitationNotice, contactsMore, contactsLoading, open, search, tab, inbox, active, messages, error, sending, loading, hasOlder, draft, myId, people, presence, retrying } = chat;
 const { loggedIn } = useUserSession();
 const panel = ref<HTMLElement | null>(null);
 const atBottom = ref(true);
@@ -20,20 +20,21 @@ function time(value: string) { return new Date(value).toLocaleString('ru-RU', { 
 const statusText = (s: string) => s === 'online' ? 'В сети' : s === 'away' ? 'Отошёл' : 'Не в сети';
 </script>
 <template>
-  <UModal v-if="loggedIn" v-model:open="open" title="Личные сообщения" description="Переписка с пользователями Space" :ui="{ content: 'sm:max-w-5xl', body: 'p-0 sm:p-0' }">
+  <UModal v-if="loggedIn" v-model:open="open" title="Личные сообщения" description="Переписка с пользователями Space" :ui="{ content: 'w-[calc(100vw-2rem)] sm:w-[calc(100vw-2rem)] sm:max-w-5xl', body: 'p-0 sm:p-0' }">
     <UButton icon="i-lucide-message-circle" color="neutral" variant="soft" aria-label="Открыть личные сообщения">
       Сообщения <UBadge v-if="inbox.unread" color="error" size="sm">{{ inbox.unread }}</UBadge>
     </UButton>
     <template #body>
-      <div class="grid grid-cols-[minmax(130px,30%)_1fr] h-[min(70dvh,650px)] min-h-80">
-        <aside class="border-r border-gray-200 dark:border-gray-700 flex flex-col min-h-0">
+      <div class="grid grid-cols-[minmax(0,40%)_minmax(0,1fr)] sm:grid-cols-[280px_minmax(0,1fr)] h-[min(70dvh,650px)] min-h-80">
+        <aside class="border-r border-gray-200 dark:border-gray-700 flex flex-col min-h-0 min-w-0">
           <div class="p-3 space-y-2">
             <UInput v-model="search" class="w-full" placeholder="Найти пользователя" aria-label="Поиск собеседника" />
-            <div class="flex flex-wrap gap-1"><UButton size="xs" :variant="tab === 'dialogs' ? 'solid' : 'ghost'" @click="tab = 'dialogs'">Диалоги</UButton><UButton size="xs" :variant="tab === 'contacts' ? 'solid' : 'ghost'" @click="tab = 'contacts'">Контакты</UButton><UButton size="xs" :variant="tab === 'online' ? 'solid' : 'ghost'" @click="tab = 'online'">Online</UButton></div>
+            <div class="flex flex-nowrap gap-1 overflow-x-auto [&>button]:shrink-0 [&>button]:whitespace-nowrap"><UButton size="xs" :variant="tab === 'dialogs' ? 'solid' : 'ghost'" @click="tab = 'dialogs'">Диалоги</UButton><UButton size="xs" :variant="tab === 'contacts' ? 'solid' : 'ghost'" @click="tab = 'contacts'">Контакты</UButton><UButton size="xs" :variant="tab === 'online' ? 'solid' : 'ghost'" @click="tab = 'online'">Online</UButton></div>
           </div>
-          <div class="overflow-y-auto flex-1">
+          <p v-if="contactsWarning" class="px-3 text-xs text-amber-700" role="status">{{ contactsWarning }}</p>
+          <div class="overflow-y-auto flex-1 min-w-0">
             <template v-if="search.trim() || tab !== 'dialogs'">
-              <button v-for="person in people" :key="person.id" class="w-full text-left p-3 hover:bg-sky-50 dark:hover:bg-gray-800 border-b border-gray-100 dark:border-gray-800" @click="chat.start(person)">
+              <button v-for="person in people" :key="person.directoryObjectId || person.directoryLogin || person.id" class="w-full text-left p-3 hover:bg-sky-50 dark:hover:bg-gray-800 border-b border-gray-100 dark:border-gray-800" @click="chat.start(person)">
                 <span class="block font-medium break-words">{{ person.fullName || person.login }}</span><span class="text-xs text-gray-500">{{ person.status === 'ACTIVE' ? statusText(chat.status(person)) : 'Ожидает активации' }}</span><span v-if="person.department" class="block text-xs text-gray-500">{{ person.department }}</span>
               </button>
               <UButton v-if="contactsMore && (search.trim() || tab === 'contacts')" variant="ghost" :loading="contactsLoading" @click="chat.loadContacts(true)">Показать ещё</UButton>

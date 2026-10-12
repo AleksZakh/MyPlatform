@@ -17,7 +17,7 @@ const row = (id, senderId) => ({ id, senderId, conversationId: 1, body: `message
 const sent = []; let fail = true, invitationCalls = 0;
 globalThis.$fetch = async (path, options = {}) => {
   if (path === '/api/chat/contacts') return { people: [dialog.peer], hasMore: false };
-  if (path === '/api/chat/invitations') { invitationCalls++; return { sent: true }; }
+  if (path === '/api/chat/invitations') { if (options.body.directoryObjectId) assert.equal(options.body.directoryLogin, 'cached'); invitationCalls++; return { sent: true }; }
   if (path === '/api/chat/conversations') return { dialogs: [dialog], unread: 0 };
   if (options.method === 'POST' && path.endsWith('/messages')) { sent.push({ ...options.body }); if (fail) throw { data: { message: 'Network interruption' } }; return row(8, 1); }
   if (path.endsWith('/messages')) return { messages: options.query?.after !== undefined ? [row(7, 2), row(8, 1)].filter(r => r.id > options.query.after) : [row(6, 2)], hasMore: false, peerReadThrough: 0 };
@@ -39,6 +39,9 @@ test('client retries same message ID and catches incoming messages before own re
     assert.equal(chat.invitationNotice.value, ''); assert.equal(invitationCalls, 0); // Selecting a contact does not send email.
     await chat.invite(); assert.equal(invitationCalls, 1);
     assert.equal(chat.invitee.value.invitationPending, true);
+    assert.match(chat.invitationNotice.value, /отправлено/);
+    await chat.start({ ...inactive, id: 0, directoryObjectId: '11111111-1111-4111-8111-111111111111', directoryLogin: 'cached' });
+    await chat.invite(); assert.equal(invitationCalls, 2);
     assert.match(chat.invitationNotice.value, /отправлено/);
     await chat.select(dialog);
     assert.equal(chat.invitee.value, null);

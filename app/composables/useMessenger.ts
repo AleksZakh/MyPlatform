@@ -6,6 +6,7 @@ export function useMessenger() {
   const open = ref(false), search = ref(''), tab = ref<'dialogs' | 'contacts' | 'online'>('dialogs');
   const inbox = ref<ChatInbox>({ dialogs: [], unread: 0 }), contacts = ref<ChatPerson[]>([]);
   const invitee = ref<ChatPerson | null>(null), inviting = ref(false), invitationNotice = ref('');
+  const contactsWarning = ref('');
   const contactsMore = ref(false), contactsLoading = ref(false);
   const active = ref<ChatDialog | null>(null), messages = ref<ChatMessageDto[]>([]);
   const error = ref(''), sending = ref(false), loading = ref(false), hasOlder = ref(false), draft = ref('');
@@ -130,7 +131,7 @@ export function useMessenger() {
       const result = await $fetch<ChatContacts>('/api/chat/contacts', { query: { q: value, offset: more ? contacts.value.length : 0 } });
       if (n !== searching) return;
       contacts.value = more ? [...contacts.value, ...result.people] : result.people;
-      contactsMore.value = result.hasMore;
+      contactsMore.value = result.hasMore; contactsWarning.value = result.warning || '';
     } catch (e) { if (n === searching) fail(e); }
     finally { if (n === searching) contactsLoading.value = false; }
   }
@@ -139,9 +140,9 @@ export function useMessenger() {
     if (!person || inviting.value) return;
     inviting.value = true; error.value = ''; invitationNotice.value = '';
     try {
-      await $fetch('/api/chat/invitations', { method: 'POST', headers, body: { userId: person.id } });
+      await $fetch('/api/chat/invitations', { method: 'POST', headers, body: person.directoryLogin ? { directoryObjectId: person.directoryObjectId, directoryLogin: person.directoryLogin } : { userId: person.id } });
       if (owner !== myId.value) return;
-      if (invitee.value?.id === person.id) {
+      if (invitee.value === person) {
         invitee.value.invitationPending = true;
         invitationNotice.value = 'Приглашение отправлено. Переписка станет доступна после входа сотрудника в Space.';
       }
@@ -158,5 +159,5 @@ export function useMessenger() {
   function refreshVisible() { if (!document.hidden) { void refreshInbox(); void synchronize(); } }
   onMounted(() => { refreshVisible(); timer = setInterval(refreshVisible, 15000); document.addEventListener('visibilitychange', refreshVisible); window.addEventListener('focus', refreshVisible); });
   onBeforeUnmount(() => { generation++; clearInterval(timer); clearTimeout(debounce); document.removeEventListener('visibilitychange', refreshVisible); window.removeEventListener('focus', refreshVisible); });
-  return { invitee, inviting, invitationNotice, invite, contactsMore, contactsLoading, loadContacts, open, search, tab, inbox, active, messages, error, sending, loading, hasOlder, draft, myId, people, presence, retrying, status, select, start, older, send, markVisibleRead, refreshInbox };
+  return { contactsWarning, invitee, inviting, invitationNotice, invite, contactsMore, contactsLoading, loadContacts, open, search, tab, inbox, active, messages, error, sending, loading, hasOlder, draft, myId, people, presence, retrying, status, select, start, older, send, markVisibleRead, refreshInbox };
 }
