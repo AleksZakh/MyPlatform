@@ -25,6 +25,7 @@ interface _GlobalComponents {
   AdminDomainGroupImport: typeof import("../../app/components/admin/DomainGroupImport.vue")['default']
   AdminUserDirectory: typeof import("../../app/components/admin/UserDirectory.vue")['default']
   AuthRegistrationRequestForm: typeof import("../../app/components/auth/RegistrationRequestForm.vue")['default']
+  ChatLauncher: typeof import("../../app/components/chat/Launcher.vue")['default']
   LabDeletionJournal: typeof import("../../app/components/lab/DeletionJournal.vue")['default']
   LabDocumentUploadField: typeof import("../../app/components/lab/DocumentUploadField.vue")['default']
   LabEventJournal: typeof import("../../app/components/lab/EventJournal.vue")['default']
@@ -222,6 +223,7 @@ interface _GlobalComponents {
   LazyAdminDomainGroupImport: LazyComponent<typeof import("../../app/components/admin/DomainGroupImport.vue")['default']>
   LazyAdminUserDirectory: LazyComponent<typeof import("../../app/components/admin/UserDirectory.vue")['default']>
   LazyAuthRegistrationRequestForm: LazyComponent<typeof import("../../app/components/auth/RegistrationRequestForm.vue")['default']>
+  LazyChatLauncher: LazyComponent<typeof import("../../app/components/chat/Launcher.vue")['default']>
   LazyLabDeletionJournal: LazyComponent<typeof import("../../app/components/lab/DeletionJournal.vue")['default']>
   LazyLabDocumentUploadField: LazyComponent<typeof import("../../app/components/lab/DocumentUploadField.vue")['default']>
   LazyLabEventJournal: LazyComponent<typeof import("../../app/components/lab/EventJournal.vue")['default']>

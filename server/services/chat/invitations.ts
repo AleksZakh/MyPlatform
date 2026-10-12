@@ -1,3 +1,5 @@
+import { Prisma } from '@prisma/client';
+import { ensureDomainUser } from '../domain-user.service';
 import { randomUUID } from 'node:crypto';
 import { createError, type H3Event } from 'h3';
 import { prisma } from '../../utils/prisma';
@@ -45,4 +47,40 @@ export async function inviteDomainContact(event: H3Event, senderId: number, reci
    actorUserId: senderId, targetUserId: recipientId, actorEmail: '', note: 'Отправлено приглашение в чат Space. Активация требует входа через AD.' } });
  });
  return { sent: true };
+}
+
+/** Provision only after explicit invitation confirmation and live AD verification. */
+export async function provisionInvitationContact(event: H3Event, senderId: number, login: string, guid?: string) {
+ const profile = await findDomainUser(login, event);
+ if (!profile || !profile.directoryObjectId || profile.accountDisabled || (guid && profile.directoryObjectId.toLowerCase() !== guid.toLowerCase()) || profile.login.toLowerCase() !== login.toLowerCase())
+  throw createError({ statusCode: 409, message: 'Данные сотрудника изменились или учётная запись отключена. Обновите поиск.' });
+ if (!profile.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email.trim()))
+  throw createError({ statusCode: 409, message: 'В AD отсутствует корректный корпоративный адрес.' });
+ try {
+  return await prisma.$transaction(async tx => {
+   await tx.$queryRaw`SELECT id FROM app_users WHERE id=${senderId} FOR UPDATE`;
+   const sender = await tx.user.findUnique({ where: { id: senderId } });
+   if (sender?.status !== 'ACTIVE') throw createError({ statusCode: 403 });
+   if (await tx.domainChatInvitation.count({ where: { senderId, reservedAt: { gt: new Date(Date.now() - 3600000) } } }) >= 20)
+    throw createError({ statusCode: 429, message: 'Можно отправить не более 20 приглашений за час.' });
+   const existing = await tx.user.findUnique({ where: { directoryObjectId: profile.directoryObjectId!.toLowerCase() } });
+   if (existing) {
+    if (existing.authType !== 'DOMAIN' || existing.status !== 'PENDING_ACTIVATION')
+     throw createError({ statusCode: 409, message: 'Пользователь уже добавлен или недоступен. Обновите список.' });
+    return existing.id;
+   }
+   if (await tx.user.findFirst({ where: { OR: [{ login: profile.login.toLowerCase() }, { email: profile.email!.trim().toLowerCase() }] } }))
+    throw createError({ statusCode: 409, message: 'Логин или почта уже связаны с другой записью. Обратитесь к администратору.' });
+   // ACTIVE exists only inside this transaction; no other request can observe it before PENDING.
+   const user = await ensureDomainUser(profile, tx);
+   await tx.user.update({ where: { id: user.id }, data: { status: 'PENDING_ACTIVATION' } });
+   await tx.auditLog.create({ data: { action: 'CREATE', category: 'AUTH', result: 'SUCCESS', entityType: 'User', entityId: user.id,
+    actorUserId: senderId, targetUserId: user.id, actorEmail: '', note: 'Подготовлена доменная учётная запись для приглашения в чат, без активации.' } });
+   return user.id;
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+ } catch (e) {
+  if (e instanceof Prisma.PrismaClientKnownRequestError && ['P2002', 'P2034'].includes(e.code))
+   throw createError({ statusCode: 409, message: 'Пользователь изменён параллельно. Обновите поиск.' });
+  throw e;
+ }
 }
