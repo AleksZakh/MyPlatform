@@ -7,10 +7,10 @@ const { open, group, name, search, candidates, selected, more, loading, busy, er
 const roleName = (role: string) => (({ OWNER: 'Владелец', ADMIN: 'Администратор', MEMBER: 'Участник' } as Record<string, string>)[role] || role);
 </script>
 <template>
- <UModal v-model:open="open" :dismissible="!busy" :title="groupId ? 'Участники и настройки группы' : 'Создать группу'" description="Все участники группы видят полную историю переписки" :ui="{ content: 'sm:max-w-2xl', body: 'max-h-[75dvh] overflow-y-auto' }">
+ <UModal v-model:open="open" :dismissible="!busy" :title="groupId ? 'Участники и настройки группы' : 'Создать группу'" description="Все участники группы видят полную историю переписки" :ui="{ content: 'sm:max-w-2xl', body: 'block max-h-[75dvh] overflow-y-auto p-4 sm:p-6' }">
   <UButton size="xs" variant="soft" :icon="groupId ? 'i-lucide-users' : 'i-lucide-users-round'">{{ groupId ? 'Участники' : 'Создать группу' }}</UButton>
   <template #body>
-   <div class="space-y-4">
+   <div class="w-full min-w-0 space-y-4">
     <p v-if="error" role="alert" class="text-red-600">{{ error }}</p>
     <p class="text-sm text-gray-500">Новые участники получают доступ ко всей истории. До 100 участников.</p>
     <template v-if="!groupId || group">

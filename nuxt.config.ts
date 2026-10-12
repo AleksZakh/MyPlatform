@@ -14,14 +14,23 @@ export default defineNuxtConfig({
       }
     }
   },
+  // colorMode: {
+  //   preference: 'light', // Всегда устанавливает светлую тему по умолчанию
+  //   fallback: 'light', // Если произойдет сбой, вернет светлую тем
+  //   globalName: '__NUXT_COLOR_MODE__',
+  //   componentName: 'ColorScheme',
+  //   classPrefix: '', // Префикс класса для тега <html> (например, 'light-mode')
+  //   classSuffix: '-mode',
+  //   storage: 'localStorage', // Оставляем стандартный тип, ошибки TS больше нет
+  // },
   colorMode: {
-    preference: 'light', // Всегда устанавливает светлую тему по умолчанию
-    fallback: 'light', // Если произойдет сбой, вернет светлую тем
+    preference: 'system',
+    fallback: 'light',
     globalName: '__NUXT_COLOR_MODE__',
     componentName: 'ColorScheme',
-    classPrefix: '', // Префикс класса для тега <html> (например, 'light-mode')
-    classSuffix: '-mode',
-    storage: 'localStorage', // Оставляем стандартный тип, ошибки TS больше нет
+    classPrefix: '',
+    classSuffix: '',
+    storage: 'localStorage',
   },
   runtimeConfig: {
     // Серверные переменные (доступны только на сервере)
