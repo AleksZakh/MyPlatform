@@ -948,6 +948,11 @@ model LabExportSettings {
 model ChatConversation {
   id Int @id @default(autoincrement())
   pairKey String @unique @db.VarChar(64)
+  kind String @default("DIRECT") @db.VarChar(10)
+  name String? @db.VarChar(120)
+  createdById Int?
+  createdAt DateTime @default(now())
+  archivedAt DateTime?
   updatedAt DateTime @default(now())
   members ChatMember[]
   messages ChatMessage[]
@@ -957,6 +962,8 @@ model ChatMember {
   conversationId Int
   userId Int
   readThrough Int @default(0)
+  role String @default("MEMBER") @db.VarChar(10)
+  unreadFrom Int @default(0)
   conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Restrict)
   @@id([conversationId, userId])

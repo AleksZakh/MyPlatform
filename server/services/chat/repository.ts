@@ -22,7 +22,7 @@ export async function openDialog(userId: number, recipientId: number) {
 export async function saveMessage(userId: number, id: number, body: string, clientId: string) {
   return prisma.$transaction(async tx => {
     // A per-dialog lock orders commits, message cursors and read receipts.
-    const rows = await tx.$queryRaw<{ id: number }[]>`SELECT c.id FROM chat_conversations c JOIN chat_members m ON m."conversationId"=c.id WHERE c.id=${id} AND m."userId"=${userId} FOR UPDATE OF c`;
+    const rows = await tx.$queryRaw<{ id: number; kind: string; archivedAt: Date | null }[]>`SELECT c.id, c.kind, c."archivedAt" FROM chat_conversations c JOIN chat_members m ON m."conversationId"=c.id WHERE c.id=${id} AND m."userId"=${userId} FOR UPDATE OF c`;
     if (!rows.length) throw createError({ statusCode: 404 });
     const prior = await tx.chatMessage.findUnique({ where: { senderId_clientId: { senderId: userId, clientId } } });
     if (prior) {
@@ -30,7 +30,10 @@ export async function saveMessage(userId: number, id: number, body: string, clie
       return prior;
     }
     const members = await tx.chatMember.findMany({ where: { conversationId: id }, include: { user: { select: { status: true } } } });
-    if (members.length !== 2 || members.some(m => m.user.status !== 'ACTIVE')) throw createError({ statusCode: 403, message: 'Участник диалога отключён.' });
+    const conversation = rows[0]!;
+    if (conversation.archivedAt) throw createError({ statusCode: 409, message: 'Группа в архиве. Отправка сообщений недоступна.' });
+    if (!members.some(m => m.userId === userId && m.user.status === 'ACTIVE')) throw createError({ statusCode: 403 });
+    if (conversation.kind === 'DIRECT' && (members.length !== 2 || members.some(m => m.user.status !== 'ACTIVE'))) throw createError({ statusCode: 403, message: 'Участник диалога отключён.' });
     const count = await tx.chatMessage.count({ where: { senderId: userId, createdAt: { gt: new Date(Date.now() - 60000) } } });
     if (count >= 60) throw createError({ statusCode: 429, message: 'Слишком много сообщений. Подождите минуту.' });
     const message = await tx.chatMessage.create({ data: { conversationId: id, senderId: userId, body, clientId } });

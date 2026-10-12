@@ -9,10 +9,10 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && req.url === '/internal/chat') {
     try {
       let body = '';
-      for await (const chunk of req) { body += chunk.toString(); if (Buffer.byteLength(body) > 4096) { res.writeHead(413).end(); return; } }
+      for await (const chunk of req) { body += chunk.toString(); if (Buffer.byteLength(body) > 16384) { res.writeHead(413).end(); return; } }
       if (!verifyNotification(body, key, String(req.headers['x-space-time'] || ''), String(req.headers['x-space-signature'] || ''))) { res.writeHead(403).end(); return; }
       const data = JSON.parse(body);
-      if (!Number.isSafeInteger(data.conversationId) || data.conversationId <= 0 || !Array.isArray(data.recipients) || data.recipients.length !== 2 || data.recipients.some((id: unknown) => typeof id !== 'string' || !/^(DOMAIN|EXTERNAL):[1-9][0-9]*$/.test(id))) { res.writeHead(400).end(); return; }
+      if (!Number.isSafeInteger(data.conversationId) || data.conversationId <= 0 || !Array.isArray(data.recipients) || (data.recipients.length < 1 || data.recipients.length > 200) || data.recipients.some((id: unknown) => typeof id !== 'string' || !/^(DOMAIN|EXTERNAL):[1-9][0-9]*$/.test(id))) { res.writeHead(400).end(); return; }
       const message = JSON.stringify({ type: 'chat:changed', conversationId: data.conversationId });
       for (const [ws, client] of clients) {
         if (client.user && client.exp * 1000 > Date.now() && data.recipients.includes(client.user.id) && ws.readyState === WebSocket.OPEN) {

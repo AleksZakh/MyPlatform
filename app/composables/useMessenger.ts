@@ -27,7 +27,11 @@ export function useMessenger() {
       const result = await $fetch<ChatInbox>('/api/chat/conversations');
       if (g !== generation) return;
       inbox.value = result;
-      if (active.value) active.value = result.dialogs.find(d => d.id === active.value?.id) || active.value;
+      if (active.value) {
+        const found = result.dialogs.find(d => d.id === active.value?.id);
+        if (found) active.value = found;
+        else { const id = active.value.id; generation++; active.value = null; messages.value = []; draft.value = ''; drafts.delete(id); pending.delete(id); error.value = 'Доступ к диалогу закрыт.'; }
+      }
     } catch (e) { if (g === generation && open.value) fail(e); }
     finally { inboxBusy = false; }
   }
@@ -96,7 +100,7 @@ export function useMessenger() {
   }
   async function send() {
     const id = active.value?.id;
-    if (!id || sending.value || !draft.value.trim() || draft.value.trim().length > 4000) return;
+    if (!id || active.value?.archived || sending.value || !draft.value.trim() || draft.value.trim().length > 4000) return;
     // Preserve clientId after an ambiguous network failure; retry cannot duplicate the message.
     const attempt = pending.get(id) || { clientId: crypto.randomUUID(), body: draft.value.trim() };
     pending.set(id, attempt); sending.value = true; error.value = '';
@@ -159,5 +163,12 @@ export function useMessenger() {
   function refreshVisible() { if (!document.hidden) { void refreshInbox(); void synchronize(); } }
   onMounted(() => { refreshVisible(); timer = setInterval(refreshVisible, 15000); document.addEventListener('visibilitychange', refreshVisible); window.addEventListener('focus', refreshVisible); });
   onBeforeUnmount(() => { generation++; clearInterval(timer); clearTimeout(debounce); document.removeEventListener('visibilitychange', refreshVisible); window.removeEventListener('focus', refreshVisible); });
-  return { contactsWarning, invitee, inviting, invitationNotice, invite, contactsMore, contactsLoading, loadContacts, open, search, tab, inbox, active, messages, error, sending, loading, hasOlder, draft, myId, people, presence, retrying, status, select, start, older, send, markVisibleRead, refreshInbox };
+  async function groupChanged(id: number) {
+    while (inboxBusy && loggedIn.value) await new Promise(resolve => setTimeout(resolve, 25));
+    if (!loggedIn.value) return;
+    await refreshInbox();
+    const dialog = inbox.value.dialogs.find(d => d.id === id);
+    if (dialog && active.value?.id !== id) await select(dialog);
+  }
+  return { groupChanged, contactsWarning, invitee, inviting, invitationNotice, invite, contactsMore, contactsLoading, loadContacts, open, search, tab, inbox, active, messages, error, sending, loading, hasOlder, draft, myId, people, presence, retrying, status, select, start, older, send, markVisibleRead, refreshInbox };
 }

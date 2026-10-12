@@ -20,14 +20,15 @@ function time(value: string) { return new Date(value).toLocaleString('ru-RU', { 
 const statusText = (s: string) => s === 'online' ? 'В сети' : s === 'away' ? 'Отошёл' : 'Не в сети';
 </script>
 <template>
-  <UModal v-if="loggedIn" v-model:open="open" title="Личные сообщения" description="Переписка с пользователями Space" :ui="{ content: 'w-[calc(100vw-2rem)] sm:w-[calc(100vw-2rem)] sm:max-w-5xl', body: 'p-0 sm:p-0' }">
-    <UButton icon="i-lucide-message-circle" color="neutral" variant="soft" aria-label="Открыть личные сообщения">
+  <UModal v-if="loggedIn" v-model:open="open" title="Сообщения" description="Личные и групповые переписки Space" :ui="{ content: 'w-[calc(100vw-2rem)] sm:w-[calc(100vw-2rem)] sm:max-w-5xl', body: 'p-0 sm:p-0' }">
+    <UButton icon="i-lucide-message-circle" color="neutral" variant="soft" aria-label="Открыть сообщения">
       Сообщения <UBadge v-if="inbox.unread" color="error" size="sm">{{ inbox.unread }}</UBadge>
     </UButton>
     <template #body>
       <div class="grid grid-cols-[minmax(0,40%)_minmax(0,1fr)] sm:grid-cols-[280px_minmax(0,1fr)] h-[min(70dvh,650px)] min-h-80">
         <aside class="border-r border-gray-200 dark:border-gray-700 flex flex-col min-h-0 min-w-0">
           <div class="p-3 space-y-2">
+            <ChatGroupPanel @changed="chat.groupChanged" />
             <UInput v-model="search" class="w-full" placeholder="Найти пользователя" aria-label="Поиск собеседника" />
             <div class="flex flex-nowrap gap-1 overflow-x-auto [&>button]:shrink-0 [&>button]:whitespace-nowrap"><UButton size="xs" :variant="tab === 'dialogs' ? 'solid' : 'ghost'" @click="tab = 'dialogs'">Диалоги</UButton><UButton size="xs" :variant="tab === 'contacts' ? 'solid' : 'ghost'" @click="tab = 'contacts'">Контакты</UButton><UButton size="xs" :variant="tab === 'online' ? 'solid' : 'ghost'" @click="tab = 'online'">Online</UButton></div>
           </div>
@@ -43,10 +44,10 @@ const statusText = (s: string) => s === 'online' ? 'В сети' : s === 'away' 
             </template>
             <template v-else>
               <button v-for="dialog in inbox.dialogs" :key="dialog.id" class="w-full text-left p-3 border-b border-gray-100 dark:border-gray-800" :class="active?.id === dialog.id ? 'bg-sky-50 dark:bg-gray-800' : ''" @click="chat.select(dialog)">
-                <span class="font-medium break-words">{{ dialog.peer.fullName || dialog.peer.login }}</span>
+                <span v-if="dialog.kind === 'GROUP'" class="text-xs mr-1">Группа ·</span><span class="font-medium break-words">{{ dialog.peer.fullName || dialog.peer.login }}</span>
                 <UBadge v-if="dialog.unread" class="ml-1" size="xs">{{ dialog.unread }}</UBadge>
                 <span class="block truncate text-xs text-gray-500">{{ dialog.last?.body || 'Новый диалог' }}</span>
-                <span class="text-xs">{{ statusText(chat.status(dialog.peer)) }}</span>
+                <span class="text-xs">{{ dialog.kind === 'GROUP' ? (dialog.archived ? 'В архиве' : `Участников: ${dialog.memberCount}`) : statusText(chat.status(dialog.peer)) }}</span>
               </button>
               <p v-if="!inbox.dialogs.length" class="p-3 text-sm text-gray-500">Выберите пользователя во вкладке «Контакты» или найдите по имени.</p>
             </template>
@@ -64,21 +65,22 @@ const statusText = (s: string) => s === 'online' ? 'В сети' : s === 'away' 
             <div class="flex gap-2"><UButton :loading="inviting" :disabled="!!invitationNotice" @click="chat.invite">Отправить приглашение</UButton><UButton variant="ghost" :disabled="inviting" @click="invitee = null">Отмена</UButton></div>
           </div>
           <template v-else-if="active">
-            <header class="p-3 border-b border-gray-200 dark:border-gray-700"><strong>{{ active.peer.fullName || active.peer.login }}</strong><span class="block text-xs text-gray-500">{{ active.peer.status === 'ACTIVE' ? statusText(chat.status(active.peer)) : 'Учётная запись отключена' }}</span></header>
+            <header class="p-3 border-b border-gray-200 dark:border-gray-700"><ChatGroupPanel v-if="active.kind === 'GROUP'" :key="active.id" :group-id="active.id" class="float-right" @changed="chat.groupChanged" /><strong>{{ active.peer.fullName || active.peer.login }}</strong><span class="block text-xs text-gray-500">{{ active.kind === 'GROUP' ? (active.archived ? 'Группа в архиве' : `Участников: ${active.memberCount}`) : active.peer.status === 'ACTIVE' ? statusText(chat.status(active.peer)) : 'Учётная запись отключена' }}</span></header>
             <div ref="panel" class="flex-1 overflow-y-auto p-4 space-y-3" @scroll="scrolled">
               <UButton v-if="hasOlder" size="xs" variant="ghost" :loading="loading" @click="loadOlder">Предыдущие сообщения</UButton>
               <p v-if="loading && !messages.length" role="status">Загрузка…</p>
               <div v-for="message in messages" :key="message.id" class="flex" :class="message.senderId === myId ? 'justify-end' : 'justify-start'">
                 <div class="max-w-[90%] rounded-xl px-3 py-2" :class="message.senderId === myId ? 'bg-sky-100 text-gray-900' : 'bg-gray-100 text-gray-900'">
+                  <p v-if="active.kind === 'GROUP'" class="text-xs font-semibold mb-1">{{ message.sender?.fullName || message.sender?.login || `Участник #${message.senderId}` }}</p>
                   <p class="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{{ message.body }}</p>
-                  <p class="text-[11px] text-gray-500 mt-1">{{ time(message.createdAt) }}<span v-if="message.senderId === myId"> · {{ message.id <= active.peerReadThrough ? 'Прочитано' : 'Отправлено' }}</span></p>
+                  <p class="text-[11px] text-gray-500 mt-1">{{ time(message.createdAt) }}<span v-if="message.senderId === myId"> · {{ message.id <= active.peerReadThrough ? (active.kind === 'GROUP' ? 'Прочитано всеми' : 'Прочитано') : 'Отправлено' }}</span></p>
                 </div>
               </div>
             </div>
             <UButton v-if="!atBottom" size="xs" variant="ghost" @click="toBottom">К последним сообщениям</UButton>
             <form class="p-3 border-t border-gray-200 dark:border-gray-700 space-y-2" @submit.prevent="chat.send">
-              <textarea v-model="draft" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 p-2 resize-none bg-transparent" rows="3" maxlength="4000" aria-label="Текст сообщения" placeholder="Сообщение…" :disabled="sending || retrying || active.peer.status !== 'ACTIVE'" @keydown="keydown" />
-              <div class="flex items-center justify-between gap-2"><span class="text-xs text-gray-500">Enter — отправить · Shift+Enter — новая строка</span><UButton type="submit" :loading="sending" :disabled="!draft.trim() || loading || active.peer.status !== 'ACTIVE'">{{ retrying ? 'Повторить отправку' : 'Отправить' }}</UButton></div>
+              <textarea v-model="draft" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 p-2 resize-none bg-transparent" rows="3" maxlength="4000" aria-label="Текст сообщения" placeholder="Сообщение…" :disabled="sending || retrying || active.archived || active.peer.status !== 'ACTIVE'" @keydown="keydown" />
+              <div class="flex items-center justify-between gap-2"><span class="text-xs text-gray-500">Enter — отправить · Shift+Enter — новая строка</span><UButton type="submit" :loading="sending" :disabled="!draft.trim() || loading || active.archived || active.peer.status !== 'ACTIVE'">{{ retrying ? 'Повторить отправку' : 'Отправить' }}</UButton></div>
             </form>
           </template>
           <p v-else class="m-auto p-6 text-gray-500">Выберите собеседника. Можно написать и пользователю не в сети.</p>

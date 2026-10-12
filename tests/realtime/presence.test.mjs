@@ -49,7 +49,7 @@ test('authentication, origin, tabs, disconnect and identity isolation', async ()
     let leaked = false;
     c.on('message', raw => { if (JSON.parse(raw).type === 'chat:changed') leaked = true; });
     const notification = message(b, d => d.type === 'chat:changed');
-    const payload = JSON.stringify({ conversationId: 10, recipients: ['DOMAIN:1', 'EXTERNAL:99'] });
+    const payload = JSON.stringify({ conversationId: 10, recipients: ['DOMAIN:1', 'EXTERNAL:99', 'DOMAIN:100'] });
     const stamp = String(Date.now());
     const denied = await fetch('http://127.0.0.1:15050/internal/chat', { method: 'POST', body: payload });
     assert.equal(denied.status, 403);
