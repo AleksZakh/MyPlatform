@@ -165,7 +165,7 @@ const DEFAULT_VISIBLE_COLUMNS =
     .map(column => column.id)
 
 
-function normalizeColumns(
+export function normalizeColumns(
   columns: unknown,
 ): string[] {
   if (!Array.isArray(columns)) {
@@ -200,144 +200,21 @@ function normalizeColumns(
 
 
 export const useTableSettings = () => {
-  const nuxtApp = useNuxtApp()
-  const toast = useToast()
-
-  const tableSettings = ref({
-    visibleColumns:
-      [...DEFAULT_VISIBLE_COLUMNS],
-  })
-
-
-  const loadSettings = () => {
-    if (nuxtApp.ssrContext) {
-      return
-    }
-
-    try {
-      const saved =
-        localStorage.getItem(
-          'tableSettings',
-        )
-
-      if (!saved) {
-        return
-      }
-
-      const parsed =
-        JSON.parse(saved)
-
-      tableSettings.value = {
-        ...tableSettings.value,
-        ...parsed,
-        visibleColumns:
-          normalizeColumns(
-            parsed?.visibleColumns,
-          ),
-      }
-
-      // Один раз переписываем старые русские ID
-      // в новые стабильные ID.
-      localStorage.setItem(
-        'tableSettings',
-        JSON.stringify(
-          tableSettings.value,
-        ),
-      )
-    } catch (error) {
-      console.error(
-        'Ошибка загрузки настроек таблицы:',
-        error,
-      )
-    }
+  const { preferences, ready, save } = useUserPreferences();
+  const toast = useSpaceToast();
+  const tableSettings = computed(() => ({
+    visibleColumns: normalizeColumns(preferences.value.labTable?.visibleColumns),
+    columnOrder: [...new Set([...(preferences.value.labTable?.columnOrder || []), ...ALL_AVAILABLE_COLUMNS])].filter(id => ALL_AVAILABLE_COLUMNS.includes(id)),
+  }));
+  async function persist(visibleColumns: string[], columnOrder: string[]) {
+    try { await save({ labTable: { visibleColumns: normalizeColumns(visibleColumns), columnOrder } }); }
+    catch (e) { toast.add({ title: 'Не удалось сохранить настройки таблицы', description: 'Повторите действие после загрузки профиля.', color: 'error' }); throw e; }
   }
-
-
-  const saveSettings = () => {
-    if (!import.meta.client) {
-      return
-    }
-
-    try {
-      localStorage.setItem(
-        'tableSettings',
-        JSON.stringify(
-          tableSettings.value,
-        ),
-      )
-
-      toast.add({
-        title: '✅ Настройки сохранены',
-        description:
-          'Настройки таблицы успешно обновлены',
-        color: 'success',
-        icon:
-          'i-heroicons-check-circle',
-        duration: 3000,
-      })
-    } catch (error) {
-      console.error(
-        'Ошибка сохранения настроек:',
-        error,
-      )
-
-      toast.add({
-        title: '❌ Ошибка сохранения',
-        description:
-          'Не удалось сохранить настройки',
-        color: 'error',
-        icon:
-          'i-heroicons-exclamation-triangle',
-        duration: 3000,
-      })
-    }
-  }
-
-
-  const updateVisibleColumns = (
-    columns: string[],
-  ) => {
-    tableSettings.value.visibleColumns =
-      normalizeColumns(columns)
-
-    saveSettings()
-  }
-
-
-  const getVisibleColumns = () => {
-    return [
-      ...tableSettings.value.visibleColumns,
-    ]
-  }
-
-
-  const getAllAvailableColumns = () => {
-    return [...ALL_AVAILABLE_COLUMNS]
-  }
-
-
-  const resetSettings = () => {
-    tableSettings.value = {
-      visibleColumns:
-        [...DEFAULT_VISIBLE_COLUMNS],
-    }
-
-    saveSettings()
-  }
-
-
-  loadSettings()
-
-
-  return {
-    tableSettings,
-    ALL_AVAILABLE_COLUMNS,
-
-    loadSettings,
-    saveSettings,
-    updateVisibleColumns,
-    getVisibleColumns,
-    getAllAvailableColumns,
-    resetSettings,
-  }
+  const updateVisibleColumns = (columns: string[]) => persist(columns, tableSettings.value.columnOrder);
+  const updateColumnOrder = (columns: string[]) => persist(tableSettings.value.visibleColumns, [...new Set([...columns, ...tableSettings.value.columnOrder])]);
+  const resetSettings = () => save({ labTable: null });
+  return { tableSettings, ready, ALL_AVAILABLE_COLUMNS, updateVisibleColumns, updateColumnOrder, resetSettings,
+    getVisibleColumns: () => [...tableSettings.value.visibleColumns], getAllAvailableColumns: () => [...ALL_AVAILABLE_COLUMNS],
+    loadSettings: () => {}, saveSettings: () => persist(tableSettings.value.visibleColumns, tableSettings.value.columnOrder),
+  };
 }

@@ -10,6 +10,7 @@ declare global {
   const acceptHMRUpdate: typeof import('../../node_modules/@pinia/nuxt/dist/runtime/composables').acceptHMRUpdate
   const actions: typeof import('../../app/stores/auth.store').actions
   const addRouteMiddleware: typeof import('../../node_modules/nuxt/dist/app/composables/router').addRouteMiddleware
+  const allowNotification: typeof import('../../shared/utils/user-preferences').allowNotification
   const callOnce: typeof import('../../node_modules/nuxt/dist/app/composables/once').callOnce
   const cancelIdleCallback: typeof import('../../node_modules/nuxt/dist/app/compat/idle-callback').cancelIdleCallback
   const clearError: typeof import('../../node_modules/nuxt/dist/app/composables/error').clearError
@@ -21,6 +22,7 @@ declare global {
   const createUseFetch: typeof import('../../node_modules/nuxt/dist/app/composables/fetch').createUseFetch
   const customRef: typeof import('vue').customRef
   const decideAccess: typeof import('../../shared/utils/access-decision').decideAccess
+  const defaultPreferences: typeof import('../../shared/utils/user-preferences').defaultPreferences
   const defineAppConfig: typeof import('../../node_modules/nuxt/dist/app/nuxt').defineAppConfig
   const defineAsyncComponent: typeof import('vue').defineAsyncComponent
   const defineComponent: typeof import('vue').defineComponent
@@ -38,6 +40,7 @@ declare global {
   const defineStore: typeof import('../../node_modules/@pinia/nuxt/dist/runtime/composables').defineStore
   const deletionErrorMessage: typeof import('../../app/composables/useDeletionReason').deletionErrorMessage
   const detectMigrationDocument: typeof import('../../shared/utils/migration-document').detectMigrationDocument
+  const displaySchema: typeof import('../../shared/utils/user-preferences').displaySchema
   const effect: typeof import('vue').effect
   const effectScope: typeof import('vue').effectScope
   const extendLocale: typeof import('../../node_modules/@nuxt/ui/dist/runtime/composables/defineLocale').extendLocale
@@ -68,7 +71,10 @@ declare global {
   const navigateTo: typeof import('../../node_modules/nuxt/dist/app/composables/router').navigateTo
   const nextTick: typeof import('vue').nextTick
   const normalizeAdminLogins: typeof import('../../shared/utils/access-decision').normalizeAdminLogins
+  const normalizeColumns: typeof import('../../app/composables/useTableSettings').normalizeColumns
   const normalizeLocationName: typeof import('../../shared/utils/lab-location-name').normalizeLocationName
+  const normalizePreferences: typeof import('../../shared/utils/user-preferences').normalizePreferences
+  const notificationsSchema: typeof import('../../shared/utils/user-preferences').notificationsSchema
   const onActivated: typeof import('vue').onActivated
   const onBeforeMount: typeof import('vue').onBeforeMount
   const onBeforeRouteLeave: typeof import('vue-router').onBeforeRouteLeave
@@ -88,6 +94,8 @@ declare global {
   const onUpdated: typeof import('vue').onUpdated
   const onWatcherCleanup: typeof import('vue').onWatcherCleanup
   const piniaPluginPersistedstate: typeof import('../../node_modules/pinia-plugin-persistedstate/dist/nuxt/runtime/storages').storages
+  const preferencesPatchSchema: typeof import('../../shared/utils/user-preferences').preferencesPatchSchema
+  const preferencesSchema: typeof import('../../shared/utils/user-preferences').preferencesSchema
   const prefetchComponents: typeof import('../../node_modules/nuxt/dist/app/composables/preload').prefetchComponents
   const preloadComponents: typeof import('../../node_modules/nuxt/dist/app/composables/preload').preloadComponents
   const preloadPayload: typeof import('../../node_modules/nuxt/dist/app/composables/payload').preloadPayload
@@ -114,6 +122,7 @@ declare global {
   const shallowRef: typeof import('vue').shallowRef
   const showError: typeof import('../../node_modules/nuxt/dist/app/composables/error').showError
   const storeToRefs: typeof import('../../node_modules/@pinia/nuxt/dist/runtime/composables').storeToRefs
+  const tableSchema: typeof import('../../shared/utils/user-preferences').tableSchema
   const toRaw: typeof import('vue').toRaw
   const toRef: typeof import('vue').toRef
   const toRefs: typeof import('vue').toRefs
@@ -131,6 +140,8 @@ declare global {
   const useAttrs: typeof import('vue').useAttrs
   const useAuth: typeof import('../../app/composables/useAuth').useAuth
   const useAuthStore: typeof import('../../app/stores/auth.store').useAuthStore
+  const useChatGroupEditor: typeof import('../../app/composables/useChatGroupEditor').useChatGroupEditor
+  const useChatNotification: typeof import('../../app/composables/useChatNotification').useChatNotification
   const useColorMode: typeof import('../../node_modules/@nuxtjs/color-mode/dist/runtime/composables').useColorMode
   const useContentSearch: typeof import('../../node_modules/@nuxt/ui/dist/runtime/composables/useContentSearch').useContentSearch
   const useCookie: typeof import('../../node_modules/nuxt/dist/app/composables/cookie').useCookie
@@ -167,8 +178,10 @@ declare global {
   const useOverlay: typeof import('../../node_modules/@nuxt/ui/dist/runtime/composables/useOverlay').useOverlay
   const usePinia: typeof import('../../node_modules/@pinia/nuxt/dist/runtime/composables').usePinia
   const usePreviewMode: typeof import('../../node_modules/nuxt/dist/app/composables/preview').usePreviewMode
+  const useProfileSettings: typeof import('../../app/composables/useProfileSettings').useProfileSettings
   const useRecordDelete: typeof import('../../app/composables/useRecordDelete').useRecordDelete
   const useRecordUpdate: typeof import('../../app/composables/useRecordUpdate').useRecordUpdate
+  const useRecordWindow: typeof import('../../app/composables/useRecordWindow').useRecordWindow
   const useReferenceDataLoader: typeof import('../../app/composables/useReferenceDataLoader').useReferenceDataLoader
   const useRequestEvent: typeof import('../../node_modules/nuxt/dist/app/composables/ssr').useRequestEvent
   const useRequestFetch: typeof import('../../node_modules/nuxt/dist/app/composables/ssr').useRequestFetch
@@ -233,6 +246,7 @@ declare global {
   const useServerSeoMeta: typeof import('../../node_modules/nuxt/dist/app/composables/head').useServerSeoMeta
   const useShadowRoot: typeof import('vue').useShadowRoot
   const useSlots: typeof import('vue').useSlots
+  const useSpaceToast: typeof import('../../app/composables/useSpaceToast').useSpaceToast
   const useState: typeof import('../../node_modules/nuxt/dist/app/composables/state').useState
   const useStorageManager: typeof import('../../app/composables/useStorageManager').useStorageManager
   const useStructureAdmin: typeof import('../../app/composables/useStructureAdmin').useStructureAdmin
@@ -243,6 +257,7 @@ declare global {
   const useToastStore: typeof import('../../app/stores/toast.store').useToastStore
   const useTour: typeof import('../../node_modules/@nuxt/ui/dist/runtime/composables/useTour').useTour
   const useTransitionState: typeof import('vue').useTransitionState
+  const useUserPreferences: typeof import('../../app/composables/useUserPreferences').useUserPreferences
   const useUserSession: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/app/composables/session').useUserSession
   const useUserStore: typeof import('../../app/stores/user').useUserStore
   const useWebSocketStore: typeof import('../../app/stores/websocket.store').useWebSocketStore
@@ -287,10 +302,13 @@ declare global {
   export type { MigrationDocument } from '../../shared/utils/migration-document'
   import('../../shared/utils/migration-document')
   // @ts-ignore
+  export type { UserPreferences } from '../../shared/utils/user-preferences'
+  import('../../shared/utils/user-preferences')
+  // @ts-ignore
   export type { AccessActionName, AccessSubjectKind, AccessSource, AccessBlock, AccessCell, AccessRow, AccessSnapshot, AccessChange, AccessMutation, AccessSubjectOption } from '../../shared/types/access-management'
   import('../../shared/types/access-management')
   // @ts-ignore
-  export type { ChatPerson, ChatMessageDto, ChatDialog, ChatInbox, ChatHistory, ChatContacts } from '../../shared/types/chat'
+  export type { ChatPerson, ChatMessageDto, ChatDialog, ChatInbox, ChatHistory, ChatContacts, ChatGroup } from '../../shared/types/chat'
   import('../../shared/types/chat')
   // @ts-ignore
   export type { ExportKind, ExportStatus, ExportJobView } from '../../shared/types/lab-export'
@@ -315,6 +333,7 @@ declare module 'vue' {
     readonly acceptHMRUpdate: UnwrapRef<typeof import('../../node_modules/@pinia/nuxt/dist/runtime/composables')['acceptHMRUpdate']>
     readonly actions: UnwrapRef<typeof import('../../app/stores/auth.store')['actions']>
     readonly addRouteMiddleware: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/router')['addRouteMiddleware']>
+    readonly allowNotification: UnwrapRef<typeof import('../../shared/utils/user-preferences')['allowNotification']>
     readonly callOnce: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/once')['callOnce']>
     readonly cancelIdleCallback: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/compat/idle-callback')['cancelIdleCallback']>
     readonly clearError: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/error')['clearError']>
@@ -326,6 +345,7 @@ declare module 'vue' {
     readonly createUseFetch: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/fetch')['createUseFetch']>
     readonly customRef: UnwrapRef<typeof import('vue')['customRef']>
     readonly decideAccess: UnwrapRef<typeof import('../../shared/utils/access-decision')['decideAccess']>
+    readonly defaultPreferences: UnwrapRef<typeof import('../../shared/utils/user-preferences')['defaultPreferences']>
     readonly defineAppConfig: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/nuxt')['defineAppConfig']>
     readonly defineAsyncComponent: UnwrapRef<typeof import('vue')['defineAsyncComponent']>
     readonly defineComponent: UnwrapRef<typeof import('vue')['defineComponent']>
@@ -343,6 +363,7 @@ declare module 'vue' {
     readonly defineStore: UnwrapRef<typeof import('../../node_modules/@pinia/nuxt/dist/runtime/composables')['defineStore']>
     readonly deletionErrorMessage: UnwrapRef<typeof import('../../app/composables/useDeletionReason')['deletionErrorMessage']>
     readonly detectMigrationDocument: UnwrapRef<typeof import('../../shared/utils/migration-document')['detectMigrationDocument']>
+    readonly displaySchema: UnwrapRef<typeof import('../../shared/utils/user-preferences')['displaySchema']>
     readonly effect: UnwrapRef<typeof import('vue')['effect']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
     readonly extendLocale: UnwrapRef<typeof import('../../node_modules/@nuxt/ui/dist/runtime/composables/defineLocale')['extendLocale']>
@@ -373,7 +394,10 @@ declare module 'vue' {
     readonly navigateTo: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/router')['navigateTo']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
     readonly normalizeAdminLogins: UnwrapRef<typeof import('../../shared/utils/access-decision')['normalizeAdminLogins']>
+    readonly normalizeColumns: UnwrapRef<typeof import('../../app/composables/useTableSettings')['normalizeColumns']>
     readonly normalizeLocationName: UnwrapRef<typeof import('../../shared/utils/lab-location-name')['normalizeLocationName']>
+    readonly normalizePreferences: UnwrapRef<typeof import('../../shared/utils/user-preferences')['normalizePreferences']>
+    readonly notificationsSchema: UnwrapRef<typeof import('../../shared/utils/user-preferences')['notificationsSchema']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>
     readonly onBeforeMount: UnwrapRef<typeof import('vue')['onBeforeMount']>
     readonly onBeforeRouteLeave: UnwrapRef<typeof import('vue-router')['onBeforeRouteLeave']>
@@ -393,6 +417,8 @@ declare module 'vue' {
     readonly onUpdated: UnwrapRef<typeof import('vue')['onUpdated']>
     readonly onWatcherCleanup: UnwrapRef<typeof import('vue')['onWatcherCleanup']>
     readonly piniaPluginPersistedstate: UnwrapRef<typeof import('../../node_modules/pinia-plugin-persistedstate/dist/nuxt/runtime/storages')['storages']>
+    readonly preferencesPatchSchema: UnwrapRef<typeof import('../../shared/utils/user-preferences')['preferencesPatchSchema']>
+    readonly preferencesSchema: UnwrapRef<typeof import('../../shared/utils/user-preferences')['preferencesSchema']>
     readonly prefetchComponents: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/preload')['prefetchComponents']>
     readonly preloadComponents: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/preload')['preloadComponents']>
     readonly preloadPayload: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/payload')['preloadPayload']>
@@ -419,6 +445,7 @@ declare module 'vue' {
     readonly shallowRef: UnwrapRef<typeof import('vue')['shallowRef']>
     readonly showError: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/error')['showError']>
     readonly storeToRefs: UnwrapRef<typeof import('../../node_modules/@pinia/nuxt/dist/runtime/composables')['storeToRefs']>
+    readonly tableSchema: UnwrapRef<typeof import('../../shared/utils/user-preferences')['tableSchema']>
     readonly toRaw: UnwrapRef<typeof import('vue')['toRaw']>
     readonly toRef: UnwrapRef<typeof import('vue')['toRef']>
     readonly toRefs: UnwrapRef<typeof import('vue')['toRefs']>
@@ -436,6 +463,8 @@ declare module 'vue' {
     readonly useAttrs: UnwrapRef<typeof import('vue')['useAttrs']>
     readonly useAuth: UnwrapRef<typeof import('../../app/composables/useAuth')['useAuth']>
     readonly useAuthStore: UnwrapRef<typeof import('../../app/stores/auth.store')['useAuthStore']>
+    readonly useChatGroupEditor: UnwrapRef<typeof import('../../app/composables/useChatGroupEditor')['useChatGroupEditor']>
+    readonly useChatNotification: UnwrapRef<typeof import('../../app/composables/useChatNotification')['useChatNotification']>
     readonly useColorMode: UnwrapRef<typeof import('../../node_modules/@nuxtjs/color-mode/dist/runtime/composables')['useColorMode']>
     readonly useContentSearch: UnwrapRef<typeof import('../../node_modules/@nuxt/ui/dist/runtime/composables/useContentSearch')['useContentSearch']>
     readonly useCookie: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/cookie')['useCookie']>
@@ -472,8 +501,10 @@ declare module 'vue' {
     readonly useOverlay: UnwrapRef<typeof import('../../node_modules/@nuxt/ui/dist/runtime/composables/useOverlay')['useOverlay']>
     readonly usePinia: UnwrapRef<typeof import('../../node_modules/@pinia/nuxt/dist/runtime/composables')['usePinia']>
     readonly usePreviewMode: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/preview')['usePreviewMode']>
+    readonly useProfileSettings: UnwrapRef<typeof import('../../app/composables/useProfileSettings')['useProfileSettings']>
     readonly useRecordDelete: UnwrapRef<typeof import('../../app/composables/useRecordDelete')['useRecordDelete']>
     readonly useRecordUpdate: UnwrapRef<typeof import('../../app/composables/useRecordUpdate')['useRecordUpdate']>
+    readonly useRecordWindow: UnwrapRef<typeof import('../../app/composables/useRecordWindow')['useRecordWindow']>
     readonly useReferenceDataLoader: UnwrapRef<typeof import('../../app/composables/useReferenceDataLoader')['useReferenceDataLoader']>
     readonly useRequestEvent: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/ssr')['useRequestEvent']>
     readonly useRequestFetch: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/ssr')['useRequestFetch']>
@@ -538,6 +569,7 @@ declare module 'vue' {
     readonly useServerSeoMeta: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/head')['useServerSeoMeta']>
     readonly useShadowRoot: UnwrapRef<typeof import('vue')['useShadowRoot']>
     readonly useSlots: UnwrapRef<typeof import('vue')['useSlots']>
+    readonly useSpaceToast: UnwrapRef<typeof import('../../app/composables/useSpaceToast')['useSpaceToast']>
     readonly useState: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/state')['useState']>
     readonly useStorageManager: UnwrapRef<typeof import('../../app/composables/useStorageManager')['useStorageManager']>
     readonly useStructureAdmin: UnwrapRef<typeof import('../../app/composables/useStructureAdmin')['useStructureAdmin']>
@@ -548,6 +580,7 @@ declare module 'vue' {
     readonly useToastStore: UnwrapRef<typeof import('../../app/stores/toast.store')['useToastStore']>
     readonly useTour: UnwrapRef<typeof import('../../node_modules/@nuxt/ui/dist/runtime/composables/useTour')['useTour']>
     readonly useTransitionState: UnwrapRef<typeof import('vue')['useTransitionState']>
+    readonly useUserPreferences: UnwrapRef<typeof import('../../app/composables/useUserPreferences')['useUserPreferences']>
     readonly useUserSession: UnwrapRef<typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/app/composables/session')['useUserSession']>
     readonly useUserStore: UnwrapRef<typeof import('../../app/stores/user')['useUserStore']>
     readonly useWebSocketStore: UnwrapRef<typeof import('../../app/stores/websocket.store')['useWebSocketStore']>

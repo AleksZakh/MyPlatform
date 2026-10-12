@@ -9,12 +9,20 @@ declare global {
   const ACCESS_ACTIONS: typeof import('../../shared/types/access-management').ACCESS_ACTIONS
   const EXPORT_COLUMNS: typeof import('../../shared/types/lab-export').EXPORT_COLUMNS
   const EXPORT_KINDS: typeof import('../../shared/types/lab-export').EXPORT_KINDS
+  const allowNotification: typeof import('../../shared/utils/user-preferences').allowNotification
   const decideAccess: typeof import('../../shared/utils/access-decision').decideAccess
+  const defaultPreferences: typeof import('../../shared/utils/user-preferences').defaultPreferences
   const detectMigrationDocument: typeof import('../../shared/utils/migration-document').detectMigrationDocument
+  const displaySchema: typeof import('../../shared/utils/user-preferences').displaySchema
   const isSystemAdminLogin: typeof import('../../shared/utils/access-decision').isSystemAdminLogin
   const locationNameKey: typeof import('../../shared/utils/lab-location-name').locationNameKey
   const normalizeAdminLogins: typeof import('../../shared/utils/access-decision').normalizeAdminLogins
   const normalizeLocationName: typeof import('../../shared/utils/lab-location-name').normalizeLocationName
+  const normalizePreferences: typeof import('../../shared/utils/user-preferences').normalizePreferences
+  const notificationsSchema: typeof import('../../shared/utils/user-preferences').notificationsSchema
+  const preferencesPatchSchema: typeof import('../../shared/utils/user-preferences').preferencesPatchSchema
+  const preferencesSchema: typeof import('../../shared/utils/user-preferences').preferencesSchema
+  const tableSchema: typeof import('../../shared/utils/user-preferences').tableSchema
 }
 // for type re-export
 declare global {
@@ -22,10 +30,13 @@ declare global {
   export type { MigrationDocument } from '../../shared/utils/migration-document'
   import('../../shared/utils/migration-document')
   // @ts-ignore
+  export type { UserPreferences } from '../../shared/utils/user-preferences'
+  import('../../shared/utils/user-preferences')
+  // @ts-ignore
   export type { AccessActionName, AccessSubjectKind, AccessSource, AccessBlock, AccessCell, AccessRow, AccessSnapshot, AccessChange, AccessMutation, AccessSubjectOption } from '../../shared/types/access-management'
   import('../../shared/types/access-management')
   // @ts-ignore
-  export type { ChatPerson, ChatMessageDto, ChatDialog, ChatInbox, ChatHistory, ChatContacts } from '../../shared/types/chat'
+  export type { ChatPerson, ChatMessageDto, ChatDialog, ChatInbox, ChatHistory, ChatContacts, ChatGroup } from '../../shared/types/chat'
   import('../../shared/types/chat')
   // @ts-ignore
   export type { ExportKind, ExportStatus, ExportJobView } from '../../shared/types/lab-export'

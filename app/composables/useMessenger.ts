@@ -3,6 +3,7 @@ import { useWebSocketStore } from '~/stores/websocket.store';
 export function useMessenger() {
   const { loggedIn, user } = useUserSession();
   const presence = useWebSocketStore();
+  const chatNotice = useChatNotification();
   const open = ref(false), search = ref(''), tab = ref<'dialogs' | 'contacts' | 'online'>('dialogs');
   const inbox = ref<ChatInbox>({ dialogs: [], unread: 0 }), contacts = ref<ChatPerson[]>([]);
   const invitee = ref<ChatPerson | null>(null), inviting = ref(false), invitationNotice = ref('');
@@ -26,6 +27,7 @@ export function useMessenger() {
     try {
       const result = await $fetch<ChatInbox>('/api/chat/conversations');
       if (g !== generation) return;
+      chatNotice.observe(result.dialogs, myId.value, open.value ? active.value?.id : undefined);
       inbox.value = result;
       if (active.value) {
         const found = result.dialogs.find(d => d.id === active.value?.id);
@@ -123,7 +125,7 @@ export function useMessenger() {
     } catch { readTo.delete(id); }
   }
   const retrying = computed(() => active.value ? pending.has(active.value.id) && !sending.value : false);
-  function reset() { invitee.value = null; invitationNotice.value = ''; contactsMore.value = false; contactsLoading.value = false; generation++; searching++; opening++; open.value = false; active.value = null; inbox.value = { dialogs: [], unread: 0 }; messages.value = []; contacts.value = []; draft.value = ''; pending.clear(); drafts.clear(); readTo.clear(); }
+  function reset() { chatNotice.reset(); invitee.value = null; invitationNotice.value = ''; contactsMore.value = false; contactsLoading.value = false; generation++; searching++; opening++; open.value = false; active.value = null; inbox.value = { dialogs: [], unread: 0 }; messages.value = []; contacts.value = []; draft.value = ''; pending.clear(); drafts.clear(); readTo.clear(); }
   watch(() => loggedIn.value ? user.value?.id : null, () => { reset(); void refreshInbox(); });
   watch(open, value => { if (value) { void refreshInbox(); void synchronize(); void loadContacts(); } });
   async function loadContacts(more = false) {

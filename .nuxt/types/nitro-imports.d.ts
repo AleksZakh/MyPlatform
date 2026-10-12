@@ -7,6 +7,7 @@ declare global {
   const __buildAssetsURL: typeof import('../../node_modules/@nuxt/nitro-server/dist/runtime/utils/paths').buildAssetsURL
   const __publicAssetsURL: typeof import('../../node_modules/@nuxt/nitro-server/dist/runtime/utils/paths').publicAssetsURL
   const adCache: typeof import('../../server/utils/adCache').adCache
+  const allowNotification: typeof import('../../shared/utils/user-preferences').allowNotification
   const appendCorsHeaders: typeof import('../../node_modules/h3/dist/index').appendCorsHeaders
   const appendCorsPreflightHeaders: typeof import('../../node_modules/h3/dist/index').appendCorsPreflightHeaders
   const appendHeader: typeof import('../../node_modules/h3/dist/index').appendHeader
@@ -40,6 +41,7 @@ declare global {
   const createRouter: typeof import('../../node_modules/h3/dist/index').createRouter
   const decideAccess: typeof import('../../shared/utils/access-decision').decideAccess
   const defaultContentType: typeof import('../../node_modules/h3/dist/index').defaultContentType
+  const defaultPreferences: typeof import('../../shared/utils/user-preferences').defaultPreferences
   const defineAppConfig: typeof import('../../node_modules/@nuxt/nitro-server/dist/runtime/utils/config').defineAppConfig
   const defineCachedEventHandler: typeof import('../../node_modules/nitropack/dist/runtime/internal/cache').defineCachedEventHandler
   const defineCachedFunction: typeof import('../../node_modules/nitropack/dist/runtime/internal/cache').defineCachedFunction
@@ -111,6 +113,7 @@ declare global {
   const deletionId: typeof import('../../server/utils/deletion-input').deletionId
   const describeRegistryFilters: typeof import('../../server/utils/incoming-control-filter').describeRegistryFilters
   const detectMigrationDocument: typeof import('../../shared/utils/migration-document').detectMigrationDocument
+  const displaySchema: typeof import('../../shared/utils/user-preferences').displaySchema
   const dynamicEventHandler: typeof import('../../node_modules/h3/dist/index').dynamicEventHandler
   const ensureSafeBasename: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/path-safety').ensureSafeBasename
   const eventHandler: typeof import('../../node_modules/h3/dist/index').eventHandler
@@ -181,13 +184,17 @@ declare global {
   const nitroPlugin: typeof import('../../node_modules/nitropack/dist/runtime/internal/plugin').nitroPlugin
   const normalizeAdminLogins: typeof import('../../shared/utils/access-decision').normalizeAdminLogins
   const normalizeLocationName: typeof import('../../shared/utils/lab-location-name').normalizeLocationName
+  const normalizePreferences: typeof import('../../shared/utils/user-preferences').normalizePreferences
   const normalizeRelative: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/path-safety').normalizeRelative
+  const notificationsSchema: typeof import('../../shared/utils/user-preferences').notificationsSchema
   const parseCookies: typeof import('../../node_modules/h3/dist/index').parseCookies
   const parseDataUrl: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/storage').parseDataUrl
   const parseDate: typeof import('../../server/utils/fileUploadHandler').parseDate
   const parseRegistrySearchDate: typeof import('../../server/utils/incoming-control-search').parseRegistrySearchDate
   const parseRegistrySearchDateRange: typeof import('../../server/utils/incoming-control-search').parseRegistrySearchDateRange
   const passwordNeedsReHash: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/password').passwordNeedsReHash
+  const preferencesPatchSchema: typeof import('../../shared/utils/user-preferences').preferencesPatchSchema
+  const preferencesSchema: typeof import('../../shared/utils/user-preferences').preferencesSchema
   const prisma: typeof import('../../server/utils/prisma').prisma
   const promisifyNodeListener: typeof import('../../node_modules/h3/dist/index').promisifyNodeListener
   const protocolHandbookDto: typeof import('../../server/utils/lab-handbook-dto').protocolHandbookDto
@@ -236,6 +243,7 @@ declare global {
   const softDelete: typeof import('../../server/utils/auditLog').softDelete
   const splitCookiesString: typeof import('../../node_modules/h3/dist/index').splitCookiesString
   const storeFileLocally: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/storage').storeFileLocally
+  const tableSchema: typeof import('../../shared/utils/user-preferences').tableSchema
   const toEventHandler: typeof import('../../node_modules/h3/dist/index').toEventHandler
   const toNodeListener: typeof import('../../node_modules/h3/dist/index').toNodeListener
   const toPlainHandler: typeof import('../../node_modules/h3/dist/index').toPlainHandler
@@ -267,10 +275,13 @@ declare global {
   export type { MigrationDocument } from '../../shared/utils/migration-document'
   import('../../shared/utils/migration-document')
   // @ts-ignore
+  export type { UserPreferences } from '../../shared/utils/user-preferences'
+  import('../../shared/utils/user-preferences')
+  // @ts-ignore
   export type { AccessActionName, AccessSubjectKind, AccessSource, AccessBlock, AccessCell, AccessRow, AccessSnapshot, AccessChange, AccessMutation, AccessSubjectOption } from '../../shared/types/access-management'
   import('../../shared/types/access-management')
   // @ts-ignore
-  export type { ChatPerson, ChatMessageDto, ChatDialog, ChatInbox, ChatHistory, ChatContacts } from '../../shared/types/chat'
+  export type { ChatPerson, ChatMessageDto, ChatDialog, ChatInbox, ChatHistory, ChatContacts, ChatGroup } from '../../shared/types/chat'
   import('../../shared/types/chat')
   // @ts-ignore
   export type { ExportKind, ExportStatus, ExportJobView } from '../../shared/types/lab-export'
@@ -450,6 +461,7 @@ export { useImage } from '/home/local_adm/Projects/MyPlatform/node_modules/@nuxt
 export { normalizeAdminLogins, isSystemAdminLogin, decideAccess } from '/home/local_adm/Projects/MyPlatform/shared/utils/access-decision';
 export { normalizeLocationName, locationNameKey } from '/home/local_adm/Projects/MyPlatform/shared/utils/lab-location-name';
 export { detectMigrationDocument } from '/home/local_adm/Projects/MyPlatform/shared/utils/migration-document';
+export { displaySchema, notificationsSchema, tableSchema, preferencesSchema, preferencesPatchSchema, defaultPreferences, normalizePreferences, allowNotification } from '/home/local_adm/Projects/MyPlatform/shared/utils/user-preferences';
 export { ACCESS_ACTIONS } from '/home/local_adm/Projects/MyPlatform/shared/types/access-management';
 export { EXPORT_KINDS, EXPORT_COLUMNS } from '/home/local_adm/Projects/MyPlatform/shared/types/lab-export';
 export { defineOAuthAppleEventHandler } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-auth-utils/dist/runtime/server/lib/oauth/apple';

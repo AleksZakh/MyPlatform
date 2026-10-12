@@ -215,11 +215,7 @@ function deselectAllColumns() {
 
 
 function resetToDefault() {
-  resetSettings()
-
-  tempVisibleColumns.value = [
-    ...tableSettings.value.visibleColumns,
-  ]
+  tempVisibleColumns.value = LAB_TABLE_COLUMNS.filter(column => column.defaultVisible).map(column => column.id);
 }
 
 
@@ -227,7 +223,7 @@ async function handleSave() {
   saving.value = true
 
   try {
-    updateVisibleColumns(
+    await updateVisibleColumns(
       tempVisibleColumns.value,
     )
 

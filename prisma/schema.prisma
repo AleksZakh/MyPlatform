@@ -708,6 +708,8 @@ enum AccessAction {
 }
 
 model User {
+  preferences UserPreference?
+
   passwordResetTokenHash   String? @unique @db.VarChar(64)
   passwordResetExpiresAt   DateTime?
   passwordResetRequestedAt DateTime?
@@ -998,4 +1000,12 @@ model DomainChatInvitation {
   sender User @relation("ChatInvitationSender", fields: [senderId], references: [id], onDelete: Restrict)
   @@index([senderId, reservedAt])
   @@map("domain_chat_invitations")
+}
+
+model UserPreference {
+  userId Int @id
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  data Json
+  updatedAt DateTime @updatedAt
+  @@map("user_preferences")
 }

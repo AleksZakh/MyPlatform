@@ -22,6 +22,7 @@ export default defineNuxtPlugin(() => {
       const { ticket } = await $fetch<{ ticket: string }>('/api/realtime/ticket', { method: 'POST', headers: { 'x-space-realtime': '1' } });
       if (current !== generation) return;
       const url = new URL('/ws', location.href); url.protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      if (import.meta.dev && location.protocol === 'http:') {url.port = '5050';}
       const socket = ws = new WebSocket(url);
       watchdog = setTimeout(() => socket.close(), 10000);
       socket.onopen = () => socket.send(JSON.stringify({ type: 'auth', ticket }));

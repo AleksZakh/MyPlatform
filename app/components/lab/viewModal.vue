@@ -1,9 +1,13 @@
 <template>
   <UModal
+    :fullscreen="expanded"
     class="custom-modal"
     :ui="{
       content:
-        'sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl w-full bg-gray-100',
+        expanded ? 'space-record-window w-screen max-w-none h-dvh max-h-dvh bg-gray-100 flex flex-col' : 'space-record-window sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl w-full max-h-[94vh] bg-gray-100 flex flex-col',
+      body: 'flex-1 min-h-0 overflow-auto',
+      header: 'shrink-0',
+      footer: 'shrink-0',
     }"
   >
     <template #header>
@@ -17,6 +21,7 @@
             <p class="text-sm text-gray-500 dark:text-gray-400" > Просмотр данных записи </p>
           </div>
         </div>
+        <UButton variant="outline" color="neutral" :aria-label="expanded ? 'Свернуть окно' : 'Развернуть окно'" :aria-pressed="expanded" @click="expanded = !expanded">{{ expanded ? 'Свернуть' : 'Развернуть' }}</UButton>
         <UButton
           variant="ghost"
           color="neutral"
@@ -426,6 +431,7 @@
 
 
 <script setup lang="ts">
+const { expanded } = useRecordWindow();
 import {
   defineComponent,
   h,

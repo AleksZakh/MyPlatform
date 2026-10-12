@@ -167,6 +167,13 @@ declare module "nitropack/types" {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/chat/conversations/index.get').default>>>>
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/chat/conversations/index.post').default>>>>
     }
+    '/api/chat/groups/:id': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/chat/groups/[id].get').default>>>>
+      'patch': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/chat/groups/[id].patch').default>>>>
+    }
+    '/api/chat/groups': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/chat/groups/index.post').default>>>>
+    }
     '/api/chat/invitations': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/chat/invitations.post').default>>>>
     }
@@ -365,6 +372,10 @@ declare module "nitropack/types" {
     }
     '/api/navigation': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/navigation.get').default>>>>
+    }
+    '/api/profile/preferences': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/profile/preferences.get').default>>>>
+      'patch': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/profile/preferences.patch').default>>>>
     }
     '/api/public/health': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/public/health.get').default>>>>

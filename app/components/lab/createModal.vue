@@ -1,5 +1,6 @@
 <template>
   <UModal
+    :fullscreen="expanded"
     :close="{
       onClick: () =>
         emit('close', false),
@@ -7,7 +8,7 @@
     class="custom-modal bg-sky-100 shadow-blue-200 max-h-full w-full border border-gray-300"
     :ui="{
       content:
-        'max-w-[1500px] max-h-[94vh] bg-gray-100 overflow-hidden flex flex-col',
+        expanded ? 'space-record-window w-screen max-w-none h-dvh max-h-dvh bg-gray-100 overflow-hidden flex flex-col' : 'space-record-window max-w-[1500px] max-h-[94vh] bg-gray-100 overflow-hidden flex flex-col',
       body:
         'min-h-0 flex-1 overflow-y-auto overflow-x-hidden',
       header:
@@ -45,6 +46,7 @@
           </div>
         </div>
 
+        <UButton variant="outline" color="neutral" :aria-label="expanded ? 'Свернуть окно' : 'Развернуть окно'" :aria-pressed="expanded" @click="expanded = !expanded">{{ expanded ? 'Свернуть' : 'Развернуть' }}</UButton>
         <UButton
           variant="ghost"
           color="neutral"
@@ -802,7 +804,7 @@
 
 
         <div
-          class="relative"
+          class="relative sticky bottom-0 z-10 bg-white border-t border-gray-300"
         >
           <div
             class="flex w-full gap-6 justify-end px-2 py-4"
@@ -834,6 +836,7 @@
 
 
 <script setup lang="ts">
+const { expanded } = useRecordWindow();
 import * as z from 'zod'
 
 import type {

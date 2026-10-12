@@ -10,7 +10,7 @@ export interface DeleteOptions {
   onError?: (error: string) => void;
 }
 export const useRecordDelete = () => {
-  const toast = useToast();
+  const toast = useSpaceToast();
   const loading = ref(false);
   const { canDelete, refreshDeletePermission } = useDeletePermission('lab.sampling-tests');
   const deleteRecord = async (options: DeleteOptions): Promise<boolean> => {

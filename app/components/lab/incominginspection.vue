@@ -483,6 +483,7 @@ const {
 
 const {
   tableSettings,
+  updateColumnOrder,
 } = useTableSettings()
 
 
@@ -870,36 +871,10 @@ const table =
   })
 
 
-watch(
-  visibleColumnIds,
-  newIds => {
-    const visibleSet =
-      new Set(newIds)
-
-    const preserved =
-      columnOrder.value.filter(
-        id =>
-          visibleSet.has(id),
-      )
-
-    const preservedSet =
-      new Set(preserved)
-
-    const missing =
-      newIds.filter(
-        id =>
-          !preservedSet.has(id),
-      )
-
-    columnOrder.value = [
-      ...preserved,
-      ...missing,
-    ]
-  },
-  {
-    immediate: true,
-  },
-)
+watch(tableSettings, value => {
+  const visible = new Set(value.visibleColumns);
+  columnOrder.value = value.columnOrder.filter(id => visible.has(id));
+}, { immediate: true });
 
 
 watch(search, () => {
@@ -922,10 +897,12 @@ function getHeaderByColumnId(
 }
 
 
-function onDragEnd() {
+async function onDragEnd() {
   table.setColumnOrder(
     [...columnOrder.value],
   )
+  try { await updateColumnOrder([...columnOrder.value]); }
+  catch { columnOrder.value = tableSettings.value.columnOrder.filter(id => visibleColumnIds.value.includes(id)); }
 }
 
 
@@ -955,13 +932,7 @@ const onPageSizeChange =
   }
 
 
-const handleSettingsSave =
-  (columns: string[]) => {
-    tableSettings.value
-      .visibleColumns = [
-        ...columns,
-      ]
-  }
+const handleSettingsSave = (_columns: string[]) => { /* Shared profile is already updated. */ }
 
 
 const handleFilterPanel =

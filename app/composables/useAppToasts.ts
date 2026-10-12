@@ -3,7 +3,7 @@ const tostStatus = ["primary", "secondary", "success", "info", "warning", "error
 type TostStatusType = typeof tostStatus[number];
 
 export const useAppToasts = () => {
-    const toast = useToast();
+    const toast = useSpaceToast();
     const showTost = (title:string, msg:string, status:TostStatusType, icon:string, pausa:number) => {
         return toast.add({
         title: title,

@@ -8,7 +8,7 @@ export interface UpdateOptions {
 }
 
 export const useRecordUpdate = () => {
-  const toast = useToast();
+  const toast = useSpaceToast();
   const loading = ref(false);
 
   const updateRecord = async (options: UpdateOptions): Promise<boolean> => {

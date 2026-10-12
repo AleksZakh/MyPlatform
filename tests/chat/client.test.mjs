@@ -7,6 +7,7 @@ const dom = new JSDOM('<div id="app"></div>', { url: 'https://space.test' });
 for (const key of ['window', 'document', 'Element', 'SVGElement', 'HTMLElement']) globalThis[key] = dom.window[key];
 const vue = await import('vue');
 for (const key of ['ref', 'computed', 'watch', 'reactive', 'onMounted', 'onBeforeUnmount']) globalThis[key] = vue[key];
+globalThis.useChatNotification = () => ({observe() {}, reset() {}});
 const session = { loggedIn: vue.ref(true), user: vue.ref({ id: 1 }) };
 globalThis.useUserSession = () => session;
 globalThis.__presence = vue.reactive({ users: [], chatRevision: 0, isConnected: true });
