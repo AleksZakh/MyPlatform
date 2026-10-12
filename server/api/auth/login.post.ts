@@ -1,3 +1,4 @@
+import { resolveAuthenticatedDomainUser } from '../../services/invited-domain-login';
 // server/api/auth/login.post.ts
 
 import { logger } from '../../utils/logger';
@@ -8,7 +9,6 @@ import {
 } from '../../services/ad-directory.service';
 
 import {
-  ensureDomainUser,
   assertDomainUserCanLogin,
 } from '../../services/domain-user.service';
 
@@ -233,7 +233,7 @@ export default defineEventHandler(async (event) => {
    * по directoryObjectId.
    */
   const appUser =
-    await ensureDomainUser(
+    await resolveAuthenticatedDomainUser(
       directoryUser,
     );
 

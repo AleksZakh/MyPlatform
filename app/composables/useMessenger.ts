@@ -1,10 +1,12 @@
-import type { ChatDialog, ChatHistory, ChatInbox, ChatMessageDto, ChatPerson } from '~~/shared/types/chat';
+import type { ChatContacts, ChatDialog, ChatHistory, ChatInbox, ChatMessageDto, ChatPerson } from '~~/shared/types/chat';
 import { useWebSocketStore } from '~/stores/websocket.store';
 export function useMessenger() {
   const { loggedIn, user } = useUserSession();
   const presence = useWebSocketStore();
-  const open = ref(false), search = ref(''), tab = ref<'dialogs' | 'online'>('dialogs');
+  const open = ref(false), search = ref(''), tab = ref<'dialogs' | 'contacts' | 'online'>('dialogs');
   const inbox = ref<ChatInbox>({ dialogs: [], unread: 0 }), contacts = ref<ChatPerson[]>([]);
+  const invitee = ref<ChatPerson | null>(null), inviting = ref(false), invitationNotice = ref('');
+  const contactsMore = ref(false), contactsLoading = ref(false);
   const active = ref<ChatDialog | null>(null), messages = ref<ChatMessageDto[]>([]);
   const error = ref(''), sending = ref(false), loading = ref(false), hasOlder = ref(false), draft = ref('');
   const pending = reactive(new Map<number, { clientId: string; body: string }>());
@@ -15,7 +17,7 @@ export function useMessenger() {
   const headers = { 'x-space-chat': '1' };
   const myId = computed(() => user.value?.id || 0);
   function status(person: ChatPerson) { return presence.users.find(p => p.id === `${person.authType}:${person.id}`)?.status || 'offline'; }
-  const people = computed<ChatPerson[]>(() => search.value.trim() ? contacts.value : presence.users.filter(p => Number(p.id.split(':')[1]) !== myId.value).map(p => ({ id: Number(p.id.split(':')[1]), authType: p.id.split(':')[0]!, fullName: p.name, login: p.login, status: 'ACTIVE' })).filter(p => Number.isSafeInteger(p.id)));
+  const people = computed<ChatPerson[]>(() => search.value.trim() || tab.value === 'contacts' ? contacts.value : presence.users.filter(p => Number(p.id.split(':')[1]) !== myId.value).map(p => ({ id: Number(p.id.split(':')[1]), authType: p.id.split(':')[0]!, fullName: p.name, login: p.login, status: 'ACTIVE' })).filter(p => Number.isSafeInteger(p.id)));
   function fail(e: any) { error.value = e?.data?.message || 'Не удалось выполнить запрос. Попробуйте ещё раз.'; }
   async function refreshInbox() {
     if (!loggedIn.value || inboxBusy) return;
@@ -32,6 +34,7 @@ export function useMessenger() {
     messages.value = [...new Map([...messages.value, ...rows].map(m => [m.id, m])).values()].sort((a, b) => a.id - b.id);
   }
   async function select(dialog: ChatDialog) {
+    invitee.value = null; invitationNotice.value = '';
     opening++;
     if (active.value) drafts.set(active.value.id, draft.value);
     active.value = dialog; draft.value = drafts.get(dialog.id) || pending.get(dialog.id)?.body || '';
@@ -46,6 +49,14 @@ export function useMessenger() {
     finally { if (g === generation) loading.value = false; }
   }
   async function start(person: ChatPerson) {
+    invitationNotice.value = ''; invitee.value = null;
+    if (person.status === 'PENDING_ACTIVATION' && person.authType === 'DOMAIN') {
+      opening++; generation++;
+      if (active.value) drafts.set(active.value.id, draft.value);
+      active.value = null; messages.value = []; loading.value = false; error.value = '';
+      invitee.value = person;
+      return;
+    }
     const request = ++opening, owner = myId.value;
     error.value = '';
     try {
@@ -107,20 +118,45 @@ export function useMessenger() {
     } catch { readTo.delete(id); }
   }
   const retrying = computed(() => active.value ? pending.has(active.value.id) && !sending.value : false);
-  function reset() { generation++; searching++; opening++; open.value = false; active.value = null; inbox.value = { dialogs: [], unread: 0 }; messages.value = []; contacts.value = []; draft.value = ''; pending.clear(); drafts.clear(); readTo.clear(); }
+  function reset() { invitee.value = null; invitationNotice.value = ''; contactsMore.value = false; contactsLoading.value = false; generation++; searching++; opening++; open.value = false; active.value = null; inbox.value = { dialogs: [], unread: 0 }; messages.value = []; contacts.value = []; draft.value = ''; pending.clear(); drafts.clear(); readTo.clear(); }
   watch(() => loggedIn.value ? user.value?.id : null, () => { reset(); void refreshInbox(); });
-  watch(open, value => { if (value) { void refreshInbox(); void synchronize(); } });
-  watch(search, value => {
-    clearTimeout(debounce); const n = ++searching;
-    if (!value.trim()) { contacts.value = []; return; }
-    debounce = setTimeout(async () => {
-      try { const rows = await $fetch<ChatPerson[]>('/api/chat/contacts', { query: { q: value } }); if (n === searching) contacts.value = rows; }
-      catch (e) { if (n === searching) fail(e); }
-    }, 250);
+  watch(open, value => { if (value) { void refreshInbox(); void synchronize(); void loadContacts(); } });
+  async function loadContacts(more = false) {
+    if (!loggedIn.value || !open.value || (more && contactsLoading.value)) return;
+    const n = ++searching, value = search.value;
+    contactsLoading.value = true;
+    if (!more) { contacts.value = []; contactsMore.value = false; }
+    try {
+      const result = await $fetch<ChatContacts>('/api/chat/contacts', { query: { q: value, offset: more ? contacts.value.length : 0 } });
+      if (n !== searching) return;
+      contacts.value = more ? [...contacts.value, ...result.people] : result.people;
+      contactsMore.value = result.hasMore;
+    } catch (e) { if (n === searching) fail(e); }
+    finally { if (n === searching) contactsLoading.value = false; }
+  }
+  async function invite() {
+    const person = invitee.value, owner = myId.value;
+    if (!person || inviting.value) return;
+    inviting.value = true; error.value = ''; invitationNotice.value = '';
+    try {
+      await $fetch('/api/chat/invitations', { method: 'POST', headers, body: { userId: person.id } });
+      if (owner !== myId.value) return;
+      if (invitee.value?.id === person.id) {
+        invitee.value.invitationPending = true;
+        invitationNotice.value = 'Приглашение отправлено. Переписка станет доступна после входа сотрудника в Space.';
+      }
+      await loadContacts();
+    } catch (e) { if (owner === myId.value) fail(e); }
+    finally { inviting.value = false; }
+  }
+  watch([search, tab], () => {
+    clearTimeout(debounce); searching++; contactsLoading.value = false;
+    contacts.value = []; contactsMore.value = false;
+    debounce = setTimeout(() => { void loadContacts(); }, 250);
   });
   watch(() => [presence.chatRevision, presence.isConnected], () => { void refreshInbox(); void synchronize(); });
   function refreshVisible() { if (!document.hidden) { void refreshInbox(); void synchronize(); } }
   onMounted(() => { refreshVisible(); timer = setInterval(refreshVisible, 15000); document.addEventListener('visibilitychange', refreshVisible); window.addEventListener('focus', refreshVisible); });
   onBeforeUnmount(() => { generation++; clearInterval(timer); clearTimeout(debounce); document.removeEventListener('visibilitychange', refreshVisible); window.removeEventListener('focus', refreshVisible); });
-  return { open, search, tab, inbox, active, messages, error, sending, loading, hasOlder, draft, myId, people, presence, retrying, status, select, start, older, send, markVisibleRead, refreshInbox };
+  return { invitee, inviting, invitationNotice, invite, contactsMore, contactsLoading, loadContacts, open, search, tab, inbox, active, messages, error, sending, loading, hasOlder, draft, myId, people, presence, retrying, status, select, start, older, send, markVisibleRead, refreshInbox };
 }

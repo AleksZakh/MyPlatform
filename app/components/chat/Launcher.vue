@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useMessenger } from '~/composables/useMessenger';
 const chat = useMessenger();
-const { open, search, tab, inbox, active, messages, error, sending, loading, hasOlder, draft, myId, people, presence, retrying } = chat;
+const { invitee, inviting, invitationNotice, contactsMore, contactsLoading, open, search, tab, inbox, active, messages, error, sending, loading, hasOlder, draft, myId, people, presence, retrying } = chat;
 const { loggedIn } = useUserSession();
 const panel = ref<HTMLElement | null>(null);
 const atBottom = ref(true);
@@ -29,14 +29,16 @@ const statusText = (s: string) => s === 'online' ? 'В сети' : s === 'away' 
         <aside class="border-r border-gray-200 dark:border-gray-700 flex flex-col min-h-0">
           <div class="p-3 space-y-2">
             <UInput v-model="search" class="w-full" placeholder="Найти пользователя" aria-label="Поиск собеседника" />
-            <div class="flex flex-wrap gap-1"><UButton size="xs" :variant="tab === 'dialogs' ? 'solid' : 'ghost'" @click="tab = 'dialogs'">Диалоги</UButton><UButton size="xs" :variant="tab === 'online' ? 'solid' : 'ghost'" @click="tab = 'online'">Online</UButton></div>
+            <div class="flex flex-wrap gap-1"><UButton size="xs" :variant="tab === 'dialogs' ? 'solid' : 'ghost'" @click="tab = 'dialogs'">Диалоги</UButton><UButton size="xs" :variant="tab === 'contacts' ? 'solid' : 'ghost'" @click="tab = 'contacts'">Контакты</UButton><UButton size="xs" :variant="tab === 'online' ? 'solid' : 'ghost'" @click="tab = 'online'">Online</UButton></div>
           </div>
           <div class="overflow-y-auto flex-1">
-            <template v-if="search.trim() || tab === 'online'">
+            <template v-if="search.trim() || tab !== 'dialogs'">
               <button v-for="person in people" :key="person.id" class="w-full text-left p-3 hover:bg-sky-50 dark:hover:bg-gray-800 border-b border-gray-100 dark:border-gray-800" @click="chat.start(person)">
-                <span class="block font-medium break-words">{{ person.fullName || person.login }}</span><span class="text-xs text-gray-500">{{ statusText(chat.status(person)) }}</span>
+                <span class="block font-medium break-words">{{ person.fullName || person.login }}</span><span class="text-xs text-gray-500">{{ person.status === 'ACTIVE' ? statusText(chat.status(person)) : 'Ожидает активации' }}</span><span v-if="person.department" class="block text-xs text-gray-500">{{ person.department }}</span>
               </button>
-              <p v-if="!people.length" class="p-3 text-sm text-gray-500">{{ search ? 'Пользователи не найдены' : 'Нет других подключённых пользователей' }}</p>
+              <UButton v-if="contactsMore && (search.trim() || tab === 'contacts')" variant="ghost" :loading="contactsLoading" @click="chat.loadContacts(true)">Показать ещё</UButton>
+              <p v-if="contactsLoading" class="p-3 text-sm" role="status">Загрузка…</p>
+              <p v-if="!people.length && !contactsLoading" class="p-3 text-sm text-gray-500">{{ search || tab === 'contacts' ? 'Пользователи не найдены' : 'Нет других подключённых пользователей' }}</p>
             </template>
             <template v-else>
               <button v-for="dialog in inbox.dialogs" :key="dialog.id" class="w-full text-left p-3 border-b border-gray-100 dark:border-gray-800" :class="active?.id === dialog.id ? 'bg-sky-50 dark:bg-gray-800' : ''" @click="chat.select(dialog)">
@@ -45,14 +47,22 @@ const statusText = (s: string) => s === 'online' ? 'В сети' : s === 'away' 
                 <span class="block truncate text-xs text-gray-500">{{ dialog.last?.body || 'Новый диалог' }}</span>
                 <span class="text-xs">{{ statusText(chat.status(dialog.peer)) }}</span>
               </button>
-              <p v-if="!inbox.dialogs.length" class="p-3 text-sm text-gray-500">Выберите пользователя во вкладке Online или найдите по имени.</p>
+              <p v-if="!inbox.dialogs.length" class="p-3 text-sm text-gray-500">Выберите пользователя во вкладке «Контакты» или найдите по имени.</p>
             </template>
           </div>
         </aside>
         <section class="flex flex-col min-w-0 min-h-0">
           <p v-if="!presence.isConnected" class="px-3 py-2 bg-amber-50 text-amber-900 text-xs">Нет WebSocket-соединения. Сообщения синхронизируются каждые 15 секунд.</p>
           <p v-if="error" role="alert" class="p-3 text-red-600 text-sm">{{ error }}</p>
-          <template v-if="active">
+          <div v-if="invitee" class="m-auto p-6 space-y-4 max-w-lg">
+            <h3 class="font-semibold">{{ invitee.fullName || invitee.login }}</h3>
+            <p>Этот сотрудник ещё не активирован в Space. Хотите отправить ему приглашение на корпоративную электронную почту?</p>
+            <p v-if="invitee.hasEmail === false" class="text-sm text-amber-700">В профиле Space почта не указана. Перед отправкой проверим актуальный адрес в AD.</p>
+            <p v-if="invitationNotice" role="status">{{ invitationNotice }}</p>
+            <p v-else-if="invitee.invitationPending" class="text-sm">Ранее уже отправлено приглашение. Ожидаем вход сотрудника. Повторная отправка возможна не чаще раза в сутки.</p>
+            <div class="flex gap-2"><UButton :loading="inviting" :disabled="!!invitationNotice" @click="chat.invite">Отправить приглашение</UButton><UButton variant="ghost" :disabled="inviting" @click="invitee = null">Отмена</UButton></div>
+          </div>
+          <template v-else-if="active">
             <header class="p-3 border-b border-gray-200 dark:border-gray-700"><strong>{{ active.peer.fullName || active.peer.login }}</strong><span class="block text-xs text-gray-500">{{ active.peer.status === 'ACTIVE' ? statusText(chat.status(active.peer)) : 'Учётная запись отключена' }}</span></header>
             <div ref="panel" class="flex-1 overflow-y-auto p-4 space-y-3" @scroll="scrolled">
               <UButton v-if="hasOlder" size="xs" variant="ghost" :loading="loading" @click="loadOlder">Предыдущие сообщения</UButton>

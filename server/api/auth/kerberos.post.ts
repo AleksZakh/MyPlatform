@@ -1,8 +1,9 @@
+import { resolveAuthenticatedDomainUser } from '../../services/invited-domain-login';
 import { randomUUID } from 'node:crypto'
 import { createError, defineEventHandler, getRequestHeader, setResponseHeader } from 'h3'
 import { logger } from '../../utils/logger'
 import { findDomainUser } from '../../services/ad-directory.service'
-import { ensureDomainUser, assertDomainUserCanLogin } from '../../services/domain-user.service'
+import { assertDomainUserCanLogin } from '../../services/domain-user.service'
 
 /** nginx validates SPNEGO. Nitro must only be reachable through the trusted proxy. */
 export default defineEventHandler(async event => {
@@ -21,7 +22,7 @@ export default defineEventHandler(async event => {
     const directoryUser = await findDomainUser(remoteUser, event)
     if (!directoryUser) throw createError({ statusCode: 403, statusMessage: 'KERBEROS_DIRECTORY_USER_NOT_FOUND' })
     mark('account')
-    const appUser = await ensureDomainUser(directoryUser)
+    const appUser = await resolveAuthenticatedDomainUser(directoryUser)
     assertDomainUserCanLogin(directoryUser, appUser)
     const user = {
       id: appUser.id, login: appUser.login || directoryUser.login,
