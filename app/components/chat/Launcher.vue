@@ -46,7 +46,7 @@ const statusText = (s: string) => s === 'online' ? 'В сети' : s === 'away' 
               <button v-for="dialog in inbox.dialogs" :key="dialog.id" class="w-full text-left p-3 border-b border-gray-100 dark:border-gray-800" :class="active?.id === dialog.id ? 'bg-sky-50 dark:bg-gray-800' : ''" @click="chat.select(dialog)">
                 <span v-if="dialog.kind === 'GROUP'" class="text-xs mr-1">Группа ·</span><span class="font-medium break-words">{{ dialog.peer.fullName || dialog.peer.login }}</span>
                 <UBadge v-if="dialog.unread" class="ml-1" size="xs">{{ dialog.unread }}</UBadge>
-                <span class="block truncate text-xs text-gray-500">{{ dialog.last?.body || 'Новый диалог' }}</span>
+                <span class="block truncate text-xs text-gray-500">{{ dialog.last?.deletedAt ? 'Сообщение удалено' : dialog.last?.body || 'Новый диалог' }}</span>
                 <span class="text-xs">{{ dialog.kind === 'GROUP' ? (dialog.archived ? 'В архиве' : `Участников: ${dialog.memberCount}`) : statusText(chat.status(dialog.peer)) }}</span>
               </button>
               <p v-if="!inbox.dialogs.length" class="p-3 text-sm text-gray-500">Выберите пользователя во вкладке «Контакты» или найдите по имени.</p>
@@ -72,8 +72,8 @@ const statusText = (s: string) => s === 'online' ? 'В сети' : s === 'away' 
               <div v-for="message in messages" :key="message.id" class="flex" :class="message.senderId === myId ? 'justify-end' : 'justify-start'">
                 <div class="max-w-[90%] rounded-xl px-3 py-2" :class="message.senderId === myId ? 'bg-sky-100 text-gray-900' : 'bg-gray-100 text-gray-900'">
                   <p v-if="active.kind === 'GROUP'" class="text-xs font-semibold mb-1">{{ message.sender?.fullName || message.sender?.login || `Участник #${message.senderId}` }}</p>
-                  <p class="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{{ message.body }}</p>
-                  <p class="text-[11px] text-gray-500 mt-1">{{ time(message.createdAt) }}<span v-if="message.senderId === myId"> · {{ message.id <= active.peerReadThrough ? (active.kind === 'GROUP' ? 'Прочитано всеми' : 'Прочитано') : 'Отправлено' }}</span></p>
+                  <ChatMessageContent :message="message" :can-change="message.senderId === myId && !active.archived" @changed="chat.messageChanged" />
+                  <p class="text-[11px] text-gray-500 mt-1">{{ time(message.createdAt) }}<span v-if="message.editedAt && !message.deletedAt"> · изменено</span><span v-if="message.senderId === myId"> · {{ message.id <= active.peerReadThrough ? (active.kind === 'GROUP' ? 'Прочитано всеми' : 'Прочитано') : 'Отправлено' }}</span></p>
                 </div>
               </div>
             </div>

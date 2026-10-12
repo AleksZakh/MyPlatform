@@ -18,6 +18,7 @@ test('database: migration, membership, idempotence, history and read cursors', a
     for (const statement of migration.split(';').filter(s => s.trim())) await prisma.$executeRawUnsafe(statement);
     const groups = await readFile(new URL('../../prisma/migrations/20261012150000_chat_groups/migration.sql', import.meta.url), 'utf8');
     for (const statement of groups.split(';').filter(s => s.trim())) await prisma.$executeRawUnsafe(statement);
+    for (const statement of (await readFile(new URL('../../prisma/migrations/20261012195000_chat_message_actions/migration.sql', import.meta.url), 'utf8')).split(';').filter(s => s.trim())) await prisma.$executeRawUnsafe(statement);
     await prisma.$executeRawUnsafe(`INSERT INTO app_users(id,status) VALUES(1,'ACTIVE'),(2,'ACTIVE'),(3,'ACTIVE'),(4,'BLOCKED')`);
     const a = await openDialog(1, 2), b = await openDialog(2, 1);
     assert.equal(a.id, b.id);

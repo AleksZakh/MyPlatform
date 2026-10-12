@@ -15,10 +15,12 @@ const result = await build({ entryPoints: [new URL('../../app/composables/useMes
 const { useMessenger } = await import('data:text/javascript;base64,' + Buffer.from(result.outputFiles[0].text).toString('base64'));
 const dialog = { id: 1, peer: { id: 2, login: 'other', fullName: 'Other', status: 'ACTIVE', authType: 'DOMAIN' }, readThrough: 0, peerReadThrough: 0, unread: 0, last: null };
 const row = (id, senderId) => ({ id, senderId, conversationId: 1, body: `message ${id}`, clientId: 'test', createdAt: new Date().toISOString() });
+let changedRows = [];
 const sent = []; let fail = true, invitationCalls = 0;
 globalThis.$fetch = async (path, options = {}) => {
   if (path === '/api/chat/contacts') return { people: [dialog.peer], hasMore: false };
   if (path === '/api/chat/invitations') { if (options.body.directoryObjectId) assert.equal(options.body.directoryLogin, 'cached'); invitationCalls++; return { sent: true }; }
+  if (path.endsWith('/changes')) { const messages=changedRows.filter(m=>m.revision>(options.query?.since || 0)); return {messages,cursor:messages.at(-1)?.revision || options.query?.since || 0,hasMore:false}; }
   if (path === '/api/chat/conversations') return { dialogs: [dialog], unread: 0 };
   if (options.method === 'POST' && path.endsWith('/messages')) { sent.push({ ...options.body }); if (fail) throw { data: { message: 'Network interruption' } }; return row(8, 1); }
   if (path.endsWith('/messages')) return { messages: options.query?.after !== undefined ? [row(7, 2), row(8, 1)].filter(r => r.id > options.query.after) : [row(6, 2)], hasMore: false, peerReadThrough: 0 };
@@ -53,6 +55,14 @@ test('client retries same message ID and catches incoming messages before own re
     assert.equal(sent.length, 2); assert.equal(sent[0].clientId, sent[1].clientId);
     assert.deepEqual(chat.messages.value.map(m => m.id), [6, 7, 8]);
     assert.equal(chat.draft.value, '');
+    changedRows = [{...row(6,2), body:'Edited old message', revision:1, editedAt:new Date().toISOString()}];
+    globalThis.__presence.chatRevision++; await vue.nextTick(); await new Promise(resolve=>setTimeout(resolve,20));
+    assert.equal(chat.messages.value.find(m=>m.id===6).body,'Edited old message');
+    changedRows.push({...row(7,2),body:'',revision:2,deletedAt:new Date().toISOString()});
+    globalThis.__presence.chatRevision++; await vue.nextTick(); await new Promise(resolve=>setTimeout(resolve,20));
+    assert.ok(chat.messages.value.find(m=>m.id===7).deletedAt);
+    assert.equal(chat.messages.value.find(m=>m.id===7).body,'');
+    assert.deepEqual(chat.messages.value.map(m=>m.id),[6,7,8]);
     session.loggedIn.value = false; await vue.nextTick();
     assert.equal(chat.messages.value.length, 0); assert.equal(chat.open.value, false);
   } finally { app.unmount(); dom.window.close(); }

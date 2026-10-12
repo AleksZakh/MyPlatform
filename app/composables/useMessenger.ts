@@ -1,4 +1,4 @@
-import type { ChatContacts, ChatDialog, ChatHistory, ChatInbox, ChatMessageDto, ChatPerson } from '~~/shared/types/chat';
+import type { ChatChanges, ChatContacts, ChatDialog, ChatHistory, ChatInbox, ChatMessageDto, ChatPerson } from '~~/shared/types/chat';
 import { useWebSocketStore } from '~/stores/websocket.store';
 export function useMessenger() {
   const { loggedIn, user } = useUserSession();
@@ -14,6 +14,7 @@ export function useMessenger() {
   const pending = reactive(new Map<number, { clientId: string; body: string }>());
   const drafts = new Map<number, string>();
   const readTo = new Map<number, number>();
+  const changeCursors = new Map<number, number>();
   let generation = 0, searching = 0, opening = 0, historyBusy = false, inboxBusy = false;
   let timer: ReturnType<typeof setInterval> | undefined, debounce: ReturnType<typeof setTimeout> | undefined;
   const headers = { 'x-space-chat': '1' };
@@ -38,12 +39,22 @@ export function useMessenger() {
     finally { inboxBusy = false; }
   }
   function merge(rows: ChatMessageDto[]) {
-    messages.value = [...new Map([...messages.value, ...rows].map(m => [m.id, m])).values()].sort((a, b) => a.id - b.id);
+    const map = new Map(messages.value.map(m => [m.id, m]));
+    for (const row of rows) {
+      const prior = map.get(row.id);
+      if (!prior || (row.revision || 0) >= (prior.revision || 0)) map.set(row.id, { ...prior, ...row });
+    }
+    messages.value = [...map.values()].sort((a,b) => a.id - b.id);
+  }
+  async function messageChanged(row: ChatMessageDto) {
+    if (active.value?.id === row.conversationId) merge([row]);
+    await refreshInbox();
   }
   async function select(dialog: ChatDialog) {
     invitee.value = null; invitationNotice.value = '';
     opening++;
     if (active.value) drafts.set(active.value.id, draft.value);
+    changeCursors.delete(dialog.id);
     active.value = dialog; draft.value = drafts.get(dialog.id) || pending.get(dialog.id)?.body || '';
     messages.value = []; hasOlder.value = false; error.value = ''; loading.value = true;
     const g = ++generation;
@@ -88,12 +99,23 @@ export function useMessenger() {
         merge(result.messages); active.value!.peerReadThrough = result.peerReadThrough;
         more = result.hasMore && result.messages.length > 0;
       }
+      // Refresh edits/deletions independently of the cursor for newly sent messages.
+      let changedMore = true;
+      while (changedMore && g === generation) {
+        const result = await $fetch<ChatChanges>(`/api/chat/conversations/${id}/changes`, { query: { since: changeCursors.get(id) || 0 } });
+        if (g !== generation) return;
+        const loaded = new Set(messages.value.map(m => m.id));
+        merge(result.messages.filter(m => loaded.has(m.id)));
+        changeCursors.set(id, result.cursor);
+        changedMore = result.hasMore && result.messages.length > 0;
+      }
     } catch (e) { if (g === generation) fail(e); }
     finally { historyBusy = false; }
   }
   async function older() {
     if (!active.value || loading.value || !hasOlder.value) return;
-    const g = generation, id = active.value.id; loading.value = true;
+    const g = ++generation, id = active.value.id; loading.value = true;
+    changeCursors.delete(id);
     try {
       const result = await $fetch<ChatHistory>(`/api/chat/conversations/${id}/messages`, { query: { before: messages.value[0]?.id } });
       if (g === generation) { merge(result.messages); hasOlder.value = result.hasMore; }
@@ -125,7 +147,7 @@ export function useMessenger() {
     } catch { readTo.delete(id); }
   }
   const retrying = computed(() => active.value ? pending.has(active.value.id) && !sending.value : false);
-  function reset() { chatNotice.reset(); invitee.value = null; invitationNotice.value = ''; contactsMore.value = false; contactsLoading.value = false; generation++; searching++; opening++; open.value = false; active.value = null; inbox.value = { dialogs: [], unread: 0 }; messages.value = []; contacts.value = []; draft.value = ''; pending.clear(); drafts.clear(); readTo.clear(); }
+  function reset() { chatNotice.reset(); invitee.value = null; invitationNotice.value = ''; contactsMore.value = false; contactsLoading.value = false; generation++; searching++; opening++; open.value = false; active.value = null; inbox.value = { dialogs: [], unread: 0 }; messages.value = []; contacts.value = []; draft.value = ''; pending.clear(); drafts.clear(); readTo.clear(); changeCursors.clear(); }
   watch(() => loggedIn.value ? user.value?.id : null, () => { reset(); void refreshInbox(); });
   watch(open, value => { if (value) { void refreshInbox(); void synchronize(); void loadContacts(); } });
   async function loadContacts(more = false) {
@@ -172,5 +194,5 @@ export function useMessenger() {
     const dialog = inbox.value.dialogs.find(d => d.id === id);
     if (dialog && active.value?.id !== id) await select(dialog);
   }
-  return { groupChanged, contactsWarning, invitee, inviting, invitationNotice, invite, contactsMore, contactsLoading, loadContacts, open, search, tab, inbox, active, messages, error, sending, loading, hasOlder, draft, myId, people, presence, retrying, status, select, start, older, send, markVisibleRead, refreshInbox };
+  return { messageChanged, groupChanged, contactsWarning, invitee, inviting, invitationNotice, invite, contactsMore, contactsLoading, loadContacts, open, search, tab, inbox, active, messages, error, sending, loading, hasOlder, draft, myId, people, presence, retrying, status, select, start, older, send, markVisibleRead, refreshInbox };
 }

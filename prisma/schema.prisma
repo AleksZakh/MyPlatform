@@ -948,6 +948,7 @@ model LabExportSettings {
 
 
 model ChatConversation {
+  messageVersion Int @default(0)
   id Int @id @default(autoincrement())
   pairKey String @unique @db.VarChar(64)
   kind String @default("DIRECT") @db.VarChar(10)
@@ -973,6 +974,10 @@ model ChatMember {
   @@map("chat_members")
 }
 model ChatMessage {
+  revision Int @default(0)
+  editedAt DateTime?
+  deletedAt DateTime?
+  revisions ChatMessageRevision[]
   id Int @id @default(autoincrement())
   conversationId Int
   senderId Int
@@ -983,6 +988,7 @@ model ChatMessage {
   sender User @relation(fields: [senderId], references: [id], onDelete: Restrict)
   @@unique([senderId, clientId])
   @@index([conversationId, id])
+  @@index([conversationId, revision])
   @@map("chat_messages")
 }
 
@@ -1008,4 +1014,18 @@ model UserPreference {
   data Json
   updatedAt DateTime @updatedAt
   @@map("user_preferences")
+}
+
+model ChatMessageRevision {
+  id Int @id @default(autoincrement())
+  messageId Int
+  actorId Int
+  previousBody String @db.VarChar(4000)
+  previousRevision Int
+  action String @db.VarChar(10)
+  createdAt DateTime @default(now())
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  @@unique([messageId, previousRevision])
+  @@index([actorId, createdAt])
+  @@map("chat_message_revisions")
 }

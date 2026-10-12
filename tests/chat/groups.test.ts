@@ -16,6 +16,7 @@ test('group roles, full history, unread baseline, removal, archive, retry and di
   for (const sql of base.split(';').filter(s => s.trim())) await prisma.$executeRawUnsafe(sql);
   const migration = await readFile(new URL('../../prisma/migrations/20261012150000_chat_groups/migration.sql', import.meta.url),'utf8');
   for (const sql of migration.split(';').filter(s=>s.trim())) await prisma.$executeRawUnsafe(sql);
+  for (const sql of (await readFile('prisma/migrations/20261012195000_chat_message_actions/migration.sql','utf8')).split(';').filter(s=>s.trim())) await prisma.$executeRawUnsafe(sql);
   for (let id=1;id<=7;id++) await prisma.user.create({data:{id,authType:'DOMAIN',login:`user-${id}`,status:id===5?'BLOCKED':'ACTIVE'}});
   const request = randomUUID();
   const group = await createGroup(1, 'Рабочая группа', [2,3], request);
