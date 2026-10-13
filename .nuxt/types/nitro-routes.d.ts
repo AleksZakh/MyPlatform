@@ -379,6 +379,15 @@ declare module "nitropack/types" {
     '/api/navigation': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/navigation.get').default>>>>
     }
+    '/api/profile/avatar': {
+      'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/profile/avatar.delete').default>>>>
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/profile/avatar.get').default>>>>
+      'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/profile/avatar.put').default>>>>
+    }
+    '/api/profile': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/profile/index.get').default>>>>
+      'patch': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/profile/index.patch').default>>>>
+    }
     '/api/profile/preferences': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/profile/preferences.get').default>>>>
       'patch': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/profile/preferences.patch').default>>>>

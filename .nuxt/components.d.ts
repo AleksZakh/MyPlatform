@@ -52,6 +52,7 @@ export const LabViewModal: typeof import("../app/components/lab/viewModal.vue")[
 export const NavigateTopnav: typeof import("../app/components/navigate/topnav.vue")['default']
 export const NavigationAdminCacheControl: typeof import("../app/components/navigation/AdminCacheControl.vue")['default']
 export const NavigationAppNavigation: typeof import("../app/components/navigation/AppNavigation.vue")['default']
+export const ProfilePersonalDetails: typeof import("../app/components/profile/PersonalDetails.vue")['default']
 export const SidebarMenuData: typeof import("../app/components/sidebar/menu.data")['default']
 export const SidebarMenu: typeof import("../app/components/sidebar/menu.vue")['default']
 export const UiTableSettings: typeof import("../app/components/ui/Table/settings.vue")['default']
@@ -252,6 +253,7 @@ export const LazyLabViewModal: LazyComponent<typeof import("../app/components/la
 export const LazyNavigateTopnav: LazyComponent<typeof import("../app/components/navigate/topnav.vue")['default']>
 export const LazyNavigationAdminCacheControl: LazyComponent<typeof import("../app/components/navigation/AdminCacheControl.vue")['default']>
 export const LazyNavigationAppNavigation: LazyComponent<typeof import("../app/components/navigation/AppNavigation.vue")['default']>
+export const LazyProfilePersonalDetails: LazyComponent<typeof import("../app/components/profile/PersonalDetails.vue")['default']>
 export const LazySidebarMenuData: LazyComponent<typeof import("../app/components/sidebar/menu.data")['default']>
 export const LazySidebarMenu: LazyComponent<typeof import("../app/components/sidebar/menu.vue")['default']>
 export const LazyUiTableSettings: LazyComponent<typeof import("../app/components/ui/Table/settings.vue")['default']>

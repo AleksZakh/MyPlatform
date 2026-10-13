@@ -14,6 +14,7 @@ declare global {
   const defaultPreferences: typeof import('../../shared/utils/user-preferences').defaultPreferences
   const detectMigrationDocument: typeof import('../../shared/utils/migration-document').detectMigrationDocument
   const displaySchema: typeof import('../../shared/utils/user-preferences').displaySchema
+  const emptyProfileDetails: typeof import('../../shared/utils/profile-details').emptyProfileDetails
   const isSystemAdminLogin: typeof import('../../shared/utils/access-decision').isSystemAdminLogin
   const locationNameKey: typeof import('../../shared/utils/lab-location-name').locationNameKey
   const normalizeAdminLogins: typeof import('../../shared/utils/access-decision').normalizeAdminLogins
@@ -22,6 +23,7 @@ declare global {
   const notificationsSchema: typeof import('../../shared/utils/user-preferences').notificationsSchema
   const preferencesPatchSchema: typeof import('../../shared/utils/user-preferences').preferencesPatchSchema
   const preferencesSchema: typeof import('../../shared/utils/user-preferences').preferencesSchema
+  const profileDetailsSchema: typeof import('../../shared/utils/profile-details').profileDetailsSchema
   const tableSchema: typeof import('../../shared/utils/user-preferences').tableSchema
 }
 // for type re-export
@@ -29,6 +31,9 @@ declare global {
   // @ts-ignore
   export type { MigrationDocument } from '../../shared/utils/migration-document'
   import('../../shared/utils/migration-document')
+  // @ts-ignore
+  export type { ProfileDetails, PersonalProfileDto } from '../../shared/utils/profile-details'
+  import('../../shared/utils/profile-details')
   // @ts-ignore
   export type { UserPreferences } from '../../shared/utils/user-preferences'
   import('../../shared/utils/user-preferences')

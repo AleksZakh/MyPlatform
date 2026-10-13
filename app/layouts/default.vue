@@ -25,7 +25,7 @@
 
       <!-- Контент текущей страницы -->
       <main
-        class="main-content relative"
+        class="main-content relative bg-transparent"
         :class="{
           'main-content--contained':
             isContainedMain,
@@ -80,6 +80,7 @@ const isContainedMain =
       route.path ===
         '/admin/users' ||
       route.path === '/admin/access' ||
+      route.path === '/profile' ||
       route.path.startsWith(
         '/admin/users/',
       ),

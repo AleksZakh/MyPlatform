@@ -43,6 +43,7 @@ declare global {
   const displaySchema: typeof import('../../shared/utils/user-preferences').displaySchema
   const effect: typeof import('vue').effect
   const effectScope: typeof import('vue').effectScope
+  const emptyProfileDetails: typeof import('../../shared/utils/profile-details').emptyProfileDetails
   const extendLocale: typeof import('../../node_modules/@nuxt/ui/dist/runtime/composables/defineLocale').extendLocale
   const extractShortcuts: typeof import('../../node_modules/@nuxt/ui/dist/runtime/composables/defineShortcuts').extractShortcuts
   const getAppManifest: typeof import('../../node_modules/nuxt/dist/app/composables/manifest').getAppManifest
@@ -101,6 +102,7 @@ declare global {
   const preloadPayload: typeof import('../../node_modules/nuxt/dist/app/composables/payload').preloadPayload
   const preloadRouteComponents: typeof import('../../node_modules/nuxt/dist/app/composables/preload').preloadRouteComponents
   const prerenderRoutes: typeof import('../../node_modules/nuxt/dist/app/composables/ssr').prerenderRoutes
+  const profileDetailsSchema: typeof import('../../shared/utils/profile-details').profileDetailsSchema
   const provide: typeof import('vue').provide
   const proxyRefs: typeof import('vue').proxyRefs
   const reactive: typeof import('vue').reactive
@@ -177,6 +179,7 @@ declare global {
   const useNuxtApp: typeof import('../../node_modules/nuxt/dist/app/nuxt').useNuxtApp
   const useNuxtData: typeof import('../../node_modules/nuxt/dist/app/composables/asyncData').useNuxtData
   const useOverlay: typeof import('../../node_modules/@nuxt/ui/dist/runtime/composables/useOverlay').useOverlay
+  const usePersonalProfile: typeof import('../../app/composables/usePersonalProfile').usePersonalProfile
   const usePinia: typeof import('../../node_modules/@pinia/nuxt/dist/runtime/composables').usePinia
   const usePreviewMode: typeof import('../../node_modules/nuxt/dist/app/composables/preview').usePreviewMode
   const useProfileSettings: typeof import('../../app/composables/useProfileSettings').useProfileSettings
@@ -303,6 +306,9 @@ declare global {
   export type { MigrationDocument } from '../../shared/utils/migration-document'
   import('../../shared/utils/migration-document')
   // @ts-ignore
+  export type { ProfileDetails, PersonalProfileDto } from '../../shared/utils/profile-details'
+  import('../../shared/utils/profile-details')
+  // @ts-ignore
   export type { UserPreferences } from '../../shared/utils/user-preferences'
   import('../../shared/utils/user-preferences')
   // @ts-ignore
@@ -367,6 +373,7 @@ declare module 'vue' {
     readonly displaySchema: UnwrapRef<typeof import('../../shared/utils/user-preferences')['displaySchema']>
     readonly effect: UnwrapRef<typeof import('vue')['effect']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
+    readonly emptyProfileDetails: UnwrapRef<typeof import('../../shared/utils/profile-details')['emptyProfileDetails']>
     readonly extendLocale: UnwrapRef<typeof import('../../node_modules/@nuxt/ui/dist/runtime/composables/defineLocale')['extendLocale']>
     readonly extractShortcuts: UnwrapRef<typeof import('../../node_modules/@nuxt/ui/dist/runtime/composables/defineShortcuts')['extractShortcuts']>
     readonly getAppManifest: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/manifest')['getAppManifest']>
@@ -425,6 +432,7 @@ declare module 'vue' {
     readonly preloadPayload: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/payload')['preloadPayload']>
     readonly preloadRouteComponents: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/preload')['preloadRouteComponents']>
     readonly prerenderRoutes: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/ssr')['prerenderRoutes']>
+    readonly profileDetailsSchema: UnwrapRef<typeof import('../../shared/utils/profile-details')['profileDetailsSchema']>
     readonly provide: UnwrapRef<typeof import('vue')['provide']>
     readonly proxyRefs: UnwrapRef<typeof import('vue')['proxyRefs']>
     readonly reactive: UnwrapRef<typeof import('vue')['reactive']>
@@ -501,6 +509,7 @@ declare module 'vue' {
     readonly useNuxtApp: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/nuxt')['useNuxtApp']>
     readonly useNuxtData: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/asyncData')['useNuxtData']>
     readonly useOverlay: UnwrapRef<typeof import('../../node_modules/@nuxt/ui/dist/runtime/composables/useOverlay')['useOverlay']>
+    readonly usePersonalProfile: UnwrapRef<typeof import('../../app/composables/usePersonalProfile')['usePersonalProfile']>
     readonly usePinia: UnwrapRef<typeof import('../../node_modules/@pinia/nuxt/dist/runtime/composables')['usePinia']>
     readonly usePreviewMode: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/preview')['usePreviewMode']>
     readonly useProfileSettings: UnwrapRef<typeof import('../../app/composables/useProfileSettings')['useProfileSettings']>

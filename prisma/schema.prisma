@@ -708,6 +708,7 @@ enum AccessAction {
 }
 
 model User {
+  profile UserProfile?
   preferences UserPreference?
 
   passwordResetTokenHash   String? @unique @db.VarChar(64)
@@ -1028,4 +1029,19 @@ model ChatMessageRevision {
   @@unique([messageId, previousRevision])
   @@index([actorId, createdAt])
   @@map("chat_message_revisions")
+}
+
+model UserProfile {
+  userId Int @id
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nickname String @default("") @db.VarChar(80)
+  contactEmail String @default("") @db.VarChar(255)
+  additionalEmail String @default("") @db.VarChar(255)
+  phone String @default("") @db.VarChar(50)
+  postalAddress String @default("") @db.VarChar(500)
+  about String @default("") @db.VarChar(1000)
+  avatar Bytes?
+  avatarVersion String? @db.VarChar(36)
+  updatedAt DateTime @updatedAt
+  @@map("user_profiles")
 }

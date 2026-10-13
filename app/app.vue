@@ -1,7 +1,8 @@
 <template>
   <UApp :locale="ru">
     <NuxtLayout>
-      <div class="bg-gray-50 h-full relative ">
+      <div class="bg-gray-50 relative"
+        :class="containedPage ? 'h-full min-h-0 overflow-hidden' : 'min-h-full'">
         <NuxtPage />
       </div>
     </NuxtLayout>
@@ -9,6 +10,9 @@
 </template>
 
 <script setup lang="ts">
+const route = useRoute();
+const containedPage = computed(() => route.path === '/profile' || route.path === '/admin/access' || route.path === '/admin/users' || route.path.startsWith('/admin/users/'));
+
 import { ru } from '@nuxt/ui/locale';
 
 // Здесь можно добавить глобальную логику для всего приложения, если нужно
