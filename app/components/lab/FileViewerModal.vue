@@ -50,7 +50,6 @@
                     enableDownload: true,
                     renderMode: 'canvas'
                   }"
-                  verbosity: 0 
                 />
 
                 <!-- Фоллбек (запасной вариант) на случай ошибки загрузки библиотеки -->
