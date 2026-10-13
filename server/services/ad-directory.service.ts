@@ -77,6 +77,7 @@ export const DIRECTORY_USER_ATTRIBUTES = [
 
   'mail',
 
+  'company',
   'department',
   'title',
 
@@ -116,6 +117,7 @@ export interface RawDirectoryUser {
 
   mail?: unknown;
 
+  company?: unknown;
   department?: unknown;
   title?: unknown;
 
@@ -170,6 +172,7 @@ export interface DirectoryUser {
 
   email: string | null;
 
+  company?: string | null;
   department: string | null;
 
   position: string | null;
@@ -581,6 +584,8 @@ export const normalizeDirectoryUser = (
       normalizeEmail(
         rawUser.mail,
       ),
+
+    company: normalizeText(rawUser.company),
 
     department:
       normalizeText(

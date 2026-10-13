@@ -117,6 +117,11 @@ export async function ensureDomainUser(
       ?.trim() ||
     null;
 
+  // Older directory-cache entries may not contain company yet.
+  const organization = directoryUser.company === undefined
+    ? undefined
+    : directoryUser.company?.trim() || null;
+
   const position =
     directoryUser.position
       ?.trim() ||
@@ -252,6 +257,7 @@ export async function ensureDomainUser(
         existingUser.directoryObjectId !==
           directoryObjectId ||
         existingUser.email !== email ||
+        (organization !== undefined && existingUser.organization !== organization) ||
         existingUser.fullName !==
           fullName ||
         existingUser.position !==
@@ -273,6 +279,7 @@ export async function ensureDomainUser(
           directoryObjectId,
           email,
           fullName,
+          ...(organization !== undefined ? { organization } : {}),
           position,
 
           /**
@@ -312,6 +319,8 @@ export async function ensureDomainUser(
         email,
 
         fullName,
+
+        organization: organization ?? null,
 
         position,
 
