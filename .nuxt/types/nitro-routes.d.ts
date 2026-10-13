@@ -156,9 +156,15 @@ declare module "nitropack/types" {
     '/api/chat/contacts': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/chat/contacts.get').default>>>>
     }
+    '/api/chat/conversations/:id/changes': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/chat/conversations/[id]/changes.get').default>>>>
+    }
     '/api/chat/conversations/:id/messages': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/chat/conversations/[id]/messages.get').default>>>>
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/chat/conversations/[id]/messages.post').default>>>>
+    }
+    '/api/chat/conversations/:id/messages/:messageId': {
+      'patch': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/chat/conversations/[id]/messages/[messageId].patch').default>>>>
     }
     '/api/chat/conversations/:id/read': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/chat/conversations/[id]/read.post').default>>>>

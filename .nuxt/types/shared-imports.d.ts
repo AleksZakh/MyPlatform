@@ -36,7 +36,7 @@ declare global {
   export type { AccessActionName, AccessSubjectKind, AccessSource, AccessBlock, AccessCell, AccessRow, AccessSnapshot, AccessChange, AccessMutation, AccessSubjectOption } from '../../shared/types/access-management'
   import('../../shared/types/access-management')
   // @ts-ignore
-  export type { ChatPerson, ChatMessageDto, ChatDialog, ChatInbox, ChatHistory, ChatContacts, ChatGroup } from '../../shared/types/chat'
+  export type { ChatPerson, ChatMessageDto, ChatDialog, ChatInbox, ChatHistory, ChatContacts, ChatGroup, ChatChanges } from '../../shared/types/chat'
   import('../../shared/types/chat')
   // @ts-ignore
   export type { ExportKind, ExportStatus, ExportJobView } from '../../shared/types/lab-export'

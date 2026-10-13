@@ -27,6 +27,7 @@ export const AdminUserDirectory: typeof import("../app/components/admin/UserDire
 export const AuthRegistrationRequestForm: typeof import("../app/components/auth/RegistrationRequestForm.vue")['default']
 export const ChatGroupPanel: typeof import("../app/components/chat/GroupPanel.vue")['default']
 export const ChatLauncher: typeof import("../app/components/chat/Launcher.vue")['default']
+export const ChatMessageContent: typeof import("../app/components/chat/MessageContent.vue")['default']
 export const LabDeletionJournal: typeof import("../app/components/lab/DeletionJournal.vue")['default']
 export const LabDocumentUploadField: typeof import("../app/components/lab/DocumentUploadField.vue")['default']
 export const LabEventJournal: typeof import("../app/components/lab/EventJournal.vue")['default']
@@ -226,6 +227,7 @@ export const LazyAdminUserDirectory: LazyComponent<typeof import("../app/compone
 export const LazyAuthRegistrationRequestForm: LazyComponent<typeof import("../app/components/auth/RegistrationRequestForm.vue")['default']>
 export const LazyChatGroupPanel: LazyComponent<typeof import("../app/components/chat/GroupPanel.vue")['default']>
 export const LazyChatLauncher: LazyComponent<typeof import("../app/components/chat/Launcher.vue")['default']>
+export const LazyChatMessageContent: LazyComponent<typeof import("../app/components/chat/MessageContent.vue")['default']>
 export const LazyLabDeletionJournal: LazyComponent<typeof import("../app/components/lab/DeletionJournal.vue")['default']>
 export const LazyLabDocumentUploadField: LazyComponent<typeof import("../app/components/lab/DocumentUploadField.vue")['default']>
 export const LazyLabEventJournal: LazyComponent<typeof import("../app/components/lab/EventJournal.vue")['default']>

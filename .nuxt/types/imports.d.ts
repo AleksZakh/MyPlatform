@@ -141,6 +141,7 @@ declare global {
   const useAuth: typeof import('../../app/composables/useAuth').useAuth
   const useAuthStore: typeof import('../../app/stores/auth.store').useAuthStore
   const useChatGroupEditor: typeof import('../../app/composables/useChatGroupEditor').useChatGroupEditor
+  const useChatMessageActions: typeof import('../../app/composables/useChatMessageActions').useChatMessageActions
   const useChatNotification: typeof import('../../app/composables/useChatNotification').useChatNotification
   const useColorMode: typeof import('../../node_modules/@nuxtjs/color-mode/dist/runtime/composables').useColorMode
   const useContentSearch: typeof import('../../node_modules/@nuxt/ui/dist/runtime/composables/useContentSearch').useContentSearch
@@ -308,7 +309,7 @@ declare global {
   export type { AccessActionName, AccessSubjectKind, AccessSource, AccessBlock, AccessCell, AccessRow, AccessSnapshot, AccessChange, AccessMutation, AccessSubjectOption } from '../../shared/types/access-management'
   import('../../shared/types/access-management')
   // @ts-ignore
-  export type { ChatPerson, ChatMessageDto, ChatDialog, ChatInbox, ChatHistory, ChatContacts, ChatGroup } from '../../shared/types/chat'
+  export type { ChatPerson, ChatMessageDto, ChatDialog, ChatInbox, ChatHistory, ChatContacts, ChatGroup, ChatChanges } from '../../shared/types/chat'
   import('../../shared/types/chat')
   // @ts-ignore
   export type { ExportKind, ExportStatus, ExportJobView } from '../../shared/types/lab-export'
@@ -464,6 +465,7 @@ declare module 'vue' {
     readonly useAuth: UnwrapRef<typeof import('../../app/composables/useAuth')['useAuth']>
     readonly useAuthStore: UnwrapRef<typeof import('../../app/stores/auth.store')['useAuthStore']>
     readonly useChatGroupEditor: UnwrapRef<typeof import('../../app/composables/useChatGroupEditor')['useChatGroupEditor']>
+    readonly useChatMessageActions: UnwrapRef<typeof import('../../app/composables/useChatMessageActions')['useChatMessageActions']>
     readonly useChatNotification: UnwrapRef<typeof import('../../app/composables/useChatNotification')['useChatNotification']>
     readonly useColorMode: UnwrapRef<typeof import('../../node_modules/@nuxtjs/color-mode/dist/runtime/composables')['useColorMode']>
     readonly useContentSearch: UnwrapRef<typeof import('../../node_modules/@nuxt/ui/dist/runtime/composables/useContentSearch')['useContentSearch']>

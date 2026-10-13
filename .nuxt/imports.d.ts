@@ -41,6 +41,7 @@ export { useAccessMatrix } from '../app/composables/useAccessMatrix';
 export { useAppToasts } from '../app/composables/useAppToasts';
 export { useAuth } from '../app/composables/useAuth';
 export { useChatGroupEditor } from '../app/composables/useChatGroupEditor';
+export { useChatMessageActions } from '../app/composables/useChatMessageActions';
 export { useChatNotification } from '../app/composables/useChatNotification';
 export { useDeletePermission } from '../app/composables/useDeletePermission';
 export { requestDeletionReason, deletionErrorMessage } from '../app/composables/useDeletionReason';
@@ -66,7 +67,7 @@ export { normalizeLocationName, locationNameKey } from '../shared/utils/lab-loca
 export { detectMigrationDocument, MigrationDocument } from '../shared/utils/migration-document';
 export { displaySchema, notificationsSchema, tableSchema, preferencesSchema, preferencesPatchSchema, defaultPreferences, normalizePreferences, allowNotification, UserPreferences } from '../shared/utils/user-preferences';
 export { ACCESS_ACTIONS, AccessActionName, AccessSubjectKind, AccessSource, AccessBlock, AccessCell, AccessRow, AccessSnapshot, AccessChange, AccessMutation, AccessSubjectOption } from '../shared/types/access-management';
-export { ChatPerson, ChatMessageDto, ChatDialog, ChatInbox, ChatHistory, ChatContacts, ChatGroup } from '../shared/types/chat';
+export { ChatPerson, ChatMessageDto, ChatDialog, ChatInbox, ChatHistory, ChatContacts, ChatGroup, ChatChanges } from '../shared/types/chat';
 export { EXPORT_KINDS, EXPORT_COLUMNS, ExportKind, ExportStatus, ExportJobView } from '../shared/types/lab-export';
 export { StructureMember } from '../shared/types/structure-member';
 export { useAuthStore, actions, useIsLoadingStore } from '../app/stores/auth.store';

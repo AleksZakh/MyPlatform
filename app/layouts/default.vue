@@ -25,7 +25,7 @@
 
       <!-- Контент текущей страницы -->
       <main
-        class="main-content relative bg-red-300"
+        class="main-content relative"
         :class="{
           'main-content--contained':
             isContainedMain,
