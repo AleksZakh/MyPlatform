@@ -2335,9 +2335,9 @@ watch(
      * Место принадлежит объекту.
      * После смены объекта старое значение нельзя оставлять.
      */
-    state.samplingTest
-      .testLocationName =
-        ''
+    // state.samplingTest
+    //   .testLocationName =
+    //     ''
 
   },
 

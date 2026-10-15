@@ -17,5 +17,8 @@ export default defineEventHandler(async event => {
     const data = { ...normalizePreferences(row?.data), ...parsed.data };
     await tx.userPreference.upsert({ where: { userId: user.id }, create: { userId: user.id, data }, update: { data } });
     return data;
+  }, {
+    maxWait: 5000,
+    timeout: 15000,
   });
 });
