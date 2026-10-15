@@ -45,6 +45,8 @@
     </div>
 
 
+    <NuxtLink to="/library" class="flex items-center gap-2 px-4"><Icon name="lucide:library" />Библиотека</NuxtLink>
+
     <!-- User -->
 
     <div class="flex ml-auto items-center gap-4">

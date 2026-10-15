@@ -1045,3 +1045,69 @@ model UserProfile {
   updatedAt DateTime @updatedAt
   @@map("user_profiles")
 }
+
+model LibraryCategory {
+  id Int @id @default(autoincrement())
+  name String @db.VarChar(200)
+  parentId Int?
+  parent LibraryCategory? @relation("LibraryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children LibraryCategory[] @relation("LibraryTree")
+  icon String @default("lucide:book-open") @db.VarChar(100)
+  iconAssetId String? @db.Uuid
+  iconAsset LibraryAsset? @relation(fields: [iconAssetId], references: [id], onDelete: Restrict)
+  position Int @default(0)
+  books LibraryBookCategory[]
+  legacyId Int? @unique
+  @@index([parentId, position])
+  @@map("library_categories")
+}
+model LibraryBook {
+  id Int @id @default(autoincrement())
+  title String @db.VarChar(500)
+  author String @default("") @db.VarChar(500)
+  publisher String @default("") @db.VarChar(300)
+  year String @default("") @db.VarChar(100)
+  city String @default("") @db.VarChar(500)
+  keywords String @default("") @db.VarChar(2000)
+  note String @default("") @db.Text
+  series String @default("") @db.VarChar(300)
+  issue String @default("") @db.VarChar(100)
+  pdfId String @db.Uuid
+  pdf LibraryAsset @relation("LibraryPdf", fields: [pdfId], references: [id], onDelete: Restrict)
+  coverId String? @db.Uuid
+  cover LibraryAsset? @relation("LibraryCover", fields: [coverId], references: [id], onDelete: Restrict)
+  categories LibraryBookCategory[]
+  version Int @default(1)
+  deletedAt DateTime?
+  deletedBy Int?
+  createdBy Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  legacyId Int? @unique
+  legacyData Json?
+  clientKey String? @unique @db.Uuid
+  @@index([deletedAt, title])
+  @@index([series, year])
+  @@map("library_books")
+}
+model LibraryBookCategory {
+  bookId Int
+  categoryId Int
+  book LibraryBook @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  category LibraryCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  @@id([bookId, categoryId])
+  @@index([categoryId])
+  @@map("library_book_categories")
+}
+model LibraryAsset {
+  id String @id @db.Uuid
+  kind String @db.VarChar(10)
+  filename String @db.VarChar(255)
+  size Int
+  ownerId Int?
+  createdAt DateTime @default(now())
+  pdfBooks LibraryBook[] @relation("LibraryPdf")
+  coverBooks LibraryBook[] @relation("LibraryCover")
+  categoryIcons LibraryCategory[]
+  @@map("library_assets")
+}

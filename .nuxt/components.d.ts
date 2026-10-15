@@ -49,6 +49,11 @@ export const LabHandbook: typeof import("../app/components/lab/handbook.vue")['d
 export const LabIncominginspection: typeof import("../app/components/lab/incominginspection.vue")['default']
 export const LabResearch: typeof import("../app/components/lab/research.vue")['default']
 export const LabViewModal: typeof import("../app/components/lab/viewModal.vue")['default']
+export const LibraryBookCard: typeof import("../app/components/library/BookCard.vue")['default']
+export const LibraryBookEditor: typeof import("../app/components/library/BookEditor.vue")['default']
+export const LibraryCatalogEditor: typeof import("../app/components/library/CatalogEditor.vue")['default']
+export const LibraryHomeTile: typeof import("../app/components/library/HomeTile.vue")['default']
+export const LibrarySeriesImport: typeof import("../app/components/library/SeriesImport.vue")['default']
 export const NavigateTopnav: typeof import("../app/components/navigate/topnav.vue")['default']
 export const NavigationAdminCacheControl: typeof import("../app/components/navigation/AdminCacheControl.vue")['default']
 export const NavigationAppNavigation: typeof import("../app/components/navigation/AppNavigation.vue")['default']
@@ -250,6 +255,11 @@ export const LazyLabHandbook: LazyComponent<typeof import("../app/components/lab
 export const LazyLabIncominginspection: LazyComponent<typeof import("../app/components/lab/incominginspection.vue")['default']>
 export const LazyLabResearch: LazyComponent<typeof import("../app/components/lab/research.vue")['default']>
 export const LazyLabViewModal: LazyComponent<typeof import("../app/components/lab/viewModal.vue")['default']>
+export const LazyLibraryBookCard: LazyComponent<typeof import("../app/components/library/BookCard.vue")['default']>
+export const LazyLibraryBookEditor: LazyComponent<typeof import("../app/components/library/BookEditor.vue")['default']>
+export const LazyLibraryCatalogEditor: LazyComponent<typeof import("../app/components/library/CatalogEditor.vue")['default']>
+export const LazyLibraryHomeTile: LazyComponent<typeof import("../app/components/library/HomeTile.vue")['default']>
+export const LazyLibrarySeriesImport: LazyComponent<typeof import("../app/components/library/SeriesImport.vue")['default']>
 export const LazyNavigateTopnav: LazyComponent<typeof import("../app/components/navigate/topnav.vue")['default']>
 export const LazyNavigationAdminCacheControl: LazyComponent<typeof import("../app/components/navigation/AdminCacheControl.vue")['default']>
 export const LazyNavigationAppNavigation: LazyComponent<typeof import("../app/components/navigation/AppNavigation.vue")['default']>

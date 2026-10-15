@@ -49,6 +49,11 @@ interface _GlobalComponents {
   LabIncominginspection: typeof import("../../app/components/lab/incominginspection.vue")['default']
   LabResearch: typeof import("../../app/components/lab/research.vue")['default']
   LabViewModal: typeof import("../../app/components/lab/viewModal.vue")['default']
+  LibraryBookCard: typeof import("../../app/components/library/BookCard.vue")['default']
+  LibraryBookEditor: typeof import("../../app/components/library/BookEditor.vue")['default']
+  LibraryCatalogEditor: typeof import("../../app/components/library/CatalogEditor.vue")['default']
+  LibraryHomeTile: typeof import("../../app/components/library/HomeTile.vue")['default']
+  LibrarySeriesImport: typeof import("../../app/components/library/SeriesImport.vue")['default']
   NavigateTopnav: typeof import("../../app/components/navigate/topnav.vue")['default']
   NavigationAdminCacheControl: typeof import("../../app/components/navigation/AdminCacheControl.vue")['default']
   NavigationAppNavigation: typeof import("../../app/components/navigation/AppNavigation.vue")['default']
@@ -250,6 +255,11 @@ interface _GlobalComponents {
   LazyLabIncominginspection: LazyComponent<typeof import("../../app/components/lab/incominginspection.vue")['default']>
   LazyLabResearch: LazyComponent<typeof import("../../app/components/lab/research.vue")['default']>
   LazyLabViewModal: LazyComponent<typeof import("../../app/components/lab/viewModal.vue")['default']>
+  LazyLibraryBookCard: LazyComponent<typeof import("../../app/components/library/BookCard.vue")['default']>
+  LazyLibraryBookEditor: LazyComponent<typeof import("../../app/components/library/BookEditor.vue")['default']>
+  LazyLibraryCatalogEditor: LazyComponent<typeof import("../../app/components/library/CatalogEditor.vue")['default']>
+  LazyLibraryHomeTile: LazyComponent<typeof import("../../app/components/library/HomeTile.vue")['default']>
+  LazyLibrarySeriesImport: LazyComponent<typeof import("../../app/components/library/SeriesImport.vue")['default']>
   LazyNavigateTopnav: LazyComponent<typeof import("../../app/components/navigate/topnav.vue")['default']>
   LazyNavigationAdminCacheControl: LazyComponent<typeof import("../../app/components/navigation/AdminCacheControl.vue")['default']>
   LazyNavigationAppNavigation: LazyComponent<typeof import("../../app/components/navigation/AppNavigation.vue")['default']>

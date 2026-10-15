@@ -1,0 +1,418 @@
+.space-library {
+  --lib-bg: #fff;
+  --lib-panel: #f5f6f8;
+  --lib-text: #303944;
+  --lib-border: #d8dde4;
+  --lib-accent: #e97800;
+  box-sizing: border-box;
+  color: var(--lib-text);
+  background: var(--lib-bg);
+  padding: 16px;
+  min-width: 0;
+  font-size: 14px;
+}
+.dark .space-library {
+  --lib-bg: #111827;
+  --lib-panel: #1f2937;
+  --lib-text: #e5e7eb;
+  --lib-border: #4b5563;
+  --lib-accent: #ffad4d;
+}
+.space-library * {
+  box-sizing: border-box;
+}
+.space-library button,
+.space-library a,
+.space-library input,
+.space-library select,
+.space-library textarea {
+  outline-offset: 3px;
+}
+.space-library button {
+  cursor: pointer;
+}
+.space-library button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.space-library button:focus-visible,
+.space-library a:focus-visible {
+  outline: 2px solid var(--lib-accent);
+}
+.library-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: center;
+  background: var(--lib-panel);
+  padding: 16px;
+}
+.library-heading h1 {
+  font-size: 26px;
+  line-height: 1.2;
+}
+.library-heading p {
+  margin-top: 5px;
+  font-size: 17px;
+}
+.library-search {
+  display: flex;
+  min-width: 260px;
+  width: 40%;
+}
+.library-search input {
+  flex: 1;
+  min-width: 0;
+}
+.library-search button {
+  padding: 8px;
+}
+.space-library input:not([type="checkbox"]):not([type="file"]),
+.space-library select,
+.space-library textarea {
+  border: 1px solid var(--lib-border);
+  border-radius: 5px;
+  background: var(--lib-bg);
+  color: var(--lib-text);
+  padding: 7px;
+  width: 100%;
+}
+.space-library input[type="checkbox"] {
+  accent-color: var(--lib-accent);
+}
+.library-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 0;
+}
+.library-toolbar button,
+.library-dialog footer button,
+.library-dialog form button,
+.library-delete-panel button,
+.library-pagination button {
+  border: 1px solid var(--lib-border);
+  border-radius: 5px;
+  padding: 7px 12px;
+  background: var(--lib-panel);
+}
+.library-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  gap: 16px;
+}
+.library-content {
+  min-width: 0;
+}
+.library-sections {
+  border-left: 1px solid var(--lib-border);
+  padding-left: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-self: start;
+  position: sticky;
+  top: 0;
+  max-height: 75vh;
+  overflow: auto;
+}
+.library-sections button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  padding: 14px 10px;
+  font-size: 17px;
+  border-left: 4px solid transparent;
+}
+.library-sections img,
+.library-sections .iconify {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+}
+.library-sections button.active {
+  border-color: var(--lib-accent);
+  color: var(--lib-accent);
+  background: var(--lib-panel);
+}
+.library-tabs {
+  display: flex;
+  overflow-x: auto;
+  white-space: nowrap;
+  gap: 4px;
+  border-bottom: 1px solid var(--lib-border);
+  padding-bottom: 2px;
+}
+.library-tabs button {
+  padding: 14px 12px;
+  border-top: 2px solid transparent;
+}
+.library-tabs button.active {
+  border-color: var(--lib-accent);
+  background: var(--lib-panel);
+}
+.library-results {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  padding: 12px 0;
+}
+.library-books {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 18px;
+}
+.library-card {
+  border: 1px solid var(--lib-border);
+  background: var(--lib-bg);
+  border-radius: 4px;
+  padding: 10px;
+  box-shadow: 0 2px 3px #0001;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.library-cover {
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--lib-panel);
+}
+.library-cover img {
+  max-height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+}
+.library-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+  text-align: center;
+  font-size: 12px;
+  overflow: hidden;
+  max-height: 100%;
+}
+.library-placeholder .iconify {
+  font-size: 38px;
+  margin-bottom: 10px;
+}
+.library-title {
+  font-size: 13px;
+  line-height: 1.35;
+  margin: 10px 0 5px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 3.9em;
+}
+.library-card small {
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.library-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 10px;
+}
+.library-card-actions > span {
+  margin-right: auto;
+  font-size: 12px;
+}
+.library-card-actions a,
+.library-card-actions button {
+  padding: 3px;
+}
+.library-empty {
+  padding: 40px;
+  text-align: center;
+}
+.library-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  padding: 20px;
+}
+.library-group-title {
+  font-size: 17px;
+  margin: 15px 0;
+}
+.library-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: #0008;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overscroll-behavior: contain;
+}
+.library-dialog {
+  background: var(--lib-bg);
+  color: var(--lib-text);
+  border: 1px solid var(--lib-border);
+  border-radius: 9px;
+  box-shadow: 0 15px 45px #0005;
+  width: min(660px, 100%);
+  max-height: 90dvh;
+  overflow: auto;
+  padding: 20px;
+}
+.library-dialog-wide {
+  width: min(960px, 100%);
+}
+.library-dialog header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 15px;
+}
+.library-dialog h2 {
+  font-size: 24px;
+  color: var(--lib-accent);
+}
+.library-dialog header > button {
+  font-size: 28px;
+  padding: 0 7px;
+}
+.library-dialog label {
+  display: block;
+  margin: 10px 0;
+}
+.library-dialog footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+}
+.library-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+.library-primary {
+  background: var(--lib-accent) !important;
+  color: #111 !important;
+}
+.library-drop {
+  border: 1px dashed var(--lib-border);
+  padding: 12px;
+  background: var(--lib-panel);
+}
+.library-drop input {
+  display: block;
+  max-width: 100%;
+  margin: 10px 0;
+}
+.library-category-picker {
+  border: 1px solid var(--lib-border);
+  padding: 8px;
+  max-height: 150px;
+  overflow: auto;
+}
+.library-category-picker input {
+  margin-right: 8px;
+}
+.library-error {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 12px;
+  border-radius: 5px;
+  margin: 10px 0;
+}
+.library-catalog-editor {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.library-category-list {
+  max-height: 50vh;
+  overflow: auto;
+}
+.library-category-list > div {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--lib-border);
+  padding: 8px;
+}
+.library-category-list .library-child {
+  padding-left: 15px;
+  font-size: 12px;
+}
+.library-delete-panel {
+  border: 1px solid var(--lib-accent);
+  padding: 12px;
+  margin-top: 15px;
+}
+.library-delete-panel > * {
+  margin: 5px;
+}
+.library-import-list {
+  max-height: 35vh;
+  overflow: auto;
+}
+.library-import-list > div {
+  display: grid;
+  grid-template-columns: 2fr 80px 80px;
+  gap: 8px;
+  border-bottom: 1px solid var(--lib-border);
+  padding: 8px;
+}
+.library-import-list span,
+.library-import-list p {
+  grid-column: 1/-1;
+  font-size: 12px;
+}
+@media (max-width: 800px) {
+  .library-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .library-search {
+    width: 100%;
+    min-width: 0;
+  }
+  .library-layout {
+    grid-template-columns: 1fr;
+  }
+  .library-sections {
+    grid-row: 1;
+    position: static;
+    flex-direction: row;
+    max-height: none;
+    overflow-x: auto;
+    border: 0;
+    white-space: nowrap;
+  }
+  .library-sections button {
+    font-size: 14px;
+  }
+  .library-form-grid,
+  .library-catalog-editor {
+    grid-template-columns: 1fr;
+  }
+  .library-heading h1 {
+    font-size: 22px;
+  }
+  .library-dialog {
+    padding: 14px;
+  }
+  .library-overlay {
+    padding: 8px;
+  }
+  .library-books {
+    gap: 10px;
+  }
+}

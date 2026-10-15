@@ -376,6 +376,33 @@ declare module "nitropack/types" {
     '/api/lab/test-protocol/migration/verify/:id': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/lab/test-protocol/migration/verify/[id].get').default>>>>
     }
+    '/api/library/assets/:id': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/library/assets/[id].get').default>>>>
+    }
+    '/api/library/assets': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/library/assets/index.post').default>>>>
+    }
+    '/api/library/books/:id': {
+      'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/library/books/[id].delete').default>>>>
+      'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/library/books/[id].put').default>>>>
+    }
+    '/api/library/books/:id/restore': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/library/books/[id]/restore.post').default>>>>
+    }
+    '/api/library/books': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/library/books/index.get').default>>>>
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/library/books/index.post').default>>>>
+    }
+    '/api/library/catalog': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/library/catalog.get').default>>>>
+    }
+    '/api/library/categories/:id': {
+      'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/library/categories/[id].delete').default>>>>
+      'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/library/categories/[id].put').default>>>>
+    }
+    '/api/library/categories': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/library/categories/index.post').default>>>>
+    }
     '/api/navigation': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/navigation.get').default>>>>
     }

@@ -54,6 +54,7 @@
         />
       </div>
     </section>
+    <LibraryHomeTile />
   </div>
 </template>
 

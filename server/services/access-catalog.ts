@@ -2,6 +2,7 @@ import { ACCESS_ACTIONS, type AccessActionName } from '../../shared/types/access
 
 /** Explicit operations for non-table resources. Extend here when adding a feature. */
 const featureActions: Readonly<Record<string, readonly AccessActionName[]>> = {
+  'library.manage': ['VIEW', 'UPDATE'],
   'admin.center': ['VIEW'],
   'admin.users': ['VIEW'],
   'system.audit-log': ['VIEW'],

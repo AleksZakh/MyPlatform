@@ -64,6 +64,7 @@ declare global {
   const isSystemAdminLogin: typeof import('../../shared/utils/access-decision').isSystemAdminLogin
   const isVue2: typeof import('../../node_modules/nuxt/dist/app/compat/vue-demi').isVue2
   const isVue3: typeof import('../../node_modules/nuxt/dist/app/compat/vue-demi').isVue3
+  const libraryAssetUrl: typeof import('../../app/composables/useLibrary').libraryAssetUrl
   const loadPayload: typeof import('../../node_modules/nuxt/dist/app/composables/payload').loadPayload
   const locationNameKey: typeof import('../../shared/utils/lab-location-name').locationNameKey
   const loginNormal: typeof import('../../app/composables/loginNormal').loginNormal
@@ -172,6 +173,8 @@ declare global {
   const useLayout: typeof import('../../node_modules/nuxt/dist/app/composables/layout').useLayout
   const useLazyAsyncData: typeof import('../../node_modules/nuxt/dist/app/composables/asyncData').useLazyAsyncData
   const useLazyFetch: typeof import('../../node_modules/nuxt/dist/app/composables/fetch').useLazyFetch
+  const useLibrary: typeof import('../../app/composables/useLibrary').useLibrary
+  const useLibraryDialog: typeof import('../../app/composables/useLibraryDialog').useLibraryDialog
   const useLink: typeof import('vue-router').useLink
   const useLoadingIndicator: typeof import('../../node_modules/nuxt/dist/app/composables/loading-indicator').useLoadingIndicator
   const useMessenger: typeof import('../../app/composables/useMessenger').useMessenger
@@ -321,6 +324,9 @@ declare global {
   export type { ExportKind, ExportStatus, ExportJobView } from '../../shared/types/lab-export'
   import('../../shared/types/lab-export')
   // @ts-ignore
+  export type { LibraryCategory, LibraryBook, LibraryList } from '../../shared/types/library'
+  import('../../shared/types/library')
+  // @ts-ignore
   export type { StructureMember } from '../../shared/types/structure-member'
   import('../../shared/types/structure-member')
   // @ts-ignore
@@ -394,6 +400,7 @@ declare module 'vue' {
     readonly isSystemAdminLogin: UnwrapRef<typeof import('../../shared/utils/access-decision')['isSystemAdminLogin']>
     readonly isVue2: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/compat/vue-demi')['isVue2']>
     readonly isVue3: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/compat/vue-demi')['isVue3']>
+    readonly libraryAssetUrl: UnwrapRef<typeof import('../../app/composables/useLibrary')['libraryAssetUrl']>
     readonly loadPayload: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/payload')['loadPayload']>
     readonly locationNameKey: UnwrapRef<typeof import('../../shared/utils/lab-location-name')['locationNameKey']>
     readonly loginNormal: UnwrapRef<typeof import('../../app/composables/loginNormal')['loginNormal']>
@@ -502,6 +509,8 @@ declare module 'vue' {
     readonly useLayout: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/layout')['useLayout']>
     readonly useLazyAsyncData: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/asyncData')['useLazyAsyncData']>
     readonly useLazyFetch: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/fetch')['useLazyFetch']>
+    readonly useLibrary: UnwrapRef<typeof import('../../app/composables/useLibrary')['useLibrary']>
+    readonly useLibraryDialog: UnwrapRef<typeof import('../../app/composables/useLibraryDialog')['useLibraryDialog']>
     readonly useLink: UnwrapRef<typeof import('vue-router')['useLink']>
     readonly useLoadingIndicator: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/loading-indicator')['useLoadingIndicator']>
     readonly useMessenger: UnwrapRef<typeof import('../../app/composables/useMessenger')['useMessenger']>

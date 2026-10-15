@@ -44,6 +44,7 @@ export async function getAccessActor(event: H3Event, db: Prisma.TransactionClien
 /** Every call reads current DB state: revocation does not wait for a new login. */
 export async function requirePermission(
   event: H3Event, resourceKey: string, action: AccessAction,
+  options: { auditDenial?: boolean } = {},
 ): Promise<PermissionContext> {
   const actor = await getAccessActor(event)
   const resource = await prisma.accessResource.findUnique({
@@ -93,7 +94,7 @@ export async function requirePermission(
     }
   }
   if (!decision.allowed) {
-    await auditDenied({ event, actorUserId: actor.user.id, actorLogin: actor.user.login,
+    if (options.auditDenial !== false) await auditDenied({ event, actorUserId: actor.user.id, actorLogin: actor.user.login,
       actorEmail: actor.user.email, actorAuthType: actor.user.authType, resourceKey, action })
     throw createError({ statusCode: 403, statusMessage: 'Permission denied',
       data: { code: decision.blockedBy === 'RESOURCE_INACTIVE' ? 'RESOURCE_INACTIVE' : 'PERMISSION_DENIED',

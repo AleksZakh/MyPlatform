@@ -294,6 +294,9 @@ declare global {
   export type { ExportKind, ExportStatus, ExportJobView } from '../../shared/types/lab-export'
   import('../../shared/types/lab-export')
   // @ts-ignore
+  export type { LibraryCategory, LibraryBook, LibraryList } from '../../shared/types/library'
+  import('../../shared/types/library')
+  // @ts-ignore
   export type { StructureMember } from '../../shared/types/structure-member'
   import('../../shared/types/structure-member')
   // @ts-ignore

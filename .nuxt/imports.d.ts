@@ -51,6 +51,8 @@ export { useFilters, Filters } from '../app/composables/useFilters';
 export { useIncomingControl } from '../app/composables/useIncomingControl';
 export { useIncomingControlRegistryLoader } from '../app/composables/useIncomingControlRegistryLoader';
 export { useLabDataLoader, IncomingControlReference, IncomingControlRecord } from '../app/composables/useLabDataLoader';
+export { libraryAssetUrl, useLibrary } from '../app/composables/useLibrary';
+export { useLibraryDialog } from '../app/composables/useLibraryDialog';
 export { useMessenger } from '../app/composables/useMessenger';
 export { usePersonalProfile } from '../app/composables/usePersonalProfile';
 export { useProfileSettings } from '../app/composables/useProfileSettings';
@@ -71,6 +73,7 @@ export { displaySchema, notificationsSchema, tableSchema, preferencesSchema, pre
 export { ACCESS_ACTIONS, AccessActionName, AccessSubjectKind, AccessSource, AccessBlock, AccessCell, AccessRow, AccessSnapshot, AccessChange, AccessMutation, AccessSubjectOption } from '../shared/types/access-management';
 export { ChatPerson, ChatMessageDto, ChatDialog, ChatInbox, ChatHistory, ChatContacts, ChatGroup, ChatChanges } from '../shared/types/chat';
 export { EXPORT_KINDS, EXPORT_COLUMNS, ExportKind, ExportStatus, ExportJobView } from '../shared/types/lab-export';
+export { LibraryCategory, LibraryBook, LibraryList } from '../shared/types/library';
 export { StructureMember } from '../shared/types/structure-member';
 export { useAuthStore, actions, useIsLoadingStore } from '../app/stores/auth.store';
 export { useTableFilterStore } from '../app/stores/tableFilter';
