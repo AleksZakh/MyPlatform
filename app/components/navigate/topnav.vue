@@ -35,17 +35,19 @@
       </div>
 
 
-      <div>
+      <!-- <div>
         <NuxtLink to="/edit">
           <Icon name="line-md:edit" />
           Изменить
         </NuxtLink>
-      </div>
+      </div> -->
 
+      <div>
+        <NuxtLink to="/library" class="flex items-center gap-2 px-4"><Icon name="lucide:library" />Библиотека</NuxtLink>
+      </div>
     </div>
 
 
-    <NuxtLink to="/library" class="flex items-center gap-2 px-4"><Icon name="lucide:library" />Библиотека</NuxtLink>
 
     <!-- User -->
 
