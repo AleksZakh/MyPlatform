@@ -20,7 +20,7 @@ async function handler(file:string,exportName='default'){const out=await build({
  b.onResolve({filter:/chat-invitation-mail$/},()=>({path:'mail',namespace:'team-test'}));
  b.onResolve({filter:/ad-directory.service$/},()=>({path:'directory',namespace:'team-test'}));
  b.onResolve({filter:/domain-group-directory.service$/},()=>({path:'groups',namespace:'team-test'}));
- b.onLoad({filter:/.*/,namespace:'team-test'},args=>({loader:'js',contents:args.path==='mail'?`export async function sendChatInvitationEmail(...args){if(globalThis.workTestMailFail)throw new Error('SMTP unavailable');globalThis.workTestMails.push(args);}`:args.path==='groups'?`export async function directoryGroupUserIds(){return globalThis.workTestAdGroupIds;}`:`export async function findDomainUser(login){return globalThis.workTestDirectory.get(login)||null;}`}));
+ b.onLoad({filter:/.*/,namespace:'team-test'},args=>({loader:'js',contents:args.path==='mail'?`export async function sendChatInvitationEmail(...args){if(globalThis.workTestMailFail)throw new Error('SMTP unavailable');globalThis.workTestMails.push(args);}`:args.path==='groups'?`export async function directoryGroupUserIds(){return globalThis.workTestAdGroupIds;} export async function resolveDomainGroupIds(){if(globalThis.workTestGroupFail)throw new Error('AD unavailable');return globalThis.workTestActorGroups||[];}`:`export async function findDomainUser(login){return globalThis.workTestDirectory.get(login)||null;}`}));
  b.onResolve({filter:/access-control.service$/},()=>({path:'auth',namespace:'test'}));b.onResolve({filter:/utils\/prisma$/},()=>({path:'db',namespace:'test'}));
  b.onLoad({filter:/.*/,namespace:'test'},args=>({loader:'js',contents:args.path==='db'?'export const prisma=globalThis.workTestDb;':`
  export async function getAccessActor(e){const id=Number(e.node.req.headers['x-test-user']);if(!id)throw Object.assign(new Error('auth'),{statusCode:401});const user=await globalThis.workTestDb.user.findUnique({where:{id},include:{department:true}});if(!user||user.status!=='ACTIVE')throw Object.assign(new Error('inactive'),{statusCode:403});return {user,isSystemAdmin:id===1};}
@@ -184,6 +184,57 @@ test('HTTP + database: privacy, department scope, roles, lifecycle, conflicts, i
  await ok(await call('/invitations/'+row.id,'POST',{decision:'DECLINE'},5));assert.equal((await call('/projects/'+guarded.id,'GET',undefined,5)).status,404);
  await ok(await call('/projects/'+guarded.id+'/invitations','POST',{version:(await ok(await call('/projects/'+guarded.id))).version,target:{userId:4},role:'MEMBER'}));
  row=await db.workProjectInvitation.findUniqueOrThrow({where:{projectId_userId:{projectId:guarded.id,userId:4}}});await db.workProjectInvitation.update({where:{id:row.id},data:{expiresAt:new Date(0)}});assert.equal((await call('/invitations/'+row.id,'POST',{decision:'ACCEPT'},4)).status,409);
+ // Group ownership and live read-only access, independent of snapshot team membership.
+ const owningGroup=await db.spaceGroup.create({data:{name:'ОДИС',users:{create:[{userId:4}]},domainGroups:{create:{domainGroupId:adGroup.id}}}});
+ assert.ok((await ok(await call('/context'))).groups.some((g:any)=>g.id===owningGroup.id));
+ const affiliationBody=(extra:any={})=>projectBody({departmentId:null,groupId:owningGroup.id,scope:'GROUP',...extra});
+ assert.equal((await call('/projects','POST',affiliationBody({departmentId:1}))).status,400);
+ assert.equal((await call('/projects','POST',affiliationBody({groupId:null}))).status,400);
+ assert.equal((await call('/projects','POST',affiliationBody({scope:'PRIVATE'}))).status,400);
+ assert.equal((await call('/projects','POST',affiliationBody(),4)).status,403);
+ let owned=await ok(await call('/projects','POST',affiliationBody()));
+ assert.equal(owned.group.name,'ОДИС');assert.equal(owned.departmentId,null);
+ let reader=await ok(await call('/projects/'+owned.id,'GET',undefined,4));
+ assert.equal(reader.canManage,false);assert.equal(reader.canCreateTask,false);assert.equal(reader.role,null);
+ assert.ok((await ok(await call('/projects','GET',undefined,4))).items.some((p:any)=>p.id===owned.id));
+ assert.equal((await call('/projects/'+owned.id,'GET',undefined,3)).status,404);
+ const ownedTask=await ok(await call('/tasks','POST',taskBody({visibility:'PROJECT',projectId:owned.id})));
+ assert.equal((await call('/tasks/'+ownedTask.id,'GET',undefined,4)).status,200);
+ assert.equal((await ok(await call('/tasks?projectId='+owned.id,'GET',undefined,4))).items.length,1);
+ assert.equal((await call('/tasks/'+ownedTask.id,'PATCH',{version:ownedTask.version,status:'DONE'},4)).status,403);
+ assert.equal((await call('/tasks/'+ownedTask.id+'/comments','POST',{clientKey:randomUUID(),body:'no'},4)).status,403);
+ assert.equal((await call('/tasks','POST',taskBody({visibility:'PROJECT',projectId:owned.id}),4)).status,403);
+ // Removal and deactivation revoke group access, including task URLs, on next request.
+ await db.spaceGroupUser.delete({where:{groupId_userId:{groupId:owningGroup.id,userId:4}}});
+ assert.equal((await call('/projects/'+owned.id,'GET',undefined,4)).status,404);
+ assert.equal((await call('/tasks/'+ownedTask.id,'GET',undefined,4)).status,404);
+ await db.spaceGroupUser.create({data:{groupId:owningGroup.id,userId:4}});
+ await db.spaceGroup.update({where:{id:owningGroup.id},data:{isActive:false}});
+ assert.equal((await call('/projects/'+owned.id,'GET',undefined,4)).status,404);
+ assert.equal((await call('/projects','POST',affiliationBody())).status,400);
+ await db.spaceGroup.update({where:{id:owningGroup.id},data:{isActive:true}});
+ // AD membership grants read access without adding a project role; failure denies that path.
+ (globalThis as any).workTestActorGroups=[adGroup.directoryObjectId];
+ assert.equal((await call('/projects/'+owned.id,'GET',undefined,5)).status,200);
+ (globalThis as any).workTestGroupFail=true;
+ assert.equal((await call('/projects/'+owned.id,'GET',undefined,5)).status,404);
+ assert.equal((await call('/projects/'+owned.id,'GET',undefined,4)).status,200);
+ (globalThis as any).workTestGroupFail=false;(globalThis as any).workTestActorGroups=[];
+ assert.equal((await call('/projects/'+owned.id,'GET',undefined,5)).status,404);
+ // TEAM binding is metadata only. Explicit roles survive subsequent group removal.
+ owned=await ok(await call('/projects/'+owned.id,'PUT',affiliationBody({version:owned.version,scope:'TEAM'})));
+ assert.equal((await call('/projects/'+owned.id,'GET',undefined,4)).status,404);
+ owned=await ok(await call('/projects/'+owned.id+'/members','PUT',{version:owned.version,userId:4,role:'MEMBER'}));
+ await db.spaceGroupUser.delete({where:{groupId_userId:{groupId:owningGroup.id,userId:4}}});
+ assert.equal((await call('/projects/'+owned.id,'GET',undefined,4)).status,200);
+ owned=await ok(await call('/projects/'+owned.id+'/members','PUT',{version:owned.version,userId:3,role:'MANAGER'}));
+ assert.equal((await call('/projects/'+owned.id,'PUT',affiliationBody({version:owned.version,scope:'GROUP'}),3)).status,403);
+ // Old clients omitting groupId preserve the binding while editing other properties.
+ owned=await ok(await call('/projects/'+owned.id,'PUT',projectBody({departmentId:null,scope:'TEAM',version:owned.version})));
+ assert.equal(owned.groupId,owningGroup.id);
+ owned=await ok(await call('/projects/'+owned.id,'PUT',projectBody({departmentId:2,groupId:null,scope:'DEPARTMENT',version:owned.version})));
+ assert.equal(owned.groupId,null);assert.equal(owned.departmentId,2);
+ console.log('Group affiliation: validation, direct/AD read access, revocation, fail-closed, team isolation and roles verified.');
  console.log('Private editing, group preview/revision, preserved roles, invitations/accept/cancel/expiry, domain provisioning, missing mail, SMTP failure and inviter revocation verified.');
  const audit=await db.auditLog.findMany({where:{resourceKey:'projects.shared'}});assert.ok(audit.some(a=>a.action==='MEMBER_REMOVE'));assert.ok(audit.some(a=>a.action==='COMMENT'));assert.ok(audit.every(a=>a.actorUserId));
  assert.equal(await db.workTaskComment.count({where:{taskId:pt.id}}),1);

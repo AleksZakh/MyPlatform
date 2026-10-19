@@ -1,14 +1,14 @@
 import type { Prisma } from '@prisma/client';
-export type Actor = { id: number; departmentId: number | null };
+import { spaceGroupMembership } from '../space-group-access.service';
+export type Actor = { id: number; departmentId: number | null; directoryGroupIds?: string[] };
 export type ProjectPolicy = { ownerId: number; scope: string; departmentId: number | null; archivedAt: Date | string | null; members: {userId:number;role:string}[] };
 export function projectRole(p: ProjectPolicy, a: Actor): string | null {
  return p.ownerId === a.id ? 'OWNER' : p.members.find(m => m.userId === a.id)?.role || null;
 }
 export const managesProject = (p: ProjectPolicy,a:Actor) => ['OWNER','MANAGER'].includes(projectRole(p,a) || '');
-export const seesProject = (p:ProjectPolicy,a:Actor) => !!projectRole(p,a) || (p.scope === 'DEPARTMENT' && !!a.departmentId && p.departmentId === a.departmentId);
 export const createsTask = (p:ProjectPolicy,a:Actor) => !p.archivedAt && ['OWNER','MANAGER','MEMBER'].includes(projectRole(p,a)||'');
 export function projectWhere(a:Actor): Prisma.WorkProjectWhereInput {
- return { OR: [{ownerId:a.id},{members:{some:{userId:a.id}}}, ...(a.departmentId ? [{scope:'DEPARTMENT',departmentId:a.departmentId}] : [])] };
+ return { OR: [{ownerId:a.id},{members:{some:{userId:a.id}}},{scope:'GROUP',group:spaceGroupMembership(a.id,a.directoryGroupIds)}, ...(a.departmentId ? [{scope:'DEPARTMENT',departmentId:a.departmentId,department:{isActive:true}}] : [])] };
 }
 export function taskWhere(a:Actor): Prisma.WorkTaskWhereInput {
  return { deletedAt:null, OR:[ {projectId:{not:null},project:projectWhere(a)},

@@ -3,10 +3,10 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../../utils/prisma';
 import { writeAuditEvent } from '../../utils/auditLog';
 import { workActor, hasWorkGrant } from './access';
-import { projectWhere, taskWhere, projectRole, managesProject, seesProject, createsTask, taskRights, type Actor } from './policy';
+import { projectWhere, taskWhere, projectRole, managesProject, createsTask, taskRights, type Actor } from './policy';
 import { parse, projectInput, taskInput, taskMove, memberInput, removeMemberInput, versionInput, archiveInput, commentInput, dbDay, positiveId } from './input';
 export const userSelect={id:true,login:true,fullName:true} as const;
-export const projectInclude={owner:{select:userSelect},department:{select:{id:true,key:true,name:true}},members:{include:{user:{select:userSelect}}}} as const;
+export const projectInclude={group:{select:{id:true,name:true,isActive:true}},owner:{select:userSelect},department:{select:{id:true,key:true,name:true}},members:{include:{user:{select:userSelect}}}} as const;
 const taskInclude={project:{include:projectInclude},assignee:{select:userSelect},participants:{select:{userId:true}},_count:{select:{comments:true}}} as const;
 type DB=Prisma.TransactionClient;
 type Project=Prisma.WorkProjectGetPayload<{include:typeof projectInclude}>;
@@ -35,8 +35,8 @@ export async function mutation<T>(event:H3Event,actor:Actor,entity:string,action
 }
 export async function context(event:H3Event){
  const a=await workActor(event);
- const [departments,canCreateShared,canAssign]=await Promise.all([prisma.department.findMany({where:{isActive:true},select:{id:true,key:true,name:true},orderBy:{name:'asc'}}),hasWorkGrant(event,'CREATE'),hasWorkGrant(event,'UPDATE')]);
- return {userId:a.id,department:departments.find(d=>d.id===a.departmentId)||null,departments,canCreateShared,canAssign,isSystemAdmin:a.isSystemAdmin};
+ const [departments,groups,canCreateShared,canAssign]=await Promise.all([prisma.department.findMany({where:{isActive:true},select:{id:true,key:true,name:true},orderBy:{name:'asc'}}),prisma.spaceGroup.findMany({where:{isActive:true},select:{id:true,name:true},orderBy:{name:'asc'}}),hasWorkGrant(event,'CREATE'),hasWorkGrant(event,'UPDATE')]);
+ return {userId:a.id,department:departments.find(d=>d.id===a.departmentId)||null,departments,groups,canCreateShared,canAssign,isSystemAdmin:a.isSystemAdmin};
 }
 export async function people(event:H3Event){
  await workActor(event);const q=getQuery(event);const term=String(q.q||'').trim().slice(0,100);
@@ -54,19 +54,24 @@ export async function projects(event:H3Event){
 export async function getProject(event:H3Event,id:number){const a=await workActor(event);return projectDTO(await visibleProject(prisma,id,a),a);}
 export async function saveProject(event:H3Event,raw:unknown,id?:number){
  const a=await workActor(event),v=parse(projectInput,raw);
+ const groupId=v.groupId===undefined?undefined:v.groupId;
  const shared=v.scope!=='PRIVATE';const grant=shared?await hasWorkGrant(event,'CREATE'):false;
  return mutation(event,a,'WorkProject',id?'UPDATE':'CREATE',async tx=>{
   const old=id?await visibleProject(tx,id,a):await tx.workProject.findUnique({where:{clientKey:v.clientKey},include:projectInclude});
   if(!id&&old){if(old.ownerId!==a.id)fail(409,'Ключ операции уже использован.');return {id:old.id,value:projectDTO(old,a),changed:false};}
+  const selectedGroupId=groupId===undefined?(old?.groupId??null):groupId;
   if(old){if(!managesProject(old,a))fail(403,'Изменять проект может руководитель.');version(old.version,v.version);if(old.archivedAt)fail(409,'Сначала восстановите проект из архива.');
-   if(old.ownerId!==a.id&&(old.scope!==v.scope||old.departmentId!==v.departmentId))fail(403,'Видимость и отдел изменяет владелец проекта.');}
-  if(shared&&(!old||old.scope==='PRIVATE'||old.departmentId!==v.departmentId)&&!grant)fail(403,'Создание общих проектов разрешает администратор.');
-  if(v.scope==='PRIVATE'&&(v.departmentId||old?.members.length||(old&&await tx.workProjectInvitation.count({where:{projectId:old.id,status:{in:['PENDING','SENDING']},expiresAt:{gt:new Date()}}}))))fail(400,'Личный проект не может иметь отдел, участников или действующие приглашения. Сначала исключите участников и отмените приглашения.');
+   if(old.ownerId!==a.id&&(old.scope!==v.scope||old.departmentId!==v.departmentId||old.groupId!==selectedGroupId))fail(403,'Видимость и принадлежность изменяет владелец проекта.');}
+  if(shared&&(!old||old.scope==='PRIVATE'||old.departmentId!==v.departmentId||old.groupId!==selectedGroupId||old.scope!==v.scope)&&!grant)fail(403,'Создание общих проектов разрешает администратор.');
+  if(v.scope==='PRIVATE'&&(v.departmentId||selectedGroupId||old?.members.length||(old&&await tx.workProjectInvitation.count({where:{projectId:old.id,status:{in:['PENDING','SENDING']},expiresAt:{gt:new Date()}}}))))fail(400,'Личный проект не может иметь подразделение, группу, участников или действующие приглашения. Сначала исключите участников и отмените приглашения.');
+  if(v.departmentId&&selectedGroupId)fail(400,'Выберите подразделение или группу, не оба одновременно.');
+  if(v.scope==='GROUP'&&!selectedGroupId)fail(400,'Выберите группу Space.');
+  if(selectedGroupId){const group=await tx.spaceGroup.findFirst({where:{id:selectedGroupId,isActive:true}});if(!group)fail(400,'Группа не найдена или выключена.');}
   if(v.scope==='DEPARTMENT'&&!v.departmentId)fail(400,'Выберите подразделение.');
   if(v.departmentId){const dep=await tx.department.findFirst({where:{id:v.departmentId,isActive:true}});if(!dep)fail(400,'Подразделение недоступно.');
    // Shared-project CREATE grants selection of any active owning department.
   }
-  const data={name:v.name,description:v.description,color:v.color,scope:v.scope,departmentId:v.departmentId,startDate:dbDay(v.startDate),dueDate:dbDay(v.dueDate)};
+  const data={name:v.name,description:v.description,color:v.color,scope:v.scope,departmentId:v.departmentId,groupId:selectedGroupId,startDate:dbDay(v.startDate),dueDate:dbDay(v.dueDate)};
   const p=id?await tx.workProject.update({where:{id},data:{...data,version:{increment:1}},include:projectInclude}):await tx.workProject.create({data:{...data,ownerId:a.id,clientKey:v.clientKey},include:projectInclude});
   return {id:p.id,value:projectDTO(p,a)};
  });

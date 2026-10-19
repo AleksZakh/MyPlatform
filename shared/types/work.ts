@@ -7,6 +7,7 @@ export type WorkUser = { id: number; fullName: string | null; login: string | nu
 export type WorkDepartment = { id: number; key: string; name: string };
 export type WorkProjectDTO = {
  id: number; name: string; description: string; color: string; scope: string; ownerId: number; owner: WorkUser;
+ groupId: number | null; group: {id:number;name:string;isActive:boolean} | null;
  departmentId: number | null; department: WorkDepartment | null; startDate: string | null; dueDate: string | null;
  archivedAt: string | null; version: number; canManage: boolean; canCreateTask: boolean; role: string | null;
  members: { userId: number; role: string; user: WorkUser }[];
@@ -19,5 +20,5 @@ export type WorkTaskDTO = {
  participants: { userId: number }[]; _count: { comments: number };
  canEditDetails: boolean; canEdit: boolean; canDelete: boolean; canComment: boolean;
 };
-export type WorkContext = { userId: number; department: WorkDepartment | null; departments: WorkDepartment[]; canCreateShared: boolean; canAssign: boolean; isSystemAdmin: boolean };
+export type WorkContext = { userId: number; department: WorkDepartment | null; departments: WorkDepartment[]; groups: {id:number;name:string}[]; canCreateShared: boolean; canAssign: boolean; isSystemAdmin: boolean };
 export const workUserName = (u: WorkUser | null | undefined) => u?.fullName || u?.login || (u ? `Сотрудник №${u.id}` : 'Без исполнителя');

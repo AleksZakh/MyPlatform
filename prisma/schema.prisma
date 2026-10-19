@@ -871,6 +871,7 @@ model DomainGroup {
 
 
 model SpaceGroup {
+  ownedProjects WorkProject[]
   id Int @id @default(autoincrement())
   name String @unique @db.VarChar(255)
   isActive Boolean @default(true)
@@ -1125,6 +1126,8 @@ model LibraryAsset {
 
 // Space tasks and projects — additive module, 2026-10-19.
 model WorkProject {
+  groupId Int?
+  group SpaceGroup? @relation(fields: [groupId], references: [id], onDelete: Restrict)
   invitations WorkProjectInvitation[]
   id Int @id @default(autoincrement())
   clientKey String @unique @db.Uuid
@@ -1144,6 +1147,7 @@ model WorkProject {
   updatedAt DateTime @updatedAt
   members WorkProjectMember[]
   tasks WorkTask[]
+  @@index([groupId, archivedAt])
   @@index([departmentId, archivedAt])
   @@index([ownerId])
   @@map("work_projects")

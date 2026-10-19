@@ -1,10 +1,25 @@
 import { createError, getHeader, setHeader, type H3Event } from 'h3';
+import { prisma } from '../../utils/prisma';
+import { resolveDomainGroupIds } from '../domain-group-directory.service';
 import { getAccessActor, requirePermission } from '../access-control.service';
 export async function workActor(event:H3Event) {
  setHeader(event,'Cache-Control','private, no-store');
  if(event.context.externalSessionRevoked) throw createError({statusCode:401});
  const actor=await getAccessActor(event);
- return {id:actor.user.id,departmentId:actor.user.department?.isActive ? actor.user.department.id : null,
+ // Resolve linked AD membership once per request, outside all write transactions.
+ // Direct Space membership is checked by the visibility query on every request.
+ let directoryGroupIds:string[]=[];
+ const user=actor.user;
+ if(user.authType==='DOMAIN'&&user.status==='ACTIVE'&&user.directoryObjectId&&user.login
+   && await prisma.spaceGroupDomain.count({where:{group:{isActive:true,ownedProjects:{some:{scope:'GROUP'}}},domainGroup:{isActive:true}}})){
+  try{
+   const lookups=event.context.spaceGroupLookups??=new Map<string,Promise<string[]>>();
+   if(!lookups.has(user.directoryObjectId))lookups.set(user.directoryObjectId,resolveDomainGroupIds(event,user.directoryObjectId,user.login));
+   directoryGroupIds=await lookups.get(user.directoryObjectId)!;
+  }catch{directoryGroupIds=[];} // Fail closed for AD-derived access; direct roles still work.
+ }
+
+ return {directoryGroupIds,id:actor.user.id,departmentId:actor.user.department?.isActive ? actor.user.department.id : null,
  department:actor.user.department?.isActive ? actor.user.department : null,isSystemAdmin:actor.isSystemAdmin};
 }
 export async function hasWorkGrant(event:H3Event, action:'CREATE'|'UPDATE') {
