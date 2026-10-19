@@ -23,6 +23,8 @@
     <!-- Меню отображаем только авторизованному пользователю -->
     <nav v-if="loggedIn">
 
+      <WorkSidebarLink :is-collapsed="isCollapsed" />
+
       <NuxtLink
         v-for="item in visibleMenuItems"
         :key="item.url"

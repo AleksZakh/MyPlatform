@@ -450,6 +450,8 @@ model FilterTemplate {
 // ============================================================
 
 model Department {
+  workTasks WorkTask[]
+  workProjects WorkProject[]
   id Int @id @default(autoincrement())
 
   // Стабильный программный ключ.
@@ -708,6 +710,12 @@ enum AccessAction {
 }
 
 model User {
+  workTaskComments WorkTaskComment[]
+  workTaskParticipations WorkTaskParticipant[]
+  assignedWorkTasks WorkTask[] @relation("WorkTaskAssignee")
+  createdWorkTasks WorkTask[] @relation("WorkTaskCreator")
+  workProjectMemberships WorkProjectMember[]
+  ownedWorkProjects WorkProject[] @relation("WorkProjectOwner")
   profile UserProfile?
   preferences UserPreference?
 
@@ -1110,4 +1118,95 @@ model LibraryAsset {
   coverBooks LibraryBook[] @relation("LibraryCover")
   categoryIcons LibraryCategory[]
   @@map("library_assets")
+}
+
+
+// Space tasks and projects — additive module, 2026-10-19.
+model WorkProject {
+  id Int @id @default(autoincrement())
+  clientKey String @unique @db.Uuid
+  name String @db.VarChar(200)
+  description String @default("") @db.Text
+  color String @default("#2563eb") @db.VarChar(7)
+  scope String @default("PRIVATE") @db.VarChar(20)
+  ownerId Int
+  owner User @relation("WorkProjectOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  departmentId Int?
+  department Department? @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  startDate DateTime? @db.Date
+  dueDate DateTime? @db.Date
+  archivedAt DateTime?
+  version Int @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  members WorkProjectMember[]
+  tasks WorkTask[]
+  @@index([departmentId, archivedAt])
+  @@index([ownerId])
+  @@map("work_projects")
+}
+model WorkProjectMember {
+  projectId Int
+  userId Int
+  role String @default("MEMBER") @db.VarChar(20)
+  project WorkProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+  @@id([projectId, userId])
+  @@index([userId])
+  @@map("work_project_members")
+}
+model WorkTask {
+  id Int @id @default(autoincrement())
+  clientKey String @unique @db.Uuid
+  title String @db.VarChar(250)
+  description String @default("") @db.Text
+  kind String @default("TASK") @db.VarChar(20)
+  status String @default("TODO") @db.VarChar(20)
+  priority String @default("NORMAL") @db.VarChar(20)
+  visibility String @default("PRIVATE") @db.VarChar(20)
+  creatorId Int
+  creator User @relation("WorkTaskCreator", fields: [creatorId], references: [id], onDelete: Restrict)
+  assigneeId Int?
+  assignee User? @relation("WorkTaskAssignee", fields: [assigneeId], references: [id], onDelete: Restrict)
+  departmentId Int?
+  department Department? @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  projectId Int?
+  project WorkProject? @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  plannedDate DateTime? @db.Date
+  startDate DateTime? @db.Date
+  dueDate DateTime? @db.Date
+  blockedReason String @default("") @db.VarChar(1000)
+  version Int @default(1)
+  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  participants WorkTaskParticipant[]
+  comments WorkTaskComment[]
+  @@index([assigneeId, deletedAt, plannedDate])
+  @@index([creatorId, deletedAt])
+  @@index([projectId, deletedAt, status])
+  @@index([departmentId, visibility, deletedAt])
+  @@map("work_tasks")
+}
+model WorkTaskParticipant {
+  taskId Int
+  userId Int
+  task WorkTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  @@id([taskId, userId])
+  @@index([userId])
+  @@map("work_task_participants")
+}
+model WorkTaskComment {
+  id Int @id @default(autoincrement())
+  clientKey String @unique @db.Uuid
+  taskId Int
+  authorId Int
+  body String @db.VarChar(5000)
+  task WorkTask @relation(fields: [taskId], references: [id], onDelete: Restrict)
+  author User @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+  @@index([taskId, id])
+  @@map("work_task_comments")
 }

@@ -70,7 +70,7 @@ export default defineNuxtConfig({
       htmlAttrs: {
         lang: 'ru',
       },
-      link: [{ rel: 'icon', type: 'image/x-icon', href: '/logo_logo.svg' }],
+      link: [{ rel: 'icon', type: 'image/svg+xml', href: '/logo_logo.svg' },],
     },
   },
   nitro: {

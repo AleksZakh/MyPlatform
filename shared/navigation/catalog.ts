@@ -40,12 +40,12 @@ export function breadcrumbs(path: string, query: Record<string, unknown>, depart
     const page = departmentPages.find(p => p.to === `/departments/${key}`)
     result.push({ label: departments.find(d => d.key === key)?.name || page?.label || 'Подразделение', to: page || clean === `/departments/${key}` ? `/departments/${key}` : '' })
     if (clean !== `/departments/${key}`) {
-      const names: Record<string, string> = { sampling: 'Акты отбора проб', testprotocol: 'Протоколы испытаний', documents: 'Документы', vacancies: 'Вакансии', ticket: 'Техподдержка', wiki: 'База знаний', gis: 'ГИС', aisisso: 'АИС ИССО' }
+      const names: Record<string, string> = { projects: 'Задачи и проекты', sampling: 'Акты отбора проб', testprotocol: 'Протоколы испытаний', documents: 'Документы', vacancies: 'Вакансии', ticket: 'Техподдержка', wiki: 'База знаний', gis: 'ГИС', aisisso: 'АИС ИССО' }
       result.push({ label: customLabel || names[clean.split('/').at(-1)!] || 'Ресурс отдела', to: clean })
     }
     return result
   }
-  const names: Record<string,string> = { '/library': 'Библиотека', '/online': 'Пользователи online', '/profile': 'Профиль', '/settings': 'Настройки', '/access-denied': 'Доступ ограничен' }
+  const names: Record<string,string> = { '/projects': 'Задачи и проекты', '/library': 'Библиотека', '/online': 'Пользователи online', '/profile': 'Профиль', '/settings': 'Настройки', '/access-denied': 'Доступ ограничен' }
   result.push({ label: customLabel || names[clean] || 'Текущая страница', to: clean })
   return result
 }
