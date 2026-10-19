@@ -710,6 +710,7 @@ enum AccessAction {
 }
 
 model User {
+  libraryVideoPositions LibraryVideoPosition[]
   workInvitationsReceived WorkProjectInvitation[] @relation("WorkInviteRecipient")
   workInvitationsSent WorkProjectInvitation[] @relation("WorkInviteSender")
   workTaskComments WorkTaskComment[]
@@ -1067,6 +1068,7 @@ model LibraryCategory {
   iconAssetId String? @db.Uuid
   iconAsset LibraryAsset? @relation(fields: [iconAssetId], references: [id], onDelete: Restrict)
   position Int @default(0)
+  videos LibraryVideoCategory[]
   books LibraryBookCategory[]
   legacyId Int? @unique
   @@index([parentId, position])
@@ -1235,4 +1237,70 @@ model WorkProjectInvitation {
   @@index([userId, status, expiresAt])
   @@index([inviterId, createdAt])
   @@map("work_project_invitations")
+}
+
+// Reusable video materials. Courses will reference these IDs; playback is not completion.
+model LibraryVideo {
+  id String @id @db.Uuid
+  clientKey String @unique @db.Uuid
+  title String @db.VarChar(500)
+  description String @default("") @db.Text
+  author String @default("") @db.VarChar(500)
+  filename String @db.VarChar(255)
+  fingerprint String @db.VarChar(64)
+  totalBytes BigInt
+  offset BigInt @default(0)
+  status String @default("UPLOADING") @db.VarChar(20)
+  error String? @db.VarChar(1000)
+  duration Float?
+  mediaPath String? @db.VarChar(100)
+  posterPath String? @db.VarChar(100)
+  sourcePath String? @db.VarChar(100)
+  mediaBytes BigInt?
+  leaseToken String? @db.Uuid
+  leaseUntil DateTime?
+  version Int @default(1)
+  createdBy Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  categories LibraryVideoCategory[]
+  chunks LibraryVideoChunk[]
+  positions LibraryVideoPosition[]
+  @@index([deletedAt, status, createdAt])
+  @@map("library_videos")
+}
+model LibraryVideoCategory {
+  videoId String @db.Uuid
+  categoryId Int
+  video LibraryVideo @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  category LibraryCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  @@id([videoId, categoryId])
+  @@index([categoryId])
+  @@map("library_video_categories")
+}
+model LibraryVideoChunk {
+  id String @id @db.Uuid
+  videoId String @db.Uuid
+  offset BigInt
+  size Int
+  video LibraryVideo @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  @@unique([videoId, offset])
+  @@map("library_video_chunks")
+}
+model LibraryVideoPosition {
+  videoId String @db.Uuid
+  userId Int
+  seconds Float
+  updatedAt DateTime @updatedAt
+  video LibraryVideo @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@id([videoId, userId])
+  @@map("library_video_positions")
+}
+model LibraryVideoSettings {
+  id Int @id @default(1)
+  maxBytes BigInt @default(3221225472)
+  updatedAt DateTime @updatedAt
+  @@map("library_video_settings")
 }

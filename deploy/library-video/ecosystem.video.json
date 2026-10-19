@@ -1,0 +1,1 @@
+{"apps":[{"name":"space-video","script":"/etc/space/library-video-supervisor.mjs","cwd":"/home/space","interpreter":"/usr/bin/node","exec_mode":"fork","instances":1,"autorestart":true,"watch":false,"restart_delay":5000,"kill_timeout":30000,"time":true,"env":{"NODE_ENV":"production"}}]}

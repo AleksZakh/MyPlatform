@@ -1,0 +1,8 @@
+<script setup lang="ts">
+import '../../assets/css/library.css';
+const maxMiB=ref(3072),error=ref(''),notice=ref(''),busy=ref(false),allowed=ref(false);
+useHead({title:'Видео библиотеки — настройки'});
+onMounted(async()=>{try{const c=await $fetch<{canManage:boolean}>('/api/library/catalog');allowed.value=c.canManage;if(!allowed.value){error.value='Недостаточно прав для управления библиотекой.';return;}const s=await $fetch<{maxBytes:number}>('/api/library/video-settings');maxMiB.value=s.maxBytes/1024**2;}catch(e:any){error.value=e?.data?.message||e.message;}});
+async function save(){busy.value=true;error.value='';notice.value='';try{await $fetch('/api/library/video-settings',{method:'PUT',headers:{'x-space-library':'1'},body:{maxMiB:Number(maxMiB.value)},retry:0});notice.value='Лимит сохранён. Он применяется к новым загрузкам.';}catch(e:any){error.value=e?.data?.message||e.message;}finally{busy.value=false;}}
+</script>
+<template><main class="space-library"><h1>Видео библиотеки</h1><p>Загрузка и управление доступны пользователям с правом управления библиотекой. Просмотр готовых видео — всем активным сотрудникам Space.</p><form v-if="allowed" class="library-dialog" @submit.prevent="save"><label>Максимальный размер одного видео, МиБ<input v-model.number="maxMiB" type="number" min="100" max="10240" step="1" required /></label><p>3072 МиБ = 3 ГиБ. Уже начатые загрузки сохраняют исходный лимит.</p><footer><button :disabled="busy">Сохранить</button></footer></form><p v-if="error" class="library-error" role="alert">{{error}}</p><p role="status">{{notice}}</p><NuxtLink to="/library?type=video">Открыть видео</NuxtLink></main></template>

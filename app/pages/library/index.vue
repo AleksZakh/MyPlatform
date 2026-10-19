@@ -2,6 +2,7 @@
 import type { LibraryBook } from "../../../shared/types/library";
 import { libraryAssetUrl } from "../../composables/useLibrary";
 import "../../assets/css/library.css";
+import "../../assets/css/library-video.css";
 useHead({ title: "Библиотека — Space" });
 const lib = useLibrary();
 const {
@@ -17,6 +18,7 @@ const {
   error,
 } = lib;
 const route = useRoute();
+const materialType = ref(route.query.type === "video" ? "video" : "all");
 const selected = ref<LibraryBook | null>(null);
 const editor = ref(false);
 const catalogEditor = ref(false);
@@ -99,17 +101,18 @@ function switchTrash() {
         </button>
       </form>
     </header>
+    <nav class="library-media-filter" aria-label="Тип материалов"><button v-for="t in [{key:'all',label:'Все материалы'},{key:'document',label:'Документы'},{key:'video',label:'Видео'}]" :key="t.key" :aria-pressed="materialType===t.key" @click="materialType=t.key">{{t.label}}</button></nav>
     <div v-if="canManage" class="library-toolbar">
-      <button @click="edit(null)">+ Добавить книгу</button
+      <button v-if="materialType!=='video'" @click="edit(null)">+ Добавить книгу</button
       ><button @click="catalogEditor = true">Разделы и иконки</button
-      ><button @click="seriesEditor = true">Импорт журналов</button
+      ><button v-if="materialType!=='video'" @click="seriesEditor = true">Импорт журналов</button
       ><button :aria-pressed="trash" @click="switchTrash">
-        {{ trash ? "Вернуться к книгам" : "Корзина" }}
+        {{ trash ? "Вернуться к материалам" : "Корзина" }}
       </button>
     </div>
     <p v-if="error" role="alert" class="library-error">{{ error }}</p>
     <div class="library-layout">
-      <section class="library-content" aria-label="Книги">
+      <section class="library-content" aria-label="Материалы">
         <nav class="library-tabs" aria-label="Подразделы">
           <button
             :class="{ active: category === mainId }"
@@ -125,8 +128,10 @@ function switchTrash() {
             {{ c.name }} <small>{{ c.count }}</small>
           </button>
         </nav>
+        <LibraryVideoPanel v-if="materialType!=='document'" :category="category" :query="query" :trash="trash" :can-manage="canManage" :categories="categories" @changed="lib.catalog" />
+        <template v-if="materialType!=='video'">
         <div class="library-results">
-          <span>{{ trash ? "Корзина · " : "" }}Найдено: {{ total }}</span
+          <span>{{ trash ? "Корзина · " : "" }}Документы: {{ total }}</span
           ><label
             ><input v-model="group" type="checkbox" /> Группировать эту страницу
             по изданиям и годам</label
@@ -176,10 +181,11 @@ function switchTrash() {
             Далее
           </button>
         </nav>
+        </template>
       </section>
       <aside class="library-sections" aria-label="Разделы библиотеки">
         <button :class="{ active: !category }" @click="lib.select(null)">
-          <Icon name="lucide:library" />Все книги</button
+          <Icon name="lucide:library" />Все материалы</button
         ><button
           v-for="c in categories.filter((c) => !c.parentId)"
           :key="c.id"

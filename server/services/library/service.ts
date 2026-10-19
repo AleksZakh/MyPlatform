@@ -240,11 +240,12 @@ export async function removeCategory(
     const links = await tx.libraryBookCategory.findMany({
       where: { categoryId: { in: sourceIds } },
     });
-    if ((links.length || children.length) && !targetId)
+    const videoLinks = await tx.libraryVideoCategory.findMany({ where: { categoryId: { in: sourceIds } } });
+    if ((links.length || videoLinks.length || children.length) && !targetId)
       throw createError({
         statusCode: 409,
         message:
-          "Раздел не пуст. Выберите раздел для переноса книг и подразделов.",
+          "Раздел не пуст. Выберите раздел для переноса материалов и подразделов.",
         data: { code: "CATEGORY_NOT_EMPTY" },
       });
     if (targetId) {
@@ -292,6 +293,12 @@ export async function removeCategory(
         where: { categories: { some: { categoryId: id } } },
         data: { version: { increment: 1 } },
       });
+      for (const link of videoLinks.filter(l => l.categoryId === id)) {
+        await tx.libraryVideoCategory.upsert({ where: { videoId_categoryId: { videoId: link.videoId, categoryId: targetId } },
+          create: { videoId: link.videoId, categoryId: targetId }, update: {} });
+      }
+      await tx.libraryVideo.updateMany({ where: { categories: { some: { categoryId: id } } }, data: { version: { increment: 1 } } });
+      await tx.libraryVideoCategory.deleteMany({ where: { categoryId: id } });
       await tx.libraryBookCategory.deleteMany({ where: { categoryId: id } });
     }
     await tx.libraryCategory.delete({ where: { id } });
