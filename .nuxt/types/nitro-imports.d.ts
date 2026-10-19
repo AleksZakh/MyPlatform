@@ -5,6 +5,12 @@ declare global {
   const EXPORT_KINDS: typeof import('../../shared/types/lab-export').EXPORT_KINDS
   const H3Error: typeof import('../../node_modules/h3/dist/index').H3Error
   const H3Event: typeof import('../../node_modules/h3/dist/index').H3Event
+  const TIME_COLUMNS: typeof import('../../shared/utils/work-board').TIME_COLUMNS
+  const WORK_COLORS: typeof import('../../shared/types/work').WORK_COLORS
+  const WORK_KINDS: typeof import('../../shared/types/work').WORK_KINDS
+  const WORK_PRIORITIES: typeof import('../../shared/types/work').WORK_PRIORITIES
+  const WORK_ROLES: typeof import('../../shared/types/work').WORK_ROLES
+  const WORK_STATUSES: typeof import('../../shared/types/work').WORK_STATUSES
   const __buildAssetsURL: typeof import('../../node_modules/@nuxt/nitro-server/dist/runtime/utils/paths').buildAssetsURL
   const __publicAssetsURL: typeof import('../../node_modules/@nuxt/nitro-server/dist/runtime/utils/paths').publicAssetsURL
   const adCache: typeof import('../../server/utils/adCache').adCache
@@ -40,6 +46,7 @@ declare global {
   const createEvent: typeof import('../../node_modules/h3/dist/index').createEvent
   const createEventStream: typeof import('../../node_modules/h3/dist/index').createEventStream
   const createRouter: typeof import('../../node_modules/h3/dist/index').createRouter
+  const dateKey: typeof import('../../shared/utils/work-board').dateKey
   const decideAccess: typeof import('../../shared/utils/access-decision').decideAccess
   const defaultContentType: typeof import('../../node_modules/h3/dist/index').defaultContentType
   const defaultPreferences: typeof import('../../shared/utils/user-preferences').defaultPreferences
@@ -196,6 +203,7 @@ declare global {
   const parseRegistrySearchDate: typeof import('../../server/utils/incoming-control-search').parseRegistrySearchDate
   const parseRegistrySearchDateRange: typeof import('../../server/utils/incoming-control-search').parseRegistrySearchDateRange
   const passwordNeedsReHash: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/password').passwordNeedsReHash
+  const portalToday: typeof import('../../shared/utils/work-board').portalToday
   const preferencesPatchSchema: typeof import('../../shared/utils/user-preferences').preferencesPatchSchema
   const preferencesSchema: typeof import('../../shared/utils/user-preferences').preferencesSchema
   const prisma: typeof import('../../server/utils/prisma').prisma
@@ -244,10 +252,12 @@ declare global {
   const setResponseHeaders: typeof import('../../node_modules/h3/dist/index').setResponseHeaders
   const setResponseStatus: typeof import('../../node_modules/h3/dist/index').setResponseStatus
   const setUserSession: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/session').setUserSession
+  const shiftDay: typeof import('../../shared/utils/work-board').shiftDay
   const softDelete: typeof import('../../server/utils/auditLog').softDelete
   const splitCookiesString: typeof import('../../node_modules/h3/dist/index').splitCookiesString
   const storeFileLocally: typeof import('../../node_modules/nuxt-file-storage/dist/runtime/server/utils/storage').storeFileLocally
   const tableSchema: typeof import('../../shared/utils/user-preferences').tableSchema
+  const timeBucket: typeof import('../../shared/utils/work-board').timeBucket
   const toEventHandler: typeof import('../../node_modules/h3/dist/index').toEventHandler
   const toNodeListener: typeof import('../../node_modules/h3/dist/index').toNodeListener
   const toPlainHandler: typeof import('../../node_modules/h3/dist/index').toPlainHandler
@@ -267,6 +277,7 @@ declare global {
   const validateDeletionReason: typeof import('../../server/utils/deletion-input').validateDeletionReason
   const verifyPassword: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/password').verifyPassword
   const verifySpacePassword: typeof import('../../server/utils/password').verifySpacePassword
+  const workUserName: typeof import('../../shared/types/work').workUserName
   const writeAuditEvent: typeof import('../../server/utils/auditLog').writeAuditEvent
   const writeEarlyHints: typeof import('../../node_modules/h3/dist/index').writeEarlyHints
 }
@@ -299,6 +310,9 @@ declare global {
   // @ts-ignore
   export type { StructureMember } from '../../shared/types/structure-member'
   import('../../shared/types/structure-member')
+  // @ts-ignore
+  export type { WorkUser, WorkDepartment, WorkProjectDTO, WorkTaskDTO, WorkContext } from '../../shared/types/work'
+  import('../../shared/types/work')
   // @ts-ignore
   export type { OAuthAppleConfig, OAuthAppleTokens, OAuthAppleUser } from '../../node_modules/nuxt-auth-utils/dist/runtime/server/lib/oauth/apple.d'
   import('../../node_modules/nuxt-auth-utils/dist/runtime/server/lib/oauth/apple.d')
@@ -473,8 +487,10 @@ export { normalizeLocationName, locationNameKey } from '/home/local_adm/Projects
 export { detectMigrationDocument } from '/home/local_adm/Projects/MyPlatform/shared/utils/migration-document';
 export { profileDetailsSchema, emptyProfileDetails } from '/home/local_adm/Projects/MyPlatform/shared/utils/profile-details';
 export { displaySchema, notificationsSchema, tableSchema, preferencesSchema, preferencesPatchSchema, defaultPreferences, normalizePreferences, allowNotification } from '/home/local_adm/Projects/MyPlatform/shared/utils/user-preferences';
+export { dateKey, portalToday, shiftDay, timeBucket, TIME_COLUMNS } from '/home/local_adm/Projects/MyPlatform/shared/utils/work-board';
 export { ACCESS_ACTIONS } from '/home/local_adm/Projects/MyPlatform/shared/types/access-management';
 export { EXPORT_KINDS, EXPORT_COLUMNS } from '/home/local_adm/Projects/MyPlatform/shared/types/lab-export';
+export { WORK_STATUSES, WORK_KINDS, WORK_PRIORITIES, WORK_ROLES, WORK_COLORS, workUserName } from '/home/local_adm/Projects/MyPlatform/shared/types/work';
 export { defineOAuthAppleEventHandler } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-auth-utils/dist/runtime/server/lib/oauth/apple';
 export { defineOAuthAtlassianEventHandler } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-auth-utils/dist/runtime/server/lib/oauth/atlassian';
 export { defineOAuthAuth0EventHandler } from '/home/local_adm/Projects/MyPlatform/node_modules/nuxt-auth-utils/dist/runtime/server/lib/oauth/auth0';

@@ -431,6 +431,64 @@ declare module "nitropack/types" {
     '/api/test/domain-connection': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/test/domain-connection.get').default>>>>
     }
+    '/api/work/contacts': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/work/contacts.get').default>>>>
+    }
+    '/api/work/context': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/work/context.get').default>>>>
+    }
+    '/api/work/invitations/:invitationId': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/work/invitations/[invitationId].post').default>>>>
+    }
+    '/api/work/invitations': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/work/invitations/index.get').default>>>>
+    }
+    '/api/work/people': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/work/people.get').default>>>>
+    }
+    '/api/work/projects/:id': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/work/projects/[id].get').default>>>>
+      'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/work/projects/[id].put').default>>>>
+    }
+    '/api/work/projects/:id/archive': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/work/projects/[id]/archive.post').default>>>>
+    }
+    '/api/work/projects/:id/groups': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/work/projects/[id]/groups.get').default>>>>
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/work/projects/[id]/groups.post').default>>>>
+    }
+    '/api/work/projects/:id/groups/:groupId': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/work/projects/[id]/groups/[groupId].get').default>>>>
+    }
+    '/api/work/projects/:id/invitations': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/work/projects/[id]/invitations.get').default>>>>
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/work/projects/[id]/invitations.post').default>>>>
+    }
+    '/api/work/projects/:id/invitations/:invitationId': {
+      'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/work/projects/[id]/invitations/[invitationId].delete').default>>>>
+    }
+    '/api/work/projects/:id/members': {
+      'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/work/projects/[id]/members.delete').default>>>>
+      'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/work/projects/[id]/members.put').default>>>>
+    }
+    '/api/work/projects': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/work/projects/index.get').default>>>>
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/work/projects/index.post').default>>>>
+    }
+    '/api/work/tasks/:id': {
+      'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/work/tasks/[id].delete').default>>>>
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/work/tasks/[id].get').default>>>>
+      'patch': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/work/tasks/[id].patch').default>>>>
+      'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/work/tasks/[id].put').default>>>>
+    }
+    '/api/work/tasks/:id/comments': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/work/tasks/[id]/comments.get').default>>>>
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/work/tasks/[id]/comments.post').default>>>>
+    }
+    '/api/work/tasks': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/work/tasks/index.get').default>>>>
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/work/tasks/index.post').default>>>>
+    }
     '/__nuxt_error': {
       'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../node_modules/@nuxt/nitro-server/dist/runtime/handlers/renderer').default>>>>
     }

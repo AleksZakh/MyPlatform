@@ -51,7 +51,7 @@
 
     <!-- User -->
 
-    <div class="flex ml-auto items-center gap-4">
+    <div class="flex ml-auto items-center gap-6">
       <ChatLauncher />
 
       <div

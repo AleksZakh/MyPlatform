@@ -6,6 +6,12 @@ declare global {
   const EXPORT_COLUMNS: typeof import('../../shared/types/lab-export').EXPORT_COLUMNS
   const EXPORT_KINDS: typeof import('../../shared/types/lab-export').EXPORT_KINDS
   const LAB_TABLE_COLUMNS: typeof import('../../app/composables/useTableSettings').LAB_TABLE_COLUMNS
+  const TIME_COLUMNS: typeof import('../../shared/utils/work-board').TIME_COLUMNS
+  const WORK_COLORS: typeof import('../../shared/types/work').WORK_COLORS
+  const WORK_KINDS: typeof import('../../shared/types/work').WORK_KINDS
+  const WORK_PRIORITIES: typeof import('../../shared/types/work').WORK_PRIORITIES
+  const WORK_ROLES: typeof import('../../shared/types/work').WORK_ROLES
+  const WORK_STATUSES: typeof import('../../shared/types/work').WORK_STATUSES
   const abortNavigation: typeof import('../../node_modules/nuxt/dist/app/composables/router').abortNavigation
   const acceptHMRUpdate: typeof import('../../node_modules/@pinia/nuxt/dist/runtime/composables').acceptHMRUpdate
   const actions: typeof import('../../app/stores/auth.store').actions
@@ -21,6 +27,7 @@ declare global {
   const createUseAsyncData: typeof import('../../node_modules/nuxt/dist/app/composables/asyncData').createUseAsyncData
   const createUseFetch: typeof import('../../node_modules/nuxt/dist/app/composables/fetch').createUseFetch
   const customRef: typeof import('vue').customRef
+  const dateKey: typeof import('../../shared/utils/work-board').dateKey
   const decideAccess: typeof import('../../shared/utils/access-decision').decideAccess
   const defaultPreferences: typeof import('../../shared/utils/user-preferences').defaultPreferences
   const defineAppConfig: typeof import('../../node_modules/nuxt/dist/app/nuxt').defineAppConfig
@@ -96,6 +103,7 @@ declare global {
   const onUpdated: typeof import('vue').onUpdated
   const onWatcherCleanup: typeof import('vue').onWatcherCleanup
   const piniaPluginPersistedstate: typeof import('../../node_modules/pinia-plugin-persistedstate/dist/nuxt/runtime/storages').storages
+  const portalToday: typeof import('../../shared/utils/work-board').portalToday
   const preferencesPatchSchema: typeof import('../../shared/utils/user-preferences').preferencesPatchSchema
   const preferencesSchema: typeof import('../../shared/utils/user-preferences').preferencesSchema
   const prefetchComponents: typeof import('../../node_modules/nuxt/dist/app/composables/preload').prefetchComponents
@@ -123,9 +131,11 @@ declare global {
   const shallowReactive: typeof import('vue').shallowReactive
   const shallowReadonly: typeof import('vue').shallowReadonly
   const shallowRef: typeof import('vue').shallowRef
+  const shiftDay: typeof import('../../shared/utils/work-board').shiftDay
   const showError: typeof import('../../node_modules/nuxt/dist/app/composables/error').showError
   const storeToRefs: typeof import('../../node_modules/@pinia/nuxt/dist/runtime/composables').storeToRefs
   const tableSchema: typeof import('../../shared/utils/user-preferences').tableSchema
+  const timeBucket: typeof import('../../shared/utils/work-board').timeBucket
   const toRaw: typeof import('vue').toRaw
   const toRef: typeof import('vue').toRef
   const toRefs: typeof import('vue').toRefs
@@ -268,6 +278,8 @@ declare global {
   const useUserSession: typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/app/composables/session').useUserSession
   const useUserStore: typeof import('../../app/stores/user').useUserStore
   const useWebSocketStore: typeof import('../../app/stores/websocket.store').useWebSocketStore
+  const useWorkApi: typeof import('../../app/composables/useWorkApi').useWorkApi
+  const useWorkWorkspace: typeof import('../../app/composables/useWorkWorkspace').useWorkWorkspace
   const watch: typeof import('vue').watch
   const watchEffect: typeof import('vue').watchEffect
   const watchPostEffect: typeof import('vue').watchPostEffect
@@ -278,6 +290,7 @@ declare global {
   const withMemo: typeof import('vue').withMemo
   const withModifiers: typeof import('vue').withModifiers
   const withScopeId: typeof import('vue').withScopeId
+  const workUserName: typeof import('../../shared/types/work').workUserName
 }
 // for type re-export
 declare global {
@@ -330,6 +343,9 @@ declare global {
   export type { StructureMember } from '../../shared/types/structure-member'
   import('../../shared/types/structure-member')
   // @ts-ignore
+  export type { WorkUser, WorkDepartment, WorkProjectDTO, WorkTaskDTO, WorkContext } from '../../shared/types/work'
+  import('../../shared/types/work')
+  // @ts-ignore
   export type { OnlineUser } from '../../app/stores/websocket.store'
   import('../../app/stores/websocket.store')
 }
@@ -342,6 +358,12 @@ declare module 'vue' {
     readonly EXPORT_COLUMNS: UnwrapRef<typeof import('../../shared/types/lab-export')['EXPORT_COLUMNS']>
     readonly EXPORT_KINDS: UnwrapRef<typeof import('../../shared/types/lab-export')['EXPORT_KINDS']>
     readonly LAB_TABLE_COLUMNS: UnwrapRef<typeof import('../../app/composables/useTableSettings')['LAB_TABLE_COLUMNS']>
+    readonly TIME_COLUMNS: UnwrapRef<typeof import('../../shared/utils/work-board')['TIME_COLUMNS']>
+    readonly WORK_COLORS: UnwrapRef<typeof import('../../shared/types/work')['WORK_COLORS']>
+    readonly WORK_KINDS: UnwrapRef<typeof import('../../shared/types/work')['WORK_KINDS']>
+    readonly WORK_PRIORITIES: UnwrapRef<typeof import('../../shared/types/work')['WORK_PRIORITIES']>
+    readonly WORK_ROLES: UnwrapRef<typeof import('../../shared/types/work')['WORK_ROLES']>
+    readonly WORK_STATUSES: UnwrapRef<typeof import('../../shared/types/work')['WORK_STATUSES']>
     readonly abortNavigation: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/router')['abortNavigation']>
     readonly acceptHMRUpdate: UnwrapRef<typeof import('../../node_modules/@pinia/nuxt/dist/runtime/composables')['acceptHMRUpdate']>
     readonly actions: UnwrapRef<typeof import('../../app/stores/auth.store')['actions']>
@@ -357,6 +379,7 @@ declare module 'vue' {
     readonly createUseAsyncData: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/asyncData')['createUseAsyncData']>
     readonly createUseFetch: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/fetch')['createUseFetch']>
     readonly customRef: UnwrapRef<typeof import('vue')['customRef']>
+    readonly dateKey: UnwrapRef<typeof import('../../shared/utils/work-board')['dateKey']>
     readonly decideAccess: UnwrapRef<typeof import('../../shared/utils/access-decision')['decideAccess']>
     readonly defaultPreferences: UnwrapRef<typeof import('../../shared/utils/user-preferences')['defaultPreferences']>
     readonly defineAppConfig: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/nuxt')['defineAppConfig']>
@@ -432,6 +455,7 @@ declare module 'vue' {
     readonly onUpdated: UnwrapRef<typeof import('vue')['onUpdated']>
     readonly onWatcherCleanup: UnwrapRef<typeof import('vue')['onWatcherCleanup']>
     readonly piniaPluginPersistedstate: UnwrapRef<typeof import('../../node_modules/pinia-plugin-persistedstate/dist/nuxt/runtime/storages')['storages']>
+    readonly portalToday: UnwrapRef<typeof import('../../shared/utils/work-board')['portalToday']>
     readonly preferencesPatchSchema: UnwrapRef<typeof import('../../shared/utils/user-preferences')['preferencesPatchSchema']>
     readonly preferencesSchema: UnwrapRef<typeof import('../../shared/utils/user-preferences')['preferencesSchema']>
     readonly prefetchComponents: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/preload')['prefetchComponents']>
@@ -459,9 +483,11 @@ declare module 'vue' {
     readonly shallowReactive: UnwrapRef<typeof import('vue')['shallowReactive']>
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
     readonly shallowRef: UnwrapRef<typeof import('vue')['shallowRef']>
+    readonly shiftDay: UnwrapRef<typeof import('../../shared/utils/work-board')['shiftDay']>
     readonly showError: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/error')['showError']>
     readonly storeToRefs: UnwrapRef<typeof import('../../node_modules/@pinia/nuxt/dist/runtime/composables')['storeToRefs']>
     readonly tableSchema: UnwrapRef<typeof import('../../shared/utils/user-preferences')['tableSchema']>
+    readonly timeBucket: UnwrapRef<typeof import('../../shared/utils/work-board')['timeBucket']>
     readonly toRaw: UnwrapRef<typeof import('vue')['toRaw']>
     readonly toRef: UnwrapRef<typeof import('vue')['toRef']>
     readonly toRefs: UnwrapRef<typeof import('vue')['toRefs']>
@@ -604,6 +630,8 @@ declare module 'vue' {
     readonly useUserSession: UnwrapRef<typeof import('../../node_modules/nuxt-auth-utils/dist/runtime/app/composables/session')['useUserSession']>
     readonly useUserStore: UnwrapRef<typeof import('../../app/stores/user')['useUserStore']>
     readonly useWebSocketStore: UnwrapRef<typeof import('../../app/stores/websocket.store')['useWebSocketStore']>
+    readonly useWorkApi: UnwrapRef<typeof import('../../app/composables/useWorkApi')['useWorkApi']>
+    readonly useWorkWorkspace: UnwrapRef<typeof import('../../app/composables/useWorkWorkspace')['useWorkWorkspace']>
     readonly watch: UnwrapRef<typeof import('vue')['watch']>
     readonly watchEffect: UnwrapRef<typeof import('vue')['watchEffect']>
     readonly watchPostEffect: UnwrapRef<typeof import('vue')['watchPostEffect']>
@@ -614,5 +642,6 @@ declare module 'vue' {
     readonly withMemo: UnwrapRef<typeof import('vue')['withMemo']>
     readonly withModifiers: UnwrapRef<typeof import('vue')['withModifiers']>
     readonly withScopeId: UnwrapRef<typeof import('vue')['withScopeId']>
+    readonly workUserName: UnwrapRef<typeof import('../../shared/types/work')['workUserName']>
   }
 }

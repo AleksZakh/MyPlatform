@@ -9,7 +9,14 @@ declare global {
   const ACCESS_ACTIONS: typeof import('../../shared/types/access-management').ACCESS_ACTIONS
   const EXPORT_COLUMNS: typeof import('../../shared/types/lab-export').EXPORT_COLUMNS
   const EXPORT_KINDS: typeof import('../../shared/types/lab-export').EXPORT_KINDS
+  const TIME_COLUMNS: typeof import('../../shared/utils/work-board').TIME_COLUMNS
+  const WORK_COLORS: typeof import('../../shared/types/work').WORK_COLORS
+  const WORK_KINDS: typeof import('../../shared/types/work').WORK_KINDS
+  const WORK_PRIORITIES: typeof import('../../shared/types/work').WORK_PRIORITIES
+  const WORK_ROLES: typeof import('../../shared/types/work').WORK_ROLES
+  const WORK_STATUSES: typeof import('../../shared/types/work').WORK_STATUSES
   const allowNotification: typeof import('../../shared/utils/user-preferences').allowNotification
+  const dateKey: typeof import('../../shared/utils/work-board').dateKey
   const decideAccess: typeof import('../../shared/utils/access-decision').decideAccess
   const defaultPreferences: typeof import('../../shared/utils/user-preferences').defaultPreferences
   const detectMigrationDocument: typeof import('../../shared/utils/migration-document').detectMigrationDocument
@@ -21,10 +28,14 @@ declare global {
   const normalizeLocationName: typeof import('../../shared/utils/lab-location-name').normalizeLocationName
   const normalizePreferences: typeof import('../../shared/utils/user-preferences').normalizePreferences
   const notificationsSchema: typeof import('../../shared/utils/user-preferences').notificationsSchema
+  const portalToday: typeof import('../../shared/utils/work-board').portalToday
   const preferencesPatchSchema: typeof import('../../shared/utils/user-preferences').preferencesPatchSchema
   const preferencesSchema: typeof import('../../shared/utils/user-preferences').preferencesSchema
   const profileDetailsSchema: typeof import('../../shared/utils/profile-details').profileDetailsSchema
+  const shiftDay: typeof import('../../shared/utils/work-board').shiftDay
   const tableSchema: typeof import('../../shared/utils/user-preferences').tableSchema
+  const timeBucket: typeof import('../../shared/utils/work-board').timeBucket
+  const workUserName: typeof import('../../shared/types/work').workUserName
 }
 // for type re-export
 declare global {
@@ -52,4 +63,7 @@ declare global {
   // @ts-ignore
   export type { StructureMember } from '../../shared/types/structure-member'
   import('../../shared/types/structure-member')
+  // @ts-ignore
+  export type { WorkUser, WorkDepartment, WorkProjectDTO, WorkTaskDTO, WorkContext } from '../../shared/types/work'
+  import('../../shared/types/work')
 }

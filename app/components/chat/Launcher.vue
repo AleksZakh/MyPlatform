@@ -23,7 +23,7 @@ const statusText = (s: string) => s === 'online' ? 'В сети' : s === 'away' 
   <UModal v-if="loggedIn" v-model:open="open" title="Сообщения" description="Личные и групповые переписки Space" :ui="{ content: 'w-[calc(100vw-2rem)] sm:w-[calc(100vw-2rem)] sm:max-w-5xl', body: 'block min-w-0 p-0 sm:p-0' }">
     <UButton color="neutral" variant="ghost" class="relative shrink-0" title="Сообщения"
       :aria-label="inbox.unread ? `Открыть сообщения. Непрочитанных: ${inbox.unread}` : 'Открыть сообщения'">
-      <Icon name="streamline-freehand-color:send-email-paper-plane-1" size="28" aria-hidden="true" />
+      <Icon name="streamline-freehand-color:send-email-paper-plane-1" size="20" aria-hidden="true" />
       <UBadge v-if="inbox.unread" color="error" size="sm" class="absolute -right-2 -top-1" aria-hidden="true">{{ inbox.unread > 99 ? '99+' : inbox.unread }}</UBadge>
     </UButton>
     <template #body>

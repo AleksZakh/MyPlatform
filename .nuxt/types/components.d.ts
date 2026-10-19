@@ -63,6 +63,19 @@ interface _GlobalComponents {
   UiTableSettings: typeof import("../../app/components/ui/Table/settings.vue")['default']
   UiTable: typeof import("../../app/components/ui/Table/table.vue")['default']
   UiTableTitle: typeof import("../../app/components/ui/Table/title.vue")['default']
+  WorkBoard: typeof import("../../app/components/work/Board.vue")['default']
+  WorkContactPicker: typeof import("../../app/components/work/ContactPicker.vue")['default']
+  WorkGroupMembers: typeof import("../../app/components/work/GroupMembers.vue")['default']
+  WorkInvitations: typeof import("../../app/components/work/Invitations.vue")['default']
+  WorkMembers: typeof import("../../app/components/work/Members.vue")['default']
+  WorkModal: typeof import("../../app/components/work/Modal.vue")['default']
+  WorkPersonPicker: typeof import("../../app/components/work/PersonPicker.vue")['default']
+  WorkProjectEditor: typeof import("../../app/components/work/ProjectEditor.vue")['default']
+  WorkSidebarLink: typeof import("../../app/components/work/SidebarLink.vue")['default']
+  WorkTaskCard: typeof import("../../app/components/work/TaskCard.vue")['default']
+  WorkTaskEditor: typeof import("../../app/components/work/TaskEditor.vue")['default']
+  WorkTimeline: typeof import("../../app/components/work/Timeline.vue")['default']
+  WorkWorkspace: typeof import("../../app/components/work/Workspace.vue")['default']
   UColorModeAvatar: typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/color-mode/ColorModeAvatar.vue")['default']
   UColorModeButton: typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/color-mode/ColorModeButton.vue")['default']
   UColorModeImage: typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/color-mode/ColorModeImage.vue")['default']
@@ -269,6 +282,19 @@ interface _GlobalComponents {
   LazyUiTableSettings: LazyComponent<typeof import("../../app/components/ui/Table/settings.vue")['default']>
   LazyUiTable: LazyComponent<typeof import("../../app/components/ui/Table/table.vue")['default']>
   LazyUiTableTitle: LazyComponent<typeof import("../../app/components/ui/Table/title.vue")['default']>
+  LazyWorkBoard: LazyComponent<typeof import("../../app/components/work/Board.vue")['default']>
+  LazyWorkContactPicker: LazyComponent<typeof import("../../app/components/work/ContactPicker.vue")['default']>
+  LazyWorkGroupMembers: LazyComponent<typeof import("../../app/components/work/GroupMembers.vue")['default']>
+  LazyWorkInvitations: LazyComponent<typeof import("../../app/components/work/Invitations.vue")['default']>
+  LazyWorkMembers: LazyComponent<typeof import("../../app/components/work/Members.vue")['default']>
+  LazyWorkModal: LazyComponent<typeof import("../../app/components/work/Modal.vue")['default']>
+  LazyWorkPersonPicker: LazyComponent<typeof import("../../app/components/work/PersonPicker.vue")['default']>
+  LazyWorkProjectEditor: LazyComponent<typeof import("../../app/components/work/ProjectEditor.vue")['default']>
+  LazyWorkSidebarLink: LazyComponent<typeof import("../../app/components/work/SidebarLink.vue")['default']>
+  LazyWorkTaskCard: LazyComponent<typeof import("../../app/components/work/TaskCard.vue")['default']>
+  LazyWorkTaskEditor: LazyComponent<typeof import("../../app/components/work/TaskEditor.vue")['default']>
+  LazyWorkTimeline: LazyComponent<typeof import("../../app/components/work/Timeline.vue")['default']>
+  LazyWorkWorkspace: LazyComponent<typeof import("../../app/components/work/Workspace.vue")['default']>
   LazyUColorModeAvatar: LazyComponent<typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/color-mode/ColorModeAvatar.vue")['default']>
   LazyUColorModeButton: LazyComponent<typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/color-mode/ColorModeButton.vue")['default']>
   LazyUColorModeImage: LazyComponent<typeof import("../../node_modules/@nuxt/ui/dist/runtime/components/color-mode/ColorModeImage.vue")['default']>
