@@ -2,3 +2,5 @@
 @import '@nuxt/ui';
 
 @import './preferences.css';
+
+@import './lab-graphite.css';

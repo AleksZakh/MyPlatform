@@ -821,6 +821,7 @@
 
             <UButton
               type="submit"
+              class="lab-primary-action"
               variant="outline"
               color="primary"
               label="Сохранить"

@@ -77,7 +77,7 @@
           :kbds="['Alt', 'Shift', 'N']"
         >
           <UButton
-            class="px-4 py-1 bg-white border text-lg text-black font-normal border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+            class="lab-primary-action px-4 py-1 bg-white border text-lg text-black font-normal border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
             @click="open('create')"
           >
             <Icon
