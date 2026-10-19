@@ -58,6 +58,13 @@ export const menuItems: MenuItem[] = [
   },
 
   {
+    title: 'Задачи и проекты',
+    url: '/projects',
+    icon: 'streamline-freehand-color:task-list-pen',
+    tooltip: 'Личные задачи и проекты',
+  },
+
+  {
     title:
       'Настройки',
 

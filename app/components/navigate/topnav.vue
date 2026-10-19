@@ -52,6 +52,7 @@
     <!-- User -->
 
     <div class="flex ml-auto items-center gap-4">
+      <ChatLauncher />
 
       <div
         v-if="loggedIn && user"

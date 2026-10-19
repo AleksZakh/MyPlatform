@@ -23,12 +23,11 @@
     <!-- Меню отображаем только авторизованному пользователю -->
     <nav v-if="loggedIn">
 
-      <WorkSidebarLink :is-collapsed="isCollapsed" />
 
       <NuxtLink
         v-for="item in visibleMenuItems"
         :key="item.url"
-        :to="item.url"
+        :to="menuDestination(item.url)"
         class="
           flex
           items-center
@@ -78,6 +77,12 @@ import {
   ref,
   watch,
 } from 'vue'
+
+const route = useRoute()
+function menuDestination(url: string) {
+  const department = route.path.match(/^\/departments\/([^/]+)/)?.[1]
+  return url === '/projects' && department ? `/departments/${department}/projects` : url
+}
 
 import {
   menuItems,

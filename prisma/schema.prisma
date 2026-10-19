@@ -710,6 +710,8 @@ enum AccessAction {
 }
 
 model User {
+  workInvitationsReceived WorkProjectInvitation[] @relation("WorkInviteRecipient")
+  workInvitationsSent WorkProjectInvitation[] @relation("WorkInviteSender")
   workTaskComments WorkTaskComment[]
   workTaskParticipations WorkTaskParticipant[]
   assignedWorkTasks WorkTask[] @relation("WorkTaskAssignee")
@@ -1123,6 +1125,7 @@ model LibraryAsset {
 
 // Space tasks and projects — additive module, 2026-10-19.
 model WorkProject {
+  invitations WorkProjectInvitation[]
   id Int @id @default(autoincrement())
   clientKey String @unique @db.Uuid
   name String @db.VarChar(200)
@@ -1209,4 +1212,23 @@ model WorkTaskComment {
   createdAt DateTime @default(now())
   @@index([taskId, id])
   @@map("work_task_comments")
+}
+
+model WorkProjectInvitation {
+  id String @id @db.Uuid
+  projectId Int
+  userId Int
+  inviterId Int
+  role String @db.VarChar(20)
+  status String @default("PENDING") @db.VarChar(20)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  respondedAt DateTime?
+  project WorkProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user User @relation("WorkInviteRecipient", fields: [userId], references: [id], onDelete: Restrict)
+  inviter User @relation("WorkInviteSender", fields: [inviterId], references: [id], onDelete: Restrict)
+  @@unique([projectId, userId])
+  @@index([userId, status, expiresAt])
+  @@index([inviterId, createdAt])
+  @@map("work_project_invitations")
 }

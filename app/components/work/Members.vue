@@ -1,20 +1,35 @@
 <script setup lang="ts">
-import { ref,watch } from 'vue';import PersonPicker from './PersonPicker.vue';
-import { WORK_ROLES,workUserName,type WorkProjectDTO } from '~~/shared/types/work';
-const props=defineProps<{project:WorkProjectDTO;userId:number}>();const emit=defineEmits<{changed:[]}>();
-const {error,saving,send}=useWorkApi();const candidate=ref<number|null>(null),role=ref('MEMBER'),removing=ref<number|null>(null),reassign=ref<number|null>(null);
+import { ref,watch,onBeforeUnmount } from 'vue';import ContactPicker from './ContactPicker.vue';import GroupMembers from './GroupMembers.vue';
+import { WORK_ROLES,workUserName,type WorkProjectDTO,type WorkUser } from '~~/shared/types/work';
+import type { ChatPerson } from '~~/shared/types/chat';
+const props=defineProps<{project:WorkProjectDTO;userId:number}>();const emit=defineEmits<{changed:[];settings:[]}>();
+const {error,saving,send}=useWorkApi();const candidate=ref<ChatPerson|null>(null),role=ref('MEMBER'),removing=ref<number|null>(null),reassign=ref<number|null>(null),tab=ref('person'),notice=ref('');
+type Pending={id:string;user:WorkUser;role:keyof typeof WORK_ROLES;status:string;expiresAt:string};const pending=ref<Pending[]>([]),pendingError=ref('');let sequence=0;
 const editable=()=>props.project.canManage&&!props.project.archivedAt;
-async function add(){if(!candidate.value)return;const r=await send('/api/work/projects/'+props.project.id+'/members','PUT',{version:props.project.version,userId:candidate.value,role:role.value});if(r){candidate.value=null;emit('changed');}}
+async function loadInvitations(){const ticket=++sequence;pending.value=[];pendingError.value='';if(!editable()||props.project.scope==='PRIVATE')return;try{const r=await $fetch<Pending[]>('/api/work/projects/'+props.project.id+'/invitations');if(ticket===sequence)pending.value=r;}catch{if(ticket===sequence)pendingError.value='Не удалось загрузить приглашения.';}}
+async function invite(){const p=candidate.value;if(!p)return;const target=p.id?{userId:p.id}:{directoryLogin:p.directoryLogin||p.login,directoryObjectId:p.directoryObjectId};const r=await send<{message:string}>('/api/work/projects/'+props.project.id+'/invitations','POST',{version:props.project.version,role:role.value,target});if(r){notice.value=r.message;candidate.value=null;}emit('changed');await loadInvitations();}
+async function cancel(invitation:Pending){const r=await send('/api/work/projects/'+props.project.id+'/invitations/'+invitation.id,'DELETE',{});if(r){emit('changed');await loadInvitations();}}
 async function change(userId:number,role:string){const r=await send('/api/work/projects/'+props.project.id+'/members','PUT',{version:props.project.version,userId,role});if(r)emit('changed');}
 async function remove(){const r=await send('/api/work/projects/'+props.project.id+'/members','DELETE',{version:props.project.version,userId:removing.value,reassignTo:reassign.value});if(r){removing.value=null;emit('changed');}}
-watch(removing,()=>{error.value='';reassign.value=null;});
+watch(removing,()=>{error.value='';reassign.value=null;});watch(()=>[props.project.id,props.project.version],()=>loadInvitations(),{immediate:true});onBeforeUnmount(()=>sequence++);
 </script>
-<template><section class="work-members"><h2>Участники проекта</h2><p class="work-muted">Владелец: {{ workUserName(project.owner) }}. Его полномочия сохраняются. Наблюдатели читают, кураторы обсуждают, исполнители работают с задачами, руководители ведут проект.</p>
- <p v-if="error" class="work-error" role="alert">{{ error }}</p>
+<template><section class="work-members"><h2>Участники проекта</h2><p class="work-muted">Владелец: {{ workUserName(project.owner) }}. Наблюдатели читают, кураторы обсуждают, исполнители работают с задачами, руководители ведут проект.</p>
+ <p v-if="error" class="work-error" role="alert">{{ error }}</p><p v-if="notice" role="status">{{ notice }}</p>
  <div v-for="m in project.members" :key="m.userId" class="work-member"><strong>{{ workUserName(m.user) }}</strong>
  <select :value="m.role" :aria-label="'Роль '+workUserName(m.user)" :disabled="saving||!editable()||(m.role==='MANAGER'&&project.ownerId!==userId)" @change="change(m.userId,($event.target as HTMLSelectElement).value)"><option v-for="(label,key) in WORK_ROLES" :key="key" :value="key" :disabled="key==='MANAGER'&&project.ownerId!==userId">{{ label }}</option></select>
  <button v-if="editable()&&(project.ownerId===userId||m.role!=='MANAGER')" :disabled="saving" @click="removing=m.userId">Исключить</button></div>
- <form v-if="editable()&&project.scope!=='PRIVATE'" class="work-form work-member-add" @submit.prevent="add"><PersonPicker v-model="candidate" label="Добавить сотрудника"/><label>Роль<select v-model="role"><option v-for="(label,key) in WORK_ROLES" :key="key" :value="key" :disabled="key==='MANAGER'&&project.ownerId!==userId">{{ label }}</option></select></label><button class="work-primary" :disabled="saving||!candidate">Добавить в проект</button></form>
- <p v-if="project.scope==='PRIVATE'">Чтобы добавить участников, измените видимость проекта в настройках.</p>
+ <template v-if="editable()&&project.scope!=='PRIVATE'"><div class="work-tabs"><button :aria-pressed="tab==='person'" @click="tab='person'">Сотрудник</button><button :aria-pressed="tab==='group'" @click="tab='group'">Группа Space</button></div>
+ <GroupMembers v-if="tab==='group'" :project="project" :user-id="userId" @changed="emit('changed')"/>
+ <div v-else class="work-form work-member-add"><ContactPicker v-if="!candidate" :exclude="[project.ownerId,...project.members.map(m=>m.userId)]" :disabled="saving" @choose="candidate=$event;notice='';error=''"/>
+ <form v-else class="work-form work-confirm" @submit.prevent="invite"><h3>{{ workUserName(candidate) }}</h3>
+ <p v-if="candidate.status!=='ACTIVE'">Этот доменный сотрудник ещё не активирован в Space. Хотите отправить приглашение на корпоративную электронную почту? Адрес будет проверен в AD. Сотрудник сможет активироваться после подтверждённого доменного входа и затем принять приглашение в проект.</p>
+ <p v-else>Приглашение появится в разделе «Задачи и проекты» сотрудника. Доступ к проекту будет предоставлен после принятия.</p>
+ <p v-if="candidate.status!=='ACTIVE'&&!candidate.hasEmail" class="work-muted">В кэше каталога почта не указана. При отправке проверим актуальный адрес в AD.</p>
+ <label>Роль<select v-model="role" :disabled="saving"><option v-for="(label,key) in WORK_ROLES" :key="key" :value="key" :disabled="key==='MANAGER'&&project.ownerId!==userId">{{ label }}</option></select></label><div class="work-actions"><button class="work-primary" :disabled="saving">{{ saving?'Отправка…':candidate.status==='ACTIVE'?'Пригласить в проект':'Отправить приглашение на почту' }}</button><button type="button" :disabled="saving" @click="candidate=null">Отмена</button></div>
+ </form></div>
+ <h3>Ожидающие приглашения</h3><p v-if="pendingError" role="alert" class="work-error">{{ pendingError }} <button @click="loadInvitations">Повторить</button></p><p v-else-if="!pending.length" class="work-muted">Ожидающих приглашений нет.</p>
+ <div v-for="p in pending" :key="p.id" class="work-member"><strong>{{ workUserName(p.user) }}</strong><span>{{ WORK_ROLES[p.role] }} · {{ p.status==='SENDING'?'Отправка письма':p.status==='DELIVERY_FAILED'?'Отправка не подтверждена':'Ожидает принятия' }}</span><button v-if="project.ownerId===userId||p.role!=='MANAGER'" :disabled="saving" @click="cancel(p)">Отменить приглашение</button></div>
+ </template>
+ <div v-if="project.scope==='PRIVATE'" class="work-confirm"><p>Личный проект виден только вам. Для приглашений и добавления группы выберите «Только команда проекта» в настройках и сохраните проект.</p><button v-if="editable()" @click="emit('settings')">Изменить видимость проекта</button></div>
  <div v-if="removing" class="work-confirm"><p>Исключить сотрудника #{{ removing }}? При наличии открытых задач выберите, кому их передать.</p><label>Новый исполнитель<select v-model="reassign"><option :value="null">Не выбран</option><option :value="project.ownerId">Владелец проекта</option><option v-for="m in project.members.filter(m=>m.userId!==removing&&['MEMBER','MANAGER'].includes(m.role))" :key="m.userId" :value="m.userId">{{ workUserName(m.user) }}</option></select></label><button :disabled="saving" @click="remove">Исключить</button><button @click="removing=null">Отмена</button></div>
 </section></template>

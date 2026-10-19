@@ -5,26 +5,26 @@ import { writeAuditEvent } from '../../utils/auditLog';
 import { workActor, hasWorkGrant } from './access';
 import { projectWhere, taskWhere, projectRole, managesProject, seesProject, createsTask, taskRights, type Actor } from './policy';
 import { parse, projectInput, taskInput, taskMove, memberInput, removeMemberInput, versionInput, archiveInput, commentInput, dbDay, positiveId } from './input';
-const userSelect={id:true,login:true,fullName:true} as const;
-const projectInclude={owner:{select:userSelect},department:{select:{id:true,key:true,name:true}},members:{include:{user:{select:userSelect}}}} as const;
+export const userSelect={id:true,login:true,fullName:true} as const;
+export const projectInclude={owner:{select:userSelect},department:{select:{id:true,key:true,name:true}},members:{include:{user:{select:userSelect}}}} as const;
 const taskInclude={project:{include:projectInclude},assignee:{select:userSelect},participants:{select:{userId:true}},_count:{select:{comments:true}}} as const;
 type DB=Prisma.TransactionClient;
 type Project=Prisma.WorkProjectGetPayload<{include:typeof projectInclude}>;
 type Task=Prisma.WorkTaskGetPayload<{include:typeof taskInclude}>;
-function fail(statusCode:number,message:string):never {throw createError({statusCode,message});}
-function version(current:number,requested:number|undefined){if(current!==requested)fail(409,'Запись уже изменилась. Обновите список и откройте её заново.');}
-const projectDTO=(p:Project,a:Actor)=>({...p,canManage:managesProject(p,a),canCreateTask:createsTask(p,a),role:projectRole(p,a)});
+export function fail(statusCode:number,message:string):never {throw createError({statusCode,message});}
+export function version(current:number,requested:number|undefined){if(current!==requested)fail(409,'Запись уже изменилась. Обновите список и откройте её заново.');}
+export const projectDTO=(p:Project,a:Actor)=>({...p,canManage:managesProject(p,a),canCreateTask:createsTask(p,a),role:projectRole(p,a)});
 const taskDTO=(t:Task,a:Actor)=>({...t,...taskRights(t,a),project:t.project ? {id:t.project.id,name:t.project.name,color:t.project.color}:null});
-async function visibleProject(db:DB,id:number,a:Actor){const p=await db.workProject.findFirst({where:{id,...projectWhere(a)},include:projectInclude});return p || fail(404,'Проект не найден или недоступен.');}
+export async function visibleProject(db:DB,id:number,a:Actor){const p=await db.workProject.findFirst({where:{id,...projectWhere(a)},include:projectInclude});return p || fail(404,'Проект не найден или недоступен.');}
 async function visibleTask(db:DB,id:number,a:Actor){const t=await db.workTask.findFirst({where:{id,...taskWhere(a)},include:taskInclude});return t || fail(404,'Задача не найдена или недоступна.');}
-async function activeUsers(db:DB,ids:number[]){if(!ids.length)return;const unique=[...new Set(ids)];const n=await db.user.count({where:{id:{in:unique},status:'ACTIVE'}});if(n!==unique.length)fail(400,'Один из участников неактивен или не найден.');}
+export async function activeUsers(db:DB,ids:number[]){if(!ids.length)return;const unique=[...new Set(ids)];const n=await db.user.count({where:{id:{in:unique},status:'ACTIVE'}});if(n!==unique.length)fail(400,'Один из участников неактивен или не найден.');}
 function auditSnapshot(value:unknown):Prisma.InputJsonValue {
  const v=value as Record<string,any>; const result:Record<string,any>={};
- for(const key of ['id','version','status','priority','scope','visibility','projectId','departmentId','assigneeId','archivedAt','deletedAt','plannedDate','startDate','dueDate'])if(v?.[key]!==undefined)result[key]=v[key];
+ for(const key of ['id','version','status','priority','scope','visibility','projectId','departmentId','assigneeId','archivedAt','deletedAt','plannedDate','startDate','dueDate','invitationId','userId','groupId','addedIds','role','expiresAt'])if(v?.[key]!==undefined)result[key]=v[key];
  if(Array.isArray(v?.members))result.members=v.members.map((m:any)=>({userId:m.userId,role:m.role}));
  return JSON.parse(JSON.stringify(result));
 }
-async function mutation<T>(event:H3Event,actor:Actor,entity:string,action:string,fn:(tx:DB)=>Promise<{id:number;value:T;changed?:boolean}>) {
+export async function mutation<T>(event:H3Event,actor:Actor,entity:string,action:string,fn:(tx:DB)=>Promise<{id:number;value:T;changed?:boolean}>) {
  return prisma.$transaction(async tx=>{
   // One short module lock makes membership revocation and task writes atomic across workers.
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(20261019)`;
@@ -61,7 +61,7 @@ export async function saveProject(event:H3Event,raw:unknown,id?:number){
   if(old){if(!managesProject(old,a))fail(403,'Изменять проект может руководитель.');version(old.version,v.version);if(old.archivedAt)fail(409,'Сначала восстановите проект из архива.');
    if(old.ownerId!==a.id&&(old.scope!==v.scope||old.departmentId!==v.departmentId))fail(403,'Видимость и отдел изменяет владелец проекта.');}
   if(shared&&(!old||old.scope==='PRIVATE'||old.departmentId!==v.departmentId)&&!grant)fail(403,'Создание общих проектов разрешает администратор.');
-  if(v.scope==='PRIVATE'&&(v.departmentId||old?.members.length))fail(400,'Личный проект не может иметь отдел или участников.');
+  if(v.scope==='PRIVATE'&&(v.departmentId||old?.members.length||(old&&await tx.workProjectInvitation.count({where:{projectId:old.id,status:{in:['PENDING','SENDING']},expiresAt:{gt:new Date()}}}))))fail(400,'Личный проект не может иметь отдел, участников или действующие приглашения. Сначала исключите участников и отмените приглашения.');
   if(v.scope==='DEPARTMENT'&&!v.departmentId)fail(400,'Выберите подразделение.');
   if(v.departmentId){const dep=await tx.department.findFirst({where:{id:v.departmentId,isActive:true}});if(!dep)fail(400,'Подразделение недоступно.');
    if((!old||old.departmentId!==v.departmentId)&&!a.isSystemAdmin&&v.departmentId!==a.departmentId)fail(403,'Можно создавать общие проекты своего подразделения.');}
@@ -77,7 +77,7 @@ export async function saveMember(event:H3Event,id:number,raw:unknown){const a=aw
  return mutation(event,a,'WorkProject','MEMBER',async tx=>{const p=await visibleProject(tx,id,a);if(!managesProject(p,a)||p.archivedAt)fail(403,'Недостаточно прав.');version(p.version,v.version);
  if(p.scope==='PRIVATE')fail(400,'Сначала сделайте проект общим.');if(v.userId===p.ownerId)fail(400,'Владелец проекта сохраняет свои полномочия.');
  const old=p.members.find(m=>m.userId===v.userId);if(p.ownerId!==a.id&&(v.role==='MANAGER'||old?.role==='MANAGER'))fail(403,'Руководителей назначает владелец проекта.');
- await activeUsers(tx,[v.userId]);await tx.workProjectMember.upsert({where:{projectId_userId:{projectId:id,userId:v.userId}},create:{projectId:id,userId:v.userId,role:v.role},update:{role:v.role}});
+ await activeUsers(tx,[v.userId]);await tx.workProjectInvitation.updateMany({where:{projectId:id,userId:v.userId,status:{in:['PENDING','SENDING']}},data:{status:'CANCELLED',respondedAt:new Date()}});await tx.workProjectMember.upsert({where:{projectId_userId:{projectId:id,userId:v.userId}},create:{projectId:id,userId:v.userId,role:v.role},update:{role:v.role}});
  const r=await tx.workProject.update({where:{id},data:{version:{increment:1}},include:projectInclude});return {id,value:projectDTO(r,a)};});}
 export async function removeMember(event:H3Event,id:number,raw:unknown){const a=await workActor(event),v=parse(removeMemberInput,raw);
  return mutation(event,a,'WorkProject','MEMBER_REMOVE',async tx=>{const p=await visibleProject(tx,id,a);if(!managesProject(p,a)||p.archivedAt)fail(403,'Недостаточно прав.');version(p.version,v.version);
@@ -89,6 +89,7 @@ export async function removeMember(event:H3Event,id:number,raw:unknown){const a=
  if(v.reassignTo!==p.ownerId&&!p.members.some(m=>m.userId===v.reassignTo&&['MANAGER','MEMBER'].includes(m.role)))fail(400,'Исполнитель должен входить в команду проекта.');
  await activeUsers(tx,[v.reassignTo]);await tx.workTask.updateMany({where:open,data:{assigneeId:v.reassignTo,version:{increment:1}}});}
  await tx.workProjectMember.delete({where:{projectId_userId:{projectId:id,userId:v.userId}}});
+ await tx.workProjectInvitation.updateMany({where:{projectId:id,userId:v.userId,status:{in:['PENDING','SENDING']}},data:{status:'CANCELLED',respondedAt:new Date()}});
  const result=await tx.workProject.update({where:{id},data:{version:{increment:1}},include:projectInclude});return {id,value:projectDTO(result,a)};});}
 export async function tasks(event:H3Event){const a=await workActor(event),q=getQuery(event);const page=q.page?positiveId(q.page):1;
  const conditions:Prisma.WorkTaskWhereInput[]=[taskWhere(a)];

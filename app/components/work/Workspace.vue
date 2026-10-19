@@ -3,7 +3,7 @@ import { ref,computed } from 'vue';
 import type { WorkTaskDTO,WorkProjectDTO } from '~~/shared/types/work';
 import { WORK_STATUSES,workUserName } from '~~/shared/types/work';
 import { dateKey } from '~~/shared/utils/work-board';
-import Board from './Board.vue';import Timeline from './Timeline.vue';import TaskEditor from './TaskEditor.vue';import ProjectEditor from './ProjectEditor.vue';import Members from './Members.vue';
+import Board from './Board.vue';import Timeline from './Timeline.vue';import TaskEditor from './TaskEditor.vue';import ProjectEditor from './ProjectEditor.vue';import Members from './Members.vue';import Invitations from './Invitations.vue';
 const {context,projects,project,tasks,tab,view,selectedDepartment,archived,completed,search,today,loading,error,saveError,saving,taskTotal,projectTotal,contextLabel,loadProjects,loadTasks,reload,initialize,openProject,selectTab,move,toggleArchive}=useWorkWorkspace();
 const editorRef=ref<InstanceType<typeof TaskEditor>|null>(null);
 const taskEditor=ref(false),task=ref<WorkTaskDTO|null>(null),projectEditor=ref(false),editingProject=ref<WorkProjectDTO|null>(null),archiveConfirm=ref(false),detailLoading=ref(false);
@@ -13,11 +13,13 @@ async function editTask(t?:WorkTaskDTO){error.value='';if(t){detailLoading.value
 function editProject(p:WorkProjectDTO|null=null){editingProject.value=p;projectEditor.value=true;}
 async function taskSaved(){taskEditor.value=false;await reload();}
 async function projectSaved(p:WorkProjectDTO){projectEditor.value=false;await reload();if(taskEditor.value){if(!projects.value.some(x=>x.id===p.id))projects.value.push(p);editorRef.value?.useProject(p);}else await openProject(p);}
+async function invitationAccepted(id:number){try{await reload();await openProject(await $fetch<WorkProjectDTO>('/api/work/projects/'+id));}catch{error.value='Приглашение принято. Обновите список проектов.';}}
 async function archive(){archiveConfirm.value=false;await toggleArchive();}
 </script>
 <template><section class="work-root work-workspace">
  <header class="work-page-head"><div><p class="work-eyebrow">SPACE · {{ route.params.department?contextLabel:'Рабочее пространство' }}</p><h1>Задачи и проекты</h1><p class="work-muted">Личная работа и общие проекты — в одном месте</p></div>
  <div class="work-actions"><button :disabled="loading||!context" aria-label="Обновить список" @click="context?reload():initialize()">Обновить</button><button v-if="context" class="work-primary" :disabled="detailLoading||!!project&&!project.canCreateTask" @click="editTask()">+ Задача</button><button v-if="context" @click="editProject()">+ Проект</button></div></header>
+ <Invitations v-if="context" @accepted="invitationAccepted"/>
  <nav class="work-tabs" aria-label="Раздел задач"><button v-for="t in tabs" :key="t.key" :aria-pressed="tab===t.key" @click="selectTab(t.key)">{{ t.label }}</button></nav>
  <p v-if="error||saveError" role="alert" class="work-error">{{ error||saveError }}</p>
  <div v-if="context" class="work-body">
@@ -35,7 +37,7 @@ async function archive(){archiveConfirm.value=false;await toggleArchive();}
    <p v-if="tab==='department'&&!selectedDepartment&&!project" class="work-empty">Выберите подразделение. Будут показаны только доступные вам задачи.</p>
    <p v-if="tab==='mine'" class="work-muted">Ваши задачи из всех проектов и подразделений. Личные задачи видны только вам.</p>
    <p v-if="loading||detailLoading" role="status">Загрузка…</p>
-   <Members v-if="view==='members'&&project" :project="project" :user-id="context.userId" @changed="reload"/>
+   <Members v-if="view==='members'&&project" :project="project" :user-id="context.userId" @changed="reload" @settings="editProject(project)"/>
    <Timeline v-else-if="view==='timeline'" :tasks="tasks" :today="today" @open="editTask"/>
    <div v-else-if="view==='list'" class="work-table-wrap"><table><thead><tr><th>Задача</th><th>Проект</th><th>Исполнитель</th><th>Состояние</th><th>План</th><th>Срок</th></tr></thead><tbody><tr v-for="t in tasks" :key="t.id"><td><button @click="editTask(t)">{{ t.title }}</button></td><td>{{ t.project?.name||'Самостоятельная' }}</td><td>{{ workUserName(t.assignee) }}</td><td>{{ WORK_STATUSES[t.status as keyof typeof WORK_STATUSES] }}</td><td>{{ dateKey(t.plannedDate)||'—' }}</td><td>{{ dateKey(t.dueDate)||'—' }}</td></tr></tbody></table><p v-if="!tasks.length&&!loading" class="work-empty">Задач пока нет</p></div>
    <Board v-else :tasks="tasks" :mode="view==='status'?'status':'time'" :today="today" :busy="saving" @open="editTask" @move="move"/>

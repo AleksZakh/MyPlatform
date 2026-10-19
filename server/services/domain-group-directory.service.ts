@@ -69,3 +69,14 @@ export async function resolveDomainGroupIds(event: H3Event, directoryObjectId: s
   return [...new Set((groups.groups || []).map(groupFromRaw).filter((g): g is DirectorySecurityGroup => !!g)
     .map(g => g.directoryObjectId))].sort()
 }
+
+/** Identity IDs only; callers must intersect with ACTIVE, AD-bound Space accounts. */
+export async function directoryGroupUserIds(event: H3Event, id: string): Promise<string[]> {
+  const group = await findDirectoryGroup(event, id)
+  if (!group) throw createError({ statusCode: 409, message: 'Доменная группа не найдена. Обновите её в центре администрирования.' })
+  const result = await queryDirectory(event,
+    `(&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2))(memberOf:1.2.840.113556.1.4.1941:=${escapeLdapFilter(group.distinguishedName)}))`,
+    ['objectGUID', 'sAMAccountName', 'userAccountControl'], true)
+  return [...new Set((result.users || []).filter(u => (Number(u.userAccountControl || 0) & 2) === 0)
+    .map(u => normalizeDirectoryObjectId(u.objectGUID)?.toLowerCase()).filter((id): id is string => !!id))]
+}

@@ -16,3 +16,12 @@
 
 html[data-space-contrast="high"] .work-root{--work-bg:#fff;--work-panel:#fff;--work-line:#334155;--work-text:#111827;--work-muted:#334155;--work-accent:#1d4ed8}
 html[data-space-text="large"] .work-root{font-size:1rem}html[data-space-text="largest"] .work-root{font-size:1.1rem}
+
+/* Team pickers keep a stable width and scroll within their own list. */
+.work-root .work-choice-list{display:flex;flex-direction:column;gap:.35rem;max-height:18rem;overflow:auto;min-width:0;padding:.25rem 0;overscroll-behavior:contain}
+.work-root .work-choice-list>button{text-align:left;display:flex;flex-direction:column;gap:.2rem;white-space:normal;overflow-wrap:anywhere}
+.work-root .work-choice-list small{opacity:.75}
+.work-root .work-group-members,.work-root .work-contact-picker{min-width:0;display:grid;gap:.65rem}
+.work-root .work-invitations{margin:.75rem 0}
+.work-root .work-invitation-card{border:1px solid var(--work-border,#cbd5e1);border-left:4px solid var(--project-color);border-radius:.6rem;padding:1rem;margin:.75rem 0;display:grid;gap:.5rem}
+.work-root .work-members h3{font-weight:600;margin-top:.8rem}
