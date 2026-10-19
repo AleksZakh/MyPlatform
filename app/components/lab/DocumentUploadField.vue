@@ -10,13 +10,22 @@
       class="hidden"
       :accept="accept"
       :disabled="disabled"
+      :aria-invalid="invalid || !!selectionError"
+      :aria-describedby="hintId"
       @change="handleFileChange"
     >
 
 
     <div
-      class="flex min-w-0 items-center gap-2 rounded-md border bg-white px-2 py-2 transition"
+      class="document-drop-zone flex min-w-0 items-center gap-2 rounded-md border bg-white px-2 py-2 transition"
+      :data-dragging="dragDepth > 0 && !disabled"
+      @dragenter.prevent.stop="dragEnter"
+      @dragover.prevent.stop="dragOver"
+      @dragleave.prevent.stop="dragLeave"
+      @drop.prevent.stop="dropFile"
       :class="[
+        dragDepth > 0 && !disabled ? 'ring-2 ring-sky-500 bg-sky-50' : '',
+        selectionError ? 'border-red-500' : '', 
         invalid
           ? 'border-red-500 ring-1 ring-red-500'
           : modelValue
@@ -123,6 +132,8 @@
         @click="clearSelectedFile"
       />
     </div>
+    <p :id="hintId" class="mt-1 text-xs text-gray-500" aria-live="polite">{{ disabled ? 'Выбор файла недоступен' : dragDepth > 0 ? 'Отпустите файл для выбора' : 'Перетащите сюда один файл или нажмите «Выбрать файл». JFIF поддерживается.' }}</p>
+    <p v-if="selectionError" class="mt-1 text-sm text-red-600" role="alert">{{ selectionError }}</p>
   </div>
 </template>
 
@@ -131,7 +142,11 @@
 import {
   computed,
   ref,
+  watch,
+  useId,
 } from 'vue'
+
+import { LAB_DOCUMENT_ACCEPT, documentSelectionError } from '~~/shared/utils/document-selection'
 
 import {
   getFileUrl,
@@ -169,7 +184,7 @@ const props = withDefaults(
       false,
 
     accept:
-      '.pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png',
+      LAB_DOCUMENT_ACCEPT,
 
     emptyHint:
       'PDF, Word, Excel или изображение',
@@ -255,36 +270,48 @@ function openPicker() {
 }
 
 
-function handleFileChange(
-  event: Event,
-) {
-  const input =
-    event.target as
-      HTMLInputElement
+const selectionError = ref('')
+const dragDepth = ref(0)
+const hintId = useId()
+watch(() => props.disabled, () => { dragDepth.value = 0; selectionError.value = '' })
 
-  const file =
-    input.files?.[0] ??
-    null
-
-  if (file) {
-    emit(
-      'update:modelValue',
-      file,
-    )
-  }
-
-  /**
-   * Нативное поле сразу очищаем.
-   * Выбранный File хранится в Vue state,
-   * поэтому название появляется с ПЕРВОГО выбора.
-   * Заодно пользователь сможет повторно выбрать
-   * тот же самый файл.
-   */
+function selectFiles(files: File[]) {
+  if (props.disabled) return
+  const error = documentSelectionError(files, props.accept)
+  selectionError.value = error || ''
+  if (!error) emit('update:modelValue', files[0]!)
+}
+function handleFileChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  // Canceling the native picker keeps the current selection.
+  if (input.files?.length) selectFiles(Array.from(input.files))
   input.value = ''
+}
+function hasFiles(event: DragEvent) {
+  return Array.from(event.dataTransfer?.types || []).includes('Files')
+}
+function dragEnter(event: DragEvent) {
+  if (!props.disabled && hasFiles(event)) dragDepth.value++
+}
+function dragOver(event: DragEvent) {
+  if (event.dataTransfer) event.dataTransfer.dropEffect = !props.disabled && hasFiles(event) ? 'copy' : 'none'
+}
+function dragLeave() { dragDepth.value = Math.max(0, dragDepth.value - 1) }
+function dropFile(event: DragEvent) {
+  dragDepth.value = 0
+  if (props.disabled) return
+  const items = Array.from(event.dataTransfer?.items || [])
+  if (items.some(item => item.webkitGetAsEntry?.()?.isDirectory)) {
+    selectionError.value = 'Перетаскивайте файл, а не папку.'
+    return
+  }
+  selectFiles(Array.from(event.dataTransfer?.files || []))
 }
 
 
 function clearSelectedFile() {
+  if (props.disabled) return
+  selectionError.value = ''
   emit(
     'update:modelValue',
     null,

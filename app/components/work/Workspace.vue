@@ -2,7 +2,7 @@
 import { ref,computed } from 'vue';
 import type { WorkTaskDTO,WorkProjectDTO } from '~~/shared/types/work';
 import { WORK_STATUSES,workUserName } from '~~/shared/types/work';
-import { dateKey } from '~~/shared/utils/work-board';
+import { formatWorkDate,dateKey } from '~~/shared/utils/work-board';
 import Board from './Board.vue';import Timeline from './Timeline.vue';import TaskEditor from './TaskEditor.vue';import ProjectEditor from './ProjectEditor.vue';import Members from './Members.vue';import Invitations from './Invitations.vue';
 const {context,projects,project,tasks,tab,view,selectedDepartment,archived,completed,search,today,loading,error,saveError,saving,taskTotal,projectTotal,contextLabel,loadProjects,loadTasks,reload,initialize,openProject,selectTab,move,toggleArchive}=useWorkWorkspace();
 const editorRef=ref<InstanceType<typeof TaskEditor>|null>(null);
@@ -24,7 +24,7 @@ async function archive(){archiveConfirm.value=false;await toggleArchive();}
  <p v-if="error||saveError" role="alert" class="work-error">{{ error||saveError }}</p>
  <div v-if="context" class="work-body">
   <template v-if="tab==='projects'&&!project"><div class="work-toolbar"><h2>{{ route.params.department?'Проекты подразделения и личные':'Доступные проекты' }}</h2><label class="work-check"><input v-model="archived" type="checkbox"/>Архив</label><label v-if="route.params.department">Подразделение<select v-model="selectedDepartment"><option v-for="d in context.departments" :key="d.id" :value="d.id">{{ d.name }}</option></select></label></div>
-   <div class="work-project-grid"><button v-for="p in visibleProjects" :key="p.id" class="work-project-card" :style="{'--project-color':p.color}" @click="openProject(p)"><span class="work-project-tag">{{ p.department?.name|| (p.scope==='PRIVATE'?'Личный проект':'Командный проект') }}</span><h2>{{ p.name }}</h2><p>{{ p.description||'Добавьте цель и ожидаемый результат проекта' }}</p><footer><span>{{ p.members.length+1 }} участн.</span><span>{{ dateKey(p.dueDate)||'Срок не задан' }}</span></footer></button></div>
+   <div class="work-project-grid"><button v-for="p in visibleProjects" :key="p.id" class="work-project-card" :style="{'--project-color':p.color}" @click="openProject(p)"><span class="work-project-tag">{{ p.department?.name|| (p.scope==='PRIVATE'?'Личный проект':'Командный проект') }}</span><h2>{{ p.name }}</h2><p>{{ p.description||'Добавьте цель и ожидаемый результат проекта' }}</p><footer><span>{{ p.members.length+1 }} участн.</span><span>{{ formatWorkDate(p.dueDate)||'Срок не задан' }}</span></footer></button></div>
    <div v-if="!visibleProjects.length&&!loading" class="work-empty"><h2>Начните с первого проекта</h2><p>Определите цель, добавьте задачи и пригласите участников.</p><button class="work-primary" @click="editProject()">Создать проект</button></div>
    <button v-if="projects.length<projectTotal" @click="loadProjects(true).catch(()=>error='Не удалось загрузить проекты.')">Ещё проекты ({{ projects.length }} / {{ projectTotal }})</button>
   </template>
@@ -39,7 +39,7 @@ async function archive(){archiveConfirm.value=false;await toggleArchive();}
    <p v-if="loading||detailLoading" role="status">Загрузка…</p>
    <Members v-if="view==='members'&&project" :project="project" :user-id="context.userId" @changed="reload" @settings="editProject(project)"/>
    <Timeline v-else-if="view==='timeline'" :tasks="tasks" :today="today" @open="editTask"/>
-   <div v-else-if="view==='list'" class="work-table-wrap"><table><thead><tr><th>Задача</th><th>Проект</th><th>Исполнитель</th><th>Состояние</th><th>План</th><th>Срок</th></tr></thead><tbody><tr v-for="t in tasks" :key="t.id"><td><button @click="editTask(t)">{{ t.title }}</button></td><td>{{ t.project?.name||'Самостоятельная' }}</td><td>{{ workUserName(t.assignee) }}</td><td>{{ WORK_STATUSES[t.status as keyof typeof WORK_STATUSES] }}</td><td>{{ dateKey(t.plannedDate)||'—' }}</td><td>{{ dateKey(t.dueDate)||'—' }}</td></tr></tbody></table><p v-if="!tasks.length&&!loading" class="work-empty">Задач пока нет</p></div>
+   <div v-else-if="view==='list'" class="work-table-wrap"><table><thead><tr><th>Задача</th><th>Проект</th><th>Исполнитель</th><th>Состояние</th><th>План</th><th>Срок</th></tr></thead><tbody><tr v-for="t in tasks" :key="t.id"><td><button @click="editTask(t)">{{ t.title }}</button></td><td>{{ t.project?.name||'Самостоятельная' }}</td><td>{{ workUserName(t.assignee) }}</td><td>{{ WORK_STATUSES[t.status as keyof typeof WORK_STATUSES] }}</td><td>{{ formatWorkDate(t.plannedDate)||'—' }}</td><td>{{ formatWorkDate(t.dueDate)||'—' }}</td></tr></tbody></table><p v-if="!tasks.length&&!loading" class="work-empty">Задач пока нет</p></div>
    <Board v-else :tasks="tasks" :mode="view==='status'?'status':'time'" :today="today" :busy="saving" @open="editTask" @move="move"/>
    <footer v-if="view!=='members'" class="work-list-footer"><span>Показано {{ tasks.length }} из {{ taskTotal }}</span><button v-if="tasks.length<taskTotal" :disabled="loading" @click="loadTasks(true)">Показать ещё</button><span v-if="tasks.length<taskTotal">Доска и план показывают загруженные задачи.</span></footer>
   </template>

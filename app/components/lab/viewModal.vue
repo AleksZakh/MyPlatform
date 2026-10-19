@@ -730,7 +730,7 @@ function getFileIcon(path: string): string {
   switch (extension) {
     case 'pdf': return pdfIcon;
     case 'webp': return webpIcon;
-    case 'jpg': case 'jpeg': case 'png': case 'gif':
+    case 'jpg': case 'jpeg': case 'jfif': case 'png': case 'gif':
     case 'bmp': case 'tif': case 'tiff': case 'svg': case 'avif':
       return imgIcon;
     case 'xls': case 'xlsx': case 'xlsm': case 'ods': case 'csv':

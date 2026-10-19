@@ -64,7 +64,8 @@ export async function saveProject(event:H3Event,raw:unknown,id?:number){
   if(v.scope==='PRIVATE'&&(v.departmentId||old?.members.length||(old&&await tx.workProjectInvitation.count({where:{projectId:old.id,status:{in:['PENDING','SENDING']},expiresAt:{gt:new Date()}}}))))fail(400,'Личный проект не может иметь отдел, участников или действующие приглашения. Сначала исключите участников и отмените приглашения.');
   if(v.scope==='DEPARTMENT'&&!v.departmentId)fail(400,'Выберите подразделение.');
   if(v.departmentId){const dep=await tx.department.findFirst({where:{id:v.departmentId,isActive:true}});if(!dep)fail(400,'Подразделение недоступно.');
-   if((!old||old.departmentId!==v.departmentId)&&!a.isSystemAdmin&&v.departmentId!==a.departmentId)fail(403,'Можно создавать общие проекты своего подразделения.');}
+   // Shared-project CREATE grants selection of any active owning department.
+  }
   const data={name:v.name,description:v.description,color:v.color,scope:v.scope,departmentId:v.departmentId,startDate:dbDay(v.startDate),dueDate:dbDay(v.dueDate)};
   const p=id?await tx.workProject.update({where:{id},data:{...data,version:{increment:1}},include:projectInclude}):await tx.workProject.create({data:{...data,ownerId:a.id,clientKey:v.clientKey},include:projectInclude});
   return {id:p.id,value:projectDTO(p,a)};

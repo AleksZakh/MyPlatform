@@ -219,7 +219,7 @@ const viewerFileExtension = computed(() => {
 })
 
 const isViewerImage = computed(() => {
-  return ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'bmp'].includes(viewerFileExtension.value)
+  return ['jpg', 'jpeg', 'jfif', 'png', 'gif', 'svg', 'webp', 'bmp'].includes(viewerFileExtension.value)
 })
 
 const isViewerPdf = computed(() => {

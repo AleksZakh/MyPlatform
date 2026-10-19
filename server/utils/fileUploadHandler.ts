@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { createError } from 'h3';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { labPath, normalizeStoragePath } from '../services/storage/paths';
@@ -80,7 +81,14 @@ export async function handleFileUpload(
 
     // Извлекаем расширение файла
     const rawFilename = Buffer.from(item.filename, 'latin1').toString('utf-8');
-    const fileExt = path.extname(rawFilename).toLowerCase();
+    let fileExt = path.extname(rawFilename).toLowerCase();
+    if (fileExt === '.jfif') {
+      const bytes = item.data;
+      if (!bytes || bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8 || bytes[2] !== 0xff) {
+        throw createError({ statusCode: 415, message: 'Файл JFIF должен содержать изображение JPEG.' });
+      }
+      fileExt = '.jpg';
+    }
 
     // Формируем новое имя файла
     const newFilename = `${fieldName}_${randomUUID()}${fileExt}`;

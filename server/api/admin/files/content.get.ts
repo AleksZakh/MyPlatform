@@ -11,7 +11,7 @@ export default defineEventHandler(async event => {
   const info = await handle.stat()
   if (!info.isFile()) { await handle.close(); throw createError({ statusCode: 400, message: 'Ожидался файл' }) }
   const ext = path.extname(relative).toLowerCase()
-  const mime: Record<string,string> = { '.pdf':'application/pdf', '.png':'image/png', '.jpg':'image/jpeg', '.jpeg':'image/jpeg' }
+  const mime: Record<string,string> = { '.pdf':'application/pdf', '.png':'image/png', '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.jfif':'image/jpeg' }
   const inline = Boolean(mime[ext]) && q.download !== '1'
   setHeader(event, 'Content-Type', inline ? mime[ext]! : 'application/octet-stream')
   setHeader(event, 'X-Content-Type-Options', 'nosniff')

@@ -23,3 +23,11 @@ export const TIME_COLUMNS = [
  { key: 'tomorrow', label: 'Завтра' }, { key: 'week', label: 'Ближайшие 7 дней' },
  { key: 'later', label: 'Позже' }, { key: 'unscheduled', label: 'Без плана' }, { key: 'done', label: 'Готово' },
 ];
+
+/** Calendar dates are formatted without local timezone conversion. ISO stays in API/storage. */
+export function formatWorkDate(value: string | Date | null | undefined): string {
+ const key = dateKey(value);
+ if (!key || !/^\d{4}-\d{2}-\d{2}$/.test(key)) return '';
+ const [year,month,day] = key.split('-');
+ return `${day}.${month}.${year}`;
+}

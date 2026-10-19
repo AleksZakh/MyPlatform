@@ -60,7 +60,7 @@ export const menuItems: MenuItem[] = [
   {
     title: 'Мои задачи',
     url: '/projects',
-    icon: 'streamline-freehand-color:task-list-pen',
+    icon: 'streamline-freehand-color:task-list-clipboard-clock',
     tooltip: 'Личные задачи и проекты',
   },
 

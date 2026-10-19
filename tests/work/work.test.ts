@@ -86,6 +86,19 @@ test('HTTP + database: privacy, department scope, roles, lifecycle, conflicts, i
  assert.equal((await call('/tasks/'+pt.id,'GET',undefined,3)).status,200);assert.equal((await call('/tasks/'+pt.id,'PATCH',{version:pt.version,status:'DONE'},3)).status,403);
  await ok(await call('/tasks/'+personal.id,'DELETE',{version:moved.version}));assert.equal((await call('/tasks/'+personal.id)).status,404);assert.ok((await db.workTask.findUniqueOrThrow({where:{id:personal.id}})).deletedAt);
 
+
+ // Shared-project creators can choose a newly created active owning department.
+ const newDept=await db.department.create({data:{id:3,key:'new-department',name:'Новое подразделение'}});
+ const ctx=await ok(await call('/context'));assert.ok(ctx.departments.some((d:any)=>d.id===newDept.id));
+ let cross=await ok(await call('/projects','POST',projectBody({departmentId:newDept.id})));
+ assert.equal(cross.departmentId,newDept.id);
+ cross=await ok(await call('/projects/'+cross.id,'PUT',projectBody({version:cross.version,departmentId:2})));
+ assert.equal(cross.departmentId,2);
+ await db.department.update({where:{id:newDept.id},data:{isActive:false}});
+ assert.equal((await call('/projects/'+cross.id,'PUT',projectBody({version:cross.version,departmentId:newDept.id}))).status,400);
+ assert.equal((await call('/projects','POST',projectBody({departmentId:2}),3)).status,403);
+ cross=await ok(await call('/projects/'+cross.id+'/members','PUT',{version:cross.version,userId:3,role:'MANAGER'}));
+ assert.equal((await call('/projects/'+cross.id,'PUT',projectBody({version:cross.version,departmentId:1}),3)).status,403);
  // Personal project editing and conversion are versioned; groups are independent of departments.
  let gp=await ok(await call('/projects','POST',projectBody({scope:'PRIVATE',departmentId:null,name:'Личный'})));
  gp=await ok(await call('/projects/'+gp.id,'PUT',projectBody({scope:'PRIVATE',departmentId:null,name:'Отредактирован',version:gp.version})));
