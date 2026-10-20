@@ -35,9 +35,9 @@
                 xl:text-5xl
               "
             >
-              Данные, процессы и доступы —
+              Пространство 
               <span class="text-slate-400">
-                в одном пространстве.
+                для продуктивной работы и взаимодействия.
               </span>
             </h1>
 
@@ -165,7 +165,7 @@
               </p>
 
               <h2 class="text-3xl font-semibold tracking-tight text-slate-950">
-                Вход в Space
+                Вход в систему
               </h2>
 
               <p class="mt-3 text-sm leading-6 text-slate-500">

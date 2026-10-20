@@ -9,7 +9,7 @@
       </h2>
 
       <p class="text-sm text-gray-500 mt-1">
-        Заполните данные и выберите группы Space, к которым требуется доступ.
+        Заполните данные и выберите группы, к которым требуется доступ.
       </p>
     </div>
 
@@ -60,7 +60,7 @@
       v-if="isLoadingGroups"
       class="text-sm text-gray-500"
     >
-      Загружаем группы Space...
+      Загружаем группы ...
     </div>
 
     <!-- Ошибка загрузки -->
@@ -72,13 +72,13 @@
     </div>
 
     <fieldset v-else class="border border-gray-200 rounded-lg p-4 min-w-0">
-      <legend class="px-1 font-medium text-gray-800">Группы Space</legend>
+      <legend class="px-1 font-medium text-gray-800">Группы</legend>
       <p class="text-xs text-gray-500 mb-3">Выберите группы, в которых планируете работать. Доступ предоставляется после одобрения администратором.</p>
       <p v-if="!groups.length" class="text-sm text-gray-500" role="status">Нет доступных групп. Обратитесь к администратору.</p>
       <div v-else class="flex flex-col gap-2 max-h-64 overflow-y-auto pr-1">
         <label v-for="group in groups" :key="group.id" class="flex items-start gap-3 cursor-pointer rounded-md p-2 hover:bg-gray-50">
           <input v-model="form.groupIds" type="checkbox" :value="group.id" class="mt-1" :disabled="isSubmitting || !!successMessage" />
-          <span class="text-sm text-gray-800 break-words">{{ group.name }}</span>
+          <span class="text-sm text-gray-800 wrap-break-word">{{ group.name }}</span>
         </label>
       </div>
     </fieldset>
