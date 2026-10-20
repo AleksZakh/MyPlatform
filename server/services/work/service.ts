@@ -1,3 +1,4 @@
+import { orderedTaskIds } from './task-order';
 import { createError, getQuery, type H3Event } from 'h3';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../utils/prisma';
@@ -106,7 +107,15 @@ export async function tasks(event:H3Event){const a=await workActor(event),q=getQ
  else conditions.push({OR:[{assigneeId:a.id},{creatorId:a.id},{participants:{some:{userId:a.id}}}]});
  if(q.completed!=='1')conditions.push({status:{not:'DONE'}});
  if(q.q)conditions.push({title:{contains:String(q.q).slice(0,200),mode:'insensitive'}});
- const where={AND:conditions};const [rows,total]=await Promise.all([prisma.workTask.findMany({where,include:taskInclude,orderBy:[{plannedDate:{sort:'asc',nulls:'last'}},{id:'desc'}],take:100,skip:(page-1)*100}),prisma.workTask.count({where})]);
+ const order=q.order==='timeline'?'timeline':'schedule';
+ if(order==='timeline')conditions.push({OR:[{startDate:{not:null}},{dueDate:{not:null}}]});
+ if(q.order!==undefined&&!['timeline','schedule'].includes(String(q.order)))fail(400,'Неизвестный порядок задач.');
+ if(page>10000)fail(400,'Уточните фильтр задач.');
+ const where={AND:conditions};
+ const [ids,total]=await Promise.all([orderedTaskIds(prisma,where,order,page),prisma.workTask.count({where})]);
+ const found=ids.length?await prisma.workTask.findMany({where:{AND:[where,{id:{in:ids}}]},include:taskInclude}):[];
+ const rank=new Map(ids.map((id,index)=>[id,index]));
+ const rows=found.sort((a,b)=>rank.get(a.id)!-rank.get(b.id)!);
  return {items:rows.map(t=>taskDTO(t,a)),total,page};}
 export async function getTask(event:H3Event,id:number){const a=await workActor(event);const t=await visibleTask(prisma,id,a);
  return {...taskDTO(t,a),clientKey:t.clientKey};}

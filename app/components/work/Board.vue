@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { compareWorkTasks } from '~~/shared/utils/work-order';
 import type { WorkTaskDTO } from '~~/shared/types/work';
 import { WORK_STATUSES } from '~~/shared/types/work';
 import { timeBucket,TIME_COLUMNS,shiftDay } from '~~/shared/utils/work-board';
@@ -7,7 +8,7 @@ import TaskCard from './TaskCard.vue';
 const props=defineProps<{tasks:WorkTaskDTO[];mode:'time'|'status';today:string;busy:boolean}>();
 const emit=defineEmits<{open:[WorkTaskDTO];move:[WorkTaskDTO,Record<string,unknown>]}>();
 const columns=computed(()=>props.mode==='time'?TIME_COLUMNS:Object.entries(WORK_STATUSES).map(([key,label])=>({key,label})));
-const rows=(key:string)=>props.tasks.filter(t=>(props.mode==='time'?timeBucket(t,props.today):t.status)===key);
+const rows=(key:string)=>props.tasks.filter(t=>(props.mode==='time'?timeBucket(t,props.today):t.status)===key).sort((a,b)=>compareWorkTasks(a,b));
 const droppable=(key:string)=>props.mode==='status'||['today','tomorrow','unscheduled','done'].includes(key);
 function drop(e:DragEvent,key:string){if(props.busy||!droppable(key))return;const id=Number(e.dataTransfer?.getData('text/space-task'));const t=props.tasks.find(t=>t.id===id);if(!t?.canEdit)return;
  if(props.mode==='status'){emit('move',t,{status:key});return;}

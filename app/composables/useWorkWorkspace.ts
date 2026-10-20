@@ -10,7 +10,7 @@ export function useWorkWorkspace() {
  const found=context.value?.departments.find(d=>(aliases[key]||[key]).includes(d.key));selectedDepartment.value=found?.id||context.value?.department?.id||null;}
  async function loadProjects(more=false){const page=more?projectPage.value+1:1;const r=await $fetch<{items:WorkProjectDTO[];total:number}>('/api/work/projects',{query:{page,archived:archived.value?'1':'0'}});projects.value=more?[...projects.value,...r.items]:r.items;projectTotal.value=r.total;projectPage.value=page;}
  async function loadTasks(more=false){const ticket=++sequence;loading.value=true;error.value='';const page=more?taskPage.value+1:1;
- const query={page,completed:completed.value?'1':'0',q:search.value,...(project.value?{projectId:project.value.id}:tab.value==='department'&&selectedDepartment.value?{departmentId:selectedDepartment.value}:{})};
+ const query={page,order:view.value==='timeline'?'timeline':'schedule',completed:completed.value?'1':'0',q:search.value,...(project.value?{projectId:project.value.id}:tab.value==='department'&&selectedDepartment.value?{departmentId:selectedDepartment.value}:{})};
  if(tab.value==='department'&&!selectedDepartment.value){tasks.value=[];taskTotal.value=0;loading.value=false;return;}
  try{const r=await $fetch<{items:WorkTaskDTO[];total:number}>('/api/work/tasks',{query});if(ticket!==sequence)return;tasks.value=more?[...tasks.value,...r.items]:r.items;taskTotal.value=r.total;taskPage.value=page;}
  catch(e:any){if(ticket===sequence){error.value=e.data?.message||'Не удалось загрузить задачи.';tasks.value=[];}}
@@ -21,6 +21,7 @@ export function useWorkWorkspace() {
  async function selectTab(t:typeof tab.value){sequence++;project.value=null;tab.value=t;view.value='time';search.value='';tasks.value=[];await loadTasks();}
  async function move(t:WorkTaskDTO,patch:Record<string,unknown>){const result=await send<WorkTaskDTO>('/api/work/tasks/'+t.id,'PATCH',{version:t.version,...patch});if(result)await loadTasks();}
  async function toggleArchive(){if(!project.value)return;const r=await send<WorkProjectDTO>('/api/work/projects/'+project.value.id+'/archive','POST',{version:project.value.version,archived:!project.value.archivedAt});if(r){project.value=r;await reload();}}
+ watch(()=>view.value==='timeline',()=>{if(context.value){tasks.value=[];void loadTasks();}});
  watch([completed,selectedDepartment],()=>{if(context.value)loadTasks();});watch(search,()=>{clearTimeout(debounce);debounce=setTimeout(()=>loadTasks(),300);});
  watch(archived,()=>{if(context.value)loadProjects().catch(()=>{error.value='Не удалось загрузить проекты.';});});
  watch(()=>route.params.department,()=>{if(context.value){routeDepartment();selectTab('mine');}});

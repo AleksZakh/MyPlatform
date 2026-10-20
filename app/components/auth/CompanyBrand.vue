@@ -5,7 +5,7 @@
     </span>
     <div class="min-w-0" :class="inverse ? 'text-white' : 'text-gray-900'">
       <p class="text-lg font-semibold leading-snug">Автодор Инжиниринг</p>
-      <p class="mt-1 text-sm leading-snug" :class="inverse ? 'text-gray-300' : 'text-gray-600'">Единое рабочее пространство</p>
+      <!-- <p class="mt-1 text-sm leading-snug" :class="inverse ? 'text-gray-300' : 'text-gray-600'">Единое рабочее пространство</p> -->
     </div>
   </div>
 </template>
