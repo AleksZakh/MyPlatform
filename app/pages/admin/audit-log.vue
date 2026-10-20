@@ -276,13 +276,24 @@
                 class="
                   flex h-12 w-12 shrink-0
                   items-center justify-center
-                  rounded-full
+                  rounded-full overflow-hidden
                   bg-sky-100
                   text-sm font-semibold
                   text-sky-700
                 "
               >
-                {{ getInitials(eventItem.actor.name) }}
+                <img
+                  v-if="eventItem.actor.avatarUrl && !failedAvatarUrls.has(eventItem.actor.avatarUrl)"
+                  :src="eventItem.actor.avatarUrl"
+                  alt=""
+                  width="48"
+                  height="48"
+                  loading="lazy"
+                  decoding="async"
+                  class="h-full w-full object-cover"
+                  @error="failedAvatarUrls.add(eventItem.actor.avatarUrl!)"
+                >
+                <span v-else>{{ getInitials(eventItem.actor.name) }}</span>
               </div>
 
 
@@ -748,7 +759,10 @@ import {
 } from 'vue';
 
 
+const failedAvatarUrls = ref(new Set<string>());
+
 interface AuditActor {
+  avatarUrl?: string | null;
   id?: number | null;
   name: string;
   login?: string | null;

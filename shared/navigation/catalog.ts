@@ -9,6 +9,7 @@ export const departmentPages = [
   { key: 'lab', label: 'Лабораторный контроль', to: '/departments/lab' },
 ] as const
 export const toolPages = [
+  { label: 'Пользователи онлайн', to: '/online', description: 'Кто сейчас работает в Space: сотрудники в сети и отошедшие.', icon: 'lucide:users-round', resource: 'admin.center' },
   { label: 'Видео библиотеки', to: '/library/video-settings', description: 'Лимит загрузки учебных видео.', icon: 'lucide:video', resource: 'library.manage' },
   { label: 'Настройки экспорта', to: '/admin/export-settings', description: 'Ограничение количества записей в выгрузке реестра.', icon: 'lucide:download', adminOnly: true },
   { label: 'Файловое хранилище', to: '/admin/files', description: 'Каталоги, документы и связи с записями реестра.', icon: 'lucide:folder-open', adminOnly: true },
@@ -46,7 +47,7 @@ export function breadcrumbs(path: string, query: Record<string, unknown>, depart
     }
     return result
   }
-  const names: Record<string,string> = { '/projects': 'Задачи и проекты', '/library': 'Библиотека', '/library/video-settings': 'Видео библиотеки — настройки', '/online': 'Пользователи online', '/profile': 'Профиль', '/settings': 'Настройки', '/access-denied': 'Доступ ограничен' }
+  const names: Record<string,string> = { '/projects': 'Задачи и проекты', '/library': 'Библиотека', '/library/video-settings': 'Видео библиотеки — настройки', '/online': 'Пользователи онлайн', '/profile': 'Профиль', '/settings': 'Настройки', '/access-denied': 'Доступ ограничен' }
   result.push({ label: customLabel || names[clean] || 'Текущая страница', to: clean })
   return result
 }

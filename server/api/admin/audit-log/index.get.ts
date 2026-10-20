@@ -393,6 +393,8 @@ export default defineEventHandler(
               position:
                 true,
 
+              profile: { select: { avatarVersion: true } },
+
               department: {
                 select: {
                   name:
@@ -431,6 +433,9 @@ export default defineEventHandler(
             ...row,
 
             actor: {
+              avatarUrl: actor?.profile?.avatarVersion
+                ? `/api/admin/audit-log/actors/${actor.id}/avatar?v=${encodeURIComponent(actor.profile.avatarVersion)}`
+                : null,
               id:
                 actor?.id ??
                 row.actorUserId,
