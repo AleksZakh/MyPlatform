@@ -20,7 +20,7 @@ async function load(file: string) {
   const stubs: Record<string, string> = {
    db: 'export const prisma = globalThis.developerTestDb;',
    ldap: 'export async function findDomainUser(login){return globalThis.developerTestDirectory.get(login);}',
-   mail: 'export const sendChatInvitationEmail = (...a) => globalThis.developerTestMail(...a);',
+   mail: 'export const sendChatInvitationEmail = (...a) => globalThis.developerTestMail(...a); export const sendProjectNotificationEmail = (...a) => globalThis.developerTestMail(...a);',
    usage: 'export function recordUsage(){}',
    groups: 'export async function directoryGroupUserIds(){return [];} export async function resolveDomainGroupIds(){return [];}',
    access: `export async function workActor(e){const u=await globalThis.developerTestDb.user.findUniqueOrThrow({where:{id:e.context.testUser}});if(u.status!=='ACTIVE')throw Object.assign(new Error('Inactive'),{statusCode:403});return {id:u.id,departmentId:null};} export async function hasWorkGrant(){return false;}`,
@@ -100,7 +100,19 @@ test('developer exception: daily cooldown only; domain identity, SMTP concurrenc
   await invite(p, dev.id, active.id);
   row = await db.workProjectInvitation.findUniqueOrThrow({ where: { projectId_userId: { projectId: p.id, userId: active.id } } });
   await cancelInvitation(event(dev.id), p.id, row.id);
-  await invite(p, dev.id, active.id); assert.equal(deliveries, beforeMail + 2, 'Active employees receive internal invitations, not activation emails');
+  await invite(p, dev.id, active.id); assert.equal(deliveries, beforeMail + 4, 'Active employees receive email notifications for both invitations');
+  const deliveredRow=await db.workProjectInvitation.findUniqueOrThrow({where:{projectId_userId:{projectId:p.id,userId:active.id}}});
+  assert.equal(deliveredRow.emailStatus,'SENT');assert.ok(deliveredRow.emailSentAt);
+  const missing=await user('missing-address');directory.get(missing.login!).email=null;
+  const missingResult=await invite(p,dev.id,missing.id);assert.equal(missingResult.ok,true);assert.equal(missingResult.emailStatus,'NO_ADDRESS');
+  let notice=await db.workProjectInvitation.findUniqueOrThrow({where:{projectId_userId:{projectId:p.id,userId:missing.id}}});assert.equal(notice.status,'PENDING');
+  const failed=await user('mail-failure');smtpFail=true;
+  const failedResult=await invite(p,dev.id,failed.id);assert.equal(failedResult.emailStatus,'FAILED');
+  notice=await db.workProjectInvitation.findUniqueOrThrow({where:{projectId_userId:{projectId:p.id,userId:failed.id}}});assert.equal(notice.status,'PENDING');smtpFail=false;
+  const external=await db.user.create({data:{authType:'EXTERNAL',status:'ACTIVE',email:'external@example.test'}});
+  assert.equal((await invite(p,dev.id,external.id)).emailStatus,'SENT');
+  const revoked=await user('disabled-in-ad');directory.get(revoked.login!).accountDisabled=true;
+  assert.equal((await invite(p,dev.id,revoked.id)).emailStatus,'FAILED');
   // The developer exception does not disable either existing hourly guard.
   for (let i = 0; i < 20; i++) {
    const u = await user('hourly-' + i, true);

@@ -9,6 +9,7 @@ import { mutation, visibleProject, version, fail, userSelect, projectInclude, pr
 import { invitationTarget } from '../chat/invitation-input';
 import { inviteDomainContact, provisionInvitationContact } from '../chat/invitations';
 import { INVITATION_LIFETIME, INVITATION_COOLDOWN, bypassInvitationCooldown } from '../chat/invitation-policy';
+import { notifyActiveProjectInvite } from './invitation-mail';
 import { directoryGroupUserIds } from '../domain-group-directory.service';
 import type { Prisma } from '@prisma/client';
 const roleInput=z.enum(['MANAGER','CURATOR','MEMBER','OBSERVER']);
@@ -24,7 +25,7 @@ async function manager(db:Prisma.TransactionClient,id:number,a:Actor) {
 }
 function checkRole(ownerId:number,a:Actor,role:string){if(role==='MANAGER'&&ownerId!==a.id)fail(403,'Руководителей назначает владелец проекта.');}
 export async function projectInvitations(event:H3Event,id:number){const a=await workActor(event);await manager(prisma,id,a);
- return prisma.workProjectInvitation.findMany({where:{projectId:id,status:{in:['SENDING','PENDING','DELIVERY_FAILED']},expiresAt:{gt:new Date()}},select:{id:true,user:{select:userSelect},role:true,status:true,expiresAt:true,createdAt:true},orderBy:{createdAt:'desc'}});
+ return prisma.workProjectInvitation.findMany({where:{projectId:id,status:{in:['SENDING','PENDING','DELIVERY_FAILED']},expiresAt:{gt:new Date()}},select:{id:true,user:{select:userSelect},role:true,status:true,expiresAt:true,createdAt:true,emailStatus:true,emailSentAt:true,emailErrorCode:true},orderBy:{createdAt:'desc'}});
 }
 export async function inviteToProject(event:H3Event,id:number,raw:unknown){
  const a=await workActor(event),v=parse(inviteInput,raw);
@@ -41,22 +42,22 @@ export async function inviteToProject(event:H3Event,id:number,raw:unknown){
   const sender=await tx.user.findUnique({where:{id:a.id},select:{login:true,authType:true,status:true}});
   if(!bypassInvitationCooldown(sender)&&prior&&now.getTime()-prior.createdAt.getTime()<INVITATION_COOLDOWN)fail(429,'Повторное приглашение доступно через 24 часа.');
   if(await tx.workProjectInvitation.count({where:{inviterId:a.id,createdAt:{gt:new Date(now.getTime()-3600000)}}})>=20)fail(429,'Можно отправить не более 20 приглашений в проекты за час.');
-  const data={id:randomUUID(),projectId:id,userId,inviterId:a.id,role:v.role,status:u.status==='ACTIVE'?'PENDING':'SENDING',createdAt:now,expiresAt:new Date(now.getTime()+INVITATION_LIFETIME),respondedAt:null};
+  const data={id:randomUUID(),projectId:id,userId,inviterId:a.id,role:v.role,status:u.status==='ACTIVE'?'PENDING':'SENDING',createdAt:now,expiresAt:new Date(now.getTime()+INVITATION_LIFETIME),respondedAt:null,emailStatus:'SENDING',emailSentAt:null,emailMessageId:null,emailErrorCode:null};
   const invitation=await tx.workProjectInvitation.upsert({where:{projectId_userId:{projectId:id,userId}},create:data,update:data});
   await tx.workProject.update({where:{id},data:{version:{increment:1}}});
   return {id,value:{invitationId:invitation.id,userId,status:invitation.status,role:invitation.role,expiresAt:invitation.expiresAt,projectName:p.name}};
  });
- if(reservation.status==='PENDING')return {ok:true,message:'Приглашение появилось у сотрудника в разделе «Задачи и проекты» → «Приглашения».'};
+ if(reservation.status==='PENDING')return notifyActiveProjectInvite(event,reservation.invitationId);
  try{
   // SMTP and live AD requests never hold the project transaction open.
   const mail=await inviteDomainContact(event,a.id,userId,{id,name:reservation.projectName});
   const updated=await mutation(event,a,'WorkProject','INVITE_DELIVERED',async tx=>{
-   const n=await tx.workProjectInvitation.updateMany({where:{id:reservation.invitationId,status:'SENDING'},data:{status:'PENDING'}});
+   const n=await tx.workProjectInvitation.updateMany({where:{id:reservation.invitationId,status:'SENDING'},data:{status:'PENDING',emailStatus:mail.sent?'SENT':'REUSED',emailSentAt:mail.sent?new Date():null,emailMessageId:mail.sent?(mail.messageId||null):null}});
    return {id,value:{invitationId:reservation.invitationId,status:'PENDING'},changed:n.count>0};
   });
   return {ok:true,...updated,message:mail.sent?'Письмо отправлено. После входа через AD сотрудник сможет принять приглашение в проект.':'Письмо для активации уже отправлялось этому сотруднику. Повторное письмо не отправлено; приглашение в проект будет доступно после входа в Space.'};
  }catch(e){
-  await prisma.workProjectInvitation.updateMany({where:{id:reservation.invitationId,status:'SENDING'},data:{status:'DELIVERY_FAILED'}});
+  await prisma.workProjectInvitation.updateMany({where:{id:reservation.invitationId,status:'SENDING'},data:{status:'DELIVERY_FAILED',emailStatus:'FAILED',emailErrorCode:'ACTIVATION_SEND_FAILED'}});
   throw e;
  }
 }

@@ -19,7 +19,7 @@ test('statistics: authenticated identity, allowlist, permissions, dedupe, retent
  try{
  const compiled=await build({stdin:{contents:`export {default as collect} from './server/api/statistics/events.post'; export {default as report} from './server/api/admin/statistics/index.get'; export * from './server/services/usage';`,resolveDir:process.cwd(),loader:'ts'},bundle:true,write:false,platform:'node',format:'esm',packages:'external',plugins:[{name:'isolated-context',setup(b){
  b.onResolve({filter:/domain-group-directory.service$/},()=>({path:'groups',namespace:'isolated'}));
- b.onResolve({filter:/utils\/prisma$/},()=>({path:'db',namespace:'isolated'}));b.onResolve({filter:/access-control.service$/},()=>({path:'auth',namespace:'isolated'}));b.onLoad({filter:/.*/,namespace:'isolated'},a=>({loader:'js',contents:a.path==='db'?`export const prisma=new Proxy(globalThis.statisticsTestDb,{get(t,k){const v=Reflect.get(t,k);return k==='usageEvent'?new Proxy(v,{get(d,p){if(p==='createMany'&&globalThis.statFail)return async()=>{throw new Error('DB offline')};return Reflect.get(d,p);}}):v;}});`:a.path==='groups'?'export async function resolveDomainGroupIds(){return [];}':`export async function getAccessActor(e){const id=Number(e.node.req.headers['x-test-user']);if(!id)throw Object.assign(new Error('auth'),{statusCode:401});const user=await globalThis.statisticsTestDb.user.findUnique({where:{id}});if(!user||user.status!=='ACTIVE')throw Object.assign(new Error('inactive'),{statusCode:403});return {user,isSystemAdmin:true};} export async function requirePermission(e,key,action){const actor=await getAccessActor(e);if(key!=='system.usage-statistics'||action!=='VIEW'||actor.user.id!==1)throw Object.assign(new Error('denied'),{statusCode:403});return actor;}`}));
+ b.onResolve({filter:/utils\/prisma$/},()=>({path:'db',namespace:'isolated'}));b.onResolve({filter:/access-control.service$/},()=>({path:'auth',namespace:'isolated'}));b.onLoad({filter:/.*/,namespace:'isolated'},a=>({loader:'js',contents:a.path==='db'?`export const prisma=new Proxy(globalThis.statisticsTestDb,{get(t,k){const v=Reflect.get(t,k);return k==='$queryRaw'?function(...args){if(globalThis.statFail && String(args[0]?.[0]).includes('WITH batch'))throw Object.assign(new Error('DB offline'),{code:'P2024'});return v.apply(t,args);}:v;}});`:a.path==='groups'?'export async function resolveDomainGroupIds(){return [];}':`export async function getAccessActor(e){const id=Number(e.node.req.headers['x-test-user']);if(!id)throw Object.assign(new Error('auth'),{statusCode:401});const user=await globalThis.statisticsTestDb.user.findUnique({where:{id}});if(!user||user.status!=='ACTIVE')throw Object.assign(new Error('inactive'),{statusCode:403});return {user,isSystemAdmin:true};} export async function requirePermission(e,key,action){const actor=await getAccessActor(e);if(key!=='system.usage-statistics'||action!=='VIEW'||actor.user.id!==1)throw Object.assign(new Error('denied'),{statusCode:403});return actor;}`}));
  }}]});await writeFile(output,compiled.outputFiles[0]!.text);const m=await import(pathToFileURL(output).href);
  await db.user.createMany({data:[{id:1,login:'zakharov_av',fullName:'Администратор',status:'ACTIVE',authType:'DOMAIN'},{id:2,login:'sender',fullName:'Отправитель',status:'ACTIVE',authType:'DOMAIN'},{id:3,login:'recipient',fullName:'Получатель',status:'ACTIVE',authType:'DOMAIN'},{id:4,login:'another-admin',status:'ACTIVE',authType:'DOMAIN'},{id:5,login:'ZAKHAROV_AV',status:'ACTIVE',authType:'EXTERNAL'}]});
  await db.usageEvent.create({data:{id:'expired',actorId:2,kind:'PAGE',target:'/',source:'CLIENT',occurredAt:new Date(Date.now()-100*86400000)}});
@@ -47,7 +47,7 @@ test('statistics: authenticated identity, allowlist, permissions, dedupe, retent
  // A database outage cannot reject a business action: record only queues, flush retries later.
  Object.assign(globalThis,{statFail:true});
  assert.doesNotThrow(()=>m.recordUsage({id:'message:11',actorId:2,kind:'MESSAGE',target:'conversation:7'}));await m.flushUsage();assert.equal(m.usageHealth().pending,1);assert.ok(m.usageHealth().lastErrorAt);
- Object.assign(globalThis,{statFail:false});await m.flushUsage();assert.equal(m.usageHealth().pending,0);assert.equal(await db.usageEvent.count(),3);
+ Object.assign(globalThis,{statFail:false});await m.flushUsage();assert.equal(m.usageHealth().pending,0);assert.equal(await db.usageEvent.count(),3);assert.equal(m.usageHealth().lastErrorCode,null);
  // Existing owner activity must be invisible in every report, even with actorId forced.
  await db.usageEvent.create({data:{id:'owner-legacy',actorId:1,kind:'LOGIN',target:'kerberos',source:'SERVER'}});
  for(const kind of ['LOGIN','LOGOUT','MESSAGE','MAIL','DOCUMENT','VIDEO'])m.recordUsage({actorId:1,kind,target:'owner-only'});
@@ -56,6 +56,16 @@ test('statistics: authenticated identity, allowlist, permissions, dedupe, retent
  response=await fetch(base+'/report?actorId=1',{headers:{'x-test-user':'1'}});report=await response.json();assert.equal(report.summary.events,0);assert.equal(report.items.length,0);assert.equal(report.daily.length,0);assert.equal(report.popular.length,0);
  for(const id of [2,4,5])assert.equal((await fetch(base+'/report',{headers:{'x-test-user':String(id)}})).status,403,'Other admins and external logins cannot read statistics');
  assert.equal((await fetch(base+'/report',{headers:{'x-test-user':'1','x-revoked':'1'}})).status,401);
+ // A recipient equal to owner and an external account with no login must remain visible.
+ await db.user.create({data:{id:6,login:null,email:'external@example.test',authType:'EXTERNAL',status:'ACTIVE'}});
+ m.recordUsage({id:'to-owner',actorId:2,recipientId:1,kind:'MESSAGE',target:'conversation:99'});
+ m.recordUsage({id:'null-login',actorId:6,kind:'LOGIN',target:'external-password'});
+ await m.flushUsage();
+ assert.equal(await db.usageEvent.count({where:{id:{in:['to-owner','null-login']}}}),2);
+ assert.ok(m.usageHealth().lastSavedAt);assert.ok(m.usageHealth().excluded>=6);
+ response=await fetch(base+'/report',{headers:{'x-test-user':'1'}});report=await response.json();
+ assert.equal(report.summary.events,5);assert.ok(report.health.lastStoredEventAt);
+ assert.ok(report.items.some((e:any)=>e.id==='to-owner'));assert.ok(report.items.some((e:any)=>e.id==='null-login'));
  const count=m.usageHealth().pending;process.env.SPACE_STATISTICS_ENABLED='0';m.recordUsage({actorId:2,kind:'PAGE',target:'/'});assert.equal(m.usageHealth().pending,count);delete process.env.SPACE_STATISTICS_ENABLED;
  for(let i=0;i<130;i++)m.recordUsage({actorId:3,kind:'PAGE',target:'/',source:'CLIENT'});assert.equal(m.usageHealth().pending,120);assert.ok(m.usageHealth().dropped>=10);
  assert.equal(usagePage('/profile?secret=hidden'),'/profile');assert.equal(usagePage('/reset-password?token=secret'),null);assert.equal(usagePage('/departments/lab'),'/departments/lab');

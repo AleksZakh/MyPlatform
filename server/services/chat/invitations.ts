@@ -19,6 +19,7 @@ export async function inviteDomainContact(event: H3Event, senderId: number, reci
  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw createError({ statusCode: 409, message: 'В AD отсутствует корректный корпоративный адрес. Обратитесь к администратору.' });
  const now = new Date(), id = randomUUID();
  let developerRetry = false;
+ let messageId: string | null = null;
  const existingDelivery = await prisma.$transaction(async tx => {
   // Lock both accounts in stable order: concurrent invitations share sender/recipient limits.
   await tx.$queryRaw`SELECT id FROM app_users WHERE id IN (${senderId}, ${recipientId}) ORDER BY id FOR UPDATE`;
@@ -44,7 +45,8 @@ export async function inviteDomainContact(event: H3Event, senderId: number, reci
  if (existingDelivery) return { sent: false, alreadyInvited: true };
  try {
   const sender = await prisma.user.findUniqueOrThrow({ where: { id: senderId } });
-  await sendChatInvitationEmail(email, sender.fullName || sender.login || 'Пользователь Space', project);
+  const result = await sendChatInvitationEmail(email, sender.fullName || sender.login || 'Пользователь Space', project);
+  messageId = result?.messageId || null;
  } catch {
   // Keep reservation on an ambiguous SMTP failure: avoid duplicate emails; no activation grant.
   throw createError({ statusCode: 502, message: developerRetry ? 'Не удалось подтвердить отправку письма. Приглашение не активировано. Повторите через две минуты после начала отправки; проверьте почту, чтобы исключить дублирование письма.' : 'Не удалось подтвердить отправку письма. Приглашение не активировано. Обратитесь к администратору; повторная попытка доступна через 24 часа.' });
@@ -56,7 +58,7 @@ export async function inviteDomainContact(event: H3Event, senderId: number, reci
    actorUserId: senderId, targetUserId: recipientId, actorEmail: '', note: project ? `Отправлено приглашение в проект #${project.id} Space. Активация требует входа через AD.` : 'Отправлено приглашение в чат Space. Активация требует входа через AD.' } });
  });
  recordUsage({id:`mail:${id}`,actorId:senderId,recipientId,kind:'MAIL',target:project?`project:${project.id}`:'chat-invitation'});
- return { sent: true };
+ return { sent: true, messageId };
 }
 
 /** Provision only after explicit invitation confirmation and live AD verification. */

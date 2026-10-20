@@ -1225,6 +1225,10 @@ model WorkTaskComment {
 }
 
 model WorkProjectInvitation {
+  emailStatus String @default("NOT_REQUESTED") @db.VarChar(24)
+  emailSentAt DateTime?
+  emailMessageId String? @db.VarChar(500)
+  emailErrorCode String? @db.VarChar(50)
   id String @id @db.Uuid
   projectId Int
   userId Int

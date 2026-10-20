@@ -20,6 +20,7 @@ export default defineEventHandler(async event => {
   const summary=await prisma.$queryRaw<{events:bigint;users:bigint;logins:bigint}[]>`SELECT count(*) as events,count(DISTINCT "actorId") as users,count(*) FILTER (WHERE kind='LOGIN') as logins FROM usage_events WHERE ${sql}`;
   const popular=await prisma.usageEvent.groupBy({by:['kind','target'],where,_count:{_all:true},orderBy:{_count:{target:'desc'}},take:15});
   const daily=await prisma.$queryRaw<{day:string;events:bigint;users:bigint}[]>`SELECT to_char("occurredAt" + interval '3 hours','DD.MM.YYYY') AS day,count(*) AS events,count(DISTINCT "actorId") AS users FROM usage_events WHERE ${sql} GROUP BY date("occurredAt" + interval '3 hours'),to_char("occurredAt" + interval '3 hours','DD.MM.YYYY') ORDER BY date("occurredAt" + interval '3 hours')`;
+  const latest=await prisma.usageEvent.findFirst({where:{actorId:{notIn:excludedIds}},orderBy:{occurredAt:'desc'},select:{occurredAt:true}});
   const rows=await prisma.usageEvent.findMany({where,orderBy:[{occurredAt:'desc'},{id:'desc'}],skip:(page-1)*50,take:50});
   const ids=[...new Set(rows.flatMap(r=>[r.actorId,...(r.recipientId?[r.recipientId]:[])]))];
   const users=await prisma.user.findMany({where:{id:{in:ids}},select:{id:true,fullName:true,login:true}}),names=new Map(users.map(u=>[u.id,u.fullName||u.login||`Сотрудник #${u.id}`]));
@@ -31,5 +32,5 @@ export default defineEventHandler(async event => {
   if(videoIds.length){const videos=await prisma.libraryVideo.findMany({where:{id:{in:videoIds},deletedAt:null},select:{id:true,title:true},take:100});for(const v of videos){labels.set('/api/library/videos/'+v.id,v.title);labels.set(v.id,v.title);}}
   const targetLabel=(target:string)=>labels.get(target)||usageTargetLabel(target);
   const totals=summary[0]!;
-  return {summary:{events:Number(totals.events),users:Number(totals.users),logins:Number(totals.logins)},popular:popular.map(p=>({kind:p.kind,target:p.target,targetLabel:targetLabel(p.target),count:p._count._all})),daily:daily.map(d=>({day:d.day,events:Number(d.events),users:Number(d.users)})),items:rows.map(r=>({...r,targetLabel:targetLabel(r.target),actorName:names.get(r.actorId)||`Сотрудник #${r.actorId}`,recipientName:r.recipientId?names.get(r.recipientId)||`Сотрудник #${r.recipientId}`:null})),page,health:usageHealth()};
+  return {summary:{events:Number(totals.events),users:Number(totals.users),logins:Number(totals.logins)},popular:popular.map(p=>({kind:p.kind,target:p.target,targetLabel:targetLabel(p.target),count:p._count._all})),daily:daily.map(d=>({day:d.day,events:Number(d.events),users:Number(d.users)})),items:rows.map(r=>({...r,targetLabel:targetLabel(r.target),actorName:names.get(r.actorId)||`Сотрудник #${r.actorId}`,recipientName:r.recipientId?names.get(r.recipientId)||`Сотрудник #${r.recipientId}`:null})),page,health:{...usageHealth(),lastStoredEventAt:latest?.occurredAt||null,excludedLogin:'zakharov_av'}};
 });

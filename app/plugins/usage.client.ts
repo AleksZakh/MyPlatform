@@ -1,13 +1,13 @@
 import { usagePage, USAGE_CLICKS } from '~~/shared/usage';
 export default defineNuxtPlugin(() => {
   const { user, loggedIn } = useUserSession(), router = useRouter();
-  let events: { id:string; kind:string; target:string }[] = [], sending = false, generation = 0, currentUser: number | undefined;
+  let events: { id:string; kind:string; target:string }[] = [], sending = false, generation = 0, currentUser: number | undefined, lastWarning=0;
   function record(kind:string,target:string) { if (loggedIn.value && currentUser && events.length<100) events.push({id:crypto.randomUUID(),kind,target}); }
   function page() { const target=usagePage(router.currentRoute.value.path); if(target)record('PAGE',target); }
   async function flush() {
     if(sending || !events.length || !loggedIn.value)return;
     const version=generation,batch=events.slice(0,25); sending=true;
-    try { await $fetch('/api/statistics/events',{method:'POST',headers:{'x-space-work':'1'},body:{events:batch},retry:0,keepalive:true}); if(version===generation)events.splice(0,batch.length); } catch {} finally {sending=false;}
+    try { await $fetch('/api/statistics/events',{method:'POST',headers:{'x-space-work':'1'},body:{events:batch},retry:0,keepalive:true}); if(version===generation)events.splice(0,batch.length); } catch(error:any) { if(Date.now()-lastWarning>60000){lastWarning=Date.now();console.warn('[usage] События пока не приняты сервером',{status:error?.statusCode||error?.status||0});} } finally {sending=false;}
   }
   const stopWatch=watch(()=>loggedIn.value ? user.value?.id : undefined,id=>{generation++;events=[];currentUser=typeof id==='number'?id:undefined;if(currentUser)page();},{immediate:true});
   const stopRouter=router.afterEach((_to,_from,failure)=>{if(!failure)page();});
