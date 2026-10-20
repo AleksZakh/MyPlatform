@@ -710,6 +710,7 @@ enum AccessAction {
 }
 
 model User {
+  projectFiles WorkProjectFile[]
   libraryVideoPositions LibraryVideoPosition[]
   workInvitationsReceived WorkProjectInvitation[] @relation("WorkInviteRecipient")
   workInvitationsSent WorkProjectInvitation[] @relation("WorkInviteSender")
@@ -1128,6 +1129,7 @@ model LibraryAsset {
 
 // Space tasks and projects — additive module, 2026-10-19.
 model WorkProject {
+  files WorkProjectFile[]
   groupId Int?
   group SpaceGroup? @relation(fields: [groupId], references: [id], onDelete: Restrict)
   invitations WorkProjectInvitation[]
@@ -1303,4 +1305,24 @@ model LibraryVideoSettings {
   maxBytes BigInt @default(3221225472)
   updatedAt DateTime @updatedAt
   @@map("library_video_settings")
+}
+
+// Files are stored outside public/ and releases; PRIVATE never inherits manager access.
+model WorkProjectFile {
+  id String @id @db.Uuid
+  clientKey String @unique @db.Uuid
+  projectId Int
+  ownerId Int
+  scope String @db.VarChar(10)
+  name String @db.VarChar(240)
+  size Int
+  sha256 String @db.VarChar(64)
+  storageKey String @unique @db.Uuid
+  version Int @default(1)
+  createdAt DateTime @default(now())
+  deletedAt DateTime?
+  project WorkProject @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  @@index([projectId, scope, ownerId, deletedAt, createdAt])
+  @@map("work_project_files")
 }

@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../../utils/prisma';
 import { writeAuditEvent } from '../../utils/auditLog';
 import { workActor, hasWorkGrant } from './access';
+import { ensureProjectDirectory } from './file-storage';
 import { projectWhere, taskWhere, projectRole, managesProject, createsTask, taskRights, type Actor } from './policy';
 import { parse, projectInput, taskInput, taskMove, memberInput, removeMemberInput, versionInput, archiveInput, commentInput, dbDay, positiveId } from './input';
 export const userSelect={id:true,login:true,fullName:true} as const;
@@ -58,7 +59,7 @@ export async function saveProject(event:H3Event,raw:unknown,id?:number){
  const shared=v.scope!=='PRIVATE';const grant=shared?await hasWorkGrant(event,'CREATE'):false;
  return mutation(event,a,'WorkProject',id?'UPDATE':'CREATE',async tx=>{
   const old=id?await visibleProject(tx,id,a):await tx.workProject.findUnique({where:{clientKey:v.clientKey},include:projectInclude});
-  if(!id&&old){if(old.ownerId!==a.id)fail(409,'Ключ операции уже использован.');return {id:old.id,value:projectDTO(old,a),changed:false};}
+  if(!id&&old){if(old.ownerId!==a.id)fail(409,'Ключ операции уже использован.');await ensureProjectDirectory(old.id);return {id:old.id,value:projectDTO(old,a),changed:false};}
   const selectedGroupId=groupId===undefined?(old?.groupId??null):groupId;
   if(old){if(!managesProject(old,a))fail(403,'Изменять проект может руководитель.');version(old.version,v.version);if(old.archivedAt)fail(409,'Сначала восстановите проект из архива.');
    if(old.ownerId!==a.id&&(old.scope!==v.scope||old.departmentId!==v.departmentId||old.groupId!==selectedGroupId))fail(403,'Видимость и принадлежность изменяет владелец проекта.');}
@@ -73,6 +74,7 @@ export async function saveProject(event:H3Event,raw:unknown,id?:number){
   }
   const data={name:v.name,description:v.description,color:v.color,scope:v.scope,departmentId:v.departmentId,groupId:selectedGroupId,startDate:dbDay(v.startDate),dueDate:dbDay(v.dueDate)};
   const p=id?await tx.workProject.update({where:{id},data:{...data,version:{increment:1}},include:projectInclude}):await tx.workProject.create({data:{...data,ownerId:a.id,clientKey:v.clientKey},include:projectInclude});
+  await ensureProjectDirectory(p.id);
   return {id:p.id,value:projectDTO(p,a)};
  });
 }

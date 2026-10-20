@@ -2,7 +2,7 @@ import type { WorkContext,WorkProjectDTO,WorkTaskDTO } from '~~/shared/types/wor
 import { portalToday } from '~~/shared/utils/work-board';
 export function useWorkWorkspace() {
  const route=useRoute();const context=ref<WorkContext|null>(null),projects=ref<WorkProjectDTO[]>([]),project=ref<WorkProjectDTO|null>(null),tasks=ref<WorkTaskDTO[]>([]);
- const tab=ref<'mine'|'department'|'projects'>('mine'),view=ref<'time'|'status'|'list'|'timeline'|'members'>('time');
+ const tab=ref<'mine'|'department'|'projects'>('mine'),view=ref<'time'|'status'|'list'|'timeline'|'members'|'files'>('time');
  const selectedDepartment=ref<number|null>(null),archived=ref(false),completed=ref(false),search=ref(''),today=ref(portalToday()),loading=ref(false),error=ref('');
  const taskTotal=ref(0),taskPage=ref(1),projectTotal=ref(0),projectPage=ref(1);const {error:saveError,saving,send}=useWorkApi();let timer:ReturnType<typeof setInterval>|undefined;let debounce:ReturnType<typeof setTimeout>|undefined;let sequence=0;
  const contextLabel=computed(()=>context.value?.departments.find(d=>d.id===selectedDepartment.value)?.name||'Все подразделения');
