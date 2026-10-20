@@ -48,15 +48,20 @@ function reset() { search.value = ''; category.value = 'all'; }
   <section class="admin-dashboard" :aria-busy="loading">
     <div class="ad-container">
       <header class="ad-topbar">
-        <div><p class="ad-eyebrow">SPACE <span>/</span> АДМИНИСТРИРОВАНИЕ</p><h1>Центр администрирования</h1></div>
-        <button class="ad-refresh" :disabled="loading" @click="emit('refresh')"><Icon name="lucide:refresh-cw" :class="{ 'ad-spinning': loading }"/><span>{{ loading ? 'Обновление…' : 'Обновить' }}</span></button>
+        <!-- <div><p class="ad-eyebrow">SPACE <span>/</span> АДМИНИСТРИРОВАНИЕ</p><h1>Центр администрирования</h1></div> -->
       </header>
       <p v-if="navigationError" class="ad-alert" role="alert">Не удалось загрузить список инструментов. Нажмите «Обновить», чтобы повторить.</p>
       <p v-if="summaryError" class="ad-alert" role="alert">{{ summaryError }}</p>
       <template v-if="navigation && tools.length">
         <div class="ad-overview">
           <article class="ad-card ad-welcome">
-            <div class="ad-welcome-copy"><span class="ad-tag">Рабочее пространство компании</span><h2>Команда. Доступ. Порядок.</h2><p>Все инструменты управления Space —<br class="ad-wide-only"/> в одном рабочем пространстве.</p>
+            <div class="ad-welcome-copy">
+              <div>
+                <span class="ad-tag">Рабочее пространство компании</span>
+                <button class="ad-refresh" :disabled="loading" @click="emit('refresh')"><Icon name="lucide:refresh-cw" :class="{ 'ad-spinning': loading }"/><span>{{ loading ? 'Обновление…' : 'Обновить' }}</span></button>
+                
+              </div>
+              <h2>Центр администрирования</h2><p>Все инструменты управления Space —<br class="ad-wide-only"/> в одном рабочем пространстве.</p>
               <NuxtLink v-if="primary" class="ad-soft-button" :to="primary.to">{{ primary.to === '/admin/users' ? 'Управление пользователями' : primary.label }}<Icon name="lucide:arrow-right"/></NuxtLink>
             </div>
             <div class="ad-welcome-art" aria-hidden="true"><div class="ad-art-orbit"></div><div class="ad-art-main"><Icon name="lucide:shield-check"/></div><span class="ad-art-badge ad-art-users"><Icon name="lucide:users-round"/></span><span class="ad-art-badge ad-art-key"><Icon name="lucide:key-round"/></span><span class="ad-art-dot"></span></div>
