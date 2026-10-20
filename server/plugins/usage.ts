@@ -1,9 +1,11 @@
 import { getRequestURL, getMethod, getResponseHeader } from 'h3';
+import { recordDeniedResponse } from '../services/usage-denied';
 import { recordUsage, flushUsage } from '../services/usage';
 export default defineNitroPlugin(nitro => {
   const timer = setInterval(() => { void flushUsage(); }, 15000); timer.unref();
   nitro.hooks.hook('close', async () => { clearInterval(timer); await flushUsage(); });
   nitro.hooks.hook('afterResponse', event => {
+    recordDeniedResponse(event);
     const user = event.context.user as { id?: number } | undefined;
     if (!user?.id || getMethod(event) !== 'GET' || event.node.res.statusCode >= 300) return;
     const path = getRequestURL(event).pathname;

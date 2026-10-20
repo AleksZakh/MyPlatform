@@ -15,6 +15,7 @@ export default defineNuxtRouteMiddleware(
       await $fetch(
         '/api/admin/guard',
         {
+          query: { page: to.path },
           headers:
             import.meta.server
               ? useRequestHeaders([

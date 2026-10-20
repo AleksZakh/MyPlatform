@@ -1,4 +1,4 @@
-export const USAGE_KINDS = { PAGE: 'Открытие раздела', CLICK: 'Нажатие кнопки', LOGIN: 'Вход', LOGOUT: 'Выход', DOCUMENT: 'Открытие документа', VIDEO: 'Открытие видео', VIDEO_PLAY: 'Запуск видео', MESSAGE: 'Сообщение отправлено', MAIL: 'Письмо принято почтовым сервером' } as const;
+export const USAGE_KINDS = { ACCESS_DENIED: 'Отказ в доступе', PAGE: 'Открытие раздела', CLICK: 'Нажатие кнопки', LOGIN: 'Вход', LOGOUT: 'Выход', DOCUMENT: 'Открытие документа', VIDEO: 'Открытие видео', VIDEO_PLAY: 'Запуск видео', MESSAGE: 'Сообщение отправлено', MAIL: 'Письмо принято почтовым сервером' } as const;
 export const USAGE_CLICKS = { 'chat.open': 'Открыть сообщения', 'work.task.create': 'Создать задачу', 'work.project.create': 'Создать проект', 'work.project.files': 'Файлы проекта', 'work.project.members': 'Участники проекта', 'work.refresh': 'Обновить задачи' } as const;
 export function usagePage(path: string): string | null {
   // Query strings and arbitrary DOM text must never enter the event store.
@@ -13,6 +13,7 @@ export function usagePage(path: string): string | null {
 }
 
 export const USAGE_PAGES:Record<string,string> = {
+ 'lab-document':'Документ лабораторного контроля','protected-page':'Защищённая страница',
  '/':'Главная','/profile':'Профиль','/settings':'Настройки','/online':'Пользователи онлайн','/projects':'Задачи и проекты',
  '/library':'Библиотека','/library/videos/:id':'Видеоурок','/library/video-settings':'Настройки видео',
  '/admin':'Центр администрирования','/admin/statistics':'Статистика','/admin/audit-log':'Журнал событий','/admin/access':'Права доступа','/admin/users':'Пользователи','/admin/files':'Файлы','/admin/structure':'Структура организации',

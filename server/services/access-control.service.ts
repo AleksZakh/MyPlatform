@@ -34,6 +34,7 @@ export async function getAccessActor(event: H3Event, db: Prisma.TransactionClien
       department: { select: { id: true, name: true, isActive: true } },
     },
   })
+  if (user) event.context.usageActor = user;
   if (!user) throw createError({ statusCode: 401, statusMessage: 'User not found' })
   if (user.status !== 'ACTIVE') {
     throw createError({ statusCode: 403, statusMessage: 'User is not active',
@@ -49,6 +50,7 @@ export async function requirePermission(
 ): Promise<PermissionContext> {
   const actor = await getAccessActor(event)
   if(resourceKey === 'system.usage-statistics' && (!isStatisticsOwner(actor.user) || action !== 'VIEW')) {
+    event.context.usageDeniedResource = { key: resourceKey, action };
     throw createError({statusCode:403,message:'Статистика доступна только владельцу.'})
   }
   const resource = await prisma.accessResource.findUnique({
@@ -98,6 +100,7 @@ export async function requirePermission(
     }
   }
   if (!decision.allowed) {
+    if (options.auditDenial !== false) event.context.usageDeniedResource = { key: resourceKey, action };
     if (options.auditDenial !== false) await auditDenied({ event, actorUserId: actor.user.id, actorLogin: actor.user.login,
       actorEmail: actor.user.email, actorAuthType: actor.user.authType, resourceKey, action })
     throw createError({ statusCode: 403, statusMessage: 'Permission denied',
