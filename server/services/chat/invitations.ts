@@ -6,7 +6,7 @@ import { createError, type H3Event } from 'h3';
 import { prisma } from '../../utils/prisma';
 import { findDomainUser } from '../ad-directory.service';
 import { sendChatInvitationEmail } from '../../utils/chat-invitation-mail';
-import { INVITATION_COOLDOWN, INVITATION_LIFETIME } from './invitation-policy';
+import { INVITATION_COOLDOWN, INVITATION_LIFETIME, INVITATION_RETRY_DELAY, bypassInvitationCooldown } from './invitation-policy';
 export async function inviteDomainContact(event: H3Event, senderId: number, recipientId: number, project?: {id: number; name: string}) {
  if (senderId === recipientId) throw createError({ statusCode: 400, message: 'Выберите другого пользователя.' });
  const recipient = await prisma.user.findUnique({ where: { id: recipientId } });
@@ -18,6 +18,7 @@ export async function inviteDomainContact(event: H3Event, senderId: number, reci
  const email = directory.email?.trim();
  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw createError({ statusCode: 409, message: 'В AD отсутствует корректный корпоративный адрес. Обратитесь к администратору.' });
  const now = new Date(), id = randomUUID();
+ let developerRetry = false;
  const existingDelivery = await prisma.$transaction(async tx => {
   // Lock both accounts in stable order: concurrent invitations share sender/recipient limits.
   await tx.$queryRaw`SELECT id FROM app_users WHERE id IN (${senderId}, ${recipientId}) ORDER BY id FOR UPDATE`;
@@ -27,8 +28,11 @@ export async function inviteDomainContact(event: H3Event, senderId: number, reci
   if (current.status !== 'PENDING_ACTIVATION' || current.authType !== 'DOMAIN' || current.updatedAt.getTime() !== recipient.updatedAt.getTime())
    throw createError({ statusCode: 409, message: 'Учётная запись изменилась. Обновите список.' });
   const prior = await tx.domainChatInvitation.findUnique({ where: { recipientId } });
-  if (project && prior?.sentAt && !prior.consumedAt && prior.expiresAt > now && prior.recipientVersion.getTime() === current.updatedAt.getTime() && prior.directoryObjectId.toLowerCase() === current.directoryObjectId?.toLowerCase() && now.getTime() - prior.reservedAt.getTime() < INVITATION_COOLDOWN) return true;
-  if (prior && now.getTime() - prior.reservedAt.getTime() < INVITATION_COOLDOWN)
+  developerRetry = bypassInvitationCooldown(sender);
+  if (developerRetry && prior && !prior.sentAt && now.getTime() - prior.reservedAt.getTime() < INVITATION_RETRY_DELAY)
+   throw createError({ statusCode: 429, message: 'Предыдущая отправка ещё выполняется или завершилась без подтверждения. Повторите через две минуты после её начала.' });
+  if (!developerRetry && project && prior?.sentAt && !prior.consumedAt && prior.expiresAt > now && prior.recipientVersion.getTime() === current.updatedAt.getTime() && prior.directoryObjectId.toLowerCase() === current.directoryObjectId?.toLowerCase() && now.getTime() - prior.reservedAt.getTime() < INVITATION_COOLDOWN) return true;
+  if (!developerRetry && prior && now.getTime() - prior.reservedAt.getTime() < INVITATION_COOLDOWN)
    throw createError({ statusCode: 429, message: 'Приглашение уже отправлялось. Повторная отправка доступна через 24 часа.' });
   if (await tx.domainChatInvitation.count({ where: { senderId, reservedAt: { gt: new Date(now.getTime() - 3600000) } } }) >= 20)
    throw createError({ statusCode: 429, message: 'Можно отправить не более 20 приглашений за час.' });
@@ -43,10 +47,11 @@ export async function inviteDomainContact(event: H3Event, senderId: number, reci
   await sendChatInvitationEmail(email, sender.fullName || sender.login || 'Пользователь Space', project);
  } catch {
   // Keep reservation on an ambiguous SMTP failure: avoid duplicate emails; no activation grant.
-  throw createError({ statusCode: 502, message: 'Не удалось подтвердить отправку письма. Приглашение не активировано. Обратитесь к администратору; повторная попытка доступна через 24 часа.' });
+  throw createError({ statusCode: 502, message: developerRetry ? 'Не удалось подтвердить отправку письма. Приглашение не активировано. Повторите через две минуты после начала отправки; проверьте почту, чтобы исключить дублирование письма.' : 'Не удалось подтвердить отправку письма. Приглашение не активировано. Обратитесь к администратору; повторная попытка доступна через 24 часа.' });
  }
  await prisma.$transaction(async tx => {
-  await tx.domainChatInvitation.update({ where: { id }, data: { sentAt: new Date() } });
+  const delivery = await tx.domainChatInvitation.updateMany({ where: { id }, data: { sentAt: new Date() } });
+  if (!delivery.count) throw createError({ statusCode: 409, message: 'Отправка заменена более новым приглашением. Обновите список.' });
   await tx.auditLog.create({ data: { action: 'INVITE', category: 'AUTH', result: 'SUCCESS', entityType: 'User', entityId: recipientId,
    actorUserId: senderId, targetUserId: recipientId, actorEmail: '', note: project ? `Отправлено приглашение в проект #${project.id} Space. Активация требует входа через AD.` : 'Отправлено приглашение в чат Space. Активация требует входа через AD.' } });
  });

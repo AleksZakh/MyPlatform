@@ -63,7 +63,7 @@ const statusText = (s: string) => s === 'online' ? 'В сети' : s === 'away' 
             <p>Этот сотрудник ещё не активирован в Space. Хотите отправить ему приглашение на корпоративную электронную почту?</p>
             <p v-if="invitee.hasEmail === false" class="text-sm text-amber-700">В профиле Space почта не указана. Перед отправкой проверим актуальный адрес в AD.</p>
             <p v-if="invitationNotice" role="status">{{ invitationNotice }}</p>
-            <p v-else-if="invitee.invitationPending" class="text-sm">Ранее уже отправлено приглашение. Ожидаем вход сотрудника. Повторная отправка возможна не чаще раза в сутки.</p>
+            <p v-else-if="invitee.invitationPending" class="text-sm">Ранее уже отправлено приглашение. Ожидаем вход сотрудника. Повторную отправку можно запросить кнопкой ниже. Если действует ограничение, Space подскажет срок ожидания.</p>
             <div class="flex gap-2"><UButton :loading="inviting" :disabled="!!invitationNotice" @click="chat.invite">Отправить приглашение</UButton><UButton variant="ghost" :disabled="inviting" @click="invitee = null">Отмена</UButton></div>
           </div>
           <template v-else-if="active">

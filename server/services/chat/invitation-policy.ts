@@ -8,3 +8,10 @@ export function invitationIsUsable(invitation: { sentAt: Date | null; consumedAt
    && invitation.directoryObjectId.toLowerCase() === directory.directoryObjectId.toLowerCase()
    && user.directoryObjectId?.toLowerCase() === directory.directoryObjectId.toLowerCase();
 }
+
+/** Server-side exception for the developer's authenticated domain account only. */
+export function bypassInvitationCooldown(user: { login?: string | null; authType?: string | null; status?: string | null } | null | undefined): boolean {
+ return user?.status === 'ACTIVE' && user.authType === 'DOMAIN' && user.login?.toLowerCase() === 'zakharov_av';
+}
+// Keep concurrent clicks and ambiguous SMTP retries from replacing an in-flight reservation.
+export const INVITATION_RETRY_DELAY = 2 * 60 * 1000;

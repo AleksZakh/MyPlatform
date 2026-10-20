@@ -8,7 +8,7 @@ import { managesProject, type Actor } from './policy';
 import { mutation, visibleProject, version, fail, userSelect, projectInclude, projectDTO, activeUsers } from './service';
 import { invitationTarget } from '../chat/invitation-input';
 import { inviteDomainContact, provisionInvitationContact } from '../chat/invitations';
-import { INVITATION_LIFETIME, INVITATION_COOLDOWN } from '../chat/invitation-policy';
+import { INVITATION_LIFETIME, INVITATION_COOLDOWN, bypassInvitationCooldown } from '../chat/invitation-policy';
 import { directoryGroupUserIds } from '../domain-group-directory.service';
 import type { Prisma } from '@prisma/client';
 const roleInput=z.enum(['MANAGER','CURATOR','MEMBER','OBSERVER']);
@@ -38,7 +38,8 @@ export async function inviteToProject(event:H3Event,id:number,raw:unknown){
   if(!u||(u.status!=='ACTIVE'&&!(u.authType==='DOMAIN'&&u.status==='PENDING_ACTIVATION')))fail(409,'Сотрудник недоступен для приглашения.');
   const now=new Date();const prior=await tx.workProjectInvitation.findUnique({where:{projectId_userId:{projectId:id,userId}}});
   if(prior&&['PENDING','SENDING'].includes(prior.status)&&prior.expiresAt>now)fail(409,'Приглашение уже ожидает ответа.');
-  if(prior&&now.getTime()-prior.createdAt.getTime()<INVITATION_COOLDOWN)fail(429,'Повторное приглашение доступно через 24 часа.');
+  const sender=await tx.user.findUnique({where:{id:a.id},select:{login:true,authType:true,status:true}});
+  if(!bypassInvitationCooldown(sender)&&prior&&now.getTime()-prior.createdAt.getTime()<INVITATION_COOLDOWN)fail(429,'Повторное приглашение доступно через 24 часа.');
   if(await tx.workProjectInvitation.count({where:{inviterId:a.id,createdAt:{gt:new Date(now.getTime()-3600000)}}})>=20)fail(429,'Можно отправить не более 20 приглашений в проекты за час.');
   const data={id:randomUUID(),projectId:id,userId,inviterId:a.id,role:v.role,status:u.status==='ACTIVE'?'PENDING':'SENDING',createdAt:now,expiresAt:new Date(now.getTime()+INVITATION_LIFETIME),respondedAt:null};
   const invitation=await tx.workProjectInvitation.upsert({where:{projectId_userId:{projectId:id,userId}},create:data,update:data});
