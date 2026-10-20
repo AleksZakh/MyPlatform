@@ -1,3 +1,4 @@
+import { statisticsOwnerWhere } from './usage-owner';
 import { randomUUID } from 'node:crypto';
 import { prisma } from '../utils/prisma';
 import type { USAGE_KINDS } from '../../shared/usage';
@@ -25,7 +26,15 @@ export const usageHealth = () => ({ pending: queue.length, dropped, lastErrorAt,
 export async function flushUsage() {
   if (busy) return; busy = true;
   try {
-    if (queue.length) { const batch = queue.slice(0,100); await prisma.usageEvent.createMany({ data: batch, skipDuplicates: true }); queue.splice(0,batch.length); }
+    if (queue.length) {
+      const batch=queue.slice(0,100);
+      // Resolve exclusion once per batch. If lookup fails, keep the batch for retry.
+      const owners=await prisma.user.findMany({where:statisticsOwnerWhere,select:{id:true}});
+      const excluded=new Set(owners.map(u=>u.id));
+      const data=batch.filter(e=>!excluded.has(e.actorId));
+      if(data.length)await prisma.usageEvent.createMany({data,skipDuplicates:true});
+      queue.splice(0,batch.length);
+    }
     if (Date.now() - lastCleanup > 3600000 && process.env.SPACE_STATISTICS_ENABLED !== '0') {
       lastCleanup = Date.now();
       const cutoff = new Date(Date.now() - usageHealth().retentionDays * 86400000);

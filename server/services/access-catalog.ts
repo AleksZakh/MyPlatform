@@ -7,7 +7,7 @@ const featureActions: Readonly<Record<string, readonly AccessActionName[]>> = {
   'admin.center': ['VIEW'],
   'admin.users': ['VIEW'],
   'system.audit-log': ['VIEW'],
-  'system.usage-statistics': ['VIEW'],
+  'system.usage-statistics': [], // Personal statistics cannot be delegated.
   'admin.department-mapping': [],
   'admin.ad-cache-refresh': ['UPDATE'],
   // Reserved until scoped delegation is implemented; legacy grants can be revoked.

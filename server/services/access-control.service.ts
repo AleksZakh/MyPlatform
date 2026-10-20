@@ -1,3 +1,4 @@
+import { isStatisticsOwner } from './usage-owner'
 import { spaceGroupMembership } from './space-group-access.service'
 import { AccessAction, type Prisma } from '@prisma/client'
 import { createError, type H3Event } from 'h3'
@@ -47,6 +48,9 @@ export async function requirePermission(
   options: { auditDenial?: boolean } = {},
 ): Promise<PermissionContext> {
   const actor = await getAccessActor(event)
+  if(resourceKey === 'system.usage-statistics' && (!isStatisticsOwner(actor.user) || action !== 'VIEW')) {
+    throw createError({statusCode:403,message:'Статистика доступна только владельцу.'})
+  }
   const resource = await prisma.accessResource.findUnique({
     where: { key: resourceKey }, select: { id: true, key: true, isActive: true },
   })

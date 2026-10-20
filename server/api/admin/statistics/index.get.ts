@@ -1,17 +1,22 @@
-import { AccessAction, Prisma } from '@prisma/client';
+import { isStatisticsOwner, statisticsOwnerWhere } from '../../../services/usage-owner';
+import { Prisma } from '@prisma/client';
 import { defineEventHandler, getQuery, createError, setHeader } from 'h3';
 import { prisma } from '../../../utils/prisma';
-import { requirePermission } from '../../../services/access-control.service';
+import { getAccessActor } from '../../../services/access-control.service';
 import { usageHealth } from '../../../services/usage';
 import { USAGE_KINDS, usageTargetLabel } from '../../../../shared/usage';
 export default defineEventHandler(async event => {
-  await requirePermission(event,'system.usage-statistics',AccessAction.VIEW);
+  if(event.context.externalSessionRevoked)throw createError({statusCode:401});
+  const actor=await getAccessActor(event);
+  if(!isStatisticsOwner(actor.user))throw createError({statusCode:403,message:'Статистика доступна только владельцу.'});
+  const excludedIds=(await prisma.user.findMany({where:statisticsOwnerWhere,select:{id:true}})).map(u=>u.id);
+  if(!excludedIds.includes(actor.user.id))excludedIds.push(actor.user.id);
   setHeader(event,'Cache-Control','private, no-store');
   const q=getQuery(event), days=Number(q.days || 7), actorId=q.actorId?Number(q.actorId):null, page=Number(q.page||1);
   if(![1,7,30,90].includes(days)||!Number.isInteger(page)||page<1||page>10000||(actorId!==null&&(!Number.isInteger(actorId)||actorId<1||actorId>2147483647)))throw createError({statusCode:400});
   const kind=String(q.kind||'');if(kind&&!Object.hasOwn(USAGE_KINDS, kind))throw createError({statusCode:400});
-  const since=new Date(Date.now()-days*86400000), where={occurredAt:{gte:since},...(actorId?{actorId}:{}),...(kind?{kind}:{})};
-  const sql=Prisma.sql`"occurredAt" >= ${since} ${actorId?Prisma.sql`AND "actorId"=${actorId}`:Prisma.empty} ${kind?Prisma.sql`AND kind=${kind}`:Prisma.empty}`;
+  const since=new Date(Date.now()-days*86400000), where={AND:[{actorId:{notIn:excludedIds}}],occurredAt:{gte:since},...(actorId?{actorId}:{}),...(kind?{kind}:{})};
+  const sql=Prisma.sql`"occurredAt" >= ${since} AND "actorId" NOT IN (${Prisma.join(excludedIds)}) ${actorId?Prisma.sql`AND "actorId"=${actorId}`:Prisma.empty} ${kind?Prisma.sql`AND kind=${kind}`:Prisma.empty}`;
   const summary=await prisma.$queryRaw<{events:bigint;users:bigint;logins:bigint}[]>`SELECT count(*) as events,count(DISTINCT "actorId") as users,count(*) FILTER (WHERE kind='LOGIN') as logins FROM usage_events WHERE ${sql}`;
   const popular=await prisma.usageEvent.groupBy({by:['kind','target'],where,_count:{_all:true},orderBy:{_count:{target:'desc'}},take:15});
   const daily=await prisma.$queryRaw<{day:string;events:bigint;users:bigint}[]>`SELECT to_char("occurredAt" + interval '3 hours','DD.MM.YYYY') AS day,count(*) AS events,count(DISTINCT "actorId") AS users FROM usage_events WHERE ${sql} GROUP BY date("occurredAt" + interval '3 hours'),to_char("occurredAt" + interval '3 hours','DD.MM.YYYY') ORDER BY date("occurredAt" + interval '3 hours')`;

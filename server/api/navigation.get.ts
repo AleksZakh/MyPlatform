@@ -1,3 +1,4 @@
+import { isStatisticsOwner } from '../services/usage-owner'
 import { defineEventHandler } from 'h3'
 import { prisma } from '../utils/prisma'
 import { getAccessActor } from '../services/access-control.service'
@@ -12,7 +13,7 @@ export default defineEventHandler(async event => {
     useRuntimeConfig(event).adminLogins, false, membership))
   const canView = (key: string) => snapshot.data.some(r => r.key === key && r.actions.VIEW.effectiveGranted)
   const departments = await prisma.department.findMany({ where: { isActive: true }, select: { key: true, name: true }, orderBy: { name: 'asc' } })
-  const tools = canView('admin.center') ? toolPages.filter(t => t.adminOnly ? actor.isSystemAdmin : !!t.resource && canView(t.resource))
+  const tools = canView('admin.center') ? toolPages.filter(t => t.to === '/admin/statistics' ? isStatisticsOwner(actor.user) : t.adminOnly ? actor.isSystemAdmin : !!t.resource && canView(t.resource))
     .map(({ label, to, description, icon }) => ({ label, to, description, icon })) : []
   const sections: NavigationData['sections'] = [{ label: 'Главная', to: '/' }, { label: 'Пользователи online', to: '/online' }]
   // Existing general department landing pages remain discoverable for authenticated users.
