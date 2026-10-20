@@ -29,8 +29,3 @@ html[data-space-contrast="high"] th { background: #e2e8f0 !important; color: #11
 html[data-space-contrast="high"] tr:hover td { background: #e0efff; }
 html[data-space-contrast="high"] [role=option][data-highlighted], html[data-space-contrast="high"] [role=option][aria-selected=true] { background: #dbeafe !important; color: #172554 !important; }
 
-html.dark:not([data-space-contrast="high"]) { --space-field-border: #94a3b8; }
-html.dark:not([data-space-contrast="high"]) :is([class*="bg-gray-50"], [class*="bg-gray-100"], [class*="bg-white"], [class*="bg-sky-100"]) { background-color: #172033 !important; }
-html.dark:not([data-space-contrast="high"]) :is([class*="text-gray-"], [class*="text-slate-"], legend, label) { color: #e2e8f0 !important; }
-html.dark:not([data-space-contrast="high"]) :is(input:not([type=checkbox]):not([type=radio]), textarea, select, [role=combobox]) { background: #172033 !important; color: #f1f5f9 !important; }
-html.dark:not([data-space-contrast="high"]) [role=option][data-highlighted], html.dark:not([data-space-contrast="high"]) [role=option][aria-selected=true] { background: #1e3a5f; color: #fff; }

@@ -219,7 +219,7 @@ const confirmEmail = async () => {
 
 .verify-email__error {
   margin: 16px 0;
-  color: #b91c1c;
+  color: var(--space-danger, #b91c1c);
 }
 
 .verify-email__link {

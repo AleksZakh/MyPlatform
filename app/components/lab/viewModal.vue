@@ -927,6 +927,6 @@ fieldset {
 }
 
 fieldset:hover {
-  border-color: #94a3b8;
+  border-color: var(--space-line, #94a3b8);
 }
 </style>

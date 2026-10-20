@@ -1,3 +1,4 @@
+import { recordUsage } from '../../services/usage';
 // server/api/auth/logout.post.ts
 
 import { logger } from '../../utils/logger';
@@ -26,6 +27,7 @@ export default defineEventHandler(async (event) => {
    * clearUserSession() удалит правильную session-cookie.
    */
   await clearUserSession(event);
+  if (typeof user?.id === "number") recordUsage({actorId:user.id,kind:"LOGOUT",target:"logout"});
 
 
   logger.info(

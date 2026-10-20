@@ -1,8 +1,8 @@
 .space-library {
-  --lib-bg: #fff;
-  --lib-panel: #f5f6f8;
-  --lib-text: #303944;
-  --lib-border: #d8dde4;
+  --lib-bg: var(--space-panel, #fff);
+  --lib-panel: var(--space-bg, #f5f6f8);
+  --lib-text: var(--space-text, #303944);
+  --lib-border: var(--space-line, #d8dde4);
   --lib-accent: #e97800;
   box-sizing: border-box;
   color: var(--lib-text);
@@ -326,8 +326,8 @@
   margin-right: 8px;
 }
 .library-error {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--space-danger-bg, #fee2e2);
+  color: var(--space-danger, #991b1b);
   padding: 12px;
   border-radius: 5px;
   margin: 10px 0;

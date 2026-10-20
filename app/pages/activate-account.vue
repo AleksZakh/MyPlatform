@@ -264,7 +264,7 @@ const activateAccount =
 
 .activation-form input {
   padding: 11px 12px;
-  border: 1px solid #9ca3af;
+  border: 1px solid var(--space-line, #9ca3af);
   border-radius: 6px;
   font: inherit;
 }
@@ -299,7 +299,7 @@ const activateAccount =
 }
 
 .error-message {
-  color: #b91c1c;
+  color: var(--space-danger, #b91c1c);
 }
 
 .success-message {

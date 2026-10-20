@@ -1,3 +1,4 @@
+import { recordUsage } from '../usage';
 import { createError } from 'h3';
 import { prisma } from '../../utils/prisma';
 import { pairKey } from './validation';
@@ -20,7 +21,8 @@ export async function openDialog(userId: number, recipientId: number) {
   });
 }
 export async function saveMessage(userId: number, id: number, body: string, clientId: string) {
-  return prisma.$transaction(async tx => {
+  let usageRecipient: number | null = null, wasCreated = false;
+  const result = await prisma.$transaction(async tx => {
     // A per-dialog lock orders commits, message cursors and read receipts.
     const rows = await tx.$queryRaw<{ id: number; kind: string; archivedAt: Date | null }[]>`SELECT c.id, c.kind, c."archivedAt" FROM chat_conversations c JOIN chat_members m ON m."conversationId"=c.id WHERE c.id=${id} AND m."userId"=${userId} FOR UPDATE OF c`;
     if (!rows.length) throw createError({ statusCode: 404 });
@@ -36,10 +38,14 @@ export async function saveMessage(userId: number, id: number, body: string, clie
     if (conversation.kind === 'DIRECT' && (members.length !== 2 || members.some(m => m.user.status !== 'ACTIVE'))) throw createError({ statusCode: 403, message: 'Участник диалога отключён.' });
     const count = await tx.chatMessage.count({ where: { senderId: userId, createdAt: { gt: new Date(Date.now() - 60000) } } });
     if (count >= 60) throw createError({ statusCode: 429, message: 'Слишком много сообщений. Подождите минуту.' });
+    usageRecipient = conversation.kind === 'DIRECT' ? members.find(m => m.userId !== userId)?.userId ?? null : null;
     const message = await tx.chatMessage.create({ data: { conversationId: id, senderId: userId, body, clientId } });
     await tx.chatConversation.update({ where: { id }, data: { updatedAt: new Date() } });
+    wasCreated = true;
     return message;
   });
+  if (wasCreated) recordUsage({id:`message:${result.id}`,actorId:userId,recipientId:usageRecipient,kind:'MESSAGE',target:`conversation:${id}`});
+  return result;
 }
 export async function markRead(userId: number, id: number, through: number) {
   return prisma.$transaction(async tx => {

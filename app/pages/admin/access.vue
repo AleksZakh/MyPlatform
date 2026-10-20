@@ -68,16 +68,16 @@ onBeforeUnmount(() => { disposed = true; sequence++; clearTimeout(timer) })
 </template>
 
 <style scoped>
-.access-page { height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: auto; padding: 20px; box-sizing: border-box; color: #172b4d; background: #f5f7fa; }
-header { margin-bottom: 20px; } header a { color: #315f96; font-size: 13px; } h1 { font-size: 24px; font-weight: 650; margin: 8px 0 0; }
+.access-page { height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: auto; padding: 20px; box-sizing: border-box; color: var(--space-text, #172b4d); background: var(--space-panel, #f5f7fa); }
+header { margin-bottom: 20px; } header a { color: var(--space-accent, #315f96); font-size: 13px; } h1 { font-size: 24px; font-weight: 650; margin: 8px 0 0; }
 .access-layout { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: 20px; align-items: start; }
-aside, main { min-width: 0; background: white; padding: 18px; border: 1px solid #dce4ed; border-radius: 12px; }
+aside, main { min-width: 0; background: var(--space-panel, white); padding: 18px; border: 1px solid var(--space-line, #dce4ed); border-radius: 12px; }
 label { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; font-size: 13px; }
-input, select { border: 1px solid #becada; border-radius: 7px; background: white; color: inherit; width: 100%; box-sizing: border-box; padding: 9px; }
+input, select { border: 1px solid var(--space-line, #becada); border-radius: 7px; background: var(--space-panel, white); color: inherit; width: 100%; box-sizing: border-box; padding: 9px; }
 ul { list-style: none; margin: 15px 0 0; padding: 0; } li { margin-bottom: 5px; }
 li button { width: 100%; text-align: left; padding: 12px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: inherit; cursor: pointer; }
-li button[aria-pressed=true] { background: #edf4fc; border-color: #a7c3e6; } strong, small { display: block; } strong { font-size: 13px; } small { margin-top: 4px; font-size: 11px; color: #63758b; overflow-wrap: anywhere; }
-.choose-subject { padding: 25px 0; color: #63758b; } aside p { color: #52637a; font-size: 13px; }
+li button[aria-pressed=true] { background: var(--space-selection, #edf4fc); border-color: #a7c3e6; } strong, small { display: block; } strong { font-size: 13px; } small { margin-top: 4px; font-size: 11px; color: var(--space-muted, #63758b); overflow-wrap: anywhere; }
+.choose-subject { padding: 25px 0; color: var(--space-muted, #63758b); } aside p { color: var(--space-muted, #52637a); font-size: 13px; }
 @media(max-width: 850px) { .access-layout { grid-template-columns: 1fr; } .access-page { padding: 12px; } }
 .access-page { overflow: hidden; padding: 12px 14px; }
 header { flex-shrink: 0; margin-bottom: 10px; } h1 { font-size: 21px; margin-top: 5px; }

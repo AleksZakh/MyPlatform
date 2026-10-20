@@ -226,7 +226,7 @@ const getErrorMessage = (): string => {
 
 .table-wrapper {
   overflow-x: auto;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--space-line, #d1d5db);
   border-radius: 8px;
 }
 
@@ -240,7 +240,7 @@ const getErrorMessage = (): string => {
   padding: 12px 14px;
   text-align: left;
   vertical-align: top;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--space-line, #e5e7eb);
 }
 
 .requests-table th {
@@ -265,7 +265,7 @@ const getErrorMessage = (): string => {
 .refresh-button {
   display: inline-block;
   padding: 8px 14px;
-  border: 1px solid #9ca3af;
+  border: 1px solid var(--space-line, #9ca3af);
   border-radius: 6px;
   background: transparent;
   color: inherit;
@@ -280,12 +280,12 @@ const getErrorMessage = (): string => {
 
 .state-message {
   padding: 24px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--space-line, #d1d5db);
   border-radius: 8px;
 }
 
 .state-message--error {
   border-color: #dc2626;
-  color: #b91c1c;
+  color: var(--space-danger, #b91c1c);
 }
 </style>

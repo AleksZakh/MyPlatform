@@ -1236,7 +1236,7 @@ watch(() => storageRoute.query.storageRecordId, openStorageRecord)
   margin-top: auto;
   flex-shrink: 0;
   padding-top: 12px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--space-line, #e5e7eb);
 }
 
 .custom-scrollbar {
@@ -1271,21 +1271,21 @@ watch(() => storageRoute.query.storageRecordId, openStorageRecord)
 
 /* Наведение на обычную строку. */
 .lab-row:not(.lab-row--selected):hover > td {
-  background-color: #f8fafc;
+  background-color: var(--space-panel, #f8fafc);
 }
 
 /* Отрицательный результат сохраняет своё обозначение. */
 .lab-row--negative > td {
-  background-color: #fffafa;
+  background-color: var(--space-selection, #fffafa);
 }
 
 .lab-row--negative:not(.lab-row--selected):hover > td {
-  background-color: #fff5f5;
+  background-color: var(--space-danger-bg, #fff5f5);
 }
 
 /* Выбранная строка: мягкий фон, контур и внутренняя тень. */
 .lab-row.lab-row--selected > td {
-  background-color: #eff6ff;
+  background-color: var(--space-selection, #eff6ff);
   font-weight: 500;
 
   box-shadow:
@@ -1305,7 +1305,7 @@ watch(() => storageRoute.query.storageRecordId, openStorageRecord)
 
 /* Выбрана проблемная запись: сохраняем красноватый фон. */
 .lab-row.lab-row--selected.lab-row--negative > td {
-  background-color: #ffe4e6;
+  background-color: var(--space-danger-bg, #ffe4e6);
 }
 
 @media (prefers-reduced-motion: reduce) {

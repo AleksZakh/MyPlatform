@@ -1,3 +1,4 @@
+import { recordUsage } from '../usage';
 import { Prisma } from '@prisma/client';
 import { ensureDomainUser } from '../domain-user.service';
 import { randomUUID } from 'node:crypto';
@@ -49,6 +50,7 @@ export async function inviteDomainContact(event: H3Event, senderId: number, reci
   await tx.auditLog.create({ data: { action: 'INVITE', category: 'AUTH', result: 'SUCCESS', entityType: 'User', entityId: recipientId,
    actorUserId: senderId, targetUserId: recipientId, actorEmail: '', note: project ? `Отправлено приглашение в проект #${project.id} Space. Активация требует входа через AD.` : 'Отправлено приглашение в чат Space. Активация требует входа через AD.' } });
  });
+ recordUsage({id:`mail:${id}`,actorId:senderId,recipientId,kind:'MAIL',target:project?`project:${project.id}`:'chat-invitation'});
  return { sent: true };
 }
 

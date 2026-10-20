@@ -16,7 +16,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: white;
+  background-color: var(--space-panel, white);
   z-index: 50;
 }
 </style>

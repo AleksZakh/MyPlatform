@@ -817,7 +817,7 @@ tr.cursor-pointer {
 }
 
 tr.cursor-pointer:hover {
-  background-color: #f9fafb;
+  background-color: var(--space-panel, #f9fafb);
 }
 
 .max-h-12 {
@@ -830,12 +830,12 @@ tr.cursor-pointer:hover {
 }
 
 .max-h-12::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--space-bg, #f1f1f1);
   border-radius: 2px;
 }
 
 .max-h-12::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: var(--space-raised, #c1c1c1);
   border-radius: 2px;
 }
 

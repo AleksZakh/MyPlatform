@@ -31,5 +31,5 @@ onBeforeUnmount(() => { alive = false; clearInterval(timer) })
   </div>
 </template>
 <style scoped>
-.admin-cache { display:flex; align-items:center; flex-wrap:wrap; gap:8px; font-size:12px; }.dot { display:inline-block; width:7px; height:7px; margin-right:4px; border-radius:50%; background:#228453; }.stale { background:#b17b16; }.updating { background:#2563b8; }.error { color:#a12c20; }
+.admin-cache { display:flex; align-items:center; flex-wrap:wrap; gap:8px; font-size:12px; }.dot { display:inline-block; width:7px; height:7px; margin-right:4px; border-radius:50%; background:#228453; }.stale { background:#b17b16; }.updating { background:#2563b8; }.error { color:var(--space-danger, #a12c20); }
 </style>

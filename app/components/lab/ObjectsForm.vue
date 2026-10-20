@@ -2076,7 +2076,7 @@ defineExpose({
   min-width: 0;
   padding: 18px 20px;
   overflow: hidden;
-  background: #fff;
+  background: var(--space-panel, #fff);
   border-radius: 14px;
   box-shadow:
     0 10px 30px rgb(15 23 42 / 8%);
@@ -2098,7 +2098,7 @@ defineExpose({
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.06em;
-  color: #64748b;
+  color: var(--space-muted, #64748b);
   text-transform: uppercase;
 }
 
@@ -2107,13 +2107,13 @@ defineExpose({
   font-size: 30px;
   line-height: 1.15;
   font-weight: 750;
-  color: #0f172a;
+  color: var(--space-text, #0f172a);
 }
 
 .page-subtitle {
   margin: 6px 0 0;
   font-size: 14px;
-  color: #64748b;
+  color: var(--space-muted, #64748b);
 }
 
 .toolbar {
@@ -2140,7 +2140,7 @@ defineExpose({
   top: 50%;
   left: 12px;
   z-index: 1;
-  color: #94a3b8;
+  color: var(--space-muted, #94a3b8);
   transform: translateY(-50%);
 }
 
@@ -2148,9 +2148,9 @@ defineExpose({
   width: 100%;
   height: 40px;
   padding: 0 14px 0 38px;
-  color: #0f172a;
-  background: #fff;
-  border: 1px solid #cbd5e1;
+  color: var(--space-text, #0f172a);
+  background: var(--space-panel, #fff);
+  border: 1px solid var(--space-line, #cbd5e1);
   border-radius: 9px;
   outline: none;
   transition:
@@ -2167,14 +2167,14 @@ defineExpose({
 .toolbar-note {
   flex: 0 0 auto;
   font-size: 13px;
-  color: #64748b;
+  color: var(--space-muted, #64748b);
 }
 
 .table-card {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--space-line, #e2e8f0);
   border-radius: 11px;
   box-shadow:
     0 3px 12px rgb(15 23 42 / 5%);
@@ -2198,19 +2198,19 @@ defineExpose({
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.045em;
-  color: #64748b;
+  color: var(--space-muted, #64748b);
   text-align: left;
   text-transform: uppercase;
-  background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
+  background: var(--space-panel, #f8fafc);
+  border-bottom: 1px solid var(--space-line, #e2e8f0);
 }
 
 .data-table td {
   padding: 12px 14px;
   font-size: 13px;
-  color: #334155;
+  color: var(--space-text, #334155);
   vertical-align: middle;
-  border-bottom: 1px solid #eef2f7;
+  border-bottom: 1px solid var(--space-line, #eef2f7);
 }
 
 .data-table tbody tr:last-child td {
@@ -2223,7 +2223,7 @@ defineExpose({
 }
 
 .object-row:hover {
-  background: #f8fbff;
+  background: var(--space-selection, #f8fbff);
 }
 
 .sortable {
@@ -2242,14 +2242,14 @@ defineExpose({
   overflow: hidden;
   font-size: 13px;
   font-weight: 700;
-  color: #0369a1;
+  color: var(--space-accent, #0369a1);
   text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .object-link:hover {
-  color: #075985;
+  color: var(--space-text, #075985);
   text-decoration: underline;
 }
 
@@ -2260,7 +2260,7 @@ defineExpose({
   margin-top: 3px;
   overflow: hidden;
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--space-muted, #94a3b8);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2268,11 +2268,11 @@ defineExpose({
 .full-name {
   margin-top: 0;
   font-size: 12px;
-  color: #475569;
+  color: var(--space-text, #475569);
 }
 
 .muted {
-  color: #94a3b8;
+  color: var(--space-muted, #94a3b8);
 }
 
 .location-count,
@@ -2282,14 +2282,14 @@ defineExpose({
   gap: 5px;
   padding: 5px 9px;
   font-size: 12px;
-  color: #075985;
-  background: #f0f9ff;
+  color: var(--space-text, #075985);
+  background: var(--space-selection, #f0f9ff);
   border: 1px solid #bae6fd;
   border-radius: 999px;
 }
 
 .location-count:hover {
-  background: #e0f2fe;
+  background: var(--space-selection, #e0f2fe);
 }
 
 .actions-column {
@@ -2314,24 +2314,24 @@ defineExpose({
 }
 
 .icon-button--edit {
-  color: #0284c7;
+  color: var(--space-accent, #0284c7);
 }
 
 .icon-button--edit:hover {
-  background: #e0f2fe;
+  background: var(--space-selection, #e0f2fe);
 }
 
 .icon-button--delete {
-  color: #dc2626;
+  color: var(--space-danger, #dc2626);
 }
 
 .icon-button--delete:hover {
-  background: #fef2f2;
+  background: var(--space-danger-bg, #fef2f2);
 }
 
 .empty-cell {
   padding: 50px 16px !important;
-  color: #94a3b8 !important;
+  color: var(--space-muted, #94a3b8) !important;
   text-align: center !important;
 }
 
@@ -2341,13 +2341,13 @@ defineExpose({
   justify-content: center;
   min-height: 240px;
   gap: 10px;
-  color: #64748b;
+  color: var(--space-muted, #64748b);
 }
 
 .spinner {
   width: 28px;
   height: 28px;
-  border: 3px solid #e2e8f0;
+  border: 3px solid var(--space-line, #e2e8f0);
   border-bottom-color: #0284c7;
   border-radius: 999px;
   animation: spin 0.8s linear infinite;
@@ -2364,7 +2364,7 @@ defineExpose({
 .pagination-info,
 .page-indicator {
   font-size: 12px;
-  color: #64748b;
+  color: var(--space-muted, #64748b);
 }
 
 .pagination-controls {
@@ -2386,11 +2386,11 @@ defineExpose({
   align-items: center;
   gap: 5px;
   font-weight: 600;
-  color: #0284c7;
+  color: var(--space-accent, #0284c7);
 }
 
 .back-link:hover {
-  color: #0369a1;
+  color: var(--space-accent, #0369a1);
 }
 
 .breadcrumb-separator {
@@ -2400,7 +2400,7 @@ defineExpose({
 .breadcrumb-current {
   max-width: 760px;
   overflow: hidden;
-  color: #64748b;
+  color: var(--space-muted, #64748b);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2410,10 +2410,10 @@ defineExpose({
   background:
     linear-gradient(
       135deg,
-      #f8fafc,
-      #f0f9ff
+      var(--space-panel, #f8fafc),
+      var(--space-selection, #f0f9ff)
     );
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--space-line, #e2e8f0);
   border-radius: 12px;
 }
 
@@ -2431,8 +2431,8 @@ defineExpose({
   flex: 0 0 auto;
   width: 44px;
   height: 44px;
-  color: #0369a1;
-  background: #e0f2fe;
+  color: var(--space-accent, #0369a1);
+  background: var(--space-selection, #e0f2fe);
   border-radius: 10px;
 }
 
@@ -2442,7 +2442,7 @@ defineExpose({
   overflow: hidden;
   font-size: 21px;
   font-weight: 750;
-  color: #0f172a;
+  color: var(--space-text, #0f172a);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2452,11 +2452,11 @@ defineExpose({
   margin: 5px 0 0;
   font-size: 13px;
   line-height: 1.45;
-  color: #475569;
+  color: var(--space-text, #475569);
 }
 
 .summary-full-name--empty {
-  color: #94a3b8;
+  color: var(--space-muted, #94a3b8);
 }
 
 .summary-actions {
@@ -2476,8 +2476,8 @@ defineExpose({
 
 .meta-item {
   padding: 10px 12px;
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: var(--space-panel, #fff);
+  border: 1px solid var(--space-line, #e2e8f0);
   border-radius: 9px;
 }
 
@@ -2487,13 +2487,13 @@ defineExpose({
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.04em;
-  color: #94a3b8;
+  color: var(--space-muted, #94a3b8);
   text-transform: uppercase;
 }
 
 .meta-value {
   font-size: 13px;
-  color: #334155;
+  color: var(--space-text, #334155);
 }
 
 .section-header {
@@ -2505,18 +2505,18 @@ defineExpose({
   margin: 0;
   font-size: 18px;
   font-weight: 750;
-  color: #0f172a;
+  color: var(--space-text, #0f172a);
 }
 
 .section-subtitle {
   margin: 3px 0 0;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--space-muted, #94a3b8);
 }
 
 .location-name {
   font-weight: 650;
-  color: #0f172a !important;
+  color: var(--space-text, #0f172a) !important;
 }
 
 .modal-header {
@@ -2531,7 +2531,7 @@ defineExpose({
   margin: 0;
   font-size: 20px;
   font-weight: 750;
-  color: #0f172a;
+  color: var(--space-text, #0f172a);
 }
 
 .modal-form {
@@ -2549,20 +2549,20 @@ defineExpose({
 .field-label {
   font-size: 12px;
   font-weight: 650;
-  color: #334155;
+  color: var(--space-text, #334155);
 }
 
 .required {
-  color: #dc2626;
+  color: var(--space-danger, #dc2626);
 }
 
 .field-input {
   width: 100%;
   padding: 9px 11px;
   font-size: 14px;
-  color: #0f172a;
-  background: #fff;
-  border: 1px solid #cbd5e1;
+  color: var(--space-text, #0f172a);
+  background: var(--space-panel, #fff);
+  border: 1px solid var(--space-line, #cbd5e1);
   border-radius: 8px;
   outline: none;
   transition:
@@ -2592,8 +2592,8 @@ defineExpose({
   flex-direction: column;
   gap: 2px;
   padding: 10px 12px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--space-panel, #f8fafc);
+  border: 1px solid var(--space-line, #e2e8f0);
   border-radius: 8px;
 }
 
@@ -2601,13 +2601,13 @@ defineExpose({
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.04em;
-  color: #94a3b8;
+  color: var(--space-muted, #94a3b8);
   text-transform: uppercase;
 }
 
 .object-lock-full {
   font-size: 11px;
-  color: #64748b;
+  color: var(--space-muted, #64748b);
 }
 
 
@@ -2628,8 +2628,8 @@ defineExpose({
   max-height: 90vh;
   overflow-y: auto;
   padding: 20px;
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: var(--space-panel, #fff);
+  border: 1px solid var(--space-line, #e2e8f0);
   border-radius: 14px;
   box-shadow:
     0 24px 70px rgb(15 23 42 / 25%);
@@ -2646,14 +2646,14 @@ defineExpose({
   flex: 0 0 auto;
   width: 34px;
   height: 34px;
-  color: #64748b;
+  color: var(--space-muted, #64748b);
   background: transparent;
   border-radius: 8px;
 }
 
 .modal-close:hover {
-  color: #0f172a;
-  background: #f1f5f9;
+  color: var(--space-text, #0f172a);
+  background: var(--space-bg, #f1f5f9);
 }
 
 @keyframes spin {

@@ -1,3 +1,4 @@
+import { recordUsage } from '../../services/usage';
 import {
   UserAuthType,
   UserStatus,
@@ -163,6 +164,7 @@ export default defineEventHandler(
         },
         );
 
+    recordUsage({actorId:user.id,kind:"LOGIN",target:"external-password"});
     return {
       success: true,
 

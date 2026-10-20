@@ -1326,3 +1326,17 @@ model WorkProjectFile {
   @@index([projectId, scope, ownerId, deletedAt, createdAt])
   @@map("work_project_files")
 }
+
+model UsageEvent {
+  id String @id @db.VarChar(150)
+  actorId Int
+  recipientId Int?
+  kind String @db.VarChar(40)
+  target String @db.VarChar(200)
+  source String @db.VarChar(10)
+  occurredAt DateTime @default(now())
+  @@index([occurredAt])
+  @@index([actorId, occurredAt])
+  @@index([kind, occurredAt])
+  @@map("usage_events")
+}

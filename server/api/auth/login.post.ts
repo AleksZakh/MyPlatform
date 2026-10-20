@@ -1,3 +1,4 @@
+import { recordUsage } from '../../services/usage';
 import { resolveAuthenticatedDomainUser } from '../../services/invited-domain-login';
 // server/api/auth/login.post.ts
 
@@ -329,6 +330,7 @@ export default defineEventHandler(async (event) => {
 
   event.context.user =
     user;
+  recordUsage({actorId:appUser.id,kind:"LOGIN",target:"domain-password"});
 
 
   logger.info(

@@ -143,7 +143,7 @@ useHead({
 .access-denied-card {
   max-width: 500px;
   width: 100%;
-  background: white;
+  background: var(--space-panel, white);
   border-radius: 20px;
   padding: 40px;
   text-align: center;
@@ -158,14 +158,14 @@ useHead({
 .lock-icon {
   width: 80px;
   height: 80px;
-  color: #ef4444;
+  color: var(--space-danger, #ef4444);
   animation: shake 0.5s ease-in-out;
 }
 
 .title {
   font-size: 28px;
   font-weight: 700;
-  color: #1f2937;
+  color: var(--space-text, #1f2937);
   margin-bottom: 16px;
   font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -173,14 +173,14 @@ useHead({
 
 .message {
   font-size: 16px;
-  color: #6b7280;
+  color: var(--space-muted, #6b7280);
   margin-bottom: 12px;
   line-height: 1.5;
 }
 
 .submessage {
   font-size: 14px;
-  color: #9ca3af;
+  color: var(--space-muted, #9ca3af);
   margin-bottom: 32px;
   font-style: italic;
 }
@@ -227,7 +227,7 @@ useHead({
 
 .btn-outline {
   background: transparent;
-  color: #4f46e5;
+  color: var(--space-accent, #4f46e5);
   border: 2px solid #4f46e5;
 }
 
@@ -246,7 +246,7 @@ useHead({
   color: #d1d5db;
   font-family: monospace;
   padding-top: 16px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--space-line, #e5e7eb);
 }
 
 /* Анимации */

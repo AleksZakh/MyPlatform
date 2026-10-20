@@ -255,7 +255,7 @@ fieldset {
 }
 
 fieldset:hover {
-  border-color: #94a3b8;
+  border-color: var(--space-line, #94a3b8);
 }
 
 input[type='checkbox'] {
@@ -269,6 +269,6 @@ label {
 }
 
 label:hover {
-  background-color: #f9fafb;
+  background-color: var(--space-panel, #f9fafb);
 }
 </style>

@@ -19,7 +19,7 @@ onBeforeUnmount(()=>{save(true);document.removeEventListener('visibilitychange',
 <template>
 <main class="space-library library-video-view"><NuxtLink to="/library?type=video">← В библиотеку</NuxtLink><p v-if="error" role="alert">Видео недоступно или не найдено.</p>
 <template v-else-if="video"><h1>{{video.title}}</h1><p>{{video.author}}</p><template v-if="video.status==='READY'">
-<video ref="player" controls playsinline preload="metadata" :poster="video.hasPoster?`/api/library/videos/${id}/poster`:undefined" :src="`/api/library/videos/${id}/media`" @loadedmetadata="restore" @timeupdate="save()" @pause="save(true)" @ended="save(true)" @error="playError='Не удалось воспроизвести видео. Проверьте соединение и попробуйте обновить страницу.'" />
+<video :data-space-video="id" ref="player" controls playsinline preload="metadata" :poster="video.hasPoster?`/api/library/videos/${id}/poster`:undefined" :src="`/api/library/videos/${id}/media`" @loadedmetadata="restore" @timeupdate="save()" @pause="save(true)" @ended="save(true)" @error="playError='Не удалось воспроизвести видео. Проверьте соединение и попробуйте обновить страницу.'" />
 <div class="library-toolbar"><label>Скорость <select v-model="speed" @change="player&&(player.playbackRate=Number(speed))"><option v-for="s in [0.5,0.75,1,1.25,1.5,2]" :key="s" :value="s">{{s}}×</option></select></label><button @click="player&&(player.currentTime=0)">С начала</button></div>
 <p v-if="notice" role="status">{{notice}}</p><p v-if="playError" role="alert" class="library-error">{{playError}}</p></template><p v-else>Видео ещё не готово к просмотру.</p><p class="video-description">{{video.description}}</p></template>
 </main>

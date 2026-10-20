@@ -769,7 +769,7 @@ const refreshRequest = async () => {
   width: 100%;
   box-sizing: border-box;
   padding: 10px;
-  border: 1px solid #9ca3af;
+  border: 1px solid var(--space-line, #9ca3af);
   border-radius: 6px;
   resize: vertical;
   font: inherit;
@@ -793,12 +793,12 @@ const refreshRequest = async () => {
 }
 
 .review-message--error {
-  color: #b91c1c;
+  color: var(--space-danger, #b91c1c);
   border-color: #dc2626;
 }
 
 .review-message--success {
-  color: #166534;
+  color: var(--space-text, #166534);
   border-color: #16a34a;
 }
 
@@ -825,7 +825,7 @@ const refreshRequest = async () => {
 .card {
   margin-bottom: 20px;
   padding: 20px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--space-line, #d1d5db);
   border-radius: 8px;
 }
 
@@ -842,7 +842,7 @@ const refreshRequest = async () => {
 
 .status {
   padding: 6px 10px;
-  border: 1px solid #9ca3af;
+  border: 1px solid var(--space-line, #9ca3af);
   border-radius: 6px;
   white-space: nowrap;
 }
@@ -887,7 +887,7 @@ const refreshRequest = async () => {
 
   padding: 14px;
 
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--space-line, #e5e7eb);
   border-radius: 6px;
 }
 
@@ -912,7 +912,7 @@ const refreshRequest = async () => {
 
 .button {
   padding: 8px 14px;
-  border: 1px solid #9ca3af;
+  border: 1px solid var(--space-line, #9ca3af);
   border-radius: 6px;
   background: transparent;
   color: inherit;
@@ -926,13 +926,13 @@ const refreshRequest = async () => {
 
 .state-box {
   padding: 24px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--space-line, #d1d5db);
   border-radius: 8px;
 }
 
 .state-box--error {
   border-color: #dc2626;
-  color: #b91c1c;
+  color: var(--space-danger, #b91c1c);
 }
 
 .admin-comment {

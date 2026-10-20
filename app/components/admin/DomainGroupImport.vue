@@ -20,11 +20,11 @@ const { query, items, busy, error, hasMore, search, add } = useDomainGroupImport
   </details>
 </template>
 <style scoped>
-.group-import { border: 1px solid #dce4ed; border-radius: 8px; padding: 9px; font-size: 12px; }
-summary { cursor: pointer; color: #315f96; } form { margin-top: 10px; } label, small, strong, span { display: block; }
-input { width: 100%; box-sizing: border-box; margin: 5px 0; padding: 6px; border: 1px solid #becada; border-radius: 5px; }
-button { cursor: pointer; color: #25486d; background: white; border: 1px solid #becada; border-radius: 6px; padding: 6px; text-align: left; }
+.group-import { border: 1px solid var(--space-line, #dce4ed); border-radius: 8px; padding: 9px; font-size: 12px; }
+summary { cursor: pointer; color: var(--space-accent, #315f96); } form { margin-top: 10px; } label, small, strong, span { display: block; }
+input { width: 100%; box-sizing: border-box; margin: 5px 0; padding: 6px; border: 1px solid var(--space-line, #becada); border-radius: 5px; }
+button { cursor: pointer; color: var(--space-accent, #25486d); background: var(--space-panel, white); border: 1px solid var(--space-line, #becada); border-radius: 6px; padding: 6px; text-align: left; }
 button:disabled { opacity: .55; cursor: default; } ul { list-style: none; padding: 0; max-height: 220px; overflow: auto; }
-li { margin-top: 6px; } li button { width: 100%; } small { color: #63758b; line-height: 1.5; overflow-wrap: anywhere; margin-top: 5px; }
-[role=alert] { color: #962c25; }
+li { margin-top: 6px; } li button { width: 100%; } small { color: var(--space-muted, #63758b); line-height: 1.5; overflow-wrap: anywhere; margin-top: 5px; }
+[role=alert] { color: var(--space-danger, #962c25); }
 </style>

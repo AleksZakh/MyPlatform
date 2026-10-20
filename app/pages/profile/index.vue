@@ -58,7 +58,7 @@ const { user, ready, busy, error, load, draft, notice, apply, defaults, confirmR
 .space-profile .profile-upload { display: block; font-weight: 600; }
 .space-profile input[type=file] { display: block; max-width: 100%; font: inherit; margin-top: .25rem; }
 .space-profile .profile-hint { font-size: .8125rem; margin-top: .25rem; }
-.space-profile .profile-error { color: #b91c1c; border: 1px solid currentColor; padding: .5rem; border-radius: .375rem; }
+.space-profile .profile-error { color: var(--space-danger, #b91c1c); border: 1px solid currentColor; padding: .5rem; border-radius: .375rem; }
 html.dark .space-profile .profile-error { color: #fca5a5; }
 @media (max-width: 640px) { .space-profile { padding: .75rem; } .space-profile .profile-grid { grid-template-columns: minmax(0, 1fr); } }
 </style>

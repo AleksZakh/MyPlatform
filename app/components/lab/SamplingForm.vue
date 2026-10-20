@@ -1145,6 +1145,6 @@ tr.cursor-pointer {
 }
 
 tr.cursor-pointer:hover {
-  background-color: #f9fafb;
+  background-color: var(--space-panel, #f9fafb);
 }
 </style>

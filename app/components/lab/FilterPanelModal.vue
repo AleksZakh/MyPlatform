@@ -601,12 +601,12 @@ const resetFilters = () => {
 }
 
 .panel-wrapper::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--space-bg, #f1f1f1);
   border-radius: 2px;
 }
 
 .panel-wrapper::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: var(--space-raised, #c1c1c1);
   border-radius: 2px;
 }
 

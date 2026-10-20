@@ -1,3 +1,4 @@
+import { recordUsage } from '../../services/usage';
 import { resolveAuthenticatedDomainUser } from '../../services/invited-domain-login';
 import { randomUUID } from 'node:crypto'
 import { createError, defineEventHandler, getRequestHeader, setResponseHeader } from 'h3'
@@ -36,6 +37,7 @@ export default defineEventHandler(async event => {
     mark('session')
     await setUserSession(event, { user, loggedInAt: new Date().toISOString() })
     event.context.user = user
+    recordUsage({actorId:appUser.id,kind:"LOGIN",target:"kerberos"});
     mark('complete')
     logger.info(`[kerberos] request=${requestId} stage=complete status=200 appUserId=${appUser.id}`)
     return { success: true, user, requestId }
