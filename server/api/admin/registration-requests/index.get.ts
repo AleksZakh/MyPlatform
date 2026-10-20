@@ -1,9 +1,8 @@
 import {
-  PrismaClient,
   RegistrationRequestStatus,
 } from '@prisma/client';
 
-const prisma = new PrismaClient();
+import { prisma } from '../../../utils/prisma';
 
 export default defineEventHandler(
   async (event) => {
@@ -42,6 +41,7 @@ export default defineEventHandler(
           createdAt: true,
           emailVerifiedAt: true,
 
+          requestedGroups: { select: { group: { select: { id: true, name: true } } } },
           requestedResources: {
             select: {
               id: true,
@@ -97,10 +97,10 @@ export default defineEventHandler(
           resourcesCount:
             request
               .requestedResources
-              .length,
+              .length + request.requestedGroups.length,
 
-          resources:
-            request
+          resources: [
+            ...request
               .requestedResources
               .map((item) => ({
                 id:
@@ -115,6 +115,8 @@ export default defineEventHandler(
                 type:
                   item.resource.type,
               })),
+            ...request.requestedGroups.map(({group}) => ({ id: group.id, key: `GROUP:${group.id}`, name: group.name, type: 'GROUP' })),
+          ],
         }),
       ),
     };

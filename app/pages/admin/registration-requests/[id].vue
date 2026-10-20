@@ -8,16 +8,14 @@ type RequestStatus =
   | 'EXPIRED'
   | 'COMPLETED';
 
-type RequestResource = {
-  requestResourceId: number;
-  resourceId: number;
+type RequestTarget = {
   key: string;
+  targetId: number;
+  kind: 'GROUP' | 'RESOURCE';
   name: string;
   description: string | null;
-  type: 'TABLE' | 'SECTION' | 'FEATURE';
-  sortOrder: number;
+  isActive: boolean;
   approved: boolean | null;
-  adminComment: string | null;
 };
 
 type RegistrationRequest = {
@@ -39,7 +37,7 @@ type RegistrationRequest = {
   reviewedByLogin: string | null;
   adminComment: string | null;
 
-  resources: RequestResource[];
+  targets: RequestTarget[];
 };
 
 type RegistrationRequestResponse = {
@@ -93,7 +91,7 @@ type ReviewResponse = {
 };
 
 const decisions =
-  reactive<Record<number, boolean | null>>({});
+  reactive<Record<string, boolean | null>>({});
 
 const adminComment = ref('');
 
@@ -174,9 +172,9 @@ watch(
     }
 
     for (
-      const resource of value.resources
+      const resource of value.targets
     ) {
-      decisions[resource.resourceId] =
+      decisions[resource.key] =
         resource.approved;
     }
 
@@ -193,15 +191,15 @@ const allResourcesDecided =
   computed(() => {
     if (
       !request.value ||
-      request.value.resources.length === 0
+      request.value.targets.length === 0
     ) {
       return false;
     }
 
-    return request.value.resources.every(
+    return request.value.targets.every(
       (resource) =>
         typeof decisions[
-          resource.resourceId
+          resource.key
         ] === 'boolean',
     );
   });
@@ -212,9 +210,9 @@ const approveAll = () => {
   }
 
   for (
-    const resource of request.value.resources
+    const resource of request.value.targets
   ) {
-    decisions[resource.resourceId] = true;
+    decisions[resource.key] = resource.isActive;
   }
 };
 
@@ -224,9 +222,9 @@ const rejectAll = () => {
   }
 
   for (
-    const resource of request.value.resources
+    const resource of request.value.targets
   ) {
-    decisions[resource.resourceId] = false;
+    decisions[resource.key] = false;
   }
 };
 
@@ -252,15 +250,15 @@ const submitReview = async () => {
           method: 'POST',
 
           body: {
-            resources:
-              request.value.resources.map(
+            targets:
+              request.value.targets.map(
                 (resource) => ({
-                  resourceId:
-                    resource.resourceId,
+                  kind: resource.kind,
+                  id: resource.targetId,
 
                   approved:
                     decisions[
-                      resource.resourceId
+                      resource.key
                     ],
                 }),
               ),
@@ -488,14 +486,14 @@ const refreshRequest = async () => {
 
       <div class="card">
         <h2>
-          Запрошенные ресурсы
+          Запрошенный доступ
         </h2>
 
         <div
-          v-if="request.resources.length === 0"
+          v-if="request.targets.length === 0"
           class="empty-message"
         >
-          Ресурсы не указаны.
+          Группы или ресурсы не указаны.
         </div>
 
         <div
@@ -503,8 +501,8 @@ const refreshRequest = async () => {
           class="resources"
         >
           <div
-            v-for="resource in request.resources"
-            :key="resource.resourceId"
+            v-for="resource in request.targets"
+            :key="resource.key"
             class="resource"
           >
             <div class="resource__main">
@@ -513,7 +511,7 @@ const refreshRequest = async () => {
               </strong>
 
               <small>
-                {{ resource.key }}
+                {{ resource.kind === 'GROUP' ? 'Группа Space' : 'Ресурс (ранее поданная заявка)' }}
               </small>
 
               <p
@@ -531,12 +529,13 @@ const refreshRequest = async () => {
                     <input
                         v-model="
                         decisions[
-                            resource.resourceId
+                            resource.key
                         ]
                         "
                         type="radio"
-                        :name="`resource-${resource.resourceId}`"
+                        :name="`resource-${resource.key}`"
                         :value="true"
+                        :disabled="!resource.isActive"
                     >
 
                     Одобрить
@@ -546,11 +545,11 @@ const refreshRequest = async () => {
                     <input
                         v-model="
                         decisions[
-                            resource.resourceId
+                            resource.key
                         ]
                         "
                         type="radio"
-                        :name="`resource-${resource.resourceId}`"
+                        :name="`resource-${resource.key}`"
                         :value="false"
                     >
 
@@ -623,7 +622,7 @@ const refreshRequest = async () => {
             class="review-hint"
         >
             Необходимо принять решение
-            по каждому запрошенному ресурсу.
+            по каждой запрошенной группе или ресурсу.
         </p>
 
         <button

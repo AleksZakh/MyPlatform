@@ -1,8 +1,8 @@
-import { PrismaClient, RegistrationRequestStatus } from '@prisma/client';
+import { RegistrationRequestStatus } from '@prisma/client';
 import { createHash, randomBytes } from 'node:crypto';
 import { sendVerificationEmail } from '../../utils/mailer';
 
-const prisma = new PrismaClient();
+import { prisma } from '../../utils/prisma';
 
 type RegistrationRequestBody = {
   fullName?: unknown;
@@ -10,7 +10,7 @@ type RegistrationRequestBody = {
   position?: unknown;
   email?: unknown;
   accessReason?: unknown;
-  resourceIds?: unknown;
+  groupIds?: unknown;
 };
 
 /**
@@ -220,15 +220,15 @@ export default defineEventHandler(async (event) => {
   }
 
   // ============================================================
-  // 4. Проверяем resourceIds
+  // 4. Проверяем groupIds
   // ============================================================
 
-  if (!Array.isArray(body?.resourceIds)) {
+  if (!Array.isArray(body?.groupIds)) {
     throw createError({
       statusCode: 400,
       statusMessage: 'Validation error',
       message:
-        'Необходимо выбрать ресурсы для доступа.',
+        'Необходимо выбрать группы для доступа.',
     });
   }
 
@@ -241,20 +241,20 @@ export default defineEventHandler(async (event) => {
    *
    * весь запрос считаем некорректным.
    */
-  const hasInvalidResourceId =
-    body.resourceIds.some(
+  const hasInvalidGroupId =
+    body.groupIds.some(
       (id) =>
         typeof id !== 'number' ||
         !Number.isInteger(id) ||
-        id <= 0,
+        id <= 0 || id > 2147483647,
     );
 
-  if (hasInvalidResourceId) {
+  if (hasInvalidGroupId) {
     throw createError({
       statusCode: 400,
       statusMessage: 'Validation error',
       message:
-        'Список выбранных ресурсов содержит некорректные значения.',
+        'Список выбранных групп содержит некорректные значения.',
     });
   }
 
@@ -263,8 +263,8 @@ export default defineEventHandler(async (event) => {
    * что массив содержит только number,
    * поэтому приводим тип явно.
    */
-  const rawResourceIds =
-    body.resourceIds as number[];
+  const rawGroupIds =
+    body.groupIds as number[];
 
   /**
    * Удаляем возможные дубликаты.
@@ -273,25 +273,25 @@ export default defineEventHandler(async (event) => {
    * ->
    * [1, 2, 3]
    */
-  const resourceIds = [
-    ...new Set(rawResourceIds),
+  const groupIds = [
+    ...new Set(rawGroupIds),
   ];
 
-  if (resourceIds.length === 0) {
+  if (groupIds.length === 0) {
     throw createError({
       statusCode: 400,
       statusMessage: 'Validation error',
       message:
-        'Выберите хотя бы один ресурс.',
+        'Выберите хотя бы одну группу.',
     });
   }
 
-  if (resourceIds.length > 100) {
+  if (groupIds.length > 100) {
     throw createError({
       statusCode: 400,
       statusMessage: 'Validation error',
       message:
-        'Выбрано слишком много ресурсов.',
+        'Выбрано слишком много групп.',
     });
   }
 
@@ -332,33 +332,24 @@ export default defineEventHandler(async (event) => {
     }
 
     // ==========================================================
-    // 6. Проверяем выбранные ресурсы
+    // 6. Проверяем выбранные группы
     // ==========================================================
 
     const resources =
-      await prisma.accessResource.findMany({
+      await prisma.spaceGroup.findMany({
         where: {
           id: {
-            in: resourceIds,
+            in: groupIds,
           },
 
-          // Ресурс должен быть активен
+          // Группа должна быть активна
           isActive: true,
 
-          // И должен относиться хотя бы
-          // к одному активному подразделению
-          departments: {
-            some: {
-              department: {
-                isActive: true,
-              },
-            },
-          },
+
         },
 
         select: {
           id: true,
-          key: true,
           name: true,
         },
       });
@@ -369,27 +360,27 @@ export default defineEventHandler(async (event) => {
      * [1, 2, 999]
      *
      * а БД нашла только 1 и 2,
-     * значит 999 является недоступным ресурсом.
+     * значит 999 является недоступной группой.
      */
-    const validResourceIds =
+    const validGroupIds =
       new Set(
         resources.map(
           (resource) => resource.id,
         ),
       );
 
-    const invalidResourceIds =
-      resourceIds.filter(
+    const invalidGroupIds =
+      groupIds.filter(
         (id) =>
-          !validResourceIds.has(id),
+          !validGroupIds.has(id),
       );
 
-    if (invalidResourceIds.length > 0) {
+    if (invalidGroupIds.length > 0) {
       console.warn(
-        'Попытка регистрации с недоступными ресурсами:',
+        'Попытка регистрации с недоступными группами:',
         {
           email,
-          invalidResourceIds,
+          invalidGroupIds,
         },
       );
 
@@ -397,7 +388,7 @@ export default defineEventHandler(async (event) => {
         statusCode: 400,
         statusMessage: 'Invalid resources',
         message:
-          'Один или несколько выбранных ресурсов недоступны.',
+          'Один или несколько выбранных групп недоступны.',
       });
     }
 
@@ -410,7 +401,7 @@ export default defineEventHandler(async (event) => {
     // registrationRequest.create + nested create
     // выполняются Prisma как единая атомарная операция.
     //
-    // Если создание хотя бы одного дочернего ресурса
+    // Если создание хотя бы одного дочернего группы
     // завершится ошибкой, заявка целиком не будет создана.
     // ==========================================================
 
@@ -460,10 +451,10 @@ export default defineEventHandler(async (event) => {
           // Пока письмо реально не отправляем
           verificationSentAt: null,
 
-          requestedResources: {
-            create: resourceIds.map(
-              (resourceId) => ({
-                resourceId,
+          requestedGroups: {
+            create: groupIds.map(
+              (groupId) => ({
+                groupId,
               }),
             ),
           },
@@ -474,9 +465,9 @@ export default defineEventHandler(async (event) => {
           status: true,
           createdAt: true,
 
-          requestedResources: {
+          requestedGroups: {
             select: {
-              resourceId: true,
+              groupId: true,
             },
           },
         },
@@ -586,9 +577,9 @@ export default defineEventHandler(async (event) => {
       status:
         registrationRequest.status,
 
-      resourcesCount:
+      groupsCount:
         registrationRequest
-          .requestedResources.length,
+          .requestedGroups.length,
 
       createdAt:
         registrationRequest.createdAt,

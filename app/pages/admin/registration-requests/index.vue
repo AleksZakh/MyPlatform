@@ -3,7 +3,7 @@ type RegistrationResource = {
   id: number;
   key: string;
   name: string;
-  type: 'TABLE' | 'SECTION' | 'FEATURE';
+  type: 'TABLE' | 'SECTION' | 'FEATURE' | 'GROUP';
 };
 
 type RegistrationRequest = {
@@ -135,7 +135,7 @@ const getErrorMessage = (): string => {
               <th>Должность</th>
               <th>Email</th>
               <th>Подтверждение</th>
-              <th>Ресурсы</th>
+              <th>Группы / ресурсы</th>
               <th />
             </tr>
           </thead>

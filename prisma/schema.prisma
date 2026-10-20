@@ -590,6 +590,7 @@ enum AccessResourceType {
 // ============================================================
 
 model RegistrationRequest {
+  requestedGroups RegistrationRequestGroup[]
   id Int @id @default(autoincrement())
 
   // Данные заявителя
@@ -873,6 +874,7 @@ model DomainGroup {
 
 
 model SpaceGroup {
+  registrationRequests RegistrationRequestGroup[]
   ownedProjects WorkProject[]
   id Int @id @default(autoincrement())
   name String @unique @db.VarChar(255)
@@ -1339,4 +1341,16 @@ model UsageEvent {
   @@index([actorId, occurredAt])
   @@index([kind, occurredAt])
   @@map("usage_events")
+}
+
+// Group requests do not confer membership until administrator provisioning.
+model RegistrationRequestGroup {
+  registrationRequestId Int
+  groupId Int
+  approved Boolean?
+  registrationRequest RegistrationRequest @relation(fields: [registrationRequestId], references: [id], onDelete: Cascade)
+  group SpaceGroup @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  @@id([registrationRequestId, groupId])
+  @@index([groupId])
+  @@map("registration_request_groups")
 }

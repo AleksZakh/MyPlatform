@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-slate-950 px-4 py-6 sm:px-6 lg:px-8">
+  <div class="auth-page min-h-screen px-4 py-6 sm:px-6 lg:px-8">
     <div
       class="
         mx-auto grid min-h-[calc(100vh-3rem)] max-w-6xl overflow-hidden
@@ -12,44 +12,12 @@
            ===================================================== -->
       <section
         class="
-          relative hidden overflow-hidden bg-slate-950 p-10 text-white
+          auth-information relative hidden overflow-hidden p-10 text-white
           lg:flex lg:flex-col lg:justify-between xl:p-14
         "
       >
-        <div
-          class="
-            pointer-events-none absolute -left-20 top-12 h-72 w-72
-            rounded-full bg-sky-500/20 blur-3xl
-          "
-        />
-        <div
-          class="
-            pointer-events-none absolute -bottom-24 -right-20 h-96 w-96
-            rounded-full bg-indigo-500/20 blur-3xl
-          "
-        />
-
         <div class="relative">
-          <div class="mb-10 flex items-center gap-3">
-            <div
-              class="
-                flex h-11 w-11 items-center justify-center rounded-2xl
-                border border-white/15 bg-white/10 text-lg font-semibold
-                shadow-lg backdrop-blur
-              "
-            >
-              S
-            </div>
-
-            <div>
-              <div class="text-lg font-semibold tracking-wide">
-                Space
-              </div>
-              <div class="text-xs text-slate-400">
-                Corporate workspace
-              </div>
-            </div>
-          </div>
+          <AuthCompanyBrand inverse class="mb-10" />
 
           <div class="max-w-lg">
             <p
@@ -134,25 +102,7 @@
       >
         <div class="w-full max-w-md">
           <!-- Мобильный логотип -->
-          <div class="mb-8 flex items-center gap-3 lg:hidden">
-            <div
-              class="
-                flex h-10 w-10 items-center justify-center rounded-2xl
-                bg-slate-950 font-semibold text-white
-              "
-            >
-              S
-            </div>
-
-            <div>
-              <div class="font-semibold text-slate-950">
-                Space
-              </div>
-              <div class="text-xs text-slate-500">
-                Corporate workspace
-              </div>
-            </div>
-          </div>
+          <AuthCompanyBrand class="mb-8 lg:hidden" />
 
           <!-- =================================================
                Регистрация
@@ -1132,3 +1082,7 @@ onMounted(async () => {
 });
 
 </script>
+<style scoped>
+.auth-page { background: linear-gradient(135deg, #e5e7eb 0%, #b6b8bd 48%, #737780 100%); }
+.auth-information { background: linear-gradient(145deg, #52525b 0%, #3f3f46 45%, #27272a 100%); }
+</style>

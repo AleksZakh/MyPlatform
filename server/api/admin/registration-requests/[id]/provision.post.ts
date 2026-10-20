@@ -1,7 +1,6 @@
 import {
   AccessAction,
   Prisma,
-  PrismaClient,
   RegistrationRequestStatus,
   UserAuthType,
   UserStatus,
@@ -16,7 +15,7 @@ import {
   sendActivationEmail,
 } from '../../../../utils/mailer';
 
-const prisma = new PrismaClient();
+import { prisma } from '../../../../utils/prisma';
 
 export default defineEventHandler(async (event) => {
   const admin = await requireAdmin(event);
@@ -69,6 +68,7 @@ export default defineEventHandler(async (event) => {
                 email: true,
                 status: true,
 
+                requestedGroups: { where: { approved: true }, select: { groupId: true } },
                 requestedResources: {
                   where: {
                     approved: true,
@@ -109,13 +109,21 @@ export default defineEventHandler(async (event) => {
 
           if (
             registrationRequest
-              .requestedResources.length === 0
+              .requestedResources.length === 0 && registrationRequest.requestedGroups.length === 0
           ) {
             throw createError({
               statusCode: 409,
               message:
-                'В заявке нет одобренных ресурсов.',
+                'В заявке нет одобренных групп или ресурсов.',
             });
+          }
+
+          const approvedGroupIds = registrationRequest.requestedGroups.map(item => item.groupId);
+          if (approvedGroupIds.length) {
+            // Prevent deactivation/deletion while approved membership is being created.
+            await tx.$queryRaw`SELECT id FROM space_groups WHERE id IN (${Prisma.join(approvedGroupIds)}) ORDER BY id FOR SHARE`;
+            const activeCount = await tx.spaceGroup.count({ where: { id: { in: approvedGroupIds }, isActive: true } });
+            if (activeCount !== approvedGroupIds.length) throw createError({ statusCode: 409, message: 'Одна из одобренных групп отключена. Обратитесь к администратору групп перед созданием пользователя.' });
           }
 
           // ---------------------------------------------------
@@ -207,6 +215,7 @@ export default defineEventHandler(async (event) => {
                 registrationRequestId:
                   registrationRequest.id,
 
+                spaceGroups: { create: approvedGroupIds.map(groupId => ({ groupId })) },
                 permissions: {
                   create:
                     registrationRequest
@@ -230,6 +239,7 @@ export default defineEventHandler(async (event) => {
                 fullName: true,
                 status: true,
 
+                spaceGroups: { select: { groupId: true } },
                 permissions: {
                   select: {
                     id: true,
@@ -341,6 +351,8 @@ export default defineEventHandler(async (event) => {
 
         status:
             result.user.status,
+
+        groupsCount: result.user.spaceGroups.length,
 
         permissionsCount:
             result.user

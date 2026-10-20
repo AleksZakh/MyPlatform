@@ -1,6 +1,6 @@
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+
+import { prisma } from '../../../utils/prisma';
 
 export default defineEventHandler(async (event) => {
   // ---------------------------------------------------------
@@ -59,6 +59,7 @@ export default defineEventHandler(async (event) => {
         reviewedByLogin: true,
         adminComment: true,
 
+        requestedGroups: { select: { groupId: true, approved: true, group: { select: { id: true, name: true, isActive: true } } } },
         requestedResources: {
           select: {
             id: true,
@@ -170,6 +171,14 @@ export default defineEventHandler(async (event) => {
         registrationRequest.adminComment,
 
       resources,
+      targets: [
+        ...registrationRequest.requestedGroups.map(item => ({
+          key: `GROUP:${item.groupId}`, targetId: item.groupId, kind: 'GROUP',
+          name: item.group.name, description: item.group.isActive ? 'При одобрении пользователь будет включён в группу и получит её права.' : 'Группа отключена. Одобрение недоступно.',
+          isActive: item.group.isActive, approved: item.approved,
+        })),
+        ...resources.map(item => ({ key: `RESOURCE:${item.resourceId}`, targetId: item.resourceId, kind: 'RESOURCE', name: item.name, description: item.description, isActive: true, approved: item.approved })),
+      ],
     },
   };
 });

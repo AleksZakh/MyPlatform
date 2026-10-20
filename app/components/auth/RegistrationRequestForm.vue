@@ -9,7 +9,7 @@
       </h2>
 
       <p class="text-sm text-gray-500 mt-1">
-        Заполните данные и выберите ресурсы Space, к которым требуется доступ.
+        Заполните данные и выберите группы Space, к которым требуется доступ.
       </p>
     </div>
 
@@ -57,63 +57,31 @@
 
     <!-- Загрузка ресурсов -->
     <div
-      v-if="isLoadingResources"
+      v-if="isLoadingGroups"
       class="text-sm text-gray-500"
     >
-      Загружаем доступные разделы...
+      Загружаем группы Space...
     </div>
 
     <!-- Ошибка загрузки -->
     <div
-      v-else-if="resourcesError"
+      v-else-if="groupsError"
       class="text-sm text-red-600"
     >
-      {{ resourcesError }}
+      {{ groupsError }}
     </div>
 
-    <!-- Ресурсы -->
-    <div
-      v-else
-      class="flex flex-col gap-4"
-    >
-      <div
-        v-for="department in departments"
-        :key="department.id"
-        class="border border-gray-200 rounded-lg p-4"
-      >
-        <div class="font-medium text-gray-800 mb-3">
-          {{ department.name }}
-        </div>
-
-        <div class="flex flex-col gap-2">
-          <label
-            v-for="resource in department.resources"
-            :key="resource.id"
-            class="flex items-start gap-3 cursor-pointer"
-          >
-            <input
-              v-model="form.resourceIds"
-              type="checkbox"
-              :value="resource.id"
-              class="mt-1"
-            />
-
-            <span>
-              <span class="block text-sm text-gray-800">
-                {{ resource.name }}
-              </span>
-
-              <span
-                v-if="resource.description"
-                class="block text-xs text-gray-400"
-              >
-                {{ resource.description }}
-              </span>
-            </span>
-          </label>
-        </div>
+    <fieldset v-else class="border border-gray-200 rounded-lg p-4 min-w-0">
+      <legend class="px-1 font-medium text-gray-800">Группы Space</legend>
+      <p class="text-xs text-gray-500 mb-3">Выберите группы, в которых планируете работать. Доступ предоставляется после одобрения администратором.</p>
+      <p v-if="!groups.length" class="text-sm text-gray-500" role="status">Нет доступных групп. Обратитесь к администратору.</p>
+      <div v-else class="flex flex-col gap-2 max-h-64 overflow-y-auto pr-1">
+        <label v-for="group in groups" :key="group.id" class="flex items-start gap-3 cursor-pointer rounded-md p-2 hover:bg-gray-50">
+          <input v-model="form.groupIds" type="checkbox" :value="group.id" class="mt-1" :disabled="isSubmitting || !!successMessage" />
+          <span class="text-sm text-gray-800 break-words">{{ group.name }}</span>
+        </label>
       </div>
-    </div>
+    </fieldset>
 
     <div
     v-if="successMessage"
@@ -159,9 +127,9 @@
       <button
         type="submit"
         :disabled="
-            isLoadingResources ||
-            !!resourcesError ||
-            isSubmitting
+            isLoadingGroups ||
+            !!groupsError ||
+            isSubmitting || !!successMessage || !groups.length
         "
         class="
             text-sm
@@ -181,7 +149,7 @@
         {{
             isSubmitting
             ? 'Отправка...'
-            : 'Отправить запрос на регистрацию'
+            : successMessage ? 'Заявка отправлена' : 'Отправить запрос на регистрацию'
         }}
         </button>
     </div>
@@ -191,32 +159,14 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
 
-type RegistrationResource = {
-  id: number;
-  key: string;
-  name: string;
-  description: string | null;
-  type: 'TABLE' | 'SECTION' | 'FEATURE';
-};
-
-type RegistrationDepartment = {
-  id: number;
-  key: string;
-  name: string;
-  description: string | null;
-  resources: RegistrationResource[];
-};
-
-type RegistrationResourcesResponse = {
-  success: boolean;
-  data: RegistrationDepartment[];
-};
+type RegistrationGroup = { id: number; name: string };
+type RegistrationGroupsResponse = { success: boolean; data: RegistrationGroup[] };
 
 type CreateRegistrationResponse = {
   success: boolean;
   requestId: number;
   status: string;
-  resourcesCount: number;
+  groupsCount: number;
   createdAt: string;
   message: string;
 };
@@ -228,13 +178,13 @@ const emit = defineEmits<{
   back: [];
 }>();
 
-const departments =
-  ref<RegistrationDepartment[]>([]);
+const groups =
+  ref<RegistrationGroup[]>([]);
 
-const isLoadingResources =
+const isLoadingGroups =
   ref(false);
 
-const resourcesError =
+const groupsError =
   ref('');
 
 const formError =
@@ -246,39 +196,39 @@ const form = reactive({
   position: '',
   email: '',
   accessReason: '',
-  resourceIds: [] as number[],
+  groupIds: [] as number[],
 });
 
-const loadResources = async () => {
-  isLoadingResources.value = true;
-  resourcesError.value = '';
+const loadGroups = async () => {
+  isLoadingGroups.value = true;
+  groupsError.value = '';
 
   try {
     const result =
-      await $fetch<RegistrationResourcesResponse>(
+      await $fetch<RegistrationGroupsResponse>(
         '/api/public/registration-resources',
       );
 
     if (!result?.success) {
       throw new Error(
-        'Не удалось получить список ресурсов',
+        'Не удалось получить список групп',
       );
     }
 
-    departments.value =
+    groups.value =
       result.data ?? [];
   }
   catch (error) {
     console.error(
-      'Ошибка загрузки ресурсов регистрации:',
+      'Ошибка загрузки групп регистрации:',
       error,
     );
 
-    resourcesError.value =
-      'Не удалось загрузить список доступных ресурсов.';
+    groupsError.value =
+      'Не удалось загрузить список доступных групп.';
   }
   finally {
-    isLoadingResources.value = false;
+    isLoadingGroups.value = false;
   }
 };
 
@@ -321,9 +271,9 @@ const submitRegistration = async () => {
     return;
   }
 
-  if (form.resourceIds.length === 0) {
+  if (form.groupIds.length === 0) {
     formError.value =
-      'Выберите хотя бы один ресурс.';
+      'Выберите хотя бы одну группу.';
     return;
   }
 
@@ -338,8 +288,8 @@ const submitRegistration = async () => {
     accessReason:
       form.accessReason || null,
 
-    resourceIds: [
-      ...form.resourceIds,
+    groupIds: [
+      ...form.groupIds,
     ],
   };
 
@@ -380,6 +330,6 @@ const submitRegistration = async () => {
 };
 
 onMounted(() => {
-  loadResources();
+  loadGroups();
 });
 </script>
