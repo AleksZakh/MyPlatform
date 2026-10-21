@@ -3,9 +3,21 @@ import { usagePage } from '../../shared/usage';
 import { recordUsage } from './usage';
 import { isStatisticsOwner } from './usage-owner';
 
+let audited = 0, responses = 0;
+export const deniedHealth = () => ({ auditedDenials: audited, responseDenials: responses });
+
+/** Match persisted access audit, even if a handler catches a permission exception. */
+export function recordAuditedDenial(event: H3Event, actor: {id:number;login?:string|null;authType?:string|null}, key?:string, action?:string) {
+  if (!Number.isSafeInteger(actor.id) || actor.id <= 0 || isStatisticsOwner(actor)) return;
+  if (!/^[a-z][a-z0-9.-]{0,119}$/.test(key || '') || !/^(VIEW|CREATE|UPDATE|DELETE|EXPORT|FULL)$/.test(action || '')) return;
+  event.context.usageAuditDenialRecorded = true;
+  audited++;
+  recordUsage({ actorId: actor.id, kind: 'ACCESS_DENIED', target: `access:${action}:${key}`, source:'SERVER' }, 5000);
+}
+
 /** Runs after the response: a failed capability probe followed by HTTP 200 is not a denial. */
 export function recordDeniedResponse(event: H3Event) {
-  if (event.node.res.statusCode !== 403 || event.context.externalSessionRevoked) return;
+  if (event.node.res.statusCode !== 403 || event.context.externalSessionRevoked || event.context.usageAuditDenialRecorded) return;
   const actor = event.context.usageActor || event.context.user;
   if (!Number.isSafeInteger(actor?.id) || actor.id <= 0 || isStatisticsOwner(actor)) return;
   const path = getRequestURL(event).pathname;
@@ -31,5 +43,6 @@ export function recordDeniedResponse(event: H3Event) {
     target = `${getMethod(event)} /${shape}`;
   }
   if (!target) target = 'protected-page';
+  responses++;
   recordUsage({ actorId: actor.id, kind: 'ACCESS_DENIED', target, source: 'SERVER' }, 5000);
 }

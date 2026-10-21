@@ -4,7 +4,19 @@ import { libraryAssetUrl } from "../../composables/useLibrary";
 import "../../assets/css/library.css";
 import "../../assets/css/library-video.css";
 useHead({ title: "Библиотека — Space" });
-const lib = useLibrary();
+const route = useRoute();
+const { user } = useUserSession();
+const selectionReady = ref(false);
+const preferenceKey = () => user.value?.id ? `space:library:selection:${user.value.id}` : null;
+function restoreSelection() {
+  let saved: { category?: number; type?: string } = {};
+  try { const key = preferenceKey(); if (key) saved = JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch { /* Storage can be unavailable. */ }
+  const requested = route.query.category === undefined ? saved.category : Number(route.query.category);
+  category.value = categories.value.some(c => c.id === requested) ? Number(requested) : null;
+  materialType.value = (route.query.type ?? saved.type) === 'video' ? 'video' : 'document';
+  selectionReady.value = true;
+}
+const lib = useLibrary({ beforeInitialLoad: restoreSelection });
 const {
   categories,
   canManage,
@@ -17,9 +29,22 @@ const {
   loading,
   error,
 } = lib;
-const route = useRoute();
 const materialType = ref(route.query.type === "video" ? "video" : "document");
 const toolsOpen = ref(false);
+const toolsRoot = ref<HTMLElement | null>(null);
+const toolsToggle = ref<HTMLButtonElement | null>(null);
+function closeTools(event: KeyboardEvent) {
+  if (event.key === 'Escape' && toolsOpen.value) { toolsOpen.value = false; toolsToggle.value?.focus(); }
+}
+function outsideTools(event: PointerEvent) {
+  if (toolsOpen.value && !toolsRoot.value?.contains(event.target as Node)) toolsOpen.value = false;
+}
+onMounted(() => document.addEventListener('pointerdown', outsideTools));
+onBeforeUnmount(() => document.removeEventListener('pointerdown', outsideTools));
+watch([category, materialType, selectionReady], () => {
+  if (!selectionReady.value) return;
+  try { const key = preferenceKey(); if (key) localStorage.setItem(key, JSON.stringify({ category: category.value, type: materialType.value })); } catch { /* Optional local preference. */ }
+});
 const videoPanel = ref<{ add: () => void; refresh: () => Promise<void> } | null>(null);
 const selected = ref<LibraryBook | null>(null);
 const editor = ref(false);
@@ -82,6 +107,7 @@ function switchTrash() {
 </script>
 <template>
   <main class="space-library">
+    <div ref="toolsRoot" class="library-header-shell" @keydown="closeTools">
     <header class="library-heading">
       <div>
         <h1>Электронная библиотека</h1>
@@ -102,7 +128,7 @@ function switchTrash() {
           <Icon name="lucide:search" />
         </button>
       </form>
-      <button v-if="canManage" type="button" class="library-tools-toggle"
+      <button ref="toolsToggle" v-if="canManage" type="button" class="library-tools-toggle"
         :aria-expanded="toolsOpen" aria-controls="library-tools"
         :aria-label="toolsOpen ? 'Скрыть управление библиотекой' : 'Управление библиотекой'"
         :title="toolsOpen ? 'Скрыть управление' : 'Управление библиотекой'"
@@ -121,6 +147,7 @@ function switchTrash() {
         <button :aria-pressed="trash" @click="switchTrash">{{ trash ? 'Вернуться к материалам' : 'Корзина' }}</button>
       </div>
     </Transition>
+    </div>
     <nav class="library-media-filter" aria-label="Тип материалов"><button v-for="t in [{key:'document',label:'Документы'},{key:'video',label:'Видео'}]" :key="t.key" :aria-pressed="materialType===t.key" @click="materialType=t.key">{{t.label}}</button></nav>
     <p v-if="error" role="alert" class="library-error">{{ error }}</p>
     <div class="library-layout">
@@ -132,10 +159,12 @@ function switchTrash() {
             :class="{ active: category === c.id }"
             @click="lib.select(c.id)"
           >
-            {{ c.name }} <small>{{ c.count }}</small>
+            <img v-if="c.iconAssetId" :src="libraryAssetUrl(c.iconAssetId)" alt="" />
+            <Icon v-else :name="c.icon || 'lucide:folder'" />
+            <span>{{ c.name }}</span> <small>{{ c.count }}</small>
           </button>
         </nav>
-        <LibraryVideoPanel ref="videoPanel" v-if="materialType!=='document'" :category="category" :query="query" :trash="trash" :can-manage="canManage" :categories="categories" @changed="lib.catalog" />
+        <LibraryVideoPanel ref="videoPanel" v-if="selectionReady && materialType!=='document'" :category="category" :query="query" :trash="trash" :can-manage="canManage" :categories="categories" @changed="lib.catalog" />
         <template v-if="materialType!=='video'">
         <div class="library-results">
           <span>{{ trash ? "Корзина · " : "" }}Документы: {{ total }}</span

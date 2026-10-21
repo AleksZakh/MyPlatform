@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { defineEventHandler, getQuery, createError, setHeader } from 'h3';
 import { prisma } from '../../../utils/prisma';
 import { getAccessActor } from '../../../services/access-control.service';
+import { deniedHealth } from '../../../services/usage-denied';
 import { usageHealth } from '../../../services/usage';
 import { USAGE_KINDS, usageTargetLabel } from '../../../../shared/usage';
 export default defineEventHandler(async event => {
@@ -39,5 +40,5 @@ export default defineEventHandler(async event => {
   }
   const targetLabel=(target:string)=>labels.get(target)||usageTargetLabel(target);
   const totals=summary[0]!;
-  return {summary:{events:Number(totals.events),users:Number(totals.users),logins:Number(totals.logins),denied:Number(totals.denied)},popular:popular.map(p=>({kind:p.kind,target:p.target,targetLabel:targetLabel(p.target),count:p._count._all})),daily:daily.map(d=>({day:d.day,events:Number(d.events),users:Number(d.users)})),items:rows.map(r=>({...r,targetLabel:targetLabel(r.target),actorName:names.get(r.actorId)||`Сотрудник #${r.actorId}`,recipientName:r.recipientId?names.get(r.recipientId)||`Сотрудник #${r.recipientId}`:null})),page,health:{...usageHealth(),lastStoredEventAt:latest?.occurredAt||null,excludedLogin:'zakharov_av'}};
+  return {summary:{events:Number(totals.events),users:Number(totals.users),logins:Number(totals.logins),denied:Number(totals.denied)},popular:popular.map(p=>({kind:p.kind,target:p.target,targetLabel:targetLabel(p.target),count:p._count._all})),daily:daily.map(d=>({day:d.day,events:Number(d.events),users:Number(d.users)})),items:rows.map(r=>({...r,targetLabel:targetLabel(r.target),actorName:names.get(r.actorId)||`Сотрудник #${r.actorId}`,recipientName:r.recipientId?names.get(r.recipientId)||`Сотрудник #${r.recipientId}`:null})),page,health:{...usageHealth(),...deniedHealth(),lastStoredEventAt:latest?.occurredAt||null,excludedLogin:'zakharov_av'}};
 });

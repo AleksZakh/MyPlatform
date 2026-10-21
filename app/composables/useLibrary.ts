@@ -5,7 +5,7 @@ import type {
 } from "../../shared/types/library";
 export const libraryAssetUrl = (id: string, download = false) =>
   `/api/library/assets/${id}${download ? "?download=1" : ""}`;
-export function useLibrary() {
+export function useLibrary(options: { beforeInitialLoad?: () => void } = {}) {
   const categories = ref<LibraryCategory[]>([]);
   const canManage = ref(false);
   const books = ref<LibraryBook[]>([]);
@@ -87,7 +87,13 @@ export function useLibrary() {
       body: file,
     });
   }
-  onMounted(refresh);
+  onMounted(async () => {
+    try {
+      await catalog();
+      options.beforeInitialLoad?.();
+      await load();
+    } catch (e) { error.value = message(e); }
+  });
   return {
     categories,
     canManage,

@@ -1,0 +1,31 @@
+/* Sneat palette is shared with the administration dashboard. */
+.admin-dashboard.statistics-page { padding:12px 16px; min-width:0; }
+.statistics-heading { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px; }
+.statistics-heading h1 { font-size:21px; font-weight:600; }
+.statistics-back, .statistics-status { color:var(--ad-muted); font-size:12px; }
+.statistics-filters { display:flex; flex-wrap:wrap; align-items:end; gap:8px; background:var(--ad-card); border:1px solid var(--ad-line); box-shadow:var(--ad-shadow); border-radius:8px; padding:10px; margin-bottom:10px; }
+.statistics-filters label { display:grid; gap:3px; font-size:11px; color:var(--ad-muted); }
+.statistics-page :is(input,select,button) { font:inherit; color:var(--ad-text); border:1px solid var(--ad-line); background:var(--ad-card); padding:6px 9px; border-radius:5px; }
+.statistics-filters input { width:150px; } .statistics-filters select { max-width:100%; }
+.statistics-page .statistics-primary { background:var(--ad-primary); color:var(--ad-card); border-color:var(--ad-primary); }
+.statistics-cards { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-bottom:10px; }
+.statistics-cards article { display:flex; gap:12px; align-items:center; background:var(--ad-card); border:1px solid var(--ad-line); border-radius:8px; padding:10px 14px; box-shadow:var(--ad-shadow); }
+.statistics-cards .iconify { color:var(--ad-primary); background:var(--ad-soft); font-size:25px; padding:7px; box-sizing:content-box; border-radius:7px; }
+.statistics-cards article div { display:grid; } .statistics-cards strong { font-size:23px; font-weight:600; line-height:1.2; } .statistics-cards span { font-size:12px; color:var(--ad-muted); }
+.statistics-events { background:var(--ad-card); border:1px solid var(--ad-line); border-radius:8px; box-shadow:var(--ad-shadow); overflow:hidden; }
+.statistics-events>header, .statistics-events>footer { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:9px 12px; }
+.statistics-page h2 { font-size:15px; font-weight:600; } .statistics-events>header>span { font-size:11px; color:var(--ad-muted); }
+.statistics-table-scroll { overflow:auto; max-height: max(280px, calc(100dvh - 380px)); scrollbar-gutter:stable; }
+.statistics-page table { width:100%; border-collapse:collapse; font-size:12px; }
+.statistics-page th, .statistics-page td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--ad-line); }
+.statistics-page th { position:sticky; top:0; z-index:1; background:var(--ad-bg); color:var(--ad-muted); font-size:11px; font-weight:600; }
+.statistics-page td { max-width:320px; overflow-wrap:anywhere; } .statistics-time { white-space:nowrap; }
+.statistics-page .statistics-actor { border:0; padding:0; background:transparent; color:var(--ad-primary); text-align:left; }
+.statistics-denied { color:var(--ad-red); background:var(--ad-red-bg); border-radius:4px; padding:3px 5px; }
+.statistics-events footer { font-size:12px; } .statistics-events footer>div { display:flex; gap:10px; align-items:center; }
+.statistics-page td.statistics-empty { text-align:center; padding:28px; color:var(--ad-muted); }
+.statistics-details { margin-top:10px; background:var(--ad-card); border:1px solid var(--ad-line); border-radius:8px; padding:9px 12px; }
+.statistics-details summary { cursor:pointer; font-size:12px; font-weight:600; } .statistics-details p { font-size:12px; color:var(--ad-muted); margin-top:8px; }
+.statistics-columns { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:10px; }
+.statistics-columns ol { list-style:none; padding:0; } .statistics-columns li { display:flex; justify-content:space-between; gap:12px; padding:7px 0; font-size:12px; border-bottom:1px solid var(--ad-line); }
+@media(max-width:800px) { .statistics-cards { grid-template-columns:repeat(2,minmax(0,1fr)); } .statistics-columns { grid-template-columns:1fr; } .statistics-heading { align-items:start; } .statistics-heading h1 { font-size:18px; } .statistics-status { display:none; } .statistics-page table { min-width:650px; } .statistics-columns { overflow:auto; } .admin-dashboard.statistics-page { padding:10px; } }

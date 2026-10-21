@@ -1,31 +1,52 @@
 <script setup lang="ts">
-import { USAGE_KINDS, USAGE_CLICKS } from '~~/shared/usage';
-useSeoMeta({title:'Статистика — Space'});
-const days=ref(7),actorId=ref(''),kind=ref(''),page=ref(1),busy=ref(false),error=ref('');
-interface Report {summary:{events:number;users:number;logins:number;denied:number};popular:{kind:string;target:string;targetLabel:string;count:number}[];daily:{day:string;events:number;users:number}[];items:{id:string;actorId:number;actorName:string;recipientName:string|null;kind:string;target:string;targetLabel:string;source:string;occurredAt:string}[];page:number;health:{enabled:boolean;pending:number;dropped:number;lastErrorAt:string|null;retentionDays:number;received:number;saved:number;excluded:number;lastReceivedAt:string|null;lastSavedAt:string|null;lastFlushAt:string|null;lastStoredEventAt:string|null;lastErrorCode:string|null}}
-const report=ref<Report|null>(null);let seq=0;
-function label(key:string){return USAGE_KINDS[key as keyof typeof USAGE_KINDS]||key;}
-function target(key:string){return USAGE_CLICKS[key as keyof typeof USAGE_CLICKS]||key;}
-function date(value:string){return new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',timeZone:'Europe/Moscow'}).format(new Date(value));}
-async function load(reset=false){if(reset)page.value=1;const ticket=++seq;busy.value=true;error.value='';try{const data=await $fetch<Report>('/api/admin/statistics',{query:{days:days.value,actorId:actorId.value||undefined,kind:kind.value||undefined,page:page.value}});if(ticket===seq)report.value=data;}catch(e:any){if(ticket===seq){report.value=null;error.value=e.data?.message||'Статистика недоступна. Проверьте право просмотра и миграцию.';}}finally{if(ticket===seq)busy.value=false;}}
-let timer:ReturnType<typeof setInterval>|undefined;
-onMounted(()=>{void load();timer=setInterval(()=>{if(!busy.value&&!document.hidden)void load();},15000);});
-onBeforeUnmount(()=>{seq++;if(timer)clearInterval(timer);});
-function resetFilters(){days.value=7;actorId.value='';kind.value='';void load(true);}
+import { useUsageStatistics } from '~/composables/useUsageStatistics';
+import { USAGE_KINDS } from '~~/shared/usage';
+import '~/assets/css/admin-dashboard.css';
+import '~/assets/css/usage-statistics.css';
+useSeoMeta({ title: 'Статистика — Space' });
+const { days, actorId, kind, page, busy, error, report, label, date, load, resetFilters } = useUsageStatistics();
 </script>
-<template><section class="statistics-page">
- <header><h1>Статистика использования</h1><p>Популярность разделов и материалов, входы, коммуникации и попытки доступа.</p></header>
- <form class="statistics-filters" @submit.prevent="load(true)"><label>Период<select v-model="days"><option :value="1">24 часа</option><option :value="7">7 дней</option><option :value="30">30 дней</option><option :value="90">90 дней</option></select></label><label>Сотрудник · ID<input v-model="actorId" type="number" min="1" placeholder="Все сотрудники"></label><label>Событие<select v-model="kind"><option value="">Все события</option><option v-for="(name,key) in USAGE_KINDS" :key="key" :value="key">{{name}}</option></select></label><button :disabled="busy">Обновить</button><button type="button" :disabled="busy" @click="resetFilters">Сбросить фильтры</button></form>
- <p v-if="error" role="alert">{{error}}</p><p v-if="busy" role="status">Загрузка…</p>
- <template v-if="report"><p class="statistics-note">Сбор {{report.health.enabled?'включён':'отключён'}}. Хранение — {{report.health.retentionDays}} дней. Отчёт обновляется автоматически каждые 15 секунд; новые действия могут появляться с задержкой до 30 секунд. Действия zakharov_av исключены. Статистика не является оценкой производительности сотрудника.</p><p v-if="report.health.lastErrorAt||report.health.dropped" role="alert">Были сбои записи статистики. Данные могут быть неполными. Последний сбой: {{report.health.lastErrorAt?date(report.health.lastErrorAt):'—'}}; пропущено из-за ограничений очереди: {{report.health.dropped}}.</p>
- <details class="statistics-note"><summary>Диагностика сбора статистики</summary><p>С момента запуска этого процесса: принято {{report.health.received}}, записано {{report.health.saved}}, исключено {{report.health.excluded}}, ожидает записи {{report.health.pending}}.</p><p>Последнее поступление в очередь: {{report.health.lastReceivedAt?date(report.health.lastReceivedAt):'ещё не было'}}. Последняя проверка очереди: {{report.health.lastFlushAt?date(report.health.lastFlushAt):'ещё не было'}}.</p><p>Последнее сохранённое событие другого сотрудника (без фильтров): {{report.health.lastStoredEventAt?date(report.health.lastStoredEventAt):'событий нет'}}. Код ошибки: {{report.health.lastErrorCode||'нет'}}.</p></details>
- <p v-if="!report.summary.events" role="status" class="statistics-note">По выбранным фильтрам событий других сотрудников нет. Твои действия здесь не учитываются. Для проверки попроси другого сотрудника открыть раздел и дождись обновления отчёта.</p>
- <div class="statistics-cards"><article><strong>{{report.summary.users}}</strong><span>Активных сотрудников</span></article><article><strong>{{report.summary.events}}</strong><span>Событий</span></article><article><strong>{{report.summary.logins}}</strong><span>Успешных входов</span></article><article><strong>{{report.summary.denied}}</strong><span>Отказов в доступе</span></article></div>
- <div class="statistics-columns"><section><h2>Популярные разделы и действия</h2><ol><li v-for="p in report.popular" :key="p.kind+p.target"><span>{{label(p.kind)}} · {{p.targetLabel}}</span><strong>{{p.count}}</strong></li></ol><p v-if="!report.popular.length">За этот период данных ещё нет.</p></section><section><h2>По дням · московское время</h2><div class="statistics-scroll"><table><thead><tr><th>Дата</th><th>События</th><th>Сотрудники</th></tr></thead><tbody><tr v-for="d in report.daily" :key="d.day"><td>{{d.day}}</td><td>{{d.events}}</td><td>{{d.users}}</td></tr></tbody></table></div></section></div>
- <h2>Действия сотрудников</h2><p class="statistics-note">«Браузер» — переход или нажатие, а не подтверждение выполненной операции. Открытие видео не означает его полный просмотр. Повторные запросы одного документа в течение минуты объединяются. Отказы отмечаются отдельно: «Сервер» — ответ HTTP 403, «Браузер» — блокировка перехода интерфейсом. Повторы одного отказа в течение 5 секунд объединяются. Фоновые проверки прав без отказа в запросе не учитываются.</p>
- <div class="statistics-scroll"><table><thead><tr><th>Время · МСК</th><th>Сотрудник</th><th>Событие</th><th>Объект</th><th>Получатель</th><th>Источник</th></tr></thead><tbody><tr v-for="e in report.items" :key="e.id"><td>{{date(e.occurredAt)}}</td><td><button @click="actorId=String(e.actorId);load(true)">{{e.actorName}}</button></td><td>{{label(e.kind)}}</td><td>{{e.targetLabel}}</td><td>{{e.recipientName||'—'}}</td><td>{{e.source==='SERVER'?'Сервер':'Браузер'}}</td></tr></tbody></table></div><footer><button :disabled="busy||page<=1" @click="page--;load()">Назад</button><span>Страница {{page}}</span><button :disabled="busy||page*50>=report.summary.events" @click="page++;load()">Далее</button></footer>
- </template>
-</section></template>
-<style scoped>
-.statistics-page{padding:24px;color:var(--ui-text,#172b4d);background:var(--ui-bg,#fff);min-height:100%}.statistics-page h1{font-size:26px;font-weight:650}.statistics-page h2{font-size:18px;font-weight:600;margin:20px 0 12px}.statistics-filters{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0;align-items:end}.statistics-filters label{display:grid;gap:5px;font-size:13px}.statistics-page :is(input,select,button){padding:8px 12px;border:1px solid var(--ui-border,#cbd5e1);border-radius:6px;background:var(--ui-bg-elevated,#f8fafc);color:inherit}.statistics-page button:disabled{opacity:.5}.statistics-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0}.statistics-cards article{padding:20px;background:var(--ui-bg-elevated,#f8fafc);border:1px solid var(--ui-border,#cbd5e1);border-radius:10px;display:grid;gap:5px}.statistics-cards strong{font-size:28px}.statistics-note{font-size:13px;color:var(--ui-text-muted,#64748b);margin:12px 0}.statistics-columns{display:grid;grid-template-columns:1fr 1fr;gap:24px}.statistics-columns li{display:flex;justify-content:space-between;gap:16px;border-bottom:1px solid var(--ui-border,#cbd5e1);padding:10px 0;overflow-wrap:anywhere}.statistics-scroll{overflow:auto;max-height:60vh}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px;border-bottom:1px solid var(--ui-border,#cbd5e1);font-size:13px}th{position:sticky;top:0;background:var(--ui-bg-elevated,#f8fafc)}td{overflow-wrap:anywhere;max-width:360px}footer{display:flex;gap:12px;align-items:center;margin-top:16px}@media(max-width:800px){.statistics-columns{grid-template-columns:1fr}.statistics-page{padding:14px}.statistics-cards{grid-template-columns:1fr}}
-</style>
+<template>
+<section class="admin-dashboard statistics-page" :aria-busy="busy">
+  <header class="statistics-heading">
+    <div><NuxtLink to="/admin" class="statistics-back">Администрирование /</NuxtLink><h1>Статистика использования</h1></div>
+    <span class="statistics-status" role="status">{{ busy ? 'Обновление…' : 'Автообновление · 15 сек' }}</span>
+  </header>
+  <form class="statistics-filters" @submit.prevent="load(true)">
+    <label>Период<select v-model="days"><option :value="1">24 часа</option><option :value="7">7 дней</option><option :value="30">30 дней</option><option :value="90">90 дней</option></select></label>
+    <label>Сотрудник · ID<input v-model="actorId" type="number" min="1" placeholder="Все сотрудники" /></label>
+    <label>Событие<select v-model="kind"><option value="">Все события</option><option v-for="(name,key) in USAGE_KINDS" :key="key" :value="key">{{ name }}</option></select></label>
+    <button class="statistics-primary" :disabled="busy">Обновить</button><button type="button" :disabled="busy" @click="resetFilters">Сбросить</button>
+  </form>
+  <p v-if="error" role="alert" class="ad-alert">{{ error }}</p>
+  <template v-if="report">
+    <div class="statistics-cards">
+      <article><Icon name="lucide:users" /><div><strong>{{ report.summary.users }}</strong><span>Сотрудников</span></div></article>
+      <article><Icon name="lucide:activity" /><div><strong>{{ report.summary.events }}</strong><span>Событий</span></div></article>
+      <article><Icon name="lucide:log-in" /><div><strong>{{ report.summary.logins }}</strong><span>Успешных входов</span></div></article>
+      <article><Icon name="lucide:shield-alert" /><div><strong>{{ report.summary.denied }}</strong><span>Отказов доступа</span></div></article>
+    </div>
+    <p v-if="report.health.lastErrorAt || report.health.dropped" role="alert" class="ad-alert">Были сбои записи. Последний сбой: {{ report.health.lastErrorAt ? date(report.health.lastErrorAt) : '—' }}; потери очереди: {{ report.health.dropped }}.</p>
+    <section class="statistics-events">
+      <header><h2>Действия сотрудников</h2><span>Время · Москва</span></header>
+      <div class="statistics-table-scroll" tabindex="0" aria-label="Таблица действий сотрудников">
+        <table><thead><tr><th>Время</th><th>Сотрудник</th><th>Событие</th><th>Объект</th><th>Получатель</th><th>Источник</th></tr></thead>
+        <tbody><tr v-for="e in report.items" :key="e.id"><td class="statistics-time">{{ date(e.occurredAt) }}</td><td><button class="statistics-actor" @click="actorId=String(e.actorId);load(true)">{{ e.actorName }}</button></td><td><span :class="{'statistics-denied':e.kind==='ACCESS_DENIED'}">{{ label(e.kind) }}</span></td><td>{{ e.targetLabel }}</td><td>{{ e.recipientName || '—' }}</td><td>{{ e.source==='SERVER' ? 'Сервер' : 'Браузер' }}</td></tr>
+        <tr v-if="!report.items.length"><td colspan="6" class="statistics-empty">По выбранным фильтрам событий нет.</td></tr></tbody></table>
+      </div>
+      <footer><span>Всего: {{ report.summary.events }}</span><div><button :disabled="busy || page<=1" @click="page--;load()">Назад</button><span>Страница {{ page }}</span><button :disabled="busy || page*50>=report.summary.events" @click="page++;load()">Далее</button></div></footer>
+    </section>
+    <details class="statistics-details"><summary>Популярные разделы и сводка по дням</summary>
+      <div class="statistics-columns"><section><h2>Популярные разделы и действия</h2><ol><li v-for="p in report.popular" :key="p.kind+p.target"><span>{{ label(p.kind) }} · {{ p.targetLabel }}</span><strong>{{ p.count }}</strong></li></ol></section>
+      <section><h2>По дням · Москва</h2><table><thead><tr><th>Дата</th><th>События</th><th>Сотрудники</th></tr></thead><tbody><tr v-for="d in report.daily" :key="d.day"><td>{{ d.day }}</td><td>{{ d.events }}</td><td>{{ d.users }}</td></tr></tbody></table></section></div>
+    </details>
+    <details class="statistics-details"><summary>Диагностика и правила сбора</summary>
+      <p>Сбор {{ report.health.enabled ? 'включён' : 'отключён' }}. Хранение — {{ report.health.retentionDays }} дней. Действия zakharov_av исключены. Статистика не является оценкой производительности сотрудника.</p>
+      <p>С момента запуска процесса: принято {{ report.health.received }}, записано {{ report.health.saved }}, исключено {{ report.health.excluded }}, в очереди {{ report.health.pending }}. Отказов из аудита: {{ report.health.auditedDenials ?? 0 }}; дополнительно по HTTP 403: {{ report.health.responseDenials ?? 0 }}.</p>
+      <p>Последнее поступление: {{ report.health.lastReceivedAt ? date(report.health.lastReceivedAt) : 'ещё не было' }}. Проверка очереди: {{ report.health.lastFlushAt ? date(report.health.lastFlushAt) : 'ещё не было' }}. Последнее сохранённое событие другого сотрудника без фильтров: {{ report.health.lastStoredEventAt ? date(report.health.lastStoredEventAt) : 'событий нет' }}. Ошибка: {{ report.health.lastErrorCode || 'нет' }}.</p>
+      <p>Отказы из журнала аудита учитываются даже при перехваченном запрете. Дополнительно учитываются HTTP 403 и блокировки переходов интерфейсом. Повторы одного отказа за 5 секунд объединяются; незаписываемые в аудит фоновые проверки с успешным ответом не учитываются. Старые пропуски автоматически не восстанавливаются. Счётчики диагностики относятся к текущему процессу и сбрасываются при его перезапуске.</p>
+      <p>Новые события появляются после записи очереди и обновления отчёта — обычно до 30 секунд, при нагрузке дольше. «Браузер» означает переход или нажатие, а не выполненную операцию. Открытие видео не означает полный просмотр; запросы документа за минуту объединяются.</p>
+    </details>
+  </template>
+</section>
+</template>

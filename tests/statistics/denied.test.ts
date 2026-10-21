@@ -14,12 +14,12 @@ test('403 responses and client route denials: targets, owner exclusion, retry de
   const url=process.env.WORK_TEST_DATABASE_URL||'';
   if(!url || !new URL(url).pathname.endsWith('_work_test'))throw new Error('Disposable *_work_test database required');
   const db=new PrismaClient({datasources:{db:{url}}});
-  Object.assign(globalThis,{deniedTestDb:db,defineNitroPlugin:(fn:any)=>fn});
+  Object.assign(globalThis,{getRequestURL:h3.getRequestURL,getRequestHeader:h3.getRequestHeader,deniedTestDb:db,defineNitroPlugin:(fn:any)=>fn});
   const output=resolve('tests/statistics/.denied-test.mjs');
   const server=createServer(); const hooks:Record<string,Function>={};
   try {
-    const result=await build({stdin:{contents:`export { default as plugin } from './server/plugins/usage'; export { default as collect } from './server/api/statistics/events.post'; export { default as report } from './server/api/admin/statistics/index.get'; export {flushUsage,usageHealth} from './server/services/usage';`,resolveDir:process.cwd(),loader:'ts'},bundle:true,write:false,platform:'node',format:'esm',packages:'external',plugins:[{name:'test-context',setup(b){
-      b.onResolve({filter:/utils\/prisma$/},()=>({path:'db',namespace:'test'}));
+    const result=await build({stdin:{contents:`export { default as plugin } from './server/plugins/usage'; export { default as collect } from './server/api/statistics/events.post'; export { default as report } from './server/api/admin/statistics/index.get'; export { auditDenied } from './server/utils/auditLog'; export { recordAuditedDenial, deniedHealth } from './server/services/usage-denied'; export {flushUsage,usageHealth} from './server/services/usage';`,resolveDir:process.cwd(),loader:'ts'},bundle:true,write:false,platform:'node',format:'esm',packages:'external',plugins:[{name:'test-context',setup(b){
+      b.onResolve({filter:/(?:utils\/prisma|\.\/prisma)$/},()=>({path:'db',namespace:'test'}));
       b.onResolve({filter:/access-control.service$/},()=>({path:'auth',namespace:'test'}));
       b.onResolve({filter:/domain-group-directory.service$/},()=>({path:'ad',namespace:'test'}));
       b.onLoad({filter:/.*/,namespace:'test'},a=>({loader:'js',contents:a.path==='db'?'export const prisma=globalThis.deniedTestDb;':a.path==='ad'?'export async function resolveDomainGroupIds(){return [];}':`export async function getAccessActor(e){if(!e.context.user)throw Object.assign(new Error('Unauthorized'),{statusCode:401});return {user:e.context.user,isSystemAdmin:false};} export async function requirePermission(){throw new Error('Not used');}`}));
@@ -59,8 +59,20 @@ test('403 responses and client route denials: targets, owner exclusion, retry de
     assert.ok(rows.some(e=>e.target==='/admin/access' && e.source==='SERVER'));
     assert.ok(rows.some(e=>e.target==='GET /api/work/projects/:id/files/:id'));
     assert.ok(rows.some(e=>e.target==='/settings' && e.source==='CLIENT'));
+    // A logged denial can end in HTTP 200 when the application catches it.
+    const fake=h3.createEvent({url:'/api/capabilities',method:'GET',headers:{}} as any, {statusCode:200} as any);
+    await m.auditDenied({event:fake,actorUserId:2,actorLogin:'employee',actorAuthType:'DOMAIN',resourceKey:'test.caught',action:'DELETE'});
+    assert.equal(await db.auditLog.count({where:{resourceKey:'test.caught',result:'DENIED'}}),1);
+    m.recordAuditedDenial(fake,{id:2,login:'employee',authType:'DOMAIN'},'test.caught','DELETE');
+    fake.node.res.statusCode=403;
+    fake.context.user={id:2,login:'employee',authType:'DOMAIN'};
+    await hooks.afterResponse!(fake); // must not create another route-based entry
+    m.recordAuditedDenial(fake,{id:1,login:'zakharov_av',authType:'DOMAIN'},'test.owner','VIEW');
+    await m.flushUsage();
+    assert.equal(await db.usageEvent.count({where:{target:'access:DELETE:test.caught'}}),1);
+    assert.equal(m.deniedHealth().auditedDenials,2);
     const response=await call('/api/admin/statistics?kind=ACCESS_DENIED',1);assert.equal(response.status,200);
-    const report=await response.json();assert.equal(report.summary.denied,4);assert.equal(report.summary.events,4);assert.equal(report.summary.logins,0);
+    const report=await response.json();assert.equal(report.summary.denied,5);assert.equal(report.summary.events,5);assert.equal(report.summary.logins,0);
     assert.ok(report.items.some((e:any)=>e.targetLabel==='Тестовый раздел · Просмотр'));
     assert.equal((await call('/api/admin/statistics',2)).status,403);
   } finally {

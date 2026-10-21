@@ -2,6 +2,7 @@
 import { Prisma,} from '@prisma/client';
 import type { H3Event,} from 'h3';
 import { prisma,} from './prisma';
+import { recordAuditedDenial } from '../services/usage-denied';
 
 export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE';
 
@@ -669,6 +670,9 @@ export async function writeAuditEvent(
   await prisma.auditLog.create({
     data,
   });
+  if (params.category === 'ACCESS' && params.result === 'DENIED' && actorUserId) {
+    recordAuditedDenial(params.event, { id: actorUserId, login: actorLogin, authType: actorAuthType }, params.resourceKey, params.action);
+  }
 }
 
 
