@@ -31,9 +31,9 @@ export function cachedProfiles(users: unknown[]): DirectoryUser[] {
 }
 export async function listStructureMembers(event: H3Event, cache: { users: unknown[] } | null, search: string, all = false) {
   await structureAdmin(event)
-  const users = await prisma.user.findMany({ select: memberSelect, orderBy: { id: 'asc' } })
+  const users = await prisma.user.findMany({ where: { deletedAt: null }, select: memberSelect, orderBy: { id: 'asc' } })
   const known = new Set(users.map(u => u.directoryObjectId?.toLowerCase()).filter(Boolean))
-  const localDepartments = all ? await prisma.user.findMany({ select: { id: true, department: { select: { name: true } } } }) : []
+  const localDepartments = all ? await prisma.user.findMany({ where: { deletedAt: null }, select: { id: true, department: { select: { name: true } } } }) : []
   const departmentNames = new Map(localDepartments.map(u => [u.id, u.department?.name || 'Без отдела']))
   const q = search.trim().toLocaleLowerCase('ru')
   const options = users.map(memberOption)

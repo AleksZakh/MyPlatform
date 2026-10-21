@@ -6,6 +6,7 @@ const featureActions: Readonly<Record<string, readonly AccessActionName[]>> = {
   'projects.shared': ['VIEW', 'CREATE', 'UPDATE'],
   'admin.center': ['VIEW'],
   'admin.users': ['VIEW'],
+  'admin.users.lifecycle': ['VIEW', 'UPDATE', 'DELETE'],
   'system.audit-log': ['VIEW'],
   'system.usage-statistics': [], // Personal statistics cannot be delegated.
   'admin.department-mapping': [],

@@ -12,7 +12,7 @@ export default defineEventHandler(async event => {
   // The same boundaries as the existing tools: user data is delegated; structure
   // and registration requests are available only to a system administrator.
   const [users, groups, activeGroups, departments, pending] = await Promise.all([
-    canViewUsers ? prisma.user.groupBy({ by: ['status'], _count: { _all: true } }) : null,
+    canViewUsers ? prisma.user.groupBy({ where: { deletedAt: null }, by: ['status'], _count: { _all: true } }) : null,
     access.isSystemAdmin ? prisma.spaceGroup.count() : null,
     access.isSystemAdmin ? prisma.spaceGroup.count({ where: { isActive: true } }) : null,
     access.isSystemAdmin ? prisma.department.count({ where: { isActive: true } }) : null,

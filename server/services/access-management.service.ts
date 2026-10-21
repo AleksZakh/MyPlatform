@@ -207,7 +207,7 @@ export async function listAccessSubjects(event: H3Event, kind: AccessSubjectKind
   let items: AccessSubjectOption[]
   if (kind === 'user') {
     const users = await prisma.user.findMany({
-      where: search ? { OR: ['fullName', 'login', 'email'].map(field => ({ [field]: { contains: search, mode: 'insensitive' as const } })) } : {},
+      where: { deletedAt: null, ...(search ? { OR: ['fullName', 'login', 'email'].map(field => ({ [field]: { contains: search, mode: 'insensitive' as const } })) } : {}) },
       orderBy: [{ fullName: 'asc' }, { id: 'asc' }], take: 51,
       select: { id: true, fullName: true, login: true, email: true, status: true,
         department: { select: { name: true } } },

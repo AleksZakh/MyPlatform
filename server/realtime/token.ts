@@ -6,10 +6,10 @@ export function secret() {
   return value;
 }
 export function issue(identity: Identity, key: string, now = Date.now()) {
-  const body = Buffer.from(JSON.stringify({ ...identity, aud: 'space-presence', exp: Math.floor(now / 1000) + 120 })).toString('base64url');
+  const body = Buffer.from(JSON.stringify({ ...identity, aud: 'space-presence', issuedAt: now, exp: Math.floor(now / 1000) + 120 })).toString('base64url');
   return body + '.' + createHmac('sha256', key).update(body).digest('base64url');
 }
-export function verify(token: string, key: string, now = Date.now()): Identity & { exp: number } {
+export function verify(token: string, key: string, now = Date.now()): Identity & { exp: number; issuedAt: number } {
   if (typeof token !== 'string' || token.length > 4096) throw new Error('Invalid ticket');
   const parts = token.split('.');
   if (parts.length !== 2) throw new Error('Invalid ticket');
@@ -20,5 +20,6 @@ export function verify(token: string, key: string, now = Date.now()): Identity &
   const value = JSON.parse(Buffer.from(body, 'base64url').toString());
   if (value.aud !== 'space-presence' || !Number.isInteger(value.exp) || value.exp <= now / 1000 || value.exp > now / 1000 + 125
     || !['id', 'login', 'name'].every(k => typeof value[k] === 'string' && value[k].length > 0 && value[k].length <= 300)) throw new Error('Invalid ticket');
-  return { id: value.id, login: value.login, name: value.name, exp: value.exp };
+  if (value.issuedAt !== undefined && (!Number.isSafeInteger(value.issuedAt) || value.issuedAt > now + 5000)) throw new Error('Invalid ticket');
+  return { id: value.id, login: value.login, name: value.name, exp: value.exp, issuedAt: value.issuedAt ?? (value.exp - 120) * 1000 };
 }

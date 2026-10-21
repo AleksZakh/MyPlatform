@@ -32,7 +32,7 @@ export async function saveSpaceGroup(event: H3Event, id: number | null, body: un
       const previous = id ? await spaceGroupSnapshot(tx, id) : null
       if (previous && previous.revision !== input.revision) accessError(409, 'STRUCTURE_CONFLICT', 'Состав группы изменился. Загрузите его заново.')
       const [users, domains] = await Promise.all([
-        tx.user.count({ where: { id: { in: input.userIds } } }),
+        tx.user.count({ where: { id: { in: input.userIds }, deletedAt: null } }),
         tx.domainGroup.count({ where: { id: { in: input.domainGroupIds } } }),
       ])
       if (users !== input.userIds.length || domains !== input.domainGroupIds.length)

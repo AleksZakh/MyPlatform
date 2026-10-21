@@ -5,7 +5,21 @@ import { verifyNotification } from './realtime/notification.js';
 const key = secret();
 const origins = new Set((process.env.WS_ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean));
 if (!origins.size) throw new Error('Set WS_ALLOWED_ORIGINS to exact browser origins');
+const revoked = new Map<string, number>();
 const server = http.createServer(async (req, res) => {
+  if (req.method === 'POST' && req.url === '/internal/revoke') {
+    try {
+      let body = '';
+      for await (const chunk of req) { body += chunk.toString(); if (Buffer.byteLength(body) > 1024) { res.writeHead(413).end(); return; } }
+      if (!verifyNotification(body, key, String(req.headers['x-space-time'] || ''), String(req.headers['x-space-signature'] || ''))) { res.writeHead(403).end(); return; }
+      const { userId } = JSON.parse(body);
+      if (typeof userId !== 'string' || !/^EXTERNAL:[1-9][0-9]*$/.test(userId)) { res.writeHead(400).end(); return; }
+      revoked.set(userId, Date.now());
+      for (const [ws, client] of clients) if (client.user?.id === userId) { client.exp = 0; ws.close(4401, 'Account access revoked'); }
+      broadcast(); res.writeHead(204).end();
+    } catch { res.writeHead(400).end(); }
+    return;
+  }
   if (req.method === 'POST' && req.url === '/internal/chat') {
     try {
       let body = '';
@@ -69,6 +83,7 @@ wss.on('connection', ws => {
       const message = JSON.parse(raw.toString());
       if (message.type === 'auth') {
         const user = verify(message.ticket, key);
+        if (revoked.has(user.id) && user.issuedAt <= revoked.get(user.id)!) throw new Error('Account revoked');
         if (c.user && c.user.id !== user.id) throw new Error('Identity changed');
         c.user = { id: user.id, login: user.login, name: user.name }; c.exp = user.exp;
         clearTimeout(c.timer);
@@ -81,6 +96,7 @@ wss.on('connection', ws => {
   ws.on('close', () => { clearTimeout(c.timer); clients.delete(ws); broadcast(); });
 });
 const heartbeat = setInterval(() => {
+  for (const [id, expiry] of revoked) if (expiry + 125000 <= Date.now()) revoked.delete(id);
   for (const [ws, c] of clients) {
     if (!c.alive || (c.user && c.exp * 1000 <= Date.now())) { ws.terminate(); continue; }
     c.alive = false; c.count = 0; ws.ping();

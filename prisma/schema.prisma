@@ -711,6 +711,8 @@ enum AccessAction {
 }
 
 model User {
+  deletedAt DateTime?
+
   projectFiles WorkProjectFile[]
   libraryVideoPositions LibraryVideoPosition[]
   workInvitationsReceived WorkProjectInvitation[] @relation("WorkInviteRecipient")

@@ -1,9 +1,9 @@
 <template>
-  <div class="admin-shell">
+  <div class="admin-shell admin-users-sneat">
     <header class="admin-header">
       <div>
         <h1 class="page-title">
-          AdminCenter
+          Пользователи Space
         </h1>
 
       </div>
@@ -129,6 +129,7 @@
           BLOCKED
         </option>
 
+        <option value="DELETED">Удалённые аккаунты</option>
         <option value="DISABLED">
           DISABLED
         </option>
@@ -263,7 +264,7 @@
                 class="status-badge"
                 :class="statusBadgeClass(row.appUser.status)"
               >
-                {{ row.appUser.status }}
+                {{ row.appUser.deletedAt ? 'Удалён' : row.appUser.status }}
               </span>
 
               <span
@@ -356,7 +357,7 @@
                 class="status-badge"
                 :class="statusBadgeClass(selectedUser.appUser.status)"
               >
-                {{ selectedUser.appUser.status }}
+                {{ selectedUser.appUser.deletedAt ? 'Удалён' : selectedUser.appUser.status }}
               </span>
             </div>
           </header>
@@ -388,6 +389,7 @@
             v-if="activeTab === 'profile'"
             class="detail-content"
           >
+            <AdminAccountLifecycle v-if="selectedUser.appUser?.authType === 'EXTERNAL'" :key="selectedUser.appUser.id" :user-id="selectedUser.appUser.id" @updated="loadUsers"/>
             <div class="info-grid">
               <article class="info-card">
                 <span class="info-label">
@@ -1074,6 +1076,7 @@ interface AdminUserRow {
 
   appUser: {
     id: number
+    deletedAt: string | null
     authType:
       | 'DOMAIN'
       | 'EXTERNAL'
@@ -1732,10 +1735,7 @@ async function loadUsers() {
               ?.key,
         )
 
-      if (replacement) {
-        selectedUser.value =
-          replacement
-      }
+      selectedUser.value = replacement || null
     }
 
 
@@ -3214,4 +3214,15 @@ onMounted(
   .search-box { grid-column: 1 / -1; }
   .detail-panel--access { height: max(560px, 80dvh); min-height: 0; overflow: hidden; }
 }
+</style>
+
+<style scoped>
+.admin-users-sneat{--space-surface:#fff;--space-panel:#f5f5f9;--space-text:#414b5a;--space-muted:#717b8b;--space-line:#e9e8f1;--space-selection:#eeebff;--space-accent:#6754d9;background:var(--space-panel);color:var(--space-text);padding:16px 20px}
+.admin-users-sneat .page-title{font-weight:600;color:var(--space-text)}
+.admin-users-sneat :is(.list-panel,.detail-panel,.department-list-panel){border-radius:10px;box-shadow:0 3px 12px #2f315710;border:1px solid var(--space-line);background:var(--space-surface)}
+.admin-users-sneat :is(.section-tab--active,.admin-mode-tab--active,.access-navigation-link){color:var(--space-accent)}
+.admin-users-sneat .stat-card{padding:8px 12px;border-radius:8px;background:var(--space-surface);box-shadow:0 3px 12px #2f315708}.admin-users-sneat .stats-grid{gap:8px}
+:global(html.dark:not([data-space-contrast=high])) .admin-users-sneat{--space-surface:#222832;--space-panel:#171b23;--space-text:#e1e6ee;--space-muted:#acb5c6;--space-line:#37404e;--space-selection:#35304f;--space-accent:#b0a2ff;--space-danger:#ffb4ad;--space-danger-bg:#472e35}
+:global(html[data-space-contrast=high]) .admin-users-sneat{--space-surface:#fff;--space-panel:#fff;--space-text:#111827;--space-muted:#334155;--space-line:#64748b;--space-accent:#4430ad}
+@media(max-width:600px){.admin-users-sneat{padding:10px}}
 </style>

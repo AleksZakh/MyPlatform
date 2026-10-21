@@ -47,16 +47,16 @@ function reset() { search.value = ''; category.value = 'all'; }
 <template>
   <section class="admin-dashboard" :aria-busy="loading">
     <div class="ad-container">
-      <header class="ad-topbar">
+      <!-- <header class="ad-topbar"> -->
         <!-- <div><p class="ad-eyebrow">SPACE <span>/</span> АДМИНИСТРИРОВАНИЕ</p><h1>Центр администрирования</h1></div> -->
-      </header>
+      <!-- </header> -->
       <p v-if="navigationError" class="ad-alert" role="alert">Не удалось загрузить список инструментов. Нажмите «Обновить», чтобы повторить.</p>
       <p v-if="summaryError" class="ad-alert" role="alert">{{ summaryError }}</p>
       <template v-if="navigation && tools.length">
         <div class="ad-overview">
           <article class="ad-card ad-welcome">
             <div class="ad-welcome-copy">
-              <div>
+              <div class="flex w-full items-center justify-between gap-3">
                 <span class="ad-tag">Рабочее пространство компании</span>
                 <button class="ad-refresh" :disabled="loading" @click="emit('refresh')"><Icon name="lucide:refresh-cw" :class="{ 'ad-spinning': loading }"/><span>{{ loading ? 'Обновление…' : 'Обновить' }}</span></button>
                 

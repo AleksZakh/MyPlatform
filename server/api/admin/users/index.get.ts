@@ -38,6 +38,7 @@ type SourceFilter =
 
 type StatusFilter =
   | 'all'
+  | 'DELETED'
   | UserStatus
 
 
@@ -72,6 +73,7 @@ interface AdminUserRow {
 
   appUser: {
     id: number
+    deletedAt: Date | null
     authType: UserAuthType
     status: UserStatus
 
@@ -387,6 +389,7 @@ function parseStatus(
   value: unknown,
 ): StatusFilter {
   if (
+    value === 'DELETED' ||
     value ===
       UserStatus.PENDING_ACTIVATION ||
     value ===
@@ -676,6 +679,7 @@ export default defineEventHandler(
               ? {
                   id:
                     matched.id,
+                  deletedAt: matched.deletedAt,
 
                   authType:
                     matched.authType,
@@ -776,6 +780,7 @@ export default defineEventHandler(
           appUser: {
             id:
               user.id,
+            deletedAt: user.deletedAt,
 
             authType:
               user.authType,
@@ -821,6 +826,8 @@ export default defineEventHandler(
       const filtered =
         rows.filter(
           row => {
+            if (status === 'DELETED' && !row.appUser?.deletedAt) return false;
+            if (status !== 'DELETED' && row.appUser?.deletedAt) return false;
             if (
               source ===
                 'domain' &&
@@ -840,7 +847,7 @@ export default defineEventHandler(
             }
 
             if (
-              status !== 'all'
+              status !== 'all' && status !== 'DELETED'
             ) {
               if (
                 row.appUser
@@ -946,38 +953,39 @@ export default defineEventHandler(
         )
 
 
+      const statsRows = rows.filter(row => !row.appUser?.deletedAt)
       const stats = {
         total:
-          rows.length,
+          statsRows.length,
 
         domain:
-          rows.filter(
+          statsRows.filter(
             row =>
               row.source ===
               'DOMAIN',
           ).length,
 
         external:
-          rows.filter(
+          statsRows.filter(
             row =>
               row.source ===
               'EXTERNAL',
           ).length,
 
         registered:
-          rows.filter(
+          statsRows.filter(
             row =>
               !!row.appUser,
           ).length,
 
         notRegistered:
-          rows.filter(
+          statsRows.filter(
             row =>
               !row.appUser,
           ).length,
 
         active:
-          rows.filter(
+          statsRows.filter(
             row =>
               row.appUser
                 ?.status ===
@@ -985,7 +993,7 @@ export default defineEventHandler(
           ).length,
 
         blocked:
-          rows.filter(
+          statsRows.filter(
             row =>
               row.appUser
                 ?.status ===
@@ -993,7 +1001,7 @@ export default defineEventHandler(
           ).length,
 
         directoryDisabled:
-          rows.filter(
+          statsRows.filter(
             row =>
               row.directory
                 ?.accountDisabled ===
