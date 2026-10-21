@@ -18,7 +18,9 @@ const {
   error,
 } = lib;
 const route = useRoute();
-const materialType = ref(route.query.type === "video" ? "video" : "all");
+const materialType = ref(route.query.type === "video" ? "video" : "document");
+const toolsOpen = ref(false);
+const videoPanel = ref<{ add: () => void; refresh: () => Promise<void> } | null>(null);
 const selected = ref<LibraryBook | null>(null);
 const editor = ref(false);
 const catalogEditor = ref(false);
@@ -31,7 +33,7 @@ const mainId = computed(() => {
   return c?.parentId || c?.id || null;
 });
 const children = computed(() =>
-  categories.value.filter((c) => c.parentId === mainId.value),
+  mainId.value ? categories.value.filter((c) => c.parentId === mainId.value) : [],
 );
 const groups = computed(() => {
   if (!group.value) return [{ name: "", books: books.value }];
@@ -100,26 +102,31 @@ function switchTrash() {
           <Icon name="lucide:search" />
         </button>
       </form>
-    </header>
-    <nav class="library-media-filter" aria-label="Тип материалов"><button v-for="t in [{key:'all',label:'Все материалы'},{key:'document',label:'Документы'},{key:'video',label:'Видео'}]" :key="t.key" :aria-pressed="materialType===t.key" @click="materialType=t.key">{{t.label}}</button></nav>
-    <div v-if="canManage" class="library-toolbar">
-      <button v-if="materialType!=='video'" @click="edit(null)">+ Добавить книгу</button
-      ><button @click="catalogEditor = true">Разделы и иконки</button
-      ><button v-if="materialType!=='video'" @click="seriesEditor = true">Импорт журналов</button
-      ><button :aria-pressed="trash" @click="switchTrash">
-        {{ trash ? "Вернуться к материалам" : "Корзина" }}
+      <button v-if="canManage" type="button" class="library-tools-toggle"
+        :aria-expanded="toolsOpen" aria-controls="library-tools"
+        :aria-label="toolsOpen ? 'Скрыть управление библиотекой' : 'Управление библиотекой'"
+        :title="toolsOpen ? 'Скрыть управление' : 'Управление библиотекой'"
+        @click="toolsOpen = !toolsOpen">
+        <Icon name="lucide:sliders-horizontal" />
       </button>
-    </div>
+    </header>
+    <Transition name="library-tools">
+      <div v-if="canManage && toolsOpen" id="library-tools" class="library-toolbar library-tools-panel"
+        role="region" aria-label="Управление библиотекой">
+        <button v-if="materialType === 'document'" @click="edit(null)">+ Добавить книгу</button>
+        <button v-if="materialType === 'video' && !trash" @click="videoPanel?.add()">+ Добавить видео</button>
+        <button @click="catalogEditor = true">Разделы и иконки</button>
+        <button v-if="materialType === 'document'" @click="seriesEditor = true">Импорт журналов</button>
+        <NuxtLink v-if="materialType === 'video'" to="/library/video-settings">Лимит загрузки</NuxtLink>
+        <button :aria-pressed="trash" @click="switchTrash">{{ trash ? 'Вернуться к материалам' : 'Корзина' }}</button>
+      </div>
+    </Transition>
+    <nav class="library-media-filter" aria-label="Тип материалов"><button v-for="t in [{key:'document',label:'Документы'},{key:'video',label:'Видео'}]" :key="t.key" :aria-pressed="materialType===t.key" @click="materialType=t.key">{{t.label}}</button></nav>
     <p v-if="error" role="alert" class="library-error">{{ error }}</p>
     <div class="library-layout">
       <section class="library-content" aria-label="Материалы">
-        <nav class="library-tabs" aria-label="Подразделы">
+        <nav v-if="children.length" class="library-tabs" aria-label="Подразделы">
           <button
-            :class="{ active: category === mainId }"
-            @click="lib.select(mainId)"
-          >
-            Все</button
-          ><button
             v-for="c in children"
             :key="c.id"
             :class="{ active: category === c.id }"
@@ -128,7 +135,7 @@ function switchTrash() {
             {{ c.name }} <small>{{ c.count }}</small>
           </button>
         </nav>
-        <LibraryVideoPanel v-if="materialType!=='document'" :category="category" :query="query" :trash="trash" :can-manage="canManage" :categories="categories" @changed="lib.catalog" />
+        <LibraryVideoPanel ref="videoPanel" v-if="materialType!=='document'" :category="category" :query="query" :trash="trash" :can-manage="canManage" :categories="categories" @changed="lib.catalog" />
         <template v-if="materialType!=='video'">
         <div class="library-results">
           <span>{{ trash ? "Корзина · " : "" }}Документы: {{ total }}</span
@@ -184,9 +191,7 @@ function switchTrash() {
         </template>
       </section>
       <aside class="library-sections" aria-label="Разделы библиотеки">
-        <button :class="{ active: !category }" @click="lib.select(null)">
-          <Icon name="lucide:library" />Все материалы</button
-        ><button
+        <button
           v-for="c in categories.filter((c) => !c.parentId)"
           :key="c.id"
           :class="{ active: mainId === c.id }"

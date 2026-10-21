@@ -18,10 +18,11 @@ onBeforeUnmount(()=>{clearInterval(timer);clearTimeout(searchTimer);seq++;});
 function edit(v:LibraryVideo|null,cont=false){selected.value=v;resume.value=cont;editor.value=true;}
 async function changed(){await load();emit('changed');}
 async function action(v:LibraryVideo,type:'trash'|'restore'|'retry'){busy.value=true;try{await $fetch(`/api/library/videos/${v.id}/state`,{method:'POST',headers:{'x-space-library':'1'},body:{action:type,version:v.version},retry:0});removing.value=null;await changed();}catch(e:any){error.value=e?.data?.message||e.message;}finally{busy.value=false;}}
+defineExpose({ add: () => { if (props.canManage && !props.trash) edit(null); }, refresh: load });
 </script>
 <template>
 <section class="library-video-panel" aria-label="Учебные видео">
-<div class="library-toolbar"><h2>Видео · {{total}}</h2><button v-if="canManage&&!trash" @click="edit(null)">+ Добавить видео</button><NuxtLink v-if="canManage" to="/library/video-settings">Лимит загрузки</NuxtLink><button :disabled="loading" @click="load()">Обновить</button></div>
+<div class="library-results"><h2>Видео · {{total}}</h2><button :disabled="loading" @click="load()" aria-label="Обновить список видео" title="Обновить список видео"><Icon name="lucide:refresh-cw" /></button></div>
 <p v-if="error" role="alert" class="library-error">{{error}}</p><p v-if="loading" role="status">Загрузка видео…</p><p v-else-if="!rows.length" class="library-empty">{{trash?'В корзине нет видео.':'Видео не найдены.'}}</p>
 <div class="library-books">
 <article v-for="v in rows" :key="v.id" class="library-card">

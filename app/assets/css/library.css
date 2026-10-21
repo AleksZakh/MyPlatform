@@ -7,7 +7,7 @@
   box-sizing: border-box;
   color: var(--lib-text);
   background: var(--lib-bg);
-  padding: 16px;
+  padding: 12px;
   min-width: 0;
   font-size: 14px;
 }
@@ -42,18 +42,18 @@
 .library-heading {
   display: flex;
   justify-content: space-between;
-  gap: 20px;
+  gap: 12px;
   align-items: center;
   background: var(--lib-panel);
-  padding: 16px;
+  padding: 12px;
 }
 .library-heading h1 {
-  font-size: 26px;
+  font-size: 22px;
   line-height: 1.2;
 }
 .library-heading p {
   margin-top: 5px;
-  font-size: 17px;
+  font-size: 14px;
 }
 .library-search {
   display: flex;
@@ -111,10 +111,10 @@
   flex-direction: column;
   gap: 10px;
   align-self: start;
-  position: sticky;
-  top: 0;
-  max-height: 75vh;
-  overflow: auto;
+  /* The layout main is the single page scroll container. */
+  max-height: none;
+  overflow: visible;
+  position: static;
 }
 .library-sections button {
   display: flex;
@@ -415,4 +415,24 @@
   .library-books {
     gap: 10px;
   }
+}
+
+.library-tools-toggle {
+  display: inline-flex; align-items: center; justify-content: center;
+  flex: 0 0 36px; width: 36px; height: 36px; border-radius: 6px;
+  border: 1px solid var(--lib-border); background: var(--lib-bg);
+}
+.library-tools-toggle[aria-expanded="true"] { color: var(--lib-accent); }
+.library-tools-panel { padding: 10px 12px; background: var(--lib-panel); border-top: 1px solid var(--lib-border); }
+.library-tools-panel a { border: 1px solid var(--lib-border); border-radius: 5px; padding: 7px 12px; }
+.library-tools-enter-active, .library-tools-leave-active { transition: opacity .16s ease, transform .16s ease; }
+.library-tools-enter-from, .library-tools-leave-to { opacity: 0; transform: translateY(-8px); }
+@media (prefers-reduced-motion: reduce) {
+  .library-tools-enter-active, .library-tools-leave-active { transition: none; }
+}
+@media (max-width: 800px) {
+  .library-heading { position: relative; }
+  .library-heading > div { padding-right: 42px; }
+  .library-tools-toggle { position: absolute; right: 12px; top: 12px; }
+  .library-sections { overflow-x: auto; }
 }
