@@ -829,7 +829,8 @@ const tryKerberosLogin = async () => {
       directory: 'Не удалось получить профиль из Active Directory.',
       account: 'Не удалось подготовить учётную запись Space или вход для неё запрещён.',
       session: 'Сервер не смог создать сессию Space.',
-      'session-check': 'Сессия после входа не подтвердилась. Проверьте cookie и настройки сервера.',
+      'session-check': 'Сессия после входа не подтвердиласpython3 ~/Загрузки/Space-sidebar-gray-fix-20261022/install-update.py \
+  ~/Projects/MyPlatformь. Проверьте cookie и настройки сервера.',
     };
     // kerberosDiagnostic.value = `${messages[stage] || 'Доменный вход не завершён.'} Этап: ${stage}; HTTP: ${status}${id ? `; запрос: ${id}` : ''}.`;
     kerberosDiagnostic.value = ``;
