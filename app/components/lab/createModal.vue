@@ -267,11 +267,8 @@
                   </span>
                 </template>
 
-                <UInput
-                  v-model="state.samplingTest.testLocationName"
-                  class="w-full min-w-0 shadow-sm"
-                  autocomplete="off"
-                />
+                <CreatableNameSelect v-model="state.samplingTest.testLocationName" :items="locationItems" :loading="locationsLoading" placeholder="Выберите или создайте место отбора" />
+                <p v-if="locationsError" role="alert" class="text-sm text-red-600">{{ locationsError }} <button type="button" @click="loadLocationItems()">Повторить</button></p>
               </UFormField>
 
 
@@ -530,20 +527,7 @@
                   </span>
                 </template>
 
-                <UInput
-                  v-model="state.receiptMaterial.manufacturerName"
-                  :list="manufacturerListId"
-                  placeholder="Введите или выберите производителя..."
-                  autocomplete="off"
-                  class="w-full min-w-0"
-                />
-                <datalist :id="manufacturerListId">
-                  <option
-                    v-for="name in manufacturerSuggestions"
-                    :key="name"
-                    :value="name"
-                  />
-                </datalist>
+                <CreatableNameSelect v-model="state.receiptMaterial.manufacturerName" :items="manufacturerNames" placeholder="Выберите или создайте изготовителя" />
               </UFormField>
 
 
@@ -837,6 +821,7 @@
 
 
 <script setup lang="ts">
+import CreatableNameSelect from "./CreatableNameSelect.vue";
 const { expanded } = useRecordWindow();
 import * as z from 'zod'
 
@@ -855,7 +840,6 @@ import {
   reactive,
   ref,
   watch,
-  useId,
 } from 'vue'
 
 import {
@@ -1032,8 +1016,6 @@ const materialItems =
 const manufacturerItems =
   ref<string[]>([])
 
-// Unique per modal instance, including server rendering and hydration.
-const manufacturerListId = `manufacturer-options-${useId()}`
 
 const manufacturerNames = computed(() => {
   const names = new Map<string, string>()
@@ -1043,15 +1025,6 @@ const manufacturerNames = computed(() => {
     if (name && !names.has(key)) names.set(key, name)
   }
   return [...names.values()]
-})
-
-const manufacturerSuggestions = computed(() => {
-  const query = state.receiptMaterial.manufacturerName
-    .trim().toLocaleLowerCase('ru-RU')
-  // Search the entire loaded reference list BEFORE limiting the suggestions.
-  return manufacturerNames.value
-    .filter(name => !query || name.toLocaleLowerCase('ru-RU').includes(query))
-    .slice(0, 50)
 })
 
 const testResultItems =
@@ -1604,6 +1577,27 @@ const state =
     getInitialState(),
   )
 
+
+const locationItems = ref<string[]>([])
+const locationsLoading = ref(false)
+const locationsError = ref('')
+let locationRequest = 0
+const selectedObjectId = computed(() => testObjectOptions.value.find(item => item.name === state.samplingTest.testObjectName)?.id)
+async function loadLocationItems() {
+ const request = ++locationRequest
+ locationItems.value = []
+ locationsError.value = ''
+ const objectId = selectedObjectId.value
+ if (!objectId) { locationsLoading.value = false; return }
+ locationsLoading.value = true
+ try {
+  const result = await $fetch<{ data: { name: string }[] }>('/api/lab/locations/all', { query: { testObjectId: objectId } })
+  if (request === locationRequest) locationItems.value = [...new Set(result.data.map(item => item.name))]
+ } catch {
+  if (request === locationRequest) locationsError.value = 'Не удалось загрузить места отбора. Введённое значение сохранено.'
+ } finally { if (request === locationRequest) locationsLoading.value = false }
+}
+watch(selectedObjectId, () => { void loadLocationItems() }, { immediate: true })
 
 function getChronologyErrors(formState: Schema) {
   const samplingDate = dateToApiValue(formState.samplingTest.samplingDate)

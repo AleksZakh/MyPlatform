@@ -831,7 +831,8 @@ const tryKerberosLogin = async () => {
       session: 'Сервер не смог создать сессию Space.',
       'session-check': 'Сессия после входа не подтвердилась. Проверьте cookie и настройки сервера.',
     };
-    kerberosDiagnostic.value = `${messages[stage] || 'Доменный вход не завершён.'} Этап: ${stage}; HTTP: ${status}${id ? `; запрос: ${id}` : ''}.`;
+    // kerberosDiagnostic.value = `${messages[stage] || 'Доменный вход не завершён.'} Этап: ${stage}; HTTP: ${status}${id ? `; запрос: ${id}` : ''}.`;
+    kerberosDiagnostic.value = ``;
   } finally {
     isKerberosChecking.value = false;
   }

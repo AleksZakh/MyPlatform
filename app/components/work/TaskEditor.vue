@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue';
-import Modal from './Modal.vue';import PersonPicker from './PersonPicker.vue';
+import TaskSurface from './TaskSurface.vue';import PersonPicker from './PersonPicker.vue';
 import { WORK_STATUSES,WORK_KINDS,WORK_PRIORITIES,workUserName,type WorkTaskDTO,type WorkProjectDTO,type WorkContext,type WorkUser } from '~~/shared/types/work';
 import { dateKey } from '~~/shared/utils/work-board';
 const props=defineProps<{task:WorkTaskDTO|null;projects:WorkProjectDTO[];project?:WorkProjectDTO|null;context:WorkContext}>();
@@ -27,7 +27,7 @@ async function postComment(){const r=await send('/api/work/tasks/'+task!.id+'/co
 onMounted(()=>loadComments());
 defineExpose({useProject:(p:WorkProjectDTO)=>{relationship.value='PROJECT';form.projectId=p.id;form.visibility='PROJECT';form.departmentId=null;form.participantIds=[];}});
 </script>
-<template><Modal :title="task?'Задача #'+task.id:'Новая задача'" @close="emit('close')">
+<template><TaskSurface :slide="!!task" :title="task?'Задача #'+task.id:'Новая задача'" @close="emit('close')">
  <form class="work-form" @submit.prevent="save">
   <p v-if="error" class="work-error" role="alert">{{ error }}</p>
   <fieldset :disabled="saving||readOnly"><label>Название задачи<input v-model="form.title" required maxlength="250" autofocus /></label>
@@ -51,4 +51,4 @@ defineExpose({useProject:(p:WorkProjectDTO)=>{relationship.value='PROJECT';form.
  <article v-for="c in comments" :key="c.id"><strong>{{ workUserName(c.author) }}</strong><small>{{ c.createdAt.slice(0,10) }}</small><p>{{ c.body }}</p></article>
  <button v-if="hasMore" @click="loadComments(true)">Ещё комментарии</button><form v-if="task.canComment" @submit.prevent="postComment"><label>Комментарий<textarea v-model="comment" required maxlength="5000" rows="2" /></label><button :disabled="saving||!comment.trim()">Отправить</button></form>
  </section>
-</Modal></template>
+</TaskSurface></template>

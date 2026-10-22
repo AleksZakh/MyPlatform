@@ -17,7 +17,7 @@ function drop(e:DragEvent,key:string){if(props.busy||!droppable(key))return;cons
  emit('move',t,{plannedDate:key==='unscheduled'?null:key==='today'?props.today:shiftDay(props.today,1)});
 }
 </script>
-<template><div class="work-board" aria-label="Доска задач">
+<template><div class="work-board" :class="{'work-board--status': mode === 'status'}" aria-label="Доска задач">
  <section v-for="c in columns" :key="c.key" class="work-column" @dragover="droppable(c.key)&&$event.preventDefault()" @drop.prevent="drop($event,c.key)">
   <header><h3>{{ c.label }}</h3><span>{{ rows(c.key).length }}</span></header>
   <p v-if="mode==='time'&&['week','later'].includes(c.key)" class="work-muted">Дату можно выбрать в карточке</p>

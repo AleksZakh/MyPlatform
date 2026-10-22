@@ -43,6 +43,12 @@
       </div> -->
 
       <div>
+        <UDropdownMenu :items="departmentPages.map(page => ({ label: page.label, to: page.to }))">
+          <button type="button" class="flex items-center gap-2 px-4" aria-label="Отделы"><Icon name="lucide:building-2" />Отделы<Icon name="lucide:chevron-down" /></button>
+        </UDropdownMenu>
+      </div>
+
+      <div>
         <NuxtLink to="/library" class="flex items-center gap-2 px-4"><Icon name="lucide:library" />Библиотека</NuxtLink>
       </div>
     </div>
@@ -104,6 +110,7 @@
 
 
 <script setup lang="ts">
+import { departmentPages } from "~~/shared/navigation/catalog";
 
 import { useAuthStore, useIsLoadingStore } from '@/stores/auth.store';
 
