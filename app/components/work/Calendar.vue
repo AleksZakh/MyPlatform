@@ -11,7 +11,7 @@ const label=computed(()=>new Intl.DateTimeFormat('ru-RU',{month:'long',year:'num
 function moveMonth(offset:number){const date=new Date(month.value+'T00:00:00Z');date.setUTCMonth(date.getUTCMonth()+offset);month.value=date.toISOString().slice(0,10);}
 const scheduledDay=(task:WorkTaskDTO)=>dateKey(task.plannedDate)||dateKey(task.startDate)||dateKey(task.dueDate);
 const sorted=computed(()=>[...props.tasks].sort((a,b)=>compareWorkTasks(a,b)));
-const days=computed(()=>{const weekday=(new Date(month.value+'T00:00:00Z').getUTCDay()+6)%7;const start=shiftDay(month.value,-weekday);return Array.from({length:42},(_,i)=>{const day=shiftDay(start,i);return {day,tasks:sorted.value.filter(t=>scheduledDay(t)===day)};});});
+const days=computed(()=>{const weekday=(new Date(month.value+'T00:00:00Z').getUTCDay()+6)%7;const start=shiftDay(month.value,-weekday);return Array.from({length:42},(_,i)=>{const day=shiftDay(start,i);return {day,weekend:i%7>=5,tasks:sorted.value.filter(t=>scheduledDay(t)===day)};});});
 const unscheduled=computed(()=>sorted.value.filter(t=>!scheduledDay(t)));
 const weekdays=['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье'];
 </script>
@@ -21,7 +21,7 @@ const weekdays=['Понедельник','Вторник','Среда','Четв
   <p class="work-muted">Задача показана на дату плана, а если она не задана — на дату начала или срока. Нажмите на задачу, чтобы открыть подробности.</p>
   <div class="work-calendar-scroll"><div class="work-calendar-grid">
    <div v-for="day in weekdays" :key="day" class="work-calendar-weekday">{{ day }}</div>
-   <section v-for="cell in days" :key="cell.day" class="work-calendar-day" :class="{'is-outside':cell.day.slice(0,7)!==month.slice(0,7),'is-today':cell.day===today}" :aria-label="formatWorkDate(cell.day)">
+   <section v-for="cell in days" :key="cell.day" class="work-calendar-day" :class="{'is-weekend':cell.weekend,'is-outside':cell.day.slice(0,7)!==month.slice(0,7),'is-today':cell.day===today}" :aria-label="formatWorkDate(cell.day)">
     <time :datetime="cell.day">{{ formatWorkDate(cell.day) }}</time>
     <button v-for="task in cell.tasks" :key="task.id" class="work-calendar-task" :style="{'--project-color':task.project?.color||'#64748b'}" @click="emit('open',task)">{{ task.title }}<small>{{ task.project?.name||'Самостоятельная' }} · {{ WORK_STATUSES[task.status as keyof typeof WORK_STATUSES] }}</small></button>
    </section>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref,onMounted,onBeforeUnmount } from 'vue';
+import Modal from './Modal.vue';
 import { WORK_ROLES,workUserName,type WorkUser } from '~~/shared/types/work';
 const emit=defineEmits<{accepted:[number]}>();const route=useRoute();
 type Invitation={id:string;role:keyof typeof WORK_ROLES;expiresAt:string;project:{id:number;name:string;color:string};inviter:WorkUser};
@@ -9,7 +10,7 @@ async function respond(row:Invitation,decision:'ACCEPT'|'DECLINE'){const r=await
 function refreshVisible(){if(document.visibilityState==='visible')load();}
 onMounted(()=>{load();window.addEventListener('focus',refreshVisible);timer=setInterval(refreshVisible,60000);});onBeforeUnmount(()=>{sequence++;clearInterval(timer);window.removeEventListener('focus',refreshVisible);});
 </script>
-<template><section class="work-invitations"><button :aria-expanded="opened" @click="opened=!opened;if(opened)load()">Приглашения в проекты <strong v-if="rows.length">({{ rows.length }})</strong></button><span v-if="loadError" class="work-error" role="status">{{ loadError }}</span>
- <div v-if="opened"><p v-if="error" class="work-error" role="alert">{{ error }}</p><p v-if="busy" role="status">Проверяем приглашения…</p><p v-else-if="!rows.length&&!loadError" class="work-muted">Ожидающих приглашений нет.</p>
+<template><section class="work-invitations"><button :aria-expanded="opened" @click="opened=!opened;if(opened)load()">Приглашения в проекты <span v-if="loadError" title="Не удалось проверить приглашения">!</span><strong v-if="rows.length">({{ rows.length }})</strong></button>
+ <Modal v-if="opened" title="Приглашения в проекты" @close="opened=false"><p v-if="loadError" class="work-error" role="status">{{ loadError }} <button @click="load">Повторить</button></p><p v-if="error" class="work-error" role="alert">{{ error }}</p><p v-if="busy" role="status">Проверяем приглашения…</p><p v-else-if="!rows.length&&!loadError" class="work-muted">Ожидающих приглашений нет.</p>
  <article v-for="r in rows" :key="r.id" class="work-invitation-card" :style="{'--project-color':r.project.color}"><h3>{{ r.project.name }}</h3><p>{{ workUserName(r.inviter) }} приглашает вас. Роль: {{ WORK_ROLES[r.role] }}.</p><p class="work-muted">Доступ ко всем задачам проекта будет открыт после принятия. Приглашение действительно до {{ new Date(r.expiresAt).toLocaleString('ru-RU',{timeZone:'Europe/Moscow'}) }} (МСК).</p><div class="work-actions"><button class="work-primary" :disabled="saving" @click="respond(r,'ACCEPT')">Принять</button><button :disabled="saving" @click="respond(r,'DECLINE')">Отклонить</button></div></article>
- </div></section></template>
+ </Modal></section></template>

@@ -44,12 +44,12 @@
       >
         <UTooltip :text="item.tooltip">
 
-          <span class="icon flex items-center">
+          <span class="icon flex items-center"><span class="sidebar-icon-backdrop">
             <Icon
               :name="item.icon"
-              class="mr-3"
+              class="sidebar-menu-glyph"
               size="22"
-            />
+            /></span>
           </span>
 
 
@@ -313,4 +313,8 @@ defineEmits<{
   transform: rotate(180deg);
 }
 
+/* Gray tiles preserve the original multicolour icons in graphite mode. */
+.sidebar-icon-backdrop{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;margin-right:10px;border-radius:7px;flex-shrink:0}
+:global(.dark) .sidebar-icon-backdrop{background:#9ca3af}
+:global(.dark) button.toggle-icon{background:#9ca3af;border-radius:4px;padding:2px;line-height:1}
 </style>
