@@ -3,7 +3,7 @@ import ContractEditor from './ContractEditor.vue';
 import { ref } from 'vue';
 import { useContractsPreview } from '~/composables/diagnostic/useContractsPreview';
 import { contractStatuses, type ContractPreview } from '~/utils/diagnostic/contracts-demo';
-const {savePreview,status,search,selectedId,selected,sortKey,descending,rows,counts,formatDate,money,sort,reset}=useContractsPreview();
+const {contracts,savePreview,status,search,selectedId,selected,sortKey,descending,rows,counts,formatDate,money,sort,reset}=useContractsPreview();
 const modules=['Договоры','Библиотека работ','Сооружения','Календарный план','Командировки','Планы и отчёты'];
 const notice=ref('');
 const editorOpen=ref(false),editing=ref<ContractPreview|null>(null);
@@ -36,7 +36,7 @@ function open(){if(selected.value){editing.value={...selected.value};editorOpen.
     <aside class="diagnostic-actions" aria-label="Действия с договором"><button @click="create"><Icon name="lucide:file-plus-2"/>Новый договор</button><button :disabled="!selected" @click="open"><Icon name="lucide:pencil"/>Открыть договор</button><button disabled title="Удаление подключим после согласования правил"><Icon name="lucide:trash-2"/>Удалить договор</button></aside>
    </div>
   </div>
-  <ContractEditor v-if="editorOpen" :contract="editing" @close="editorOpen=false" @save="saved"/>
+  <ContractEditor v-if="editorOpen" :contract="editing" :contracts="contracts" @close="editorOpen=false" @save="saved"/>
  </section>
 </template>
 <style src="~/assets/css/diagnostic-contracts.css"></style>

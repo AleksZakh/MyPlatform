@@ -13,5 +13,5 @@ export function useContractsPreview(){
  watch(rows,()=>{if(!selected.value)selectedId.value=null;});
  function sort(key:keyof ContractPreview){if(sortKey.value===key)descending.value=!descending.value;else{sortKey.value=key;descending.value=false;}}
  function reset(){search.value='';selectedId.value=null;sortKey.value='number';descending.value=false;}
- return{savePreview,status,search,selectedId,selected,sortKey,descending,rows,counts,formatDate,money,sort,reset};
+ return{contracts,savePreview,status,search,selectedId,selected,sortKey,descending,rows,counts,formatDate,money,sort,reset};
 }
