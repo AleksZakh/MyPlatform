@@ -1,0 +1,15 @@
+/* Shared dark palette for tabular data; semantic cell backgrounds stay intact. */
+html.dark:not([data-space-contrast="high"]){--space-table-row:#344757;--space-table-stripe:#3b4f60;--space-table-head:#465b70;--space-table-line:#607387;--space-table-hover:#315e73;--space-table-selected:#216b85}
+html.dark:not([data-space-contrast="high"]) :is(.main-content,.lab-area,.work-root,[role=dialog]) table{background-color:var(--space-table-row)!important;color:#edf3f8!important;border-color:var(--space-table-line)!important}
+html.dark:not([data-space-contrast="high"]) :is(.main-content,.lab-area,.work-root,[role=dialog]) table thead,
+html.dark:not([data-space-contrast="high"]) :is(.main-content,.lab-area,.work-root,[role=dialog]) table thead th{background-color:var(--space-table-head)!important;color:#f5f8fb!important;border-color:var(--space-table-line)!important}
+html.dark:not([data-space-contrast="high"]) :is(.main-content,.lab-area,.work-root,[role=dialog]) table tbody tr{background-color:var(--space-table-row)!important}
+html.dark:not([data-space-contrast="high"]) :is(.main-content,.lab-area,.work-root,[role=dialog]) table tbody tr:nth-child(even){background-color:var(--space-table-stripe)!important}
+html.dark:not([data-space-contrast="high"]) :is(.main-content,.lab-area,.work-root,[role=dialog]) table tbody tr:hover{background-color:var(--space-table-hover)!important}
+html.dark:not([data-space-contrast="high"]) :is(.main-content,.lab-area,.work-root,[role=dialog]) table tbody tr:is(.is-selected,[aria-selected=true],[data-state=selected]){background-color:var(--space-table-selected)!important}
+html.dark:not([data-space-contrast="high"]) :is(.main-content,.lab-area,.work-root,[role=dialog]) table td{border-color:var(--space-table-line)!important}
+/* Lab tables colour cells directly. Preserve negative-result rows. */
+html.dark:not([data-space-contrast="high"]):has(.lab-area) .lab-area table{background:var(--space-table-row)!important}
+html.dark:not([data-space-contrast="high"]):has(.lab-area) .lab-area table th{background:var(--space-table-head)!important;color:#f5f8fb!important;border-color:var(--space-table-line)!important}
+html.dark:not([data-space-contrast="high"]):has(.lab-area) .lab-area .lab-row:not(.lab-row--negative)>td{background:inherit!important}
+html.dark:not([data-space-contrast="high"]):has(.lab-area) .lab-area .lab-row.lab-row--selected{background:var(--space-table-selected)!important}

@@ -1,0 +1,5 @@
+// Preview-only fixtures. No production records or financial data are loaded here.
+export type ContractStatus = 'PLANNED' | 'ACTIVE' | 'COMPLETED';
+export interface ContractPreview { id:number; number:string; date:string; counterparty:string; executor:string; buildings:number; finish:string; amount:number; direction:'INCOME'|'EXPENSE'; status:ContractStatus }
+export const contractStatuses = [{key:'PLANNED',label:'Планируемые'},{key:'ACTIVE',label:'Выполняемые'},{key:'COMPLETED',label:'Завершенные'}] as const;
+export const demoContracts:ContractPreview[] = Array.from({length:15},(_,i)=>({id:i+1,number:`ДЕМО-${2026}-${String(i+1).padStart(3,'0')}`,date:`2026-${String(i%9+1).padStart(2,'0')}-15`,counterparty:i%3===0?'Учебный подрядчик':'Учебный заказчик',executor:'ОДИС',buildings:i%6,finish:`${i<7?2027:2026}-11-30`,amount:150000+i*125500,direction:i%4===0?'EXPENSE':'INCOME',status:i<7?'PLANNED':i<12?'ACTIVE':'COMPLETED'}));
