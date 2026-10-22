@@ -42,3 +42,9 @@ html.dark:not([data-space-contrast="high"]) :is(.bg-amber-50,.bg-amber-100,.bg-y
 html.dark:not([data-space-contrast="high"]) :is(.text-amber-700,.text-amber-800,.text-amber-900,.text-yellow-700,.text-yellow-800){color:var(--space-warning)!important}
 html.dark:not([data-space-contrast="high"]) :is(.dark\:bg-gray-800,.dark\:bg-gray-900,.dark\:bg-slate-800,.dark\:bg-slate-900){background-color:var(--space-raised)!important}
 html.dark:not([data-space-contrast="high"]) .library-primary{color:#111827!important}
+
+/* Sidebar icon tiles: support both original and wrapped icon markup. */
+html.dark .sidebar .menu-item .icon{display:inline-flex!important;align-items:center;justify-content:center;background-color:#9ca3af!important;border:1px solid #b8c0cb;border-radius:7px;width:32px;min-width:32px;height:32px;margin-right:10px;flex-shrink:0}
+html.dark .sidebar .menu-item .icon .sidebar-icon-backdrop{width:auto;height:auto;margin:0;background:transparent}
+html.dark .sidebar .menu-item .icon .iconify{margin:0!important}
+html.dark .sidebar button.toggle-icon{background-color:#9ca3af!important;border-radius:4px;padding:2px;line-height:1}
