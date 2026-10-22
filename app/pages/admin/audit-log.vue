@@ -203,6 +203,9 @@
       </div>
 
 
+      <div v-if="filters.category==='DATA'" class="mb-3 flex flex-wrap gap-2" aria-label="Раздел данных">
+        <button v-for="item in [{key:'',label:'Все разделы'},{key:'diagnostic',label:'Диагностика'},{key:'lab',label:'Лабораторный контроль'},{key:'library',label:'Библиотека'},{key:'projects',label:'Проекты'},{key:'chat',label:'Чат'}]" :key="item.key" class="rounded-lg border px-3 py-1" :aria-pressed="filters.module===item.key" :class="filters.module===item.key?'bg-sky-700 text-white':''" @click="filters.module=item.key;pagination.page=1;loadAuditLog()">{{item.label}}</button>
+      </div>
       <!-- =====================================================
            ERROR
            ===================================================== -->
@@ -860,6 +863,7 @@ const categoryTabs = [
 const filters = ref({
   search: '',
   category: '',
+  module: '',
   dateFrom: '',
   dateTo: '',
 });
@@ -980,6 +984,7 @@ const loadAuditLog =
       }
 
 
+      if(filters.value.category==='DATA' && filters.value.module)query.module=filters.value.module;
       if (
         filters.value.dateFrom
       ) {
@@ -1064,6 +1069,7 @@ const resetFilters =
     filters.value = {
       search: '',
       category: '',
+  module: '',
       dateFrom: '',
       dateTo: '',
     };
@@ -1089,6 +1095,7 @@ const selectCategory =
 
     filters.value.category =
       category;
+    filters.value.module='';
 
 
     pagination.value.page =
@@ -1294,6 +1301,9 @@ const entityLabel =
     const labels:
       Record<string, string> = {
 
+        DiagnosticContract: 'Договор диагностики',
+        DiagnosticCounterparty: 'Контрагент диагностики',
+        DiagnosticProjectType: 'Тип проекта диагностики',
         SamplingTest:
           'Акт отбора',
 
@@ -1343,6 +1353,7 @@ const resourceLabel =
     const labels:
       Record<string, string> = {
 
+        'diagnostic.contracts': 'Диагностика — договоры',
         'lab.sampling-tests':
           'Лабораторный контроль',
 

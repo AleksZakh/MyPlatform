@@ -2,7 +2,7 @@ export const ACCESS_ACTIONS = ['VIEW', 'CREATE', 'UPDATE', 'DELETE'] as const
 export type AccessActionName = typeof ACCESS_ACTIONS[number]
 export type AccessSubjectKind = 'user' | 'department' | 'domainGroup' | 'spaceGroup'
 export type AccessSource = 'SYSTEM_ADMIN' | 'USER' | 'DEPARTMENT' | 'DOMAIN_GROUP' | 'SPACE_GROUP'
-export type AccessBlock = 'USER_INACTIVE' | 'RESOURCE_INACTIVE' | 'ADMIN_REQUIRED' | 'NO_PERMISSION' | null
+export type AccessBlock = 'USER_INACTIVE' | 'RESOURCE_INACTIVE' | 'ADMIN_REQUIRED' | 'NO_PERMISSION' | 'PERSONAL_DENY' | null
 
 export interface AccessCell {
   directGranted: boolean

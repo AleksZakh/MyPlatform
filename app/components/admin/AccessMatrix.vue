@@ -15,6 +15,7 @@ function sourceText(row: AccessRow, action: AccessActionName): string {
   if (cell.blockedBy === 'USER_INACTIVE') return props.kind === 'user' ? 'Сотрудник неактивен' : 'Получатель отключён'
   if (cell.blockedBy === 'RESOURCE_INACTIVE') return 'Ресурс отключён'
   if (cell.blockedBy === 'ADMIN_REQUIRED') return 'Только системный администратор'
+  if (cell.blockedBy === 'PERSONAL_DENY') return 'Персональный запрет'
   if (!cell.effectiveGranted) return 'Нет доступа'
   if (props.kind === 'spaceGroup') return 'Для участников группы Space'
   if (props.kind === 'department') return 'Для сотрудников отдела'
@@ -71,6 +72,7 @@ function allDisabled(row: AccessRow) {
       <p v-if="!snapshot.subject.isActive" class="matrix-hint">Получатель неактивен. Назначения сохранены, но не дают доступа. Их можно отозвать.</p>
       <p v-if="snapshot.subject.department && !snapshot.subject.department.isActive" class="matrix-hint">Отдел отключён: его права не наследуются.</p>
       <p v-if="snapshot.directoryWarning" class="matrix-error" role="status">{{ snapshot.directoryWarning }}</p>
+      <AdminDiagnosticRestrictions v-if="kind==='user' && !snapshot.subject.isSystemAdmin" :user-id="subjectId" :can-manage="snapshot.canManage" @saved="load" />
       <div class="matrix-filters">
         <label>Поиск ресурса<input v-model="search" type="search" placeholder="Название или ключ" /></label>
         <label>Раздел ресурсов<select v-model="group"><option value="">Все разделы</option><option v-for="item in groups" :key="item">{{ item }}</option></select></label>

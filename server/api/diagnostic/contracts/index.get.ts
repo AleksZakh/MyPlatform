@@ -1,0 +1,3 @@
+import {contractAccess} from '../../../services/diagnostic/access';
+import {listContracts} from '../../../services/diagnostic/contracts';
+export default defineEventHandler(async event=>{await contractAccess(event,'VIEW');const trash=getQuery(event).trash==='1';return listContracts(trash);});

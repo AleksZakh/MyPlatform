@@ -23,3 +23,11 @@ html.dark .diagnostic-contract-modal{--contract-bg:#293b4a;--contract-panel:#344
 .contract-summary-table thead tr:nth-child(2) th{position:static}
 .contract-summary-table td{text-align:center}
 @media(max-width:700px){.contract-related{align-items:stretch;flex-direction:column}.contract-footer-content>small{flex-basis:100%}}
+
+.contract-fields-row,.contract-extra{border:0;padding:0;min-width:0}
+.contract-fields-row button{padding:3px;text-align:left;color:var(--space-text,#25486d)}
+.contract-note{display:flex;flex-direction:column;gap:8px;margin:18px 0}
+.contract-note textarea{background:var(--space-field,#fff);color:var(--space-text,#253647);border:1px solid var(--space-field-border,#c7d3df);border-radius:6px;padding:10px;resize:vertical}
+.contract-catalog-add{display:flex;gap:10px;align-items:end;flex-wrap:wrap;padding:12px;border:1px solid var(--space-field-border,#c7d3df);border-radius:6px}
+.contract-catalog-add label{display:flex;flex:1;flex-direction:column;gap:5px}
+.contract-catalog-add input{padding:8px;border:1px solid var(--space-field-border,#c7d3df);background:var(--space-field,#fff);color:inherit}

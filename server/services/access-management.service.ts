@@ -71,6 +71,7 @@ export async function buildAccessSnapshot(
     select: { id: true, key: true, name: true, description: true, type: true, isActive: true,
       departments: { select: { isOwner: true, department: { select: { name: true } } } } },
   })
+  const denials=user?await db.userPermissionDeny.findMany({where:{userId:user.id}}):[];
   const directMap = new Map(direct.map(p => [`${p.resourceId}:${p.action}`, p]))
   const inheritedSet = new Set(inherited.map(p => `${p.resourceId}:${p.action}`))
   const data = resources.map(resource => {
@@ -80,6 +81,7 @@ export async function buildAccessSnapshot(
       const own = directMap.get(key)
       const inheritedGranted = !!targetDepartment?.isActive && inheritedSet.has(key)
       const decision = decideAccess({
+        personalDenied:denials.some(d=>d.resourceId===resource.id&&(d.action===action||d.action==='VIEW')),
         userActive: subject.isActive, resourceActive: resource.isActive,
         systemAdmin: subject.isSystemAdmin, direct: kind === 'user' && !!own,
         systemAdminOnly: isSystemAdminOperation(resource.key),
@@ -102,7 +104,7 @@ export async function buildAccessSnapshot(
     return { id: resource.id, key: resource.key, name: resource.name,
       description: resource.description, type: resource.type, isActive: resource.isActive,
       group: resource.departments.filter(item => item.isOwner).map(item => item.department.name).sort().join(', ')
-        || (resource.key.startsWith('admin.') ? 'Администрирование' : 'Общие ресурсы'),
+        || (resource.key.startsWith('diagnostic.')?'Диагностика ИССО':resource.key.startsWith('admin.') ? 'Администрирование' : 'Общие ресурсы'),
       actions }
   })
   // Version includes inherited access, membership, status and catalog changes.

@@ -495,6 +495,7 @@ model Department {
 // ============================================================
 
 model AccessResource {
+  userDenials UserPermissionDeny[]
   spaceGroupPermissions SpaceGroupPermission[]
   id Int @id @default(autoincrement())
 
@@ -711,6 +712,8 @@ enum AccessAction {
 }
 
 model User {
+  diagnosticContracts DiagnosticContract[] @relation("DiagnosticSupervisor")
+  permissionDenials UserPermissionDeny[]
   deletedAt DateTime?
 
   projectFiles WorkProjectFile[]
@@ -1359,4 +1362,85 @@ model RegistrationRequestGroup {
   @@id([registrationRequestId, groupId])
   @@index([groupId])
   @@map("registration_request_groups")
+}
+
+enum DiagnosticContractDirection {
+  INCOME
+  EXPENSE
+  INTERNAL
+}
+
+model DiagnosticCounterparty {
+  id Int @id @default(autoincrement())
+  name String @db.VarChar(255)
+  normalizedName String @unique @db.VarChar(255)
+  contracts DiagnosticContract[]
+  createdAt DateTime @default(now())
+  @@map("diagnostic_counterparties")
+}
+
+model DiagnosticProjectType {
+  id Int @id @default(autoincrement())
+  name String @unique @db.VarChar(255)
+  isActive Boolean @default(true)
+  contracts DiagnosticContract[]
+  @@map("diagnostic_project_types")
+}
+
+model DiagnosticContract {
+  id Int @id @default(autoincrement())
+  number String @db.VarChar(150)
+  date DateTime @db.Date
+  counterpartyId Int
+  counterparty DiagnosticCounterparty @relation(fields:[counterpartyId],references:[id],onDelete:Restrict)
+  direction DiagnosticContractDirection
+  executor String? @db.VarChar(255)
+  start DateTime? @db.Date
+  finish DateTime? @db.Date
+  stages Int?
+  hours Decimal? @db.Decimal(14,2)
+  amount Decimal? @db.Decimal(18,2)
+  note String? @db.Text
+  projectTypeId Int?
+  projectType DiagnosticProjectType? @relation(fields:[projectTypeId],references:[id],onDelete:Restrict)
+  supervisorId Int?
+  supervisor User? @relation("DiagnosticSupervisor",fields:[supervisorId],references:[id],onDelete:SetNull)
+  relatedContractId Int?
+  relatedContract DiagnosticContract? @relation("DiagnosticRelated",fields:[relatedContractId],references:[id],onDelete:Restrict)
+  relatedExpenses DiagnosticContract[] @relation("DiagnosticRelated")
+  structures DiagnosticContractStructure[]
+  version Int @default(1)
+  createdById Int
+  updatedById Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  deletedById Int?
+  @@index([date,finish])
+  @@index([counterpartyId])
+  @@index([supervisorId])
+  @@index([relatedContractId])
+  @@index([deletedAt])
+  @@map("diagnostic_contracts")
+}
+
+// Stable link for the forthcoming structures module; the count is derived, never entered.
+model DiagnosticContractStructure {
+  id Int @id @default(autoincrement())
+  contractId Int
+  contract DiagnosticContract @relation(fields:[contractId],references:[id],onDelete:Restrict)
+  legacyStructureId String @db.VarChar(150)
+  deletedAt DateTime?
+  @@unique([contractId,legacyStructureId])
+  @@map("diagnostic_contract_structures")
+}
+
+model UserPermissionDeny {
+  userId Int
+  resourceId Int
+  action AccessAction
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  resource AccessResource @relation(fields:[resourceId],references:[id],onDelete:Cascade)
+  @@id([userId,resourceId,action])
+  @@map("user_permission_denials")
 }

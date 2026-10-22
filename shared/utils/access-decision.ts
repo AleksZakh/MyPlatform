@@ -16,6 +16,7 @@ export function decideAccess(input: {
   resourceActive: boolean
   systemAdmin: boolean
   systemAdminOnly?: boolean
+  personalDenied?: boolean
   direct: boolean
   departmentActive: boolean
   departmentGranted: boolean
@@ -25,6 +26,7 @@ export function decideAccess(input: {
   if (!input.userActive) return { allowed: false, sources: [], blockedBy: 'USER_INACTIVE' }
   if (!input.resourceActive) return { allowed: false, sources: [], blockedBy: 'RESOURCE_INACTIVE' }
   if (input.systemAdminOnly && !input.systemAdmin) return { allowed: false, sources: [], blockedBy: 'ADMIN_REQUIRED' }
+  if(input.personalDenied && !input.systemAdmin)return {allowed:false,sources:[],blockedBy:'PERSONAL_DENY'}
   const sources: AccessSource[] = []
   if (input.systemAdmin) sources.push('SYSTEM_ADMIN')
   if (input.direct) sources.push('USER')

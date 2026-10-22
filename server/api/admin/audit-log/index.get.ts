@@ -1,3 +1,4 @@
+import {auditModules} from '../../../services/audit-modules';
 import {
   AccessAction,
   Prisma,
@@ -138,6 +139,11 @@ export default defineEventHandler(
       Prisma.AuditLogWhereInput = {};
 
 
+    if(query.module){
+      const module=typeof query.module==='string'?auditModules[query.module]:null;
+      if(!module)throw createError({statusCode:400,message:'Неизвестный раздел журнала.'});
+      where.AND=[module];
+    }
     if (category) {
       where.category =
         category;

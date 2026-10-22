@@ -66,7 +66,9 @@ export async function requirePermission(
       where: { departmentId, resourceId: resource.id, action }, select: { id: true },
     }) : null,
   ])
+  const denied = !actor.isSystemAdmin && await prisma.userPermissionDeny.findFirst({where:{userId:actor.user.id,resourceId:resource.id,action:{in:action==='VIEW'?['VIEW']:['VIEW',action]}}});
   let decision = decideAccess({
+    personalDenied:!!denied,
     userActive: actor.user.status === 'ACTIVE', resourceActive: resource.isActive,
     systemAdmin: actor.isSystemAdmin, direct: !!direct,
     systemAdminOnly: isSystemAdminOperation(resource.key),
