@@ -135,12 +135,13 @@ async function loadMenuPermissions() {
     true
 
   try {
-    await $fetch(
-      '/api/admin/guard',
+    const capability = await $fetch<{ allowed: boolean }>(
+      '/api/access/check',
+      { query: { resource: 'admin.center', action: 'VIEW' } },
     )
 
     canViewAdminCenter.value =
-      true
+      capability.allowed === true
 
   } catch (error: any) {
     const statusCode =

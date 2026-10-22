@@ -8,6 +8,7 @@ export const deniedHealth = () => ({ auditedDenials: audited, responseDenials: r
 
 /** Match persisted access audit, even if a handler catches a permission exception. */
 export function recordAuditedDenial(event: H3Event, actor: {id:number;login?:string|null;authType?:string|null}, key?:string, action?:string) {
+  if (event.context.accessCapabilityProbe) return;
   if (!Number.isSafeInteger(actor.id) || actor.id <= 0 || isStatisticsOwner(actor)) return;
   if (!/^[a-z][a-z0-9.-]{0,119}$/.test(key || '') || !/^(VIEW|CREATE|UPDATE|DELETE|EXPORT|FULL)$/.test(action || '')) return;
   event.context.usageAuditDenialRecorded = true;
@@ -17,6 +18,7 @@ export function recordAuditedDenial(event: H3Event, actor: {id:number;login?:str
 
 /** Runs after the response: a failed capability probe followed by HTTP 200 is not a denial. */
 export function recordDeniedResponse(event: H3Event) {
+  if (event.context.accessCapabilityProbe) return;
   if (event.node.res.statusCode !== 403 || event.context.externalSessionRevoked || event.context.usageAuditDenialRecorded) return;
   const actor = event.context.usageActor || event.context.user;
   if (!Number.isSafeInteger(actor?.id) || actor.id <= 0 || isStatisticsOwner(actor)) return;

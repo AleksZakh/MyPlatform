@@ -17,7 +17,7 @@ export const useRecordDelete = () => {
     if (loading.value) return false;
     loading.value = true;
     try {
-      if (!await refreshDeletePermission()) throw new Error('Право удаления отсутствует или не удалось проверить доступ.');
+      // Confirmed operations reach DELETE, which checks current permissions and audits a denial.
       const reason = requestDeletionReason(options.recordName || `Запись №${options.id}`);
       if (reason === null) return false;
       const result = await $fetch<{ success: boolean; message?: string }>(`/api/incoming-control/${options.id}`, {
