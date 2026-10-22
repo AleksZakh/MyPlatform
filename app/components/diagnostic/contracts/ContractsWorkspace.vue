@@ -1,13 +1,17 @@
 <script setup lang="ts">
+import ContractEditor from './ContractEditor.vue';
 import { ref } from 'vue';
 import { useContractsPreview } from '~/composables/diagnostic/useContractsPreview';
 import { contractStatuses, type ContractPreview } from '~/utils/diagnostic/contracts-demo';
-const {status,search,selectedId,selected,sortKey,descending,rows,counts,formatDate,money,sort,reset}=useContractsPreview();
-const modules=['Сотрудники','Договоры','Библиотека работ','Сооружения','Календарный план','Командировки','Планы и отчёты'];
+const {savePreview,status,search,selectedId,selected,sortKey,descending,rows,counts,formatDate,money,sort,reset}=useContractsPreview();
+const modules=['Договоры','Библиотека работ','Сооружения','Календарный план','Командировки','Планы и отчёты'];
 const notice=ref('');
+const editorOpen=ref(false),editing=ref<ContractPreview|null>(null);
+function create(){editing.value=null;editorOpen.value=true;}
+function saved(row:ContractPreview){savePreview(row);status.value=row.status;search.value='';editorOpen.value=false;notice.value='Договор сохранён только в демонстрационном списке этой страницы. После обновления страницы он исчезнет; в БД изменений нет.';}
 const columns:{key:keyof ContractPreview;label:string}[]=[{key:'direction',label:'Д/Р'},{key:'number',label:'Номер дог-ра'},{key:'date',label:'Дата закл. дог.'},{key:'counterparty',label:'Контрагент'},{key:'executor',label:'Исполнитель'},{key:'buildings',label:'Кол-во соор-ий'},{key:'finish',label:'Окончание работ'},{key:'amount',label:'Стоимость с НДС, ₽'}];
 function moveTab(event:KeyboardEvent,index:number,step:number){const next=(index+step+3)%3;status.value=contractStatuses[next]!.key;const buttons=(event.currentTarget as HTMLElement).parentElement?.querySelectorAll<HTMLButtonElement>('[role=tab]');buttons?.[next]?.focus();}
-function open(){if(selected.value)notice.value=`Выбран договор ${selected.value.number}. Форму договора подключим на следующем этапе.`;}
+function open(){if(selected.value){editing.value={...selected.value};editorOpen.value=true;}}
 </script>
 <template>
  <section class="diagnostic-contracts">
@@ -17,8 +21,6 @@ function open(){if(selected.value)notice.value=`Выбран договор ${se
    <label class="diagnostic-search"><span class="sr-only">Поиск договоров</span><input v-model="search" type="search" placeholder="Поиск договоров"/><Icon name="lucide:search" aria-hidden="true"/></label>
   </nav>
   <div class="diagnostic-content">
-   <h1>Договоры</h1>
-   <p class="diagnostic-preview">Предпросмотр интерфейса · демонстрационные данные. Рабочая база договоров ещё не подключена.</p>
    <p v-if="notice" class="diagnostic-notice" role="status">{{ notice }} <button aria-label="Закрыть сообщение" @click="notice=''">×</button></p>
    <div class="diagnostic-register">
     <div class="diagnostic-register-main">
@@ -31,9 +33,10 @@ function open(){if(selected.value)notice.value=`Выбран договор ${se
      </div>
      <footer class="diagnostic-summary">Показано: {{ rows.length }} <span v-if="selected">· Выбран: {{ selected.number }}</span></footer>
     </div>
-    <aside class="diagnostic-actions" aria-label="Действия с договором"><button disabled title="Следующий этап — форма нового договора"><Icon name="lucide:file-plus-2"/>Новый договор</button><button :disabled="!selected" @click="open"><Icon name="lucide:pencil"/>Открыть договор</button><button disabled title="Удаление подключим после согласования правил"><Icon name="lucide:trash-2"/>Удалить договор</button></aside>
+    <aside class="diagnostic-actions" aria-label="Действия с договором"><button @click="create"><Icon name="lucide:file-plus-2"/>Новый договор</button><button :disabled="!selected" @click="open"><Icon name="lucide:pencil"/>Открыть договор</button><button disabled title="Удаление подключим после согласования правил"><Icon name="lucide:trash-2"/>Удалить договор</button></aside>
    </div>
   </div>
+  <ContractEditor v-if="editorOpen" :contract="editing" @close="editorOpen=false" @save="saved"/>
  </section>
 </template>
 <style src="~/assets/css/diagnostic-contracts.css"></style>
