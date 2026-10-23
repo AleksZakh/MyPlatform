@@ -5,13 +5,15 @@ import { useContractsPreview } from '~/composables/diagnostic/useContractsPrevie
 import { contractStatuses,directionLabels,type ContractRecord as ContractPreview } from '~~/shared/types/diagnostic-contracts';
 const {catalog,rights,loading,error,trash,load,message,contracts,savePreview,status,search,selectedId,selected,sortKey,descending,rows,counts,formatDate,money,sort,reset}=useContractsPreview();
 const modules=['Договоры','Библиотека работ','Сооружения','Календарный план','Командировки','Планы и отчёты'];
+const toast=useSpaceToast();
+const editMode=ref(false);
 const notice=ref('');
 const editorOpen=ref(false),editing=ref<ContractPreview|null>(null);
-function create(){editing.value=null;editorOpen.value=true;}
-function saved(row:ContractPreview){savePreview(row);status.value=row.status;search.value='';editorOpen.value=false;notice.value='Договор сохранён.';void load();}
+function create(){editMode.value=true;editing.value=null;editorOpen.value=true;}
+function saved(row:ContractPreview){savePreview(row);status.value=row.status;search.value='';editorOpen.value=false;toast.add({title:'Договор сохранён',color:'success'});void load();}
 const columns:{key:keyof ContractPreview;label:string}[]=[{key:'direction',label:'Д/Р'},{key:'number',label:'Номер дог-ра'},{key:'date',label:'Дата закл. дог.'},{key:'counterparty',label:'Контрагент'},{key:'executor',label:'Исполнитель'},{key:'buildings',label:'Кол-во соор-ий'},{key:'finish',label:'Окончание работ'},{key:'amount',label:'Стоимость с НДС, ₽'}];
 function moveTab(event:KeyboardEvent,index:number,step:number){const next=(index+step+3)%3;status.value=contractStatuses[next]!.key;const buttons=(event.currentTarget as HTMLElement).parentElement?.querySelectorAll<HTMLButtonElement>('[role=tab]');buttons?.[next]?.focus();}
-async function open(){if(!selected.value||trash.value)return;try{editing.value=await $fetch<ContractPreview>('/api/diagnostic/contracts/'+selected.value.id);editorOpen.value=true;}catch(e){error.value=message(e);}}
+async function open(edit=false){if(!selected.value||trash.value||(edit&&!rights.value.UPDATE))return;try{editMode.value=edit;editing.value=await $fetch<ContractPreview>('/api/diagnostic/contracts/'+selected.value.id);editorOpen.value=true;}catch(e){error.value=message(e);}}
 async function remove(){const row=selected.value;if(!row||!rights.value.DELETE)return;if(!window.confirm(trash.value?'Восстановить договор '+row.number+'?':'Переместить договор '+row.number+' в корзину?'))return;try{await $fetch('/api/diagnostic/contracts/'+row.id+(trash.value?'/restore':''),{method:trash.value?'POST':'DELETE',headers:{'x-space-diagnostic':'1'},body:{version:row.version}});await load();}catch(e){error.value=message(e);}}
 </script>
 <template>
@@ -35,10 +37,10 @@ async function remove(){const row=selected.value;if(!row||!rights.value.DELETE)r
      </div>
      <footer class="diagnostic-summary">Показано: {{ rows.length }} <span v-if="selected">· Выбран: {{ selected.number }}</span></footer>
     </div>
-    <aside class="diagnostic-actions" aria-label="Действия с договором"><button :disabled="loading||!rights.CREATE||trash" @click="create"><Icon name="lucide:file-plus-2"/>Новый договор</button><button :disabled="loading||!selected||trash" @click="open"><Icon name="lucide:pencil"/>Открыть договор</button><button :disabled="loading||!selected||!rights.DELETE" @click="remove"><Icon name="lucide:trash-2"/>{{ trash?'Восстановить':'Удалить договор' }}</button><button :disabled="loading" @click="load">Обновить</button><button :disabled="loading" @click="trash=!trash">{{ trash?'Вернуться к договорам':'Корзина' }}</button></aside>
+    <aside class="diagnostic-actions" aria-label="Действия с договором"><button :disabled="loading||!rights.CREATE||trash" @click="create"><Icon name="lucide:file-plus-2"/>Новый договор</button><button :disabled="loading||!selected||trash" @click="open(false)"><Icon name="lucide:eye"/>Просмотр договора</button><button :disabled="loading||!selected||trash||!rights.UPDATE" @click="open(true)"><Icon name="lucide:pencil"/>Редактировать</button><button :disabled="loading||!selected||!rights.DELETE" @click="remove"><Icon name="lucide:trash-2"/>{{ trash?'Восстановить':'Удалить договор' }}</button><button :disabled="loading" @click="load">Обновить</button><button v-if="catalog.canManageTrash||trash" :disabled="loading" @click="trash=!trash">{{ trash?'Вернуться к договорам':'Корзина' }}</button></aside>
    </div>
   </div>
-  <ContractEditor v-if="editorOpen" :contract="editing" :catalog="catalog" :read-only="editing ? !rights.UPDATE : !rights.CREATE" :can-create="rights.CREATE" @close="editorOpen=false" @save="saved"/>
+  <ContractEditor v-if="editorOpen" :contract="editing" :catalog="catalog" :read-only="editing ? (!editMode||!rights.UPDATE) : !rights.CREATE" :can-edit="rights.UPDATE" @edit="editMode=true" :can-create="rights.CREATE" @close="editorOpen=false" @save="saved"/>
  </section>
 </template>
 <style src="~/assets/css/diagnostic-contracts.css"></style>

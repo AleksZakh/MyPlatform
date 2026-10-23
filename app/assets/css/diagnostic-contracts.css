@@ -31,3 +31,6 @@ html.dark .diagnostic-contract-modal{--contract-bg:#293b4a;--contract-panel:#344
 .contract-catalog-add{display:flex;gap:10px;align-items:end;flex-wrap:wrap;padding:12px;border:1px solid var(--space-field-border,#c7d3df);border-radius:6px}
 .contract-catalog-add label{display:flex;flex:1;flex-direction:column;gap:5px}
 .contract-catalog-add input{padding:8px;border:1px solid var(--space-field-border,#c7d3df);background:var(--space-field,#fff);color:inherit}
+
+.contract-authorship{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:20px;padding-top:10px;border-top:1px solid var(--space-field-border,#c7d3df);color:var(--space-muted,#64748b);font-size:12px}
+.contract-authorship strong{font-weight:500}

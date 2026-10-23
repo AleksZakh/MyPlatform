@@ -1,4 +1,5 @@
 
+import {canManageContractTrash} from './access';
 import {Prisma} from '@prisma/client';
 import {createError,type H3Event} from 'h3';
 import {prisma} from '../../utils/prisma';
@@ -11,7 +12,7 @@ export async function readCatalog(event:H3Event){
  prisma.diagnosticProjectType.findMany({where:{isActive:true},orderBy:{id:'asc'},select:{id:true,name:true}}),
  prisma.diagnosticContract.findMany({where:{direction:'INCOME',deletedAt:null},orderBy:{number:'asc'},select:{id:true,number:true,counterparty:{select:{name:true}}}}),
  diagnosticSupervisors(event)]);
- return {counterparties,projectTypes,supervisors:supervisors.items,supervisorWarning:supervisors.warning,incomeContracts:income.map(c=>({id:c.id,number:c.number,counterparty:c.counterparty.name}))};
+ return {canManageTrash:await canManageContractTrash(event),counterparties,projectTypes,supervisors:supervisors.items,supervisorWarning:supervisors.warning,incomeContracts:income.map(c=>({id:c.id,number:c.number,counterparty:c.counterparty.name}))};
 }
 export async function addCatalog(event:H3Event,actorId:number,kind:'counterparty'|'projectType',name:unknown){
  if(typeof name!=='string'||!name.trim()||name.trim().length>255)throw createError({statusCode:400,message:'Укажите название длиной до 255 символов.'});

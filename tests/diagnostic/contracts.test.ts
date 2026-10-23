@@ -9,6 +9,7 @@ import * as h3 from 'h3';
 import {createServer} from 'node:http';
 import {once} from 'node:events';
 import {contractStatus,moscowToday,normalizeCounterparty} from '../../shared/utils/diagnostic-contracts';
+import {matchesContract} from '../../shared/utils/diagnostic-contract-search';
 import {parseContract} from '../../server/services/diagnostic/input';
 import {decideAccess} from '../../shared/utils/access-decision';
 const url=process.env.DIAGNOSTIC_TEST_DATABASE_URL||'';
@@ -32,6 +33,9 @@ test('Dates, optional values, exact decimals and permissions',()=>{
  assert.equal(contractStatus('2026-10-22','2026-10-22','2026-10-22'),'COMPLETED');
  assert.equal(contractStatus('2026-10-20','2026-10-21','2026-10-22'),'COMPLETED');
  assert.equal(moscowToday(new Date('2026-10-22T21:01:00Z')),'2026-10-23');
+ const searchable:any={number:'Номер',date:'2026-10-23',start:'2026-11-01',finish:null,direction:'INTERNAL',status:'PLANNED',note:'Описание специальное',projectType:'Мониторинг',supervisor:'Иванов',hours:'42.50',stages:3,relatedContractNumber:'СВЯЗЬ-25',creator:'Петров',editor:'Сидоров',createdAt:'2026-10-23T09:00:00Z',updatedAt:'2026-10-23T10:00:00Z'};
+ for(const q of ['специальное','Мониторинг','Иванов','42,50','01.11.2026','СВЯЗЬ-25','Петров','Сидоров','23.10.2026','Внутренний','Планируемые'])assert.equal(matchesContract(searchable,q),true,q);
+ assert.equal(matchesContract(searchable,'не существует'),false);
  assert.equal(parseContract(body()).hours,null);assert.equal(parseContract(body({hours:''})).hours,null);
  assert.equal(parseContract(body({hours:'0'})).hours,'0');
  assert.equal(parseContract(body({amount:'1234567890123456.78'})).amount,'1234567890123456.78');
@@ -70,13 +74,15 @@ test('HTTP CRUD, live rights, catalogs, audit atomicity, versions, links, trash'
  assert.equal((await call('/contracts','POST',body({supervisorId:3}))).status,400);
  const planned=await ok(await call('/contracts','POST',body({date:'2099-01-01',direction:'INTERNAL',number:'Future'})));assert.equal(planned.status,'PLANNED');
  let a=await ok(await call('/contracts','POST',body({supervisorId:2,note:'Описание'})));
+ assert.equal(a.creator,'Тест 2');assert.equal(a.editor,'Тест 2');assert.ok(a.createdAt);assert.ok(a.updatedAt);
  assert.equal(a.amount,null);assert.equal(a.hours,null);assert.equal(a.buildings,0);assert.equal(a.note,'Описание');
  assert.equal((await ok(await call('/contracts/'+a.id))).number,a.number);
  assert.ok(await db.auditLog.findFirst({where:{entityType:'DiagnosticContract',entityId:a.id,action:'CREATE',actorUserId:2}}));
  await db.auditLog.create({data:{category:'DATA',result:'SUCCESS',action:'CREATE',actorEmail:'test',entityType:'SamplingTest',entityId:999}});
  const journal=await ok(await call('/journal?category=DATA&module=diagnostic','GET',undefined,1));assert.ok(journal.data.length);assert.ok(journal.data.every((r:any)=>r.resourceKey==='diagnostic.contracts'));
  const lab=await ok(await call('/journal?category=DATA&module=lab','GET',undefined,1));assert.equal(lab.data.length,1);
- let updated=await ok(await call('/contracts/'+a.id,'PUT',{...a,amount:'123456.78',hours:'0'}));
+ let updated=await ok(await call('/contracts/'+a.id,'PUT',{...a,amount:'123456.78',hours:'0'},1));
+ assert.equal(updated.creator,'Тест 2');assert.equal(updated.editor,'Тест 1');
  assert.equal(updated.hours,'0');assert.equal(updated.amount,'123456.78');
  assert.equal((await call('/contracts/'+a.id,'PUT',a)).status,409);
  a=updated;
@@ -100,6 +106,12 @@ test('HTTP CRUD, live rights, catalogs, audit atomicity, versions, links, trash'
  await db.userPermissionDeny.deleteMany();
  await ok(await call('/contracts/'+expense.id,'DELETE',{version:expense.version}));
  assert.equal((await call('/contracts/'+expense.id)).status,404);
+ assert.equal((await call('/contracts?trash=1')).status,403); // CRUD alone does not make a trash admin.
+ assert.equal((await call('/contracts?trash=1','GET',undefined,1)).status,403); // System admin outside ODIS.
+ assert.equal((await call('/contracts/'+expense.id+'/restore','POST',{version:expense.version+1})).status,403);
+ const trashResource=await db.accessResource.findUniqueOrThrow({where:{key:'diagnostic.contracts.trash'}});
+ await db.spaceGroupPermission.create({data:{groupId:1,resourceId:trashResource.id,action:'VIEW'}});
+ assert.equal((await ok(await call('/catalog'))).canManageTrash,true);
  const trash=await ok(await call('/contracts?trash=1'));assert.equal(trash.length,1);
  await ok(await call('/contracts/'+expense.id+'/restore','POST',{version:trash[0].version}));
  assert.equal((await call('/contracts/'+expense.id)).status,200);

@@ -8,10 +8,12 @@ export interface ContractInput {
  supervisorId:number|null; relatedContractId:number|null;
 }
 export interface ContractRecord extends ContractInput {
+ createdById:number;updatedById:number;createdAt:string;updatedAt:string;creator:string;editor:string;relatedContractNumber:string|null;
  id:number;version:number;status:ContractStatus;buildings:number;counterparty:string;
  projectType:string|null;supervisor:string|null;deletedAt:string|null;
 }
 export interface DiagnosticCatalog {
+ canManageTrash:boolean;
  counterparties:{id:number;name:string}[];projectTypes:{id:number;name:string}[];
  supervisors:{id:number;name:string}[];supervisorWarning:string|null;
  incomeContracts:{id:number;number:string;counterparty:string}[];

@@ -11,24 +11,30 @@ async function atomic<T>(fn:(tx:Prisma.TransactionClient)=>Promise<T>):Promise<T
  try{return await prisma.$transaction(fn,{isolationLevel:Prisma.TransactionIsolationLevel.Serializable,timeout:10000});}
  catch(e){if(e instanceof Prisma.PrismaClientKnownRequestError && ['P2034','P2002'].includes(e.code))throw createError({statusCode:409,message:'Данные изменены параллельно. Обновите список и повторите действие.'});throw e;}
 }
-const include={counterparty:true,projectType:true,supervisor:{select:{id:true,fullName:true,login:true,deletedAt:true}},_count:{select:{structures:{where:{deletedAt:null}}}}} satisfies Prisma.DiagnosticContractInclude;
+const include={relatedContract:{select:{number:true}},counterparty:true,projectType:true,supervisor:{select:{id:true,fullName:true,login:true,deletedAt:true}},_count:{select:{structures:{where:{deletedAt:null}}}}} satisfies Prisma.DiagnosticContractInclude;
 type Row=Prisma.DiagnosticContractGetPayload<{include:typeof include}>;
 const day=(d:Date|null)=>d?.toISOString().slice(0,10)??null;
 export function serializeContract(r:Row):ContractRecord{
- return {id:r.id,version:r.version,number:r.number,date:day(r.date)!,counterpartyId:r.counterpartyId,counterparty:r.counterparty.name,
+ return {createdById:r.createdById,updatedById:r.updatedById,createdAt:r.createdAt.toISOString(),updatedAt:r.updatedAt.toISOString(),creator:'',editor:'',relatedContractNumber:r.relatedContract?.number??null,id:r.id,version:r.version,number:r.number,date:day(r.date)!,counterpartyId:r.counterpartyId,counterparty:r.counterparty.name,
  direction:r.direction,executor:r.executor,start:day(r.start),finish:day(r.finish),stages:r.stages,hours:r.hours?.toString()??null,amount:r.amount?.toString()??null,note:r.note,
  projectTypeId:r.projectTypeId,projectType:r.projectType?.name??null,supervisorId:r.supervisorId,
  supervisor:r.supervisor?(r.supervisor.deletedAt?'Удалённый аккаунт':r.supervisor.fullName||r.supervisor.login):null,
  relatedContractId:r.relatedContractId,buildings:r._count.structures,status:contractStatus(day(r.date)!,day(r.finish)),deletedAt:r.deletedAt?.toISOString()??null};
 }
+async function withAuthors(rows:ContractRecord[],db:Prisma.TransactionClient=prisma){
+ const ids=[...new Set(rows.flatMap(r=>[r.createdById,r.updatedById]))];
+ const users=await db.user.findMany({where:{id:{in:ids}},select:{id:true,fullName:true,login:true,email:true,deletedAt:true}});
+ const names=new Map(users.map(u=>[u.id,u.deletedAt?'Удалённый аккаунт':u.fullName||u.login||u.email||('Сотрудник #'+u.id)]));
+ return rows.map(r=>({...r,creator:names.get(r.createdById)||'Удалённый аккаунт',editor:names.get(r.updatedById)||'Удалённый аккаунт'}));
+}
 export async function listContracts(trash=false){
  const rows=await prisma.diagnosticContract.findMany({where:{deletedAt:trash?{not:null}:null},include,orderBy:[{date:'desc'},{id:'desc'}]});
- return rows.map(serializeContract);
+ return withAuthors(rows.map(serializeContract));
 }
 export async function readContract(id:number){
  const row=await prisma.diagnosticContract.findFirst({where:{id,deletedAt:null},include});
  if(!row)throw createError({statusCode:404,message:'Договор не найден.'});
- return serializeContract(row);
+ return (await withAuthors([serializeContract(row)]))[0]!;
 }
 export async function saveContract(event:H3Event,actorId:number,input:ContractInput,contractId?:number,version?:number){
  // AD queries run outside transactions.
@@ -60,7 +66,7 @@ export async function saveContract(event:H3Event,actorId:number,input:ContractIn
   }else row=await tx.diagnosticContract.create({data:{...data,createdById:actorId},include});
   const after=serializeContract(row);
   await writeAuditEvent({event,db:tx,category:'DATA',result:'SUCCESS',action:before?'UPDATE':'CREATE',resourceKey:CONTRACT_RESOURCE,entityType:'DiagnosticContract',entityId:row.id,actorUserId:actorId,note:'Договор '+row.number,changes:computeAuditDelta(before?{...serializeContract(before)}:{},{...after})});
-  return after;
+  return (await withAuthors([after],tx))[0]!;
  });
 }
 export async function deleteContract(event:H3Event,actorId:number,id:number,version:number,restore=false){
