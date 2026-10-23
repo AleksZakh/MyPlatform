@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AccessStructureNav from '~/components/admin/AccessStructureNav.vue'
 import { computed } from 'vue'
 import DepartmentMemberPicker from '~/components/admin/DepartmentMemberPicker.vue'
 import { useStructureAdmin } from '~/composables/useStructureAdmin'
@@ -14,7 +15,7 @@ const { busy, error, notice, departments, spaceDepartments, directoryName, depar
   addMany, batchProgress, groupDraftVersion, dirty, hasGroup, sync, newGroup, openGroup, saveGroup, add, activate, reloadDepartments } = useStructureAdmin()
 </script>
 <template>
-  <div class="structure-page">
+  <div class="structure-wrapper"><AccessStructureNav/><div class="structure-page">
     <header><NuxtLink to="/admin/users">← Администрирование пользователей</NuxtLink><h1>Отделы и группы Space</h1>
       <nav><button :aria-pressed="tab === 'departments'" @click="tab = 'departments'">Отделы из AD</button><button :aria-pressed="tab === 'groups'" @click="tab = 'groups'">Группы Space</button><NuxtLink to="/admin/access">Назначение прав →</NuxtLink></nav>
     </header>
@@ -63,7 +64,7 @@ const { busy, error, notice, departments, spaceDepartments, directoryName, depar
         <p v-if="error && groupId">При конфликте откройте группу заново из списка; это сбросит черновик после подтверждения.</p>
       </div><p v-else>Создайте группу или выберите существующую.</p>
     </section>
-  </div>
+  </div></div>
 </template>
 <style scoped>
 .structure-page { height:100%; overflow:auto; box-sizing:border-box; padding:20px; background:var(--space-panel, #f5f7fb); color:var(--space-text, #172b4d); font-size:13px; }
@@ -79,3 +80,5 @@ ul { list-style:none; padding:0; } li { margin:6px 0; } aside li button { width:
 </style>
 
 <style scoped>thead { position:sticky; top:0; background:var(--space-bg, #f3f6fb); }.actions { position:sticky; bottom:0; background:var(--space-panel, white); padding:10px 0; border-top:1px solid var(--space-line, #dce4ed); }.scroll { max-height:240px; }td { overflow-wrap:anywhere; }</style>
+
+<style scoped>.structure-wrapper{min-height:100%;display:flex;flex-direction:column}.structure-wrapper .structure-page{flex:1;height:auto;min-height:0}</style>

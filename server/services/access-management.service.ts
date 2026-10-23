@@ -1,3 +1,5 @@
+import {requireDepartmentManager} from './department-access-guard'
+import type {DepartmentScope} from '../../shared/access/live-policy'
 import { spaceGroupMembership } from './space-group-access.service'
 import { getDomainGroupContext, emptyDomainGroupContext, type DomainGroupContext } from './domain-group-access.service'
 import { createHash } from 'node:crypto'
@@ -204,8 +206,9 @@ export async function saveAccessChanges(event: H3Event, kind: AccessSubjectKind,
   return accessError(409, 'ACCESS_REVISION_CONFLICT', 'Обновите матрицу.')
 }
 
-export async function listAccessSubjects(event: H3Event, kind: AccessSubjectKind, search: string) {
-  await requirePermission(event, 'admin.users', 'VIEW')
+export async function listAccessSubjects(event: H3Event, kind: AccessSubjectKind, search: string, scope?: DepartmentScope) {
+  if(scope) await requireDepartmentManager(event,scope)
+  else await requirePermission(event, 'admin.users', 'VIEW')
   let items: AccessSubjectOption[]
   if (kind === 'user') {
     const users = await prisma.user.findMany({

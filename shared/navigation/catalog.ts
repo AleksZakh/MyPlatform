@@ -9,7 +9,6 @@ export const departmentPages = [
   { key: 'lab', label: 'Лабораторный контроль', to: '/departments/lab' },
 ] as const
 export const toolPages = [
-  { label: 'Роли подразделений', to: '/admin/access-roles', description: 'Тестовая настройка шаблонов, массовых назначений и персональных исключений.', icon: 'lucide:contact-round', adminOnly: true },
   { label: 'Статистика', to: '/admin/statistics', description: 'Использование разделов, документов и коммуникаций Space.', icon: 'lucide:chart-no-axes-combined', resource: 'system.usage-statistics' },
   { label: 'Пользователи онлайн', to: '/online', description: 'Кто сейчас работает в Space: сотрудники в сети и отошедшие.', icon: 'lucide:users-round', resource: 'admin.center' },
   { label: 'Видео библиотеки', to: '/library/video-settings', description: 'Лимит загрузки учебных видео.', icon: 'lucide:video', resource: 'library.manage' },
@@ -19,7 +18,7 @@ export const toolPages = [
   { label: 'Подразделения', to: '/admin/structure?tab=departments', description: 'Отделы из department в AD, сопоставление и состав.', icon: 'lucide:building-2', adminOnly: true },
   { label: 'Группы Space', to: '/admin/structure?tab=groups', description: 'Внутренние группы: пользователи и включённые группы AD.', icon: 'lucide:group', adminOnly: true },
   { label: 'Группы AD', to: '/admin/access?kind=domainGroup', description: 'Поиск и импорт групп безопасности из домена.', icon: 'lucide:network', adminOnly: true },
-  { label: 'Права доступа', to: '/admin/access', description: 'Назначения сотрудникам, отделам и группам; источники доступа.', icon: 'lucide:shield-check', resource: 'admin.users' },
+  { label: 'Права доступа', to: '/admin/access', description: 'Шаблоны прав подразделений, назначения сотрудникам и группам, источники доступа.', icon: 'lucide:shield-check', resource: 'admin.users' },
   { label: 'Журнал событий', to: '/admin/audit-log', description: 'Действия, изменения данных и отказы в доступе.', icon: 'lucide:history', resource: 'system.audit-log' },
   { label: 'Заявки', to: '/admin/registration-requests', description: 'Рассмотрение заявок на внешний доступ.', icon: 'lucide:clipboard-list', adminOnly: true },
 ] satisfies (NavigationItem & { resource?: string; adminOnly?: boolean })[]

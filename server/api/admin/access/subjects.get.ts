@@ -1,5 +1,6 @@
 import { defineEventHandler, getQuery } from 'h3'
 import { listAccessSubjects } from '~~/server/services/access-management.service'
+import {parseScope} from '../../../services/department-access-guard'
 import { accessError } from '~~/server/services/access-input'
 
 export default defineEventHandler(async event => {
@@ -10,5 +11,5 @@ export default defineEventHandler(async event => {
   if (query.search !== undefined && (typeof query.search !== 'string' || query.search.length > 120)) {
     accessError(400, 'INVALID_ACCESS_SEARCH', 'Поиск ограничен 120 символами.')
   }
-  return listAccessSubjects(event, query.kind, typeof query.search === 'string' ? query.search.trim() : '')
+  return listAccessSubjects(event, query.kind, typeof query.search === 'string' ? query.search.trim() : '', query.scope===undefined?undefined:parseScope(query.scope))
 })

@@ -13,7 +13,8 @@ export default defineEventHandler(async event => {
     useRuntimeConfig(event).adminLogins, false, membership))
   const canView = (key: string) => snapshot.data.some(r => r.key === key && r.actions.VIEW.effectiveGranted)
   const departments = await prisma.department.findMany({ where: { isActive: true }, select: { key: true, name: true }, orderBy: { name: 'asc' } })
-  const tools = canView('admin.center') ? toolPages.filter(t => t.to === '/admin/statistics' ? isStatisticsOwner(actor.user) : t.adminOnly ? actor.isSystemAdmin : !!t.resource && canView(t.resource))
+  const departmentManager = ['lab.access-admin','diagnostic.access-admin'].some(key => snapshot.data.some(r => r.key===key && r.actions.UPDATE.effectiveGranted))
+  const tools = (canView('admin.center') || departmentManager) ? toolPages.filter(t => t.to === '/admin/access' && departmentManager ? true : t.to === '/admin/statistics' ? isStatisticsOwner(actor.user) : t.adminOnly ? actor.isSystemAdmin : !!t.resource && canView(t.resource))
     .map(({ label, to, description, icon }) => ({ label, to, description, icon })) : []
   const sections: NavigationData['sections'] = [{ label: 'Главная', to: '/' }, { label: 'Пользователи online', to: '/online' }]
   // Existing general department landing pages remain discoverable for authenticated users.
@@ -23,6 +24,7 @@ export default defineEventHandler(async event => {
   }
   if (canView('lab.sampling-tests')) sections.push({ label: 'Лаборатория — акты отбора проб', to: '/departments/lab/sampling' })
   if (canView('lab.test-protocols')) sections.push({ label: 'Лаборатория — протоколы испытаний', to: '/departments/lab/testprotocol' })
+  if (departmentManager && !canView('admin.center')) sections.push({ label: 'Права доступа', to: '/admin/access' })
   if (canView('admin.center')) sections.push({ label: 'Инструменты', to: '/admin' })
   return { tools, sections, departments, isSystemAdmin: actor.isSystemAdmin } satisfies NavigationData
 })

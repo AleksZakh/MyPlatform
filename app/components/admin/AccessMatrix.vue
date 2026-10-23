@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { watch } from 'vue'
+import { computed, watch } from 'vue'
 import type { AccessActionName, AccessRow, AccessSnapshot, AccessSubjectKind } from '~~/shared/types/access-management'
 import { useAccessMatrix } from '~/composables/useAccessMatrix'
 
-const props = defineProps<{ kind: AccessSubjectKind; subjectId: number }>()
+const props = defineProps<{ kind: AccessSubjectKind; subjectId: number; excludeDepartments?: boolean }>()
 const emit = defineEmits<{ updated: [snapshot: AccessSnapshot] }>()
 // Parent keys this component by subject: in-flight responses never update another subject.
 const { snapshot, loading, saving, error, notice, needsReload, search, onlyAssigned,
-  group, groups, rows, labels, load, toggle, toggleAll, selected, canSet, dirtyCount, apply, reset } = useAccessMatrix(props.kind, props.subjectId)
+  group, groups, rows: allRows, labels, load, toggle, toggleAll, selected, canSet, dirtyCount, apply, reset } = useAccessMatrix(props.kind, props.subjectId)
+const rows=computed(()=>props.excludeDepartments?allRows.value.filter(r=>!r.key.startsWith('lab.')&&!r.key.startsWith('diagnostic.')):allRows.value)
 watch(snapshot, value => { if (value) emit('updated', value) })
 
 function sourceText(row: AccessRow, action: AccessActionName): string {
@@ -72,7 +73,7 @@ function allDisabled(row: AccessRow) {
       <p v-if="!snapshot.subject.isActive" class="matrix-hint">Получатель неактивен. Назначения сохранены, но не дают доступа. Их можно отозвать.</p>
       <p v-if="snapshot.subject.department && !snapshot.subject.department.isActive" class="matrix-hint">Отдел отключён: его права не наследуются.</p>
       <p v-if="snapshot.directoryWarning" class="matrix-error" role="status">{{ snapshot.directoryWarning }}</p>
-      <AdminDiagnosticRestrictions v-if="kind==='user' && !snapshot.subject.isSystemAdmin" :user-id="subjectId" :can-manage="snapshot.canManage" @saved="load" />
+      <AdminDiagnosticRestrictions v-if="!excludeDepartments && kind==='user' && !snapshot.subject.isSystemAdmin" :user-id="subjectId" :can-manage="snapshot.canManage" @saved="load" />
       <div class="matrix-filters">
         <label>Поиск ресурса<input v-model="search" type="search" placeholder="Название или ключ" /></label>
         <label>Раздел ресурсов<select v-model="group"><option value="">Все разделы</option><option v-for="item in groups" :key="item">{{ item }}</option></select></label>
