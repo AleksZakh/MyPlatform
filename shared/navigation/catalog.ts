@@ -9,6 +9,7 @@ export const departmentPages = [
   { key: 'lab', label: 'Лабораторный контроль', to: '/departments/lab' },
 ] as const
 export const toolPages = [
+  { label: 'Роли подразделений', to: '/admin/access-roles', description: 'Тестовая настройка шаблонов, массовых назначений и персональных исключений.', icon: 'lucide:contact-round', adminOnly: true },
   { label: 'Статистика', to: '/admin/statistics', description: 'Использование разделов, документов и коммуникаций Space.', icon: 'lucide:chart-no-axes-combined', resource: 'system.usage-statistics' },
   { label: 'Пользователи онлайн', to: '/online', description: 'Кто сейчас работает в Space: сотрудники в сети и отошедшие.', icon: 'lucide:users-round', resource: 'admin.center' },
   { label: 'Видео библиотеки', to: '/library/video-settings', description: 'Лимит загрузки учебных видео.', icon: 'lucide:video', resource: 'library.manage' },
