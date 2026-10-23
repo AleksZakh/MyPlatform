@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import type { NavigationData, NavigationItem } from '~~/shared/navigation/catalog';
+import { isAccessStructureTool, type NavigationData, type NavigationItem } from '~~/shared/navigation/catalog';
 import type { AdminDashboardActivity, AdminDashboardSummary } from '~~/shared/types/admin-dashboard';
 import AdminActivityChart from './AdminActivityChart.vue';
 const props = defineProps<{ navigation: NavigationData | null; summary: AdminDashboardSummary | null;
@@ -13,7 +13,7 @@ const categories = [ { key: 'all', label: 'Все инструменты' }, { k
   { key: 'access', label: 'Доступ и структура' }, { key: 'content', label: 'Файлы и контент' }, { key: 'control', label: 'Контроль' } ];
 function group(tool: NavigationItem) {
   if (['/admin/users', '/online', '/admin/registration-requests'].includes(tool.to)) return 'people';
-  if (/^\/admin\/(access|structure)/.test(tool.to)) return 'access';
+  if (isAccessStructureTool(tool)) return 'access';
   if (['/admin/files', '/admin/export-settings', '/library/video-settings'].includes(tool.to)) return 'content';
   return 'control';
 }

@@ -24,6 +24,20 @@ export const toolPages = [
   { label: 'Заявки', to: '/admin/registration-requests', description: 'Рассмотрение заявок на внешний доступ.', icon: 'lucide:clipboard-list', adminOnly: true },
 ] satisfies (NavigationItem & { resource?: string; adminOnly?: boolean })[]
 
+/** Shared category for the admin dashboard and access navigation. */
+export function isAccessStructureTool(tool: NavigationItem): boolean {
+  return /^\/admin\/(access(?:-roles)?|structure)(?:[/?]|$)/.test(tool.to)
+}
+
+export function isAccessStructureActive(to: string, path: string, query: Record<string, unknown>): boolean {
+  const [target, rawQuery = ''] = to.split('?')
+  if (target !== path.replace(/\/+$/, '')) return false
+  const params = new URLSearchParams(rawQuery)
+  if (target === '/admin/structure') return (params.get('tab') || 'departments') === String(query.tab || 'departments')
+  if (target === '/admin/access') return params.get('kind') === 'domainGroup' ? query.kind === 'domainGroup' : query.kind !== 'domainGroup'
+  return true
+}
+
 export function breadcrumbs(path: string, query: Record<string, unknown>, departments: NavigationData['departments'] = [], customLabel?: string) {
   const result: NavigationItem[] = [{ label: 'Space', to: '/' }]
   const clean = path.replace(/\/+$/, '') || '/'

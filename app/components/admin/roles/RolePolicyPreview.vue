@@ -26,11 +26,7 @@ const roleLabel=(value:Role|undefined)=>roles.find(r=>r.key===value)?.label||'Н
 onBeforeRouteLeave(()=>!dirty.value||window.confirm('Выйти без сохранения изменений тестового черновика?'));
 </script>
 <template>
- <main class="role-preview" :aria-busy="loading">
-  <header class="rp-header"><div><NuxtLink to="/admin" class="rp-back">← Центр администрирования</NuxtLink><h1>Роли подразделений <span class="rp-badge">Тестовая методика</span></h1></div>
-   <div v-if="catalog" class="rp-actions"><button @click="exportDraft"><Icon name="lucide:download"/> JSON</button><button class="rp-primary" :disabled="!dirty" @click="save"><Icon name="lucide:save"/> Сохранить черновик</button></div>
-  </header>
-  <div class="rp-banner"><Icon name="lucide:flask-conical"/><div><strong>Проверяем будущую политику доступа.</strong> Все настройки ниже — модель, а не действующие права. Черновик хранится только в этом браузере для вашей учётной записи. <NuxtLink to="/admin/access">Действующие права →</NuxtLink></div></div>
+ <main class="role-preview" aria-label="Роли подразделений" :aria-busy="loading">
   <p v-if="notice" class="rp-notice" role="status">{{ notice }}</p>
   <p v-if="loading" class="rp-empty">Загружаем сотрудников и ресурсы…</p>
   <div v-else-if="error" class="rp-error" role="alert">{{ error }} <button @click="load">Повторить</button></div>
@@ -40,6 +36,8 @@ onBeforeRouteLeave(()=>!dirty.value||window.confirm('Выйти без сохр�
     <div><strong>{{ scopeInfo?.resources.length }} ресурсов</strong><span>Единая роль для всего раздела</span></div>
     <div><strong>{{ assignedCount }} сотрудников</strong><span>Получили роль в черновике</span></div>
     <div><strong>{{ dirty ? 'Есть изменения' : 'Черновик сохранён / исходный' }}</strong><span>Рабочие назначения не меняются</span></div>
+    <div class="rp-actions"><button @click="exportDraft"><Icon name="lucide:download"/> Выгрузить JSON</button><button class="rp-primary" :disabled="!dirty" @click="save"><Icon name="lucide:save"/> Сохранить черновик</button></div>
+    <p class="rp-draft-note"><span class="rp-badge">Тестовая методика</span> Все настройки ниже — модель, а не действующие права. Черновик хранится только в этом браузере для вашей учётной записи.</p>
     <details><summary>Состав раздела</summary><ul><li v-for="r in scopeInfo?.resources" :key="r.key">{{ r.name }} <small>{{ r.key }}</small></li></ul><p v-if="!scopeInfo?.resources.length">Ресурсы ещё не зарегистрированы.</p><p>Состав взят из активных ресурсов Space. Общие сервисы и администрирование Space сюда не включены.</p></details>
    </section>
    <section class="rp-roles" aria-label="Шаблоны ролей">
