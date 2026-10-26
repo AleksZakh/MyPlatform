@@ -1444,3 +1444,51 @@ model UserPermissionDeny {
   @@id([userId,resourceId,action])
   @@map("user_permission_denials")
 }
+
+// Work library: code is an identifier, never a decimal number.
+model DiagnosticWorkGroup {
+  id           Int @id
+  name         String @unique @db.VarChar(300)
+  nextSequence Int @default(1)
+  categories   DiagnosticWorkCategory[]
+  works        DiagnosticWork[]
+  @@map("diagnostic_work_groups")
+}
+model DiagnosticWorkCategory {
+  id          Int @id @default(autoincrement())
+  groupId     Int
+  name        String @db.VarChar(250)
+  createdById Int?
+  createdAt   DateTime @default(now())
+  group       DiagnosticWorkGroup @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  works       DiagnosticWork[]
+  @@unique([groupId, name])
+  @@unique([id, groupId])
+  @@map("diagnostic_work_categories")
+}
+model DiagnosticWork {
+  id           Int @id @default(autoincrement())
+  legacyId     Int? @unique
+  code         String @unique @db.VarChar(100)
+  groupId      Int
+  sequence     Int
+  categoryId   Int
+  name         String @db.VarChar(300)
+  hours        Decimal @db.Decimal(12, 4)
+  criteria     String @db.VarChar(2000)
+  note         String @default("") @db.VarChar(4000)
+  version      Int @default(1)
+  createdById  Int
+  updatedById  Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
+  deletedById  Int?
+  deleteReason String? @db.VarChar(1000)
+  group        DiagnosticWorkGroup @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  category     DiagnosticWorkCategory @relation(fields: [categoryId, groupId], references: [id, groupId], onDelete: Restrict)
+  @@unique([groupId, sequence])
+  @@index([deletedAt, groupId, sequence])
+  @@map("diagnostic_works")
+}
+
