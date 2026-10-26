@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DiagnosticModuleTabs from '../DiagnosticModuleTabs.vue';
 import {computed,ref} from 'vue';
 import {onBeforeRouteLeave} from 'vue-router';
 import {useWorkLibraryPreview,workCategories,workGroups,type WorkExample} from '~/composables/diagnostic/useWorkLibraryPreview';
@@ -17,7 +18,7 @@ onBeforeRouteLeave(()=>!dirty.value||window.confirm('Уйти без сохра�
 </script>
 <template>
 <section class="work-library">
- <nav class="wl-nav" aria-label="Модули диагностики"><NuxtLink to="/departments/diagnostic">Договоры</NuxtLink><span aria-current="page">Библиотека работ</span><button v-for="m in modules" :key="m" @click="notice=`Раздел «${m}» пока не подключён.`">{{ m }}</button></nav>
+ <DiagnosticModuleTabs active="works"/>
  <div class="wl-content">
  <p class="wl-demo">Тестовый интерфейс · Примеры работ · Изменения исчезнут при перезагрузке или выходе из раздела. БД не изменяется.</p>
  <div class="wl-tabs"><strong>Список работ</strong><button disabled title="Следующий этап">Наборы работ · позже</button></div>

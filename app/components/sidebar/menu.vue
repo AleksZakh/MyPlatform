@@ -5,7 +5,8 @@
     <!-- Кнопка сворачивания меню -->
     <button
       type="button"
-      class="absolute toggle-icon right-1 top-0"
+      class="absolute toggle-icon right-1 top-1"
+      :aria-label="isCollapsed ? 'Развернуть меню' : 'Свернуть меню'"
       @click="$emit('toggle')"
     >
       <span
@@ -275,6 +276,7 @@ defineEmits<{
   flex-direction: column;
   overflow: hidden;
   white-space: nowrap;
+  padding-top: 34px;
 }
 
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DiagnosticModuleTabs from '../DiagnosticModuleTabs.vue';
 import ContractEditor from './ContractEditor.vue';
 import { ref } from 'vue';
 import { useContractsPreview } from '~/composables/diagnostic/useContractsPreview';
@@ -18,11 +19,10 @@ async function remove(){const row=selected.value;if(!row||!rights.value.DELETE)r
 </script>
 <template>
  <section class="diagnostic-contracts">
-  <nav class="diagnostic-modules" aria-label="Модули диагностики">
-   <div class="diagnostic-module-links"><button v-for="module in modules" :key="module" :aria-current="module==='Договоры'?'page':undefined" @click="module==='Библиотека работ'?navigateTo('/departments/diagnostic?module=works'):(notice=module==='Договоры'?'':`Раздел «${module}» будет перенесён на следующем этапе.`)">{{ module }}</button></div>
+  <DiagnosticModuleTabs active="contracts">
    <UDropdownMenu :items="[{label:'Сбросить поиск и сортировку',onSelect:reset}]"><button class="diagnostic-quick">Быстрые действия <Icon name="lucide:chevron-down" /></button></UDropdownMenu>
    <label class="diagnostic-search"><span class="sr-only">Поиск договоров</span><input v-model="search" type="search" placeholder="Поиск договоров"/><Icon name="lucide:search" aria-hidden="true"/></label>
-  </nav>
+  </DiagnosticModuleTabs>
   <div class="diagnostic-content">
    <p v-if="loading" role="status">Загрузка договоров…</p><p v-if="error" class="contract-error" role="alert">{{ error }} <button @click="load">Повторить</button></p><p v-if="trash">Корзина договоров</p>
    <p v-if="notice" class="diagnostic-notice" role="status">{{ notice }} <button aria-label="Закрыть сообщение" @click="notice=''">×</button></p>
