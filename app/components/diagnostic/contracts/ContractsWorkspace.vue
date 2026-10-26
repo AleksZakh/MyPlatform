@@ -19,7 +19,7 @@ async function remove(){const row=selected.value;if(!row||!rights.value.DELETE)r
 <template>
  <section class="diagnostic-contracts">
   <nav class="diagnostic-modules" aria-label="Модули диагностики">
-   <div class="diagnostic-module-links"><button v-for="module in modules" :key="module" :aria-current="module==='Договоры'?'page':undefined" @click="notice=module==='Договоры'?'':`Раздел «${module}» будет перенесён на следующем этапе.`">{{ module }}</button></div>
+   <div class="diagnostic-module-links"><button v-for="module in modules" :key="module" :aria-current="module==='Договоры'?'page':undefined" @click="module==='Библиотека работ'?navigateTo('/departments/diagnostic?module=works'):(notice=module==='Договоры'?'':`Раздел «${module}» будет перенесён на следующем этапе.`)">{{ module }}</button></div>
    <UDropdownMenu :items="[{label:'Сбросить поиск и сортировку',onSelect:reset}]"><button class="diagnostic-quick">Быстрые действия <Icon name="lucide:chevron-down" /></button></UDropdownMenu>
    <label class="diagnostic-search"><span class="sr-only">Поиск договоров</span><input v-model="search" type="search" placeholder="Поиск договоров"/><Icon name="lucide:search" aria-hidden="true"/></label>
   </nav>
