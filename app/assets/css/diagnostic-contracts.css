@@ -34,3 +34,5 @@ html.dark .diagnostic-contract-modal{--contract-bg:#293b4a;--contract-panel:#344
 
 .contract-authorship{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:20px;padding-top:10px;border-top:1px solid var(--space-field-border,#c7d3df);color:var(--space-muted,#64748b);font-size:12px}
 .contract-authorship strong{font-weight:500}
+
+.diagnostic-contracts{height:100%;min-height:0;display:flex;flex-direction:column;overflow:hidden;box-sizing:border-box}.diagnostic-contracts>.diag-module-tabs{flex-shrink:0}.diagnostic-contracts>.diagnostic-content{width:100%;min-height:0;flex:1;overflow:auto;box-sizing:border-box}
