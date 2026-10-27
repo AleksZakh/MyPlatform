@@ -80,7 +80,7 @@ const isContainedMain =
       route.path ===
         '/admin/users' ||
       route.path === '/admin/access' ||
-      route.path === '/departments/diagnostic' ||
+      route.path === '/departments/diagnostic' || route.path === '/admin/audit-log' ||
       route.path === '/profile' ||
       route.path.startsWith(
         '/admin/users/',

@@ -1,11 +1,11 @@
 <template>
-  <div class="min-h-full bg-slate-50">
-    <div class="mx-auto w-full max-w-[1500px] px-6 py-6 lg:px-8">
+  <div class="diagnostic-contracts audit-log-page">
+    <div class="audit-log-shell mx-auto w-full max-w-[1500px] px-6 py-6 lg:px-8">
 
       <!-- =====================================================
            BREADCRUMBS
            ===================================================== -->
-      <div class="mb-7 flex items-center gap-2 text-sm text-slate-500">
+      <div class="mb-7 flex items-center gap-2 text-sm audit-muted">
         <span>Центр управления</span>
 
         <Icon
@@ -13,7 +13,7 @@
           class="h-4 w-4"
         />
 
-        <span class="font-medium text-sky-700">
+        <span class="font-medium audit-accent">
           Журнал событий
         </span>
       </div>
@@ -32,13 +32,13 @@
           <h1
             class="
               text-2xl font-semibold tracking-tight
-              text-slate-950
+              audit-text
             "
           >
             Журнал событий
           </h1>
 
-          <p class="mt-1 text-sm text-slate-500">
+          <p class="mt-1 text-sm audit-muted">
             История действий пользователей и системных событий Space
           </p>
         </div>
@@ -54,7 +54,7 @@
             <span
               class="
                 mb-1.5 block text-xs font-medium
-                uppercase tracking-wide text-slate-500
+                uppercase tracking-wide audit-muted
               "
             >
               С даты
@@ -64,11 +64,11 @@
               v-model="filters.dateFrom"
               type="date"
               class="
-                h-10 rounded-xl border border-slate-300
-                bg-white px-3 text-sm text-slate-800
+                h-10 rounded-xl border audit-border
+                audit-bg px-3 text-sm audit-text
                 outline-none transition
-                focus:border-sky-500
-                focus:ring-4 focus:ring-sky-100
+                
+                 
               "
             >
           </label>
@@ -78,7 +78,7 @@
             <span
               class="
                 mb-1.5 block text-xs font-medium
-                uppercase tracking-wide text-slate-500
+                uppercase tracking-wide audit-muted
               "
             >
               По дату
@@ -88,11 +88,11 @@
               v-model="filters.dateTo"
               type="date"
               class="
-                h-10 rounded-xl border border-slate-300
-                bg-white px-3 text-sm text-slate-800
+                h-10 rounded-xl border audit-border
+                audit-bg px-3 text-sm audit-text
                 outline-none transition
-                focus:border-sky-500
-                focus:ring-4 focus:ring-sky-100
+                
+                 
               "
             >
           </label>
@@ -101,10 +101,10 @@
           <button
             type="button"
             class="
-              h-10 rounded-xl border border-sky-600
-              bg-white px-5 text-sm font-semibold
-              text-sky-700 transition
-              hover:bg-sky-50
+              h-10 rounded-xl border audit-border
+              audit-bg px-5 text-sm font-semibold
+              audit-accent transition
+              audit-hover-panel
             "
             @click="resetFilters"
           >
@@ -115,10 +115,10 @@
           <button
             type="button"
             class="
-              h-10 rounded-xl bg-sky-600 px-6
-              text-sm font-semibold text-white
+              h-10 rounded-xl audit-primary px-6
+              text-sm font-semibold audit-on-primary
               shadow-sm transition
-              hover:bg-sky-700
+              audit-hover-primary
               disabled:cursor-not-allowed
               disabled:opacity-50
             "
@@ -141,7 +141,7 @@
             class="
               pointer-events-none absolute
               left-3.5 top-1/2 h-5 w-5
-              -translate-y-1/2 text-slate-400
+              -translate-y-1/2 audit-muted
             "
           />
 
@@ -151,12 +151,12 @@
             placeholder="Поиск по журналу..."
             class="
               h-11 w-full rounded-xl
-              border border-slate-300 bg-white
-              pl-11 pr-4 text-sm text-slate-900
+              border audit-border audit-bg
+              pl-11 pr-4 text-sm audit-text
               outline-none transition
-              placeholder:text-slate-400
-              focus:border-sky-500
-              focus:ring-4 focus:ring-sky-100
+              
+              
+               
             "
             @keyup.enter="applyFilters"
           >
@@ -170,7 +170,7 @@
       <div
         class="
           mb-2 overflow-x-auto
-          border-b border-slate-200
+          border-b audit-border
         "
       >
         <div class="flex min-w-max gap-8">
@@ -184,8 +184,8 @@
             "
             :class="
               filters.category === tab.value
-                ? 'text-sky-700'
-                : 'text-slate-500 hover:text-slate-900'
+                ? 'audit-accent'
+                : 'audit-muted audit-hover-text'
             "
             @click="selectCategory(tab.value)"
           >
@@ -195,7 +195,7 @@
               v-if="filters.category === tab.value"
               class="
                 absolute inset-x-0 bottom-0
-                h-0.5 rounded-full bg-sky-600
+                h-0.5 rounded-full audit-tab-indicator
               "
             />
           </button>
@@ -204,16 +204,17 @@
 
 
       <div v-if="filters.category==='DATA'" class="mb-3 flex flex-wrap gap-2" aria-label="Раздел данных">
-        <button v-for="item in [{key:'',label:'Все разделы'},{key:'diagnostic',label:'Диагностика'},{key:'lab',label:'Лабораторный контроль'},{key:'library',label:'Библиотека'},{key:'projects',label:'Проекты'},{key:'chat',label:'Чат'}]" :key="item.key" class="rounded-lg border px-3 py-1" :aria-pressed="filters.module===item.key" :class="filters.module===item.key?'bg-sky-700 text-white':''" @click="filters.module=item.key;pagination.page=1;loadAuditLog()">{{item.label}}</button>
+        <button v-for="item in [{key:'',label:'Все разделы'},{key:'diagnostic',label:'Диагностика'},{key:'lab',label:'Лабораторный контроль'},{key:'library',label:'Библиотека'},{key:'projects',label:'Проекты'},{key:'chat',label:'Чат'}]" :key="item.key" class="rounded-lg border px-3 py-1" :aria-pressed="filters.module===item.key" :class="filters.module===item.key?'audit-primary audit-on-primary':''" @click="filters.module=item.key;pagination.page=1;loadAuditLog()">{{item.label}}</button>
       </div>
+      <div class="audit-log-scroll" role="region" aria-label="События журнала" tabindex="0" :aria-busy="loading">
       <!-- =====================================================
            ERROR
            ===================================================== -->
       <div
         v-if="errorMessage"
         class="
-          my-5 rounded-xl border border-red-200
-          bg-red-50 px-4 py-3 text-sm text-red-700
+          my-5 rounded-xl border audit-error-border
+          audit-error-bg px-4 py-3 text-sm audit-error-text
         "
       >
         {{ errorMessage }}
@@ -226,7 +227,7 @@
       <div
         v-if="loading && events.length === 0"
         class="
-          flex min-h-[360px]
+          audit-log-state flex
           items-center justify-center
         "
       >
@@ -235,11 +236,11 @@
             name="lucide:loader-circle"
             class="
               mx-auto h-7 w-7
-              animate-spin text-sky-600
+              animate-spin audit-accent
             "
           />
 
-          <div class="mt-3 text-sm text-slate-500">
+          <div class="mt-3 text-sm audit-muted">
             Загружаем журнал событий...
           </div>
         </div>
@@ -251,14 +252,14 @@
            ===================================================== -->
       <div
         v-else-if="events.length"
-        class="divide-y divide-slate-200 max-h-135 overflow-y-auto"
+        class="audit-log-events"
       >
         <article
           v-for="eventItem in events"
           :key="eventItem.id"
           class="
             group transition
-            hover:bg-white
+            audit-hover-panel
           "
         >
           <button
@@ -280,9 +281,9 @@
                   flex h-12 w-12 shrink-0
                   items-center justify-center
                   rounded-full overflow-hidden
-                  bg-sky-100
+                  audit-panel
                   text-sm font-semibold
-                  text-sky-700
+                  audit-accent
                 "
               >
                 <img
@@ -304,7 +305,7 @@
                 <div
                   class="
                     truncate font-medium
-                    text-slate-900
+                    audit-text
                   "
                 >
                   {{ eventItem.actor.name }}
@@ -313,7 +314,7 @@
                 <div
                   class="
                     mt-0.5 truncate
-                    text-sm text-slate-400
+                    text-sm audit-muted
                   "
                 >
                   {{
@@ -335,7 +336,7 @@
               >
                 <span
                   class="
-                    font-medium text-slate-900
+                    font-medium audit-text
                   "
                 >
                   {{ buildEventTitle(eventItem) }}
@@ -357,7 +358,7 @@
                 class="
                   mt-1 flex flex-wrap
                   items-center gap-x-2 gap-y-1
-                  text-sm text-slate-400
+                  text-sm audit-muted
                 "
               >
                 <span v-if="eventItem.resourceKey">
@@ -392,7 +393,7 @@
               <div
                 class="
                   text-sm tabular-nums
-                  text-slate-500
+                  audit-muted
                 "
               >
                 {{ formatDateTime(eventItem.timestamp) }}
@@ -401,7 +402,7 @@
               <Icon
                 name="lucide:chevron-down"
                 class="
-                  h-4 w-4 text-slate-400
+                  h-4 w-4 audit-muted
                   transition-transform
                 "
                 :class="
@@ -421,8 +422,8 @@
             v-if="expandedEventId === eventItem.id"
             class="
               mx-3 mb-4 rounded-2xl
-              border border-slate-200
-              bg-white p-5 shadow-sm
+              border audit-border
+              audit-bg p-5 shadow-sm
             "
           >
             <div
@@ -438,7 +439,7 @@
                   class="
                     mb-4 text-xs font-semibold
                     uppercase tracking-wider
-                    text-slate-400
+                    audit-muted
                   "
                 >
                   Сведения о событии
@@ -450,25 +451,25 @@
                     gap-x-4 gap-y-3 text-sm
                   "
                 >
-                  <dt class="text-slate-400">
+                  <dt class="audit-muted">
                     Категория
                   </dt>
 
-                  <dd class="font-medium text-slate-700">
+                  <dd class="font-medium audit-text">
                     {{ eventItem.category || '—' }}
                   </dd>
 
 
-                  <dt class="text-slate-400">
+                  <dt class="audit-muted">
                     Действие
                   </dt>
 
-                  <dd class="font-medium text-slate-700">
+                  <dd class="font-medium audit-text">
                     {{ eventItem.action || '—' }}
                   </dd>
 
 
-                  <dt class="text-slate-400">
+                  <dt class="audit-muted">
                     Результат
                   </dt>
 
@@ -485,37 +486,37 @@
                   </dd>
 
 
-                  <dt class="text-slate-400">
+                  <dt class="audit-muted">
                     Авторизация
                   </dt>
 
-                  <dd class="font-medium text-slate-700">
+                  <dd class="font-medium audit-text">
                     {{ eventItem.actor.authType || '—' }}
                   </dd>
 
 
-                  <dt class="text-slate-400">
+                  <dt class="audit-muted">
                     Ресурс
                   </dt>
 
                   <dd
                     class="
                       break-all font-mono
-                      text-xs text-slate-600
+                      text-xs audit-muted
                     "
                   >
                     {{ eventItem.resourceKey || '—' }}
                   </dd>
 
 
-                  <dt class="text-slate-400">
+                  <dt class="audit-muted">
                     Маршрут
                   </dt>
 
                   <dd
                     class="
                       break-all font-mono
-                      text-xs text-slate-600
+                      text-xs audit-muted
                     "
                   >
                     {{ eventItem.method || '' }}
@@ -523,14 +524,14 @@
                   </dd>
 
 
-                  <dt class="text-slate-400">
+                  <dt class="audit-muted">
                     IP
                   </dt>
 
                   <dd
                     class="
                       font-mono text-xs
-                      text-slate-600
+                      audit-muted
                     "
                   >
                     {{ eventItem.ipAddress || '—' }}
@@ -545,7 +546,7 @@
                   class="
                     mb-4 text-xs font-semibold
                     uppercase tracking-wider
-                    text-slate-400
+                    audit-muted
                   "
                 >
                   Изменения
@@ -556,16 +557,16 @@
                   v-if="getChanges(eventItem).length"
                   class="
                     overflow-hidden rounded-xl
-                    border border-slate-200
+                    border audit-border
                   "
                 >
                   <div
                     class="
                       grid grid-cols-[160px_1fr_1fr]
-                      bg-slate-50 px-4 py-2
+                      audit-bg px-4 py-2
                       text-xs font-semibold
                       uppercase tracking-wide
-                      text-slate-400
+                      audit-muted
                     "
                   >
                     <div>Поле</div>
@@ -579,14 +580,14 @@
                     :key="change.field"
                     class="
                       grid grid-cols-[160px_1fr_1fr]
-                      border-t border-slate-100
+                      border-t audit-border
                       px-4 py-3 text-sm
                     "
                   >
                     <div
                       class="
                         pr-3 font-mono
-                        text-xs text-slate-500
+                        text-xs audit-muted
                       "
                     >
                       {{ change.field }}
@@ -595,7 +596,7 @@
                     <div
                       class="
                         break-words pr-3
-                        text-slate-500
+                        audit-muted
                       "
                     >
                       {{ formatValue(change.before) }}
@@ -604,7 +605,7 @@
                     <div
                       class="
                         break-words font-medium
-                        text-slate-800
+                        audit-text
                       "
                     >
                       {{ formatValue(change.after) }}
@@ -617,9 +618,9 @@
                   v-else
                   class="
                     rounded-xl border
-                    border-dashed border-slate-200
+                    border-dashed audit-border
                     px-4 py-8 text-center
-                    text-sm text-slate-400
+                    text-sm audit-muted
                   "
                 >
                   Для этого события изменения данных не зафиксированы.
@@ -637,7 +638,7 @@
       <div
         v-else
         class="
-          flex min-h-[360px]
+          audit-log-state flex
           flex-col items-center justify-center
           text-center
         "
@@ -646,18 +647,18 @@
           class="
             flex h-14 w-14 items-center
             justify-center rounded-2xl
-            bg-slate-100
+            audit-panel
           "
         >
           <Icon
             name="lucide:history"
-            class="h-7 w-7 text-slate-400"
+            class="h-7 w-7 audit-muted"
           />
         </div>
 
         <div
           class="
-            mt-4 font-medium text-slate-700
+            mt-4 font-medium audit-text
           "
         >
           Событий не найдено
@@ -665,13 +666,15 @@
 
         <div
           class="
-            mt-1 text-sm text-slate-400
+            mt-1 text-sm audit-muted
           "
         >
           Попробуйте изменить параметры поиска.
         </div>
       </div>
 
+
+      </div><!-- /audit-log-scroll -->
 
       <!-- =====================================================
            PAGINATION
@@ -681,7 +684,7 @@
         class="
           mt-4 flex items-center
           justify-end gap-1
-          border-t border-slate-200 pt-4
+          border-t audit-border pt-4
         "
       >
         <button
@@ -689,8 +692,8 @@
           class="
             flex h-9 w-9 items-center
             justify-center rounded-full
-            text-slate-400 transition
-            hover:bg-slate-100
+            audit-muted transition
+            audit-hover-panel
             disabled:opacity-30
           "
           :disabled="pagination.page <= 1 || loading"
@@ -713,8 +716,8 @@
           "
           :class="
             pageNumber === pagination.page
-              ? 'bg-slate-200 font-semibold text-slate-800'
-              : 'text-slate-500 hover:bg-slate-100'
+              ? 'audit-panel font-semibold audit-text'
+              : 'audit-muted audit-hover-panel'
           "
           :disabled="loading"
           @click="goToPage(pageNumber)"
@@ -728,8 +731,8 @@
           class="
             flex h-9 w-9 items-center
             justify-center rounded-full
-            text-slate-400 transition
-            hover:bg-slate-100
+            audit-muted transition
+            audit-hover-panel
             disabled:opacity-30
           "
           :disabled="
@@ -753,6 +756,8 @@
 
 useHead({
   title: 'Журнал событий',
+  // Scoped by Unhead: removed automatically when this page is unmounted.
+  htmlAttrs: { 'data-space-audit-layout': 'contained' },
 });
 
 import {
@@ -1424,26 +1429,26 @@ const resultClass =
 
       case 'SUCCESS':
         return (
-          'bg-emerald-50 ' +
-          'text-emerald-700'
+          'audit-success-bg ' +
+          'audit-success-text'
         );
 
       case 'DENIED':
         return (
-          'bg-red-50 ' +
-          'text-red-700'
+          'audit-error-bg ' +
+          'audit-error-text'
         );
 
       case 'FAILED':
         return (
-          'bg-amber-50 ' +
-          'text-amber-700'
+          'audit-warning-bg ' +
+          'audit-warning-text'
         );
 
       default:
         return (
-          'bg-slate-100 ' +
-          'text-slate-600'
+          'audit-panel ' +
+          'audit-muted'
         );
     }
   };
@@ -1579,3 +1584,7 @@ onMounted(
   loadAuditLog,
 );
 </script>
+
+<!-- Reuse the exact contract palette (--diag-*) in both themes. -->
+<style src="~/assets/css/diagnostic-contracts.css"></style>
+<style src="~/assets/css/audit-log.css"></style>

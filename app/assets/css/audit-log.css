@@ -1,0 +1,107 @@
+/* Contract colours come from diagnostic-contracts.css through the shared root class.
+   The document lock is route-scoped; Unhead removes the data attribute on navigation. */
+html[data-space-audit-layout="contained"],
+html[data-space-audit-layout="contained"] body {
+  height: 100%;
+  overflow: hidden;
+}
+html[data-space-audit-layout="contained"] body { margin: 0; }
+
+.diagnostic-contracts.audit-log-page {
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--diag-bg);
+  color: var(--diag-text);
+}
+.audit-log-page .audit-log-shell {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.audit-log-shell > * { flex-shrink: 0; min-width: 0; }
+.audit-log-shell > .audit-log-scroll {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
+}
+.audit-log-events { min-width: 0; }
+.audit-log-events > article + article { border-top: 1px solid var(--diag-line); }
+.audit-log-events article { min-width: 0; }
+.audit-log-events article > button { min-width: 0; }
+.audit-log-events article > div { overflow-wrap: anywhere; }
+.audit-log-events article > div :is(.grid, dl, dd) { min-width: 0; }
+.audit-log-state { min-height: 180px; height: 100%; }
+
+.audit-log-page .audit-text { color: var(--diag-text); }
+.audit-log-page .audit-muted { color: var(--diag-muted); }
+.audit-log-page .audit-accent { color: var(--diag-accent); }
+.audit-log-page .audit-bg { background-color: var(--diag-bg); }
+.audit-log-page .audit-panel { background-color: var(--diag-panel); }
+.audit-log-page .audit-border { border-color: var(--diag-line); }
+.audit-log-page .audit-hover-panel:hover { background-color: var(--diag-panel); }
+.audit-log-page .audit-hover-text:hover { color: var(--diag-text); }
+.audit-log-page .audit-primary { background-color: #176b88; }
+.audit-log-page .audit-on-primary { color: #fff; }
+.audit-log-page .audit-hover-primary:hover { filter: brightness(1.12); }
+.audit-log-page .audit-tab-indicator { background-color: var(--diag-accent); }
+.audit-log-page input::placeholder { color: var(--diag-muted); opacity: 1; }
+.audit-log-page :is(button, input, [tabindex]):focus-visible {
+  outline: 2px solid var(--diag-accent);
+  outline-offset: 2px;
+}
+.audit-log-page button:disabled { cursor: not-allowed; }
+
+/* Status semantics are retained without light pills on a dark background. */
+.audit-log-page .audit-success-bg { background-color: #ecfdf5; }
+.audit-log-page .audit-success-text { color: #047857; }
+.audit-log-page .audit-error-bg { background-color: #fef2f2; }
+.audit-log-page .audit-error-text { color: #b91c1c; }
+.audit-log-page .audit-error-border { border-color: #fecaca; }
+.audit-log-page .audit-warning-bg { background-color: #fffbeb; }
+.audit-log-page .audit-warning-text { color: #b45309; }
+html.dark .audit-log-page .audit-success-bg { background-color: #244b43; }
+html.dark .audit-log-page .audit-success-text { color: #a6eaa0; }
+html.dark .audit-log-page .audit-error-bg { background-color: #4a3038; }
+html.dark .audit-log-page .audit-error-text { color: #ffb4b4; }
+html.dark .audit-log-page .audit-error-border { border-color: #80535f; }
+html.dark .audit-log-page .audit-warning-bg { background-color: #493f30; }
+html.dark .audit-log-page .audit-warning-text { color: #ffd29b; }
+html.dark .audit-log-page input[type="date"] { color-scheme: dark; }
+
+.audit-log-page .audit-log-scroll,
+.audit-log-page .audit-log-shell,
+html.dark .audit-log-page .audit-log-scroll,
+html.dark .audit-log-page .audit-log-shell {
+  scrollbar-width: thin;
+  scrollbar-color: var(--diag-line) var(--diag-bg);
+}
+.audit-log-page .audit-log-scroll::-webkit-scrollbar,
+.audit-log-page .audit-log-shell::-webkit-scrollbar { width: 8px; height: 8px; }
+html.dark .audit-log-page .audit-log-scroll::-webkit-scrollbar-track,
+html.dark .audit-log-page .audit-log-shell::-webkit-scrollbar-track { background: var(--diag-bg); }
+html.dark .audit-log-page .audit-log-scroll::-webkit-scrollbar-thumb,
+html.dark .audit-log-page .audit-log-shell::-webkit-scrollbar-thumb {
+  background: var(--diag-line);
+  border: 2px solid var(--diag-bg);
+  border-radius: 6px;
+}
+
+/* On compact screens keep all controls reachable with a single scroll owner. */
+@media (max-width: 767px), (max-height: 600px) {
+  .audit-log-page .audit-log-shell { display: block; overflow-y: auto; overscroll-behavior-y: contain; }
+  .audit-log-shell > .audit-log-scroll { overflow: visible; scrollbar-gutter: auto; }
+  .audit-log-state { height: auto; }
+}
+@media (max-width: 767px) {
+  .audit-log-events [class*="grid-cols-[160px_"] { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); }
+  .audit-log-events dl { grid-template-columns: minmax(80px, 1fr) minmax(0, 2fr); }
+}

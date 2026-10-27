@@ -11,7 +11,7 @@
 
 <script setup lang="ts">
 const route = useRoute();
-const containedPage = computed(() => route.path === '/departments/diagnostic' || route.path === '/profile' || route.path === '/admin/access' || route.path === '/admin/users' || route.path.startsWith('/admin/users/'));
+const containedPage = computed(() => route.path === '/departments/diagnostic' || route.path === '/admin/audit-log' || route.path === '/profile' || route.path === '/admin/access' || route.path === '/admin/users' || route.path.startsWith('/admin/users/'));
 
 import { ru } from '@nuxt/ui/locale';
 
