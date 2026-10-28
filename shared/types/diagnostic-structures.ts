@@ -20,6 +20,7 @@ export interface StructureRecord {
   classNk: string;
   classEnz: string;
   lengthMetres: number | null;
+  lengthRaw?: string;
   plannedWorks: string;
   operator: string;
   commissionedYear: string;

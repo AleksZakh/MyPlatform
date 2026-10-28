@@ -222,3 +222,11 @@ html[data-space-text="largest"] .st-detail-body {overflow:visible;}
   .st-import-panel .st-import-summary {gap:8px 16px;}
   .st-import-panel .st-import-footer {padding:10px;}
 }
+
+/* Live data uses the same contained layout and blue theme. */
+.st-card-content{display:block;min-width:0;width:100%;}
+.st-card-body{display:block!important;min-height:0;overflow-y:auto;}
+.st-card-content .st-fields dd{white-space:pre-wrap;overflow-wrap:anywhere;}
+.st-detail-body .st-fields dd{white-space:pre-wrap;overflow-wrap:anywhere;}
+.st-heading-actions{flex-wrap:wrap;}
+.st-source p+p{margin-top:8px;}

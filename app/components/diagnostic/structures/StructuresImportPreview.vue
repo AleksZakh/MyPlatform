@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue';
 import type { StructureRecord } from '~~/shared/types/diagnostic-structures';
 import { planStructureImport } from '~~/shared/utils/diagnostic-structures';
 import { readStructuresWorkbook, type StructureWorkbookSheet } from '~/utils/diagnostic/readStructuresWorkbook';
-const props=defineProps<{open:boolean; existing:StructureRecord[]}>();
+const props=defineProps<{open:boolean; existing:Pick<StructureRecord,'issoCode'>[]; previewOnly?:boolean}>();
 const emit=defineEmits<{ 'update:open':[value:boolean]; preview:[records:StructureRecord[]] }>();
 const busy=ref(false), fileName=ref(''), note=ref(''), error=ref(''), sheets=ref<StructureWorkbookSheet[]>([]), sheetIndex=ref(0), dragging=ref(false), inputKey=ref(0);
 let generation=0;
@@ -28,10 +28,10 @@ async function choose(files:FileList|null){
 function picked(event:Event){void choose((event.target as HTMLInputElement).files);}
 function dropped(event:DragEvent){dragging.value=false;void choose(event.dataTransfer?.files||null);}
 function close(){if(!busy.value)emit('update:open',false);}
-function apply(){if(!busy.value&&plan.value&&!plan.value.errors.length&&plan.value.records.length){emit('preview',plan.value.records);emit('update:open',false);}}
+function apply(){if(!props.previewOnly&&!busy.value&&plan.value&&!plan.value.errors.length&&plan.value.records.length){emit('preview',plan.value.records);emit('update:open',false);}}
 </script>
 <template>
-  <UModal :open="open" title="Импорт сооружений · предварительный просмотр" description="Проверка Excel и пропуск существующих кодов ИССО" :dismissible="!busy" :ui="{content:'st-import-panel w-[calc(100vw-2rem)] max-w-[1440px]',body:'st-import-body block min-w-0',footer:'st-import-footer'}" @update:open="value=>{if(!value)close()}">
+  <UModal :open="open" :title="previewOnly?'Проверка Excel · сооружения':'Импорт сооружений · предварительный просмотр'" description="Проверка Excel и пропуск существующих кодов ИССО" :dismissible="!busy" :ui="{content:'st-import-panel w-[calc(100vw-2rem)] max-w-[1440px]',body:'st-import-body block min-w-0',footer:'st-import-footer'}" @update:open="value=>{if(!value)close()}">
     <template #body>
       <div class="st-import-content">
       <div class="st-import-toolbar" :class="{'st-import-has-sheet':sheets.length}">
@@ -44,7 +44,7 @@ function apply(){if(!busy.value&&plan.value&&!plan.value.errors.length&&plan.val
       </div>
       <p v-if="busy" role="status">Чтение файла {{ fileName }}…</p>
       <p v-else-if="fileName" class="st-import-filename">Файл: {{ fileName }}</p>
-      <p class="st-preview-note">Временный просмотр без отправки на сервер и записи в БД. Повторные коды ИССО пропускаются. Добавленные строки исчезнут после обновления страницы.</p>
+      <p v-if="previewOnly" class="st-preview-note">Проверка файла без записи в справочник. Существующие коды сверены со всей базой на момент открытия окна. Результаты остаются в этом окне.</p><p v-else class="st-preview-note">Временный просмотр без отправки на сервер и записи в БД. Повторные коды ИССО пропускаются. Добавленные строки исчезнут после обновления страницы.</p>
       <p v-if="error||prepared.error" role="alert" class="st-error">{{ error||prepared.error }}</p>
       <template v-if="plan">
         <div class="st-import-summary" role="status"><span>Строк: <b>{{ plan.total }}</b></span><span>Новых: <b>{{ plan.records.length }}</b></span><span>Пропустить: <b>{{ plan.skipped.length }}</b></span><span>Ошибок: <b>{{ plan.errors.length }}</b></span></div>
@@ -58,6 +58,6 @@ function apply(){if(!busy.value&&plan.value&&!plan.value.errors.length&&plan.val
       <div v-if="!fileName&&!busy&&!error" class="st-import-empty"><Icon name="lucide:table-2" aria-hidden="true"/><p>Выберите Excel-файл — здесь появятся результаты проверки и таблица сооружений.</p></div>
       </div>
     </template>
-    <template #footer><span class="st-muted">Только временный просмотр</span><button type="button" :disabled="busy" @click="close">Закрыть</button><button type="button" class="st-primary" :disabled="busy||!plan?.records.length||!!plan?.errors.length" @click="apply">Добавить в просмотр{{ plan?.records.length?' ('+plan.records.length+')':'' }}</button></template>
+    <template #footer><span class="st-muted">{{ previewOnly?'Проверка файла без сохранения':'Только временный просмотр' }}</span><button type="button" :disabled="busy" @click="close">Закрыть</button><button v-if="!previewOnly" type="button" class="st-primary" :disabled="busy||!plan?.records.length||!!plan?.errors.length" @click="apply">Добавить в просмотр{{ plan?.records.length?' ('+plan.records.length+')':'' }}</button></template>
   </UModal>
 </template>

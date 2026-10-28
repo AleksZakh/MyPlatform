@@ -50,8 +50,9 @@ export function sortStructures(rows: readonly StructureRecord[], key: StructureS
   });
 }
 export function structureValue(row: StructureRecord, key: StructureField): string {
+  if(key==='lengthMetres' && row.lengthRaw?.trim())return row.lengthRaw;
   const value=row[key];
-  if (value===null || value==='') return '—';
+  if (value==null || value==='') return '—';
   return typeof value==='number' ? value.toLocaleString('ru-RU',{maximumFractionDigits:6}) : value;
 }
 export function structureOptions(rows: readonly StructureRecord[], key: 'management'|'region'|'roadName'|'structureName'|'issoType'): string[] {
@@ -78,7 +79,7 @@ export interface StructureImportPlan {
   errors: StructureImportIssue[]; ignoredHeaders: string[];
 }
 /** Pure preview planner. Existing codes are skipped and never overwritten. */
-export function planStructureImport(matrix: readonly (readonly string[])[], existing: readonly StructureRecord[], fileName: string, note=''): StructureImportPlan {
+export function planStructureImport(matrix: readonly (readonly string[])[], existing: readonly Pick<StructureRecord,'issoCode'>[], fileName: string, note=''): StructureImportPlan {
   if (!matrix.length) throw new Error('В листе нет данных.');
   const headers=matrix[0] || [], keys=headers.map(structureHeaderKey);
   const required: StructureField[]=['issoCode','roadName','structureName','location'];
