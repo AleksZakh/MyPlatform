@@ -1429,9 +1429,15 @@ model DiagnosticContractStructure {
   id Int @id @default(autoincrement())
   contractId Int
   contract DiagnosticContract @relation(fields:[contractId],references:[id],onDelete:Restrict)
-  legacyStructureId String @db.VarChar(150)
+  legacyStructureId String? @db.VarChar(150)
+  structureId Int
+  structure DiagnosticStructure @relation(fields:[structureId],references:[id],onDelete:Restrict)
+  legacyContractReferences DiagnosticStructureLegacyContract[]
+  workAssignments DiagnosticStructureWork[]
   deletedAt DateTime?
-  @@unique([contractId,legacyStructureId])
+  @@index([legacyStructureId])
+  @@unique([contractId,structureId])
+  @@unique([id,structureId])
   @@map("diagnostic_contract_structures")
 }
 
@@ -1487,8 +1493,116 @@ model DiagnosticWork {
   deleteReason String? @db.VarChar(1000)
   group        DiagnosticWorkGroup @relation(fields: [groupId], references: [id], onDelete: Restrict)
   category     DiagnosticWorkCategory @relation(fields: [categoryId, groupId], references: [id, groupId], onDelete: Restrict)
+  structureAssignments DiagnosticStructureWork[]
   @@unique([groupId, sequence])
   @@index([deletedAt, groupId, sequence])
   @@map("diagnostic_works")
 }
 
+
+// Structures are shared between contracts; work effort belongs to an assignment.
+model DiagnosticStructure {
+  id Int @id @default(autoincrement())
+  code String @unique @db.VarChar(200)
+  management String @default("") @db.Text
+  structureName String @default("") @db.Text
+  issoType String @default("") @db.Text
+  roadName String @default("") @db.Text
+  location String @default("") @db.Text
+  placementType String @default("") @db.Text
+  additionalId String @default("") @db.Text
+  obstacleType String @default("") @db.Text
+  obstacleName String @default("") @db.Text
+  region String @default("") @db.Text
+  district String @default("") @db.Text
+  operator String @default("") @db.Text
+  commissionedYear String @default("") @db.Text
+  expertOpinion String @default("") @db.Text
+  conditionRating String @default("") @db.Text
+  classAk String @default("") @db.Text
+  classNk String @default("") @db.Text
+  classEnz String @default("") @db.Text
+  lengthRaw String @default("") @db.Text
+  plannedWorks String @default("") @db.Text
+  note String @default("") @db.Text
+  locationMetres Decimal? @db.Decimal(13, 0)
+  lengthMetres Decimal? @db.Decimal(18, 6)
+  version Int @default(1)
+  createdById Int
+  updatedById Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  deletedById Int?
+  deleteReason String? @db.Text
+  legacyRows DiagnosticStructureLegacyRow[]
+  legacyContracts DiagnosticStructureLegacyContract[]
+  legacyExecutors DiagnosticStructureLegacyExecutor[]
+  contracts DiagnosticContractStructure[]
+  @@index([deletedAt, code])
+  @@index([locationMetres])
+  @@map("diagnostic_structures")
+}
+model DiagnosticStructureLegacyRow {
+  id Int @id @default(autoincrement())
+  legacyId Int @unique
+  structureId Int
+  sourceHash String @db.VarChar(64)
+  dumpHash String @db.VarChar(64)
+  rawData Json
+  importedById Int
+  importedAt DateTime @default(now())
+  structure DiagnosticStructure @relation(fields:[structureId],references:[id],onDelete:Restrict)
+  @@index([structureId])
+  @@map("diagnostic_structure_legacy_rows")
+}
+model DiagnosticStructureLegacyContract {
+  id Int @id @default(autoincrement())
+  structureId Int
+  key String @db.VarChar(64)
+  customer String @db.Text
+  number String @db.Text
+  dateText String @db.Text
+  date DateTime? @db.Date
+  contractStructureId Int?
+  linkedById Int?
+  linkedAt DateTime?
+  structure DiagnosticStructure @relation(fields:[structureId],references:[id],onDelete:Restrict)
+  contractStructure DiagnosticContractStructure? @relation(fields:[contractStructureId,structureId],references:[id,structureId],onDelete:Restrict,map:"ds_legacy_contract_link_fk")
+  @@unique([structureId, key])
+  @@index([contractStructureId])
+  @@map("diagnostic_structure_legacy_contracts")
+}
+model DiagnosticStructureLegacyExecutor {
+  id Int @id @default(autoincrement())
+  structureId Int
+  key String @db.VarChar(64)
+  name String @db.Text
+  structure DiagnosticStructure @relation(fields:[structureId],references:[id],onDelete:Restrict)
+  @@unique([structureId, key])
+  @@map("diagnostic_structure_legacy_executors")
+}
+model DiagnosticStructureWork {
+  id Int @id @default(autoincrement())
+  contractStructureId Int
+  structureId Int
+  workId Int
+  workCodeSnapshot String @db.VarChar(100)
+  workNameSnapshot String @db.VarChar(300)
+  criteriaSnapshot String @db.Text
+  catalogHoursSnapshot Decimal @db.Decimal(12, 4)
+  hours Decimal @db.Decimal(12, 4)
+  note String @default("") @db.Text
+  version Int @default(1)
+  createdById Int
+  updatedById Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  deletedById Int?
+  contractStructure DiagnosticContractStructure @relation(fields:[contractStructureId,structureId],references:[id,structureId],onDelete:Restrict,map:"ds_work_contract_link_fk")
+  work DiagnosticWork @relation(fields:[workId],references:[id],onDelete:Restrict)
+  @@index([contractStructureId, deletedAt])
+  @@index([workId])
+  @@map("diagnostic_structure_works")
+}
