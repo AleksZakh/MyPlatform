@@ -1,0 +1,32 @@
+/* Only the authenticated shell locks document scrolling; auth layouts remain natural. */
+html[data-space-shell="app"], html[data-space-shell="app"] body {
+  height:100%; min-height:0; margin:0; overflow:hidden;
+}
+html[data-space-shell="app"] #__nuxt { height:100%; min-height:0; }
+.space-page-frame { box-sizing:border-box; min-width:0; min-height:0; }
+
+/* Register heights derive from the content grid row between the header and footer. */
+.space-page-frame .diagnostic-contracts > .diagnostic-content {
+  display:flex; flex-direction:column; overflow:hidden;
+}
+.space-page-frame .diagnostic-content > * { flex-shrink:0; }
+.space-page-frame .diagnostic-content > .diagnostic-register { flex:1 1 0%; min-height:0; }
+.space-page-frame .diagnostic-register-main { display:flex; flex-direction:column; min-height:0; }
+.space-page-frame .diagnostic-register-main > * { flex-shrink:0; }
+.space-page-frame .diagnostic-table-scroll { flex:1 1 0%; min-height:0; max-height:none; }
+.space-page-frame .diagnostic-actions { min-height:0; overflow:auto; }
+.space-page-frame .work-library > .wl-content { overflow:hidden; }
+.space-page-frame .work-library .wl-table { min-height:0; }
+
+/* On short/narrow displays, one workspace scrollbar keeps all controls reachable. */
+@media (max-width:900px), (max-height:700px) {
+  .space-page-frame .diagnostic-contracts > .diagnostic-content { display:block; overflow:auto; }
+  .space-page-frame .diagnostic-register-main { display:block; }
+  .space-page-frame .diagnostic-table-scroll { max-height:none; }
+  .space-page-frame .diagnostic-actions { overflow:visible; }
+  .space-page-frame .work-library > .wl-content { display:block; overflow:auto; }
+  .space-page-frame .work-library .wl-table { max-height:none; }
+}
+html[data-space-text="largest"] .space-page-frame .diagnostic-contracts > .diagnostic-content { display:block; overflow:auto; }
+html[data-space-text="largest"] .space-page-frame .diagnostic-register-main { display:block; }
+html[data-space-text="largest"] .space-page-frame .work-library > .wl-content { display:block; overflow:auto; }

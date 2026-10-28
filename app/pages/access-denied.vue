@@ -132,11 +132,11 @@ useHead({
 
 <style scoped>
 .access-denied-container {
-  min-height: 100vh;
+  min-height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #60a5fa 0%, #1e40af 100%);
   padding: 20px;
 }
 
@@ -205,14 +205,14 @@ useHead({
 }
 
 .btn-primary {
-  background: #4f46e5;
+  background: #2563eb;
   color: white;
 }
 
 .btn-primary:hover {
-  background: #4338ca;
+  background: #1d4ed8;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
 .btn-secondary {
@@ -227,12 +227,12 @@ useHead({
 
 .btn-outline {
   background: transparent;
-  color: var(--space-accent, #4f46e5);
-  border: 2px solid #4f46e5;
+  color: var(--space-accent, #2563eb);
+  border: 2px solid #2563eb;
 }
 
 .btn-outline:hover {
-  background: #4f46e5;
+  background: #2563eb;
   color: white;
   transform: translateY(-2px);
 }

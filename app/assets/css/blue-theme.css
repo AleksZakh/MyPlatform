@@ -1,0 +1,79 @@
+/* Shared accents for pages, Nuxt UI and teleported menus/dialogs. */
+:root {
+  --space-blue-accent:#2563eb;
+  --space-blue-solid:#2563eb;
+  --space-blue-soft:#eff6ff;
+  --space-blue-on-accent:#fff;
+  --ui-color-primary-50:#eff6ff;
+  --color-purple-50:#eff6ff;
+  --color-violet-50:#eff6ff;
+  --color-indigo-50:#eff6ff;
+  --color-fuchsia-50:#eff6ff;
+  --ui-color-primary-100:#dbeafe;
+  --color-purple-100:#dbeafe;
+  --color-violet-100:#dbeafe;
+  --color-indigo-100:#dbeafe;
+  --color-fuchsia-100:#dbeafe;
+  --ui-color-primary-200:#bfdbfe;
+  --color-purple-200:#bfdbfe;
+  --color-violet-200:#bfdbfe;
+  --color-indigo-200:#bfdbfe;
+  --color-fuchsia-200:#bfdbfe;
+  --ui-color-primary-300:#93c5fd;
+  --color-purple-300:#93c5fd;
+  --color-violet-300:#93c5fd;
+  --color-indigo-300:#93c5fd;
+  --color-fuchsia-300:#93c5fd;
+  --ui-color-primary-400:#60a5fa;
+  --color-purple-400:#60a5fa;
+  --color-violet-400:#60a5fa;
+  --color-indigo-400:#60a5fa;
+  --color-fuchsia-400:#60a5fa;
+  --ui-color-primary-500:#3b82f6;
+  --color-purple-500:#3b82f6;
+  --color-violet-500:#3b82f6;
+  --color-indigo-500:#3b82f6;
+  --color-fuchsia-500:#3b82f6;
+  --ui-color-primary-600:#2563eb;
+  --color-purple-600:#2563eb;
+  --color-violet-600:#2563eb;
+  --color-indigo-600:#2563eb;
+  --color-fuchsia-600:#2563eb;
+  --ui-color-primary-700:#1d4ed8;
+  --color-purple-700:#1d4ed8;
+  --color-violet-700:#1d4ed8;
+  --color-indigo-700:#1d4ed8;
+  --color-fuchsia-700:#1d4ed8;
+  --ui-color-primary-800:#1e40af;
+  --color-purple-800:#1e40af;
+  --color-violet-800:#1e40af;
+  --color-indigo-800:#1e40af;
+  --color-fuchsia-800:#1e40af;
+  --ui-color-primary-900:#1e3a8a;
+  --color-purple-900:#1e3a8a;
+  --color-violet-900:#1e3a8a;
+  --color-indigo-900:#1e3a8a;
+  --color-fuchsia-900:#1e3a8a;
+  --ui-color-primary-950:#172554;
+  --color-purple-950:#172554;
+  --color-violet-950:#172554;
+  --color-indigo-950:#172554;
+  --color-fuchsia-950:#172554;
+}
+html:is(.dark,.dark-mode) {
+  --space-blue-accent:#93c5fd;
+  --space-blue-solid:#2563eb;
+  --space-blue-soft:#1e3a5f;
+  --space-blue-on-accent:#172554;
+}
+html[data-space-contrast="high"] {
+  --space-blue-accent:#1e40af;
+  --space-blue-solid:#1e40af;
+  --space-blue-soft:#eff6ff;
+  --space-blue-on-accent:#fff;
+}
+/* The graphite sheet also sets --ui-primary: keep the semantic accent consistent. */
+html, html:is(.dark,.dark-mode), html[data-space-contrast="high"] {
+  --ui-primary:var(--space-blue-accent)!important;
+  --ui-secondary:var(--space-blue-accent);
+}

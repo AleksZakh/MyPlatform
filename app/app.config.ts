@@ -1,5 +1,6 @@
 export default defineAppConfig({
   ui: {
+    colors: { primary: 'blue', secondary: 'sky', info: 'sky' },
     icons: {
       system: 'i-ph-desktop',
       light: 'i-ph-sun',

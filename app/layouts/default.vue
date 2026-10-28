@@ -50,6 +50,8 @@
 
 <script setup lang="ts">
 
+import { usesContainedPage } from '~~/shared/utils/contained-pages';
+
 import {
   computed,
   ref,
@@ -74,18 +76,10 @@ const route =
  * высоту main наследует корневой контейнер страницы,
  * а прокрутка живёт уже внутри рабочих панелей.
  */
-const isContainedMain =
-  computed(
-    () =>
-      route.path ===
-        '/admin/users' ||
-      route.path === '/admin/access' ||
-      route.path === '/departments/diagnostic' || route.path === '/admin/audit-log' ||
-      route.path === '/profile' ||
-      route.path.startsWith(
-        '/admin/users/',
-      ),
-  );
+const isContainedMain = computed(() => usesContainedPage(route.path));
+
+// The lock belongs to this layout, so auth/standalone pages retain document scrolling.
+useHead({ htmlAttrs: { 'data-space-shell': 'app' } });
 
 
 /**
@@ -107,8 +101,12 @@ const toggleSidebar = () => {
   grid-template-rows:
     auto minmax(0, 1fr) auto;
 
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
   width: 100%;
   height: 100dvh;
+  max-height: 100dvh;
   min-width: 0;
   min-height: 0;
 
@@ -126,6 +124,7 @@ const toggleSidebar = () => {
  * содержимым страницы и вытолкнуть footer вниз.
  */
 .layout-content {
+  grid-row: 2;
   display: grid;
 
   grid-template-columns:
@@ -174,4 +173,7 @@ const toggleSidebar = () => {
   overflow: hidden;
 }
 
+/* Explicit tracks keep overlays and notification nodes out of the content sizing. */
+.layout-wrapper > :deep(nav) { grid-row: 1; min-width: 0; }
+.layout-wrapper > :deep(footer) { grid-row: 3; min-width: 0; }
 </style>

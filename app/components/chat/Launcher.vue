@@ -23,7 +23,7 @@ const statusText = (s: string) => s === 'online' ? 'В сети' : s === 'away' 
   <UModal v-if="loggedIn" v-model:open="open" title="Сообщения" description="Личные и групповые переписки Space" :ui="{ content: 'w-[calc(100vw-2rem)] sm:w-[calc(100vw-2rem)] sm:max-w-5xl', body: 'block min-w-0 p-0 sm:p-0' }">
     <UButton data-space-stat="chat.open" color="neutral" variant="ghost" class="space-chat-launcher relative shrink-0" title="Сообщения"
       :aria-label="inbox.unread ? `Открыть сообщения. Непрочитанных: ${inbox.unread}` : 'Открыть сообщения'">
-      <Icon name="streamline-freehand-color:send-email-paper-plane-1" size="20" aria-hidden="true" />
+      <Icon name="streamline-freehand-color:send-email-paper-plane-1" size="18" aria-hidden="true" />
       <UBadge v-if="inbox.unread" color="error" size="sm" class="absolute -right-2 -top-1" aria-hidden="true">{{ inbox.unread > 99 ? '99+' : inbox.unread }}</UBadge>
     </UButton>
     <template #body>
@@ -93,5 +93,8 @@ const statusText = (s: string) => s === 'online' ? 'В сети' : s === 'away' 
 </template>
 
 <style>
-html.dark .space-chat-launcher{background:#cbd5e1!important;border:1px solid #94a3b8!important;color:#172b3a!important;min-width:36px;min-height:36px;justify-content:center;border-radius:8px}html.dark .space-chat-launcher:hover{background:#e2e8f0!important}html.dark .space-chat-launcher:focus-visible{outline:2px solid #78d6ea;outline-offset:3px}
+.space-chat-launcher{box-sizing:border-box!important;display:inline-flex;align-items:center;justify-content:center;width:34px!important;height:34px!important;min-width:34px!important;min-height:34px!important;padding:3px!important;line-height:1;gap:0}
+.space-chat-launcher>.iconify{width:18px;height:18px;flex-shrink:0}
+
+html.dark .space-chat-launcher{background:#cbd5e1!important;border:1px solid #94a3b8!important;color:#172b3a!important;min-width:34px;min-height:34px;justify-content:center;border-radius:8px}html.dark .space-chat-launcher:hover{background:#e2e8f0!important}html.dark .space-chat-launcher:focus-visible{outline:2px solid #78d6ea;outline-offset:3px}
 </style>

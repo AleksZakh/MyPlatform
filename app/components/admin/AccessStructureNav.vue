@@ -14,11 +14,11 @@ const links=computed(()=>(data.value?.tools||[]).filter(isAccessStructureTool));
 <style scoped>
 .access-structure-nav{display:flex;align-items:stretch;gap:22px;flex-shrink:0;overflow-x:auto;white-space:nowrap;padding:0 18px;background:#fff;color:#526073;border-bottom:1px solid #dde3eb;min-height:48px}
 .access-structure-nav a{display:inline-flex;gap:7px;align-items:center;padding:12px 0 10px;border-bottom:3px solid transparent;font-size:14px;text-decoration:none;color:inherit}
-.access-structure-nav a.is-active{font-weight:700;border-bottom-color:#696cff;color:#5f61e8}
-.access-structure-nav a:hover{color:#696cff}.access-structure-nav a:focus-visible,.access-structure-nav button:focus-visible{outline:2px solid #9698ff;outline-offset:-2px}
+.access-structure-nav a.is-active{font-weight:700;border-bottom-color:var(--space-blue-solid, #2563eb);color:var(--space-blue-accent, #2563eb)}
+.access-structure-nav a:hover{color:var(--space-blue-solid, #2563eb)}.access-structure-nav a:focus-visible,.access-structure-nav button:focus-visible{outline:2px solid #60a5fa;outline-offset:-2px}
 .access-structure-nav button{border:0;background:transparent;color:inherit;font:inherit;padding:10px;cursor:pointer}
 :global(html.dark .access-structure-nav){background:#252b34;color:#b8c4d4;border-color:#465261;color-scheme:dark}
-:global(html.dark .access-structure-nav a.is-active){color:#c4c6ff;border-bottom-color:#a3a5ff}
-:global(html.dark .access-structure-nav a:hover){color:#e2e4ff}
+:global(html.dark .access-structure-nav a.is-active){color:#bfdbfe;border-bottom-color:var(--space-blue-accent, #93c5fd)}
+:global(html.dark .access-structure-nav a:hover){color:#dbeafe}
 @media(max-width:640px){.access-structure-nav{gap:16px;padding:0 10px}.access-structure-nav a{font-size:13px}}
 </style>

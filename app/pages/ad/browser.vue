@@ -19,7 +19,7 @@
         Загрузить группы
       </button>
       <button
-        class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded transition"
+        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition"
         @click="loadAll"
         :disabled="loading"
       >

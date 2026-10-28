@@ -115,11 +115,11 @@ onBeforeUnmount(() => {
   width: 60px;
   height: 60px;
   border-radius: 30%;
-  background: linear-gradient(to bottom right, #305ffc, #7936e3, #3dc1fd, #9b57dc);
+  background: linear-gradient(to bottom right, #305ffc, #2563eb, #3dc1fd, #1d4ed8);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 15px rgba(255, 45, 85, 0.3);
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
   cursor: pointer;
   transition: transform 0.3s ease, opacity 0.3s ease, box-shadow 0.3s ease;
   text-decoration: none;
@@ -133,7 +133,7 @@ onBeforeUnmount(() => {
 .max-messenger-fixed:hover {
   opacity: 1;
   transform: scale(1.1);
-  box-shadow: 0 6px 20px rgba(255, 45, 85, 0.4);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
 }
 
 .max-messenger-fixed:active {
@@ -162,7 +162,7 @@ onBeforeUnmount(() => {
 
 @keyframes max-pulse {
   0%, 100% { box-shadow: 0 6px 20px rgb(86 134 242); }
-  70% { box-shadow: 0 6px 20px #6c56e9; }
+  70% { box-shadow: 0 6px 20px #2563eb; }
 }
 
 @media (max-width: 768px) {
