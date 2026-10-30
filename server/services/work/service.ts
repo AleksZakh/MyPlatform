@@ -22,7 +22,7 @@ async function visibleTask(db:DB,id:number,a:Actor){const t=await db.workTask.fi
 export async function activeUsers(db:DB,ids:number[]){if(!ids.length)return;const unique=[...new Set(ids)];const n=await db.user.count({where:{id:{in:unique},status:'ACTIVE'}});if(n!==unique.length)fail(400,'Один из участников неактивен или не найден.');}
 function auditSnapshot(value:unknown):Prisma.InputJsonValue {
  const v=value as Record<string,any>; const result:Record<string,any>={};
- for(const key of ['id','version','status','priority','scope','visibility','projectId','departmentId','assigneeId','archivedAt','deletedAt','plannedDate','startDate','dueDate','invitationId','userId','groupId','addedIds','role','expiresAt'])if(v?.[key]!==undefined)result[key]=v[key];
+ for(const key of ['upts','objectId','goal','cadastral','rights','restrictions','documents','handover','note','number','counterparty','name','id','version','status','priority','scope','visibility','projectId','departmentId','assigneeId','archivedAt','deletedAt','plannedDate','startDate','dueDate','invitationId','userId','groupId','addedIds','role','expiresAt'])if(v?.[key]!==undefined)result[key]=v[key];
  if(Array.isArray(v?.members))result.members=v.members.map((m:any)=>({userId:m.userId,role:m.role}));
  return JSON.parse(JSON.stringify(result));
 }
@@ -75,8 +75,9 @@ export async function saveProject(event:H3Event,raw:unknown,id?:number){
   }
   const data={name:v.name,description:v.description,color:v.color,scope:v.scope,departmentId:v.departmentId,groupId:selectedGroupId,startDate:dbDay(v.startDate),dueDate:dbDay(v.dueDate)};
   const p=id?await tx.workProject.update({where:{id},data:{...data,version:{increment:1}},include:projectInclude}):await tx.workProject.create({data:{...data,ownerId:a.id,clientKey:v.clientKey},include:projectInclude});
+  if(v.upts)await tx.uptsProject.upsert({where:{projectId:p.id},create:{projectId:p.id,...v.upts,receivedDate:dbDay(v.upts.receivedDate)},update:{...v.upts,receivedDate:dbDay(v.upts.receivedDate)}});
   await ensureProjectDirectory(p.id);
-  return {id:p.id,value:projectDTO(p,a)};
+  return {id:p.id,value:{...projectDTO(p,a),...(v.upts?{upts:v.upts}:{})}};
  });
 }
 export async function archiveProject(event:H3Event,id:number,raw:unknown){const a=await workActor(event),v=parse(archiveInput,raw);
@@ -143,7 +144,9 @@ export async function saveTask(event:H3Event,raw:unknown,id?:number){const a=awa
  if(v.visibility==='DEPARTMENT'&&v.assigneeId){const u=await tx.user.findUnique({where:{id:v.assigneeId},select:{departmentId:true}});if(u?.departmentId!==a.departmentId)fail(400,'Исполнитель должен состоять в этом подразделении.');}
  }
  await activeUsers(tx,[...(v.assigneeId?[v.assigneeId]:[]),...v.participantIds]);
- const data={title:v.title,description:v.description,kind:v.kind,status:v.status,priority:v.priority,visibility:v.visibility,
+ const objectId=v.uptsObjectId===undefined?(old?.projectId===v.projectId?old?.uptsObjectId??null:null):v.uptsObjectId;
+ if(objectId&&(!project||!await tx.uptsProjectObject.findFirst({where:{id:objectId,projectId:project.id}})))fail(400,'Объект не принадлежит проекту задачи.');
+ const data={uptsObjectId:objectId,title:v.title,description:v.description,kind:v.kind,status:v.status,priority:v.priority,visibility:v.visibility,
  projectId:v.projectId,departmentId:v.departmentId,assigneeId:v.assigneeId,plannedDate:dbDay(v.plannedDate),startDate:dbDay(v.startDate),dueDate:dbDay(v.dueDate),blockedReason:v.blockedReason};
  const saved=id?await tx.workTask.update({where:{id},data:{...data,version:{increment:1}}}):await tx.workTask.create({data:{...data,clientKey:v.clientKey,creatorId:a.id}});
  await tx.workTaskParticipant.deleteMany({where:{taskId:saved.id}});

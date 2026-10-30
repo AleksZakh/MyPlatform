@@ -35,13 +35,18 @@ export async function ensureProjectDirectory(projectId: number) {
   await directory([id, 'private'], true);
   return path.join(projectFilesRoot, id);
 }
-function parts(projectId: number, ownerId: number, scope: string) {
-  if (scope === 'SHARED') return [idSegment(projectId), 'shared'];
-  if (scope === 'PRIVATE') return [idSegment(projectId), 'private', idSegment(ownerId)];
+export async function ensureContractDirectory(projectId:number,contractId:number) {
+ await directory([idSegment(projectId),'contracts',idSegment(contractId),'shared'],true);
+ await directory([idSegment(projectId),'contracts',idSegment(contractId),'private'],true);
+}
+function parts(projectId: number, ownerId: number, scope: string, contractId?:number|null) {
+  const prefix=contractId?[idSegment(projectId),'contracts',idSegment(contractId)]:[idSegment(projectId)];
+  if (scope === 'SHARED') return [...prefix, 'shared'];
+  if (scope === 'PRIVATE') return [...prefix, 'private', idSegment(ownerId)];
   throw new Error('Invalid file scope');
 }
-export async function receiveProjectFile(event: H3Event, projectId: number, ownerId: number, scope: string, expected: number) {
-  const dir = await directory(parts(projectId, ownerId, scope), true);
+export async function receiveProjectFile(event: H3Event, projectId: number, ownerId: number, scope: string, expected: number, contractId?:number|null) {
+  const dir = await directory(parts(projectId, ownerId, scope, contractId), true);
   const storageKey = randomUUID(), destination = path.join(dir, storageKey);
   const file = await open(destination, 'wx', 0o640);
   const hash = createHash('sha256'); let bytes = 0;
@@ -62,9 +67,9 @@ export async function receiveProjectFile(event: H3Event, projectId: number, owne
     await file.close(); await unlink(destination).catch(() => {}); throw error;
   } finally { clearTimeout(timer); await file.close().catch(() => {}); }
 }
-export async function openProjectFile(file: { projectId: number; ownerId: number; scope: string; storageKey: string; size: number }) {
+export async function openProjectFile(file: { contractId?:number|null; projectId: number; ownerId: number; scope: string; storageKey: string; size: number }) {
   if (!uuid.test(file.storageKey)) throw new Error('Invalid file key');
-  const dir = await directory(parts(file.projectId, file.ownerId, file.scope), false);
+  const dir = await directory(parts(file.projectId, file.ownerId, file.scope, file.contractId), false);
   const handle = await open(path.join(dir, file.storageKey), constants.O_RDONLY | constants.O_NOFOLLOW);
   const stat = await handle.stat();
   if (!stat.isFile() || stat.size !== file.size) { await handle.close(); throw new Error('Missing or damaged project file'); }

@@ -8,7 +8,7 @@ import { workActor } from './access';
 import { visibleProject, fail } from './service';
 import { createsTask, managesProject, projectRole, type Actor, type ProjectPolicy } from './policy';
 import { parse, positiveId } from './input';
-import { projectFileLimit, ensureProjectDirectory, receiveProjectFile, openProjectFile } from './file-storage';
+import { ensureContractDirectory, projectFileLimit, ensureProjectDirectory, receiveProjectFile, openProjectFile } from './file-storage';
 
 const scopeInput = z.enum(['SHARED', 'PRIVATE']);
 const uploadInput = z.object({
@@ -30,12 +30,21 @@ function dto(f: WorkProjectFile, p: ProjectPolicy, a: Actor) {
     version: f.version, createdAt: f.createdAt, deletedAt: f.deletedAt, canManage: canManage(f, p, a) };
 }
 const visibleFileWhere = (projectId: number, a: Actor) => ({ projectId, OR: [{ scope: 'SHARED' }, { scope: 'PRIVATE', ownerId: a.id }] });
+async function contractFolder(event:H3Event,projectId:number,upload=false) {
+ const raw=upload?getHeader(event,'x-file-contract'):getQuery(event).contractId;
+ if(raw===undefined||raw==='')return null;
+ const contractId=positiveId(raw);
+ if(!await prisma.uptsContract.findFirst({where:{id:contractId,projectId}}))fail(404,'Договор не найден в проекте.');
+ return contractId;
+}
 export async function projectFiles(event: H3Event, projectId: number) {
   const a = await workActor(event), p = await visibleProject(prisma, projectId, a);
+  const contractId=await contractFolder(event,projectId);
+  if(contractId)await ensureContractDirectory(projectId,contractId);
   const query = getQuery(event), scope = parse(scopeInput, query.scope || 'SHARED');
   const page = query.page ? positiveId(query.page) : 1;
   await ensureProjectDirectory(projectId); // Existing projects get directories on first use.
-  const where = { projectId, scope, ...(scope === 'PRIVATE' ? { ownerId: a.id } : {}), deletedAt: query.trash === '1' ? { not: null } : null };
+  const where = { projectId, contractId, scope, ...(scope === 'PRIVATE' ? { ownerId: a.id } : {}), deletedAt: query.trash === '1' ? { not: null } : null };
   const [rows, total] = await Promise.all([
     prisma.workProjectFile.findMany({ where, orderBy: [{ createdAt: 'desc' }, { id: 'asc' }], take: 40, skip: (page - 1) * 40, include: { owner: { select: { id: true, fullName: true, login: true } } } }),
     prisma.workProjectFile.count({ where }),
@@ -48,17 +57,18 @@ export async function uploadProjectFile(event: H3Event, projectId: number) {
   let name: string;
   try { name = decodeURIComponent(getHeader(event, 'x-file-name') || ''); } catch { return fail(400, 'Неверное имя файла.'); }
   const v = parse(uploadInput, { clientKey: getHeader(event, 'x-file-key'), scope: getHeader(event, 'x-file-scope'), name, size: Number(getHeader(event, 'x-file-size')) });
+  const contractId=await contractFolder(event,projectId,true);
   if (!writable(p, a, v.scope)) fail(403, 'Нет права добавлять файлы в эту область проекта.');
   if (v.size > projectFileLimit()) fail(413, 'Файл превышает установленный лимит.');
   const length = getHeader(event, 'content-length');
   if (length !== undefined && Number(length) !== v.size) fail(400, 'Размер запроса не совпадает с размером файла.');
   const old = await prisma.workProjectFile.findUnique({ where: { clientKey: v.clientKey } });
   if (old) {
-    if (old.projectId !== projectId || old.ownerId !== a.id || old.scope !== v.scope || old.size !== v.size || old.name !== v.name || old.deletedAt) fail(409, 'Ключ загрузки уже использован.');
+    if (old.contractId !== contractId || old.projectId !== projectId || old.ownerId !== a.id || old.scope !== v.scope || old.size !== v.size || old.name !== v.name || old.deletedAt) fail(409, 'Ключ загрузки уже использован.');
     return dto(old, p, a);
   }
   // Stream to disk before acquiring any database transaction or module lock.
-  const stored = await receiveProjectFile(event, projectId, a.id, v.scope, v.size);
+  const stored = await receiveProjectFile(event, projectId, a.id, v.scope, v.size, contractId);
   // If DB commit outcome is uncertain, retain these bytes. Never delete a possibly committed file.
   return prisma.$transaction(async tx => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(20261019)`;
@@ -68,7 +78,7 @@ export async function uploadProjectFile(event: H3Event, projectId: number) {
     if (user?.status !== 'ACTIVE') fail(403, 'Учётная запись неактивна.');
     const duplicate = await tx.workProjectFile.findUnique({ where: { clientKey: v.clientKey } });
     if (duplicate) fail(409, 'Загрузка с таким ключом уже завершена. Обновите список файлов.');
-    const file = await tx.workProjectFile.create({ data: { id: randomUUID(), clientKey: v.clientKey, projectId, ownerId: a.id, scope: v.scope, name: v.name, ...stored } });
+    const file = await tx.workProjectFile.create({ data: { id: randomUUID(), clientKey: v.clientKey, projectId, contractId, ownerId: a.id, scope: v.scope, name: v.name, ...stored } });
     await writeAuditEvent({ event, db: tx, actorUserId: a.id, category: 'DATA', result: 'SUCCESS', resourceKey: 'projects.shared', entityType: 'WorkProjectFile', entityId: projectId, action: 'CREATE', afterData: { fileId: file.id, scope: file.scope, size: file.size }, note: 'Файл проекта добавлен' });
     return dto(file, current, a);
   }, { maxWait: 5000, timeout: 15000 });

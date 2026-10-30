@@ -1136,6 +1136,7 @@ model LibraryAsset {
 
 // Space tasks and projects — additive module, 2026-10-19.
 model WorkProject {
+  upts UptsProject?
   files WorkProjectFile[]
   groupId Int?
   group SpaceGroup? @relation(fields: [groupId], references: [id], onDelete: Restrict)
@@ -1175,6 +1176,9 @@ model WorkProjectMember {
   @@map("work_project_members")
 }
 model WorkTask {
+  uptsObjectId Int?
+  @@index([uptsObjectId])
+  uptsObject UptsProjectObject? @relation(fields: [uptsObjectId], references: [id], onDelete: Restrict)
   id Int @id @default(autoincrement())
   clientKey String @unique @db.Uuid
   title String @db.VarChar(250)
@@ -1320,6 +1324,9 @@ model LibraryVideoSettings {
 
 // Files are stored outside public/ and releases; PRIVATE never inherits manager access.
 model WorkProjectFile {
+  contractId Int?
+  @@index([contractId])
+  contract UptsContract? @relation(fields: [contractId], references: [id], onDelete: Restrict)
   id String @id @db.Uuid
   clientKey String @unique @db.Uuid
   projectId Int
@@ -1621,4 +1628,64 @@ model DiagnosticContractLegacyRow {
   importedById Int
   importedAt DateTime @default(now())
   @@map("diagnostic_contract_legacy_rows")
+}
+
+
+// UPTS pilot: work projects/tasks remain the source of team, permissions and scheduling.
+model UptsProject {
+  projectId Int @id
+  project WorkProject @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  projectType String @default("LAND") @db.VarChar(30)
+  status String @default("INTAKE") @db.VarChar(30)
+  basis String @default("") @db.VarChar(2000)
+  initiator String @default("") @db.VarChar(200)
+  receivedDate DateTime? @db.Date
+  completionNote String @default("") @db.VarChar(2000)
+  isDemo Boolean @default(false)
+  objects UptsProjectObject[]
+  contracts UptsContract[]
+  @@map("upts_projects")
+}
+model UptsObject {
+  clientKey String @unique @db.Uuid
+  id Int @id @default(autoincrement())
+  name String @db.VarChar(250)
+  cadastralNumber String? @unique @db.VarChar(100)
+  address String @default("") @db.VarChar(1000)
+  projects UptsProjectObject[]
+  createdAt DateTime @default(now())
+  @@map("upts_objects")
+}
+model UptsProjectObject {
+  id Int @id @default(autoincrement())
+  projectId Int
+  objectId Int
+  project UptsProject @relation(fields: [projectId], references: [projectId], onDelete: Restrict)
+  object UptsObject @relation(fields: [objectId], references: [id], onDelete: Restrict)
+  goal String @default("") @db.VarChar(1000)
+  cadastral String @default("TODO") @db.VarChar(20)
+  rights String @default("TODO") @db.VarChar(20)
+  restrictions String @default("TODO") @db.VarChar(20)
+  documents String @default("TODO") @db.VarChar(20)
+  handover String @default("TODO") @db.VarChar(20)
+  note String @default("") @db.VarChar(2000)
+  version Int @default(1)
+  tasks WorkTask[]
+  @@unique([projectId, objectId])
+  @@map("upts_project_objects")
+}
+model UptsContract {
+  id Int @id @default(autoincrement())
+  clientKey String @unique @db.Uuid
+  projectId Int
+  project UptsProject @relation(fields: [projectId], references: [projectId], onDelete: Restrict)
+  number String @db.VarChar(100)
+  name String @db.VarChar(250)
+  counterparty String @default("") @db.VarChar(250)
+  signedDate DateTime? @db.Date
+  dueDate DateTime? @db.Date
+  version Int @default(1)
+  files WorkProjectFile[]
+  @@index([projectId])
+  @@map("upts_contracts")
 }

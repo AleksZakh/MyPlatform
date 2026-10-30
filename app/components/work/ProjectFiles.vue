@@ -2,8 +2,8 @@
 import { useProjectFiles } from '~/composables/useProjectFiles';
 import type { WorkProjectDTO } from '~~/shared/types/work';
 import { workUserName } from '~~/shared/types/work';
-const props = defineProps<{ project: WorkProjectDTO }>();
-const { scope, trash, data, error, loading, busy, selected, queue, base, load, choose, upload, changeState, cancel } = useProjectFiles(props.project.id);
+const props = defineProps<{ project: WorkProjectDTO; contractId?:number; defaultScope?:'SHARED'|'PRIVATE' }>();
+const { scope, trash, data, error, loading, busy, selected, queue, base, load, choose, upload, changeState, cancel } = useProjectFiles(props.project.id,props.contractId,props.defaultScope);
 const picker = ref<HTMLInputElement | null>(null), dragging = ref(false);
 const remaining = computed(() => queue.value.some(q => q.state !== 'Загружен'));
 const canUpload = computed(() => data.value?.canUpload && !props.project.archivedAt);

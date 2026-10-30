@@ -1,0 +1,228 @@
+{
+  "base": "Space(1).zip",
+  "date": "2026-10-30",
+  "files": [
+    {
+      "path": "app/assets/css/upts.css",
+      "action": "added",
+      "original_sha256": null,
+      "sha256": "f62c2aee702218b65dd787d3109eebc74c0024a51377374cc3b747cce4fb27d0"
+    },
+    {
+      "path": "app/components/upts/ContractEditor.vue",
+      "action": "added",
+      "original_sha256": null,
+      "sha256": "7d177e0f3e0c44e56bba732a30eb451072074c86e6a655617afff395b8c8cdcd"
+    },
+    {
+      "path": "app/components/upts/ObjectEditor.vue",
+      "action": "added",
+      "original_sha256": null,
+      "sha256": "8d614b02fa4018437bfd6ab3dd22051091b0e8c5bcf56db3c45d1482dc53dc00"
+    },
+    {
+      "path": "app/components/upts/TemplateEditor.vue",
+      "action": "added",
+      "original_sha256": null,
+      "sha256": "67d0d8585e48c50969bfd6cc5cc4c225d4928bd7ec224ffa57c8b84a5879ba86"
+    },
+    {
+      "path": "app/components/upts/UptsWorkspace.vue",
+      "action": "added",
+      "original_sha256": null,
+      "sha256": "4a0a0956683dc3bb08f89e2a2f639062c4d2a1d7fc1ad31dc067d3defd58d194"
+    },
+    {
+      "path": "app/components/work/ProjectEditor.vue",
+      "action": "modified",
+      "original_sha256": "a857af6dc70a5819ecd7baa2cf64ebd9fee2e88ba001b6a4d71152f86d17d9ec",
+      "sha256": "a32ca393a0078a416af4d8ef37f7d459b836944b5a9d9bd375364aba09a31b0d"
+    },
+    {
+      "path": "app/components/work/ProjectFiles.vue",
+      "action": "modified",
+      "original_sha256": "00cf75da3a137cbd3abd080f9dd5f051bab74d0eeea66b291609f3d2181dc2ab",
+      "sha256": "bc2475450736ba8a32e194caf60d07bf5722eb3ac471e2faccc80d7d6e2c4ce9"
+    },
+    {
+      "path": "app/components/work/TaskEditor.vue",
+      "action": "modified",
+      "original_sha256": "6b4436e95506a82b2d2ac090f43985645411a36e0cfef2e0fb4b7ffd0c30a171",
+      "sha256": "e19d61f3daf38977b1636fdbfd7b64581a9282d223d4b88d21365b483bff8860"
+    },
+    {
+      "path": "app/composables/useProjectFiles.ts",
+      "action": "modified",
+      "original_sha256": "645104a07b0d2b7858e430536a687bb933782990cdb76ad1ba15c44a50313dad",
+      "sha256": "66fe85604df5ce7a740dc2ffb6e9915910c5dce71f46922fb07d68124abe2d16"
+    },
+    {
+      "path": "app/composables/useUptsWorkspace.ts",
+      "action": "added",
+      "original_sha256": null,
+      "sha256": "da98065cf98b38409a328d9b095e8416a5342e2accdf8bfba66f950227e0b032"
+    },
+    {
+      "path": "app/composables/useWorkWorkspace.ts",
+      "action": "modified",
+      "original_sha256": "2af7e10bab010ea3b43f633a6d24951e852cf12a00ed5077ae5604f35c58a243",
+      "sha256": "ce42c68d48e4c91d10f37e9ce077f69450755bdf0fc2b14c2556985d41669093"
+    },
+    {
+      "path": "app/pages/departments/upts/index.vue",
+      "action": "added",
+      "original_sha256": null,
+      "sha256": "a771c01e0a1213bf0b698ea948b06afa59c0a274f0096e8a80926d6ee5940942"
+    },
+    {
+      "path": "app/pages/index.vue",
+      "action": "modified",
+      "original_sha256": "93f4b9d955f3aca324bb31ef50bd1410944c37e78420b49d5083ca0fbf618795",
+      "sha256": "ff86fbf4d6c718a7a19eb9677f978b5f97a2c2f57cf8623290df3f59eb1d0f79"
+    },
+    {
+      "path": "docs/upts/README-UPTS.md",
+      "action": "added",
+      "original_sha256": null,
+      "sha256": "719d6bb01283cfeeaff8d2c520e302099e7452e7d7d138f9247622257c835212"
+    },
+    {
+      "path": "prisma/migrations/20261030190000_upts_pilot/migration.sql",
+      "action": "added",
+      "original_sha256": null,
+      "sha256": "9659c00fa1997c867d59a09b1a8b15101298cecbbf25a5e121c78daee48abf50"
+    },
+    {
+      "path": "prisma/schema.prisma",
+      "action": "modified",
+      "original_sha256": "737df1a5b3ecaad949e97232d98e64e61dde7ccc26d7f3d156b7192aa77f256d",
+      "sha256": "9d70003e40c04b2a96119e6c287bbb02b5c4c18b1f9b61ffc6e9c936a23c3223"
+    },
+    {
+      "path": "server/api/upts/demo.post.ts",
+      "action": "added",
+      "original_sha256": null,
+      "sha256": "41892f75250cfa107ec534222842d6ccc399bd1fd22852132b734ec6cc0fb11c"
+    },
+    {
+      "path": "server/api/upts/export.get.ts",
+      "action": "added",
+      "original_sha256": null,
+      "sha256": "38e9049e2ece911fef68e801007f4e76a00ec1f4f3fb0bcd55e4bacae11ad3bb"
+    },
+    {
+      "path": "server/api/upts/index.get.ts",
+      "action": "added",
+      "original_sha256": null,
+      "sha256": "20de8d038b8f2dea24651c54c669958f6b8415cac6c09889b7a6d7b0eae521f8"
+    },
+    {
+      "path": "server/api/upts/objects.get.ts",
+      "action": "added",
+      "original_sha256": null,
+      "sha256": "247337dbe20be2267dfdfb15f27788859729540a5c7b09881cc037faa33c456a"
+    },
+    {
+      "path": "server/api/upts/projects/[id]/contracts.post.ts",
+      "action": "added",
+      "original_sha256": null,
+      "sha256": "6c91cf27c7accf072dd9d11b74115ce3a2324f152514a12219332a592862ee30"
+    },
+    {
+      "path": "server/api/upts/projects/[id]/contracts/[contractId].put.ts",
+      "action": "added",
+      "original_sha256": null,
+      "sha256": "320e0b06d8573988911e0ac5cc47a5abd19c9450b605742abc47edd2e6b462f9"
+    },
+    {
+      "path": "server/api/upts/projects/[id]/objects.get.ts",
+      "action": "added",
+      "original_sha256": null,
+      "sha256": "60b5557606910476551f1b4005c3107d73e12aa5d5a1e39072a0f1b0fdb085a3"
+    },
+    {
+      "path": "server/api/upts/projects/[id]/objects.post.ts",
+      "action": "added",
+      "original_sha256": null,
+      "sha256": "3298003777b31b6ba1eedc01160ae71a14208eb4c30751b4c293f1cef77c2b70"
+    },
+    {
+      "path": "server/api/upts/projects/[id]/objects/[objectId].put.ts",
+      "action": "added",
+      "original_sha256": null,
+      "sha256": "43c89686a5e69a37341c8596c10582de856a0c90856ad844a0be58bae3e21a41"
+    },
+    {
+      "path": "server/api/upts/projects/[id]/template.post.ts",
+      "action": "added",
+      "original_sha256": null,
+      "sha256": "e1033f18f0d014f3147c75c8adf0411691b61c9e7598b79adfd2a5abd59916e2"
+    },
+    {
+      "path": "server/services/upts-input.ts",
+      "action": "added",
+      "original_sha256": null,
+      "sha256": "d5d35ecc2547c750a5eb2a2ead04146a77f80ea557a1469abf53d07639fc421e"
+    },
+    {
+      "path": "server/services/upts-report.ts",
+      "action": "added",
+      "original_sha256": null,
+      "sha256": "18e3ddc5e6acc100b7ccd9767a66ea62ea9d60abaf3f0d53476561ee0d76e12f"
+    },
+    {
+      "path": "server/services/upts.ts",
+      "action": "added",
+      "original_sha256": null,
+      "sha256": "defe03c4f47586eeb9fc1fb54a5e6dfdf50369482c2f37f44d3a3943ccf1d518"
+    },
+    {
+      "path": "server/services/work/file-storage.ts",
+      "action": "modified",
+      "original_sha256": "137c998bd6e63716f29ab5de2def34a93b57610d7d6cb58d3a19527e2100426d",
+      "sha256": "5fc9f2774f9b2fbd54aa154309cb03ce8c221bac242a8aef3e6a24f26d25c3c9"
+    },
+    {
+      "path": "server/services/work/files.ts",
+      "action": "modified",
+      "original_sha256": "886c0769e44f597479086132fcbbb93cef98ad1ebf8ad427a9d8f4ded8cf9ab3",
+      "sha256": "0a6debc5a3f0c2fc7249150a0fbc758abad2ad48be03cbbc73e4f883a0227e62"
+    },
+    {
+      "path": "server/services/work/input.ts",
+      "action": "modified",
+      "original_sha256": "a301ae30095f621b851c9857bd3b453baf004820ba83bfaaa52eac1cc9fd3dde",
+      "sha256": "088d1afd24f1e2c808e084d3dfa9ffc383eba818d60f059df7651aaec77ee5b9"
+    },
+    {
+      "path": "server/services/work/service.ts",
+      "action": "modified",
+      "original_sha256": "132d27d4e5a345a82f224efb2f31be9f3e1345ee1234a6f9a0bed4287236d8a2",
+      "sha256": "aa033c746829ea80ad388f04ce52caf348397e243a35ca42be2f536c62af384e"
+    },
+    {
+      "path": "shared/types/upts.ts",
+      "action": "added",
+      "original_sha256": null,
+      "sha256": "91ab2fed25dea72cc2794a54488accb2c971daaf04bb27b1e6a35401cec33f82"
+    },
+    {
+      "path": "shared/types/work.ts",
+      "action": "modified",
+      "original_sha256": "6a205064cd38fbea0f65550e26b4846afca1a010f99a8c41ba558df7b7bc73ae",
+      "sha256": "aa49a3c4fd3843cbc660f388fc2fb92a30f46d89af40222657cf8341170caaaa"
+    },
+    {
+      "path": "shared/utils/upts.ts",
+      "action": "added",
+      "original_sha256": null,
+      "sha256": "ff7fa6fd54292c73fb3c5ee50c9955b95c09528578ca42d9ba091c815dfe76c4"
+    },
+    {
+      "path": "tests/work/upts.test.ts",
+      "action": "added",
+      "original_sha256": null,
+      "sha256": "f7bec0d214aa4d2af341fcce8df9744af5fa1a9e77bd99688b34986642ea4ff3"
+    }
+  ]
+}

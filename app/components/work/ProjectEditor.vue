@@ -2,14 +2,17 @@
 import { reactive, ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import Modal from './Modal.vue';
 import { WORK_COLORS, type WorkProjectDTO, type WorkContext } from '~~/shared/types/work';
+import { UPTS_TYPES, UPTS_STATUSES, type UptsProjectDTO } from '~~/shared/types/upts';
 import { dateKey } from '~~/shared/utils/work-board';
-const props=defineProps<{project:WorkProjectDTO|null;context:WorkContext}>();
+const props=defineProps<{project:WorkProjectDTO|null;context:WorkContext;uptsMode?:boolean}>();
 const emit=defineEmits<{close:[];saved:[WorkProjectDTO]}>();
 const p=props.project;
+const meta=(p as UptsProjectDTO|null)?.upts;
+const upts=reactive({projectType:meta?.projectType||'LAND',status:meta?.status||'INTAKE',basis:meta?.basis||'',initiator:meta?.initiator||'',receivedDate:dateKey(meta?.receivedDate)||'',completionNote:meta?.completionNote||''});
 const currentContext=ref(props.context),loading=ref(false),loadError=ref('');
 let alive=true;
 const {error,saving,send}=useWorkApi();
-const visibility=ref(p?.scope==='GROUP'||p?.scope==='DEPARTMENT'?'SHARED':p?.scope||'PRIVATE');
+const visibility=ref(p?.scope==='GROUP'||p?.scope==='DEPARTMENT'?'SHARED':p?.scope||(props.uptsMode&&props.context.canCreateShared?'TEAM':'PRIVATE'));
 const affiliation=ref(p?.groupId?'GROUP':p?.departmentId?'DEPARTMENT':'NONE');
 const ownsProject=computed(()=>!p||p.ownerId===props.context.userId);
 const form=reactive({clientKey:crypto.randomUUID(),version:p?.version,name:p?.name||'',description:p?.description||'',color:p?.color||WORK_COLORS[0],departmentId:p?.departmentId||null,groupId:p?.groupId||null,startDate:dateKey(p?.startDate)||'',dueDate:dateKey(p?.dueDate)||''});
@@ -26,7 +29,7 @@ async function save(){
  if(missingAffiliation.value)return;
  const scope=visibility.value==='SHARED'?affiliation.value:visibility.value;
  const result=await send<WorkProjectDTO>(p?'/api/work/projects/'+p.id:'/api/work/projects',p?'PUT':'POST',{
-  ...form,scope,
+  ...form,scope,...(props.uptsMode?{upts:{...upts,receivedDate:upts.receivedDate||null}}:{}),
   departmentId:scope!=='PRIVATE'&&affiliation.value==='DEPARTMENT'?form.departmentId:null,
   groupId:scope!=='PRIVATE'&&affiliation.value==='GROUP'?form.groupId:null,
   startDate:form.startDate||null,dueDate:form.dueDate||null,
@@ -40,6 +43,13 @@ async function save(){
    <p v-if="error" class="work-error" role="alert">{{ error }}</p>
    <fieldset :disabled="saving">
     <label>Название проекта<input v-model="form.name" required maxlength="200" autofocus /></label>
+    <template v-if="uptsMode">
+     <div class="work-two"><label>Тип проекта<select v-model="upts.projectType"><option v-for="(label,key) in UPTS_TYPES" :key="key" :value="key">{{ label }}</option></select></label><label>Состояние<select v-model="upts.status"><option v-for="(label,key) in UPTS_STATUSES" :key="key" :value="key">{{ label }}</option></select></label></div>
+     <label>Основание / входящее задание<textarea v-model="upts.basis" rows="2" maxlength="2000" /></label>
+     <div class="work-two"><label>Инициатор<input v-model="upts.initiator" maxlength="200" /></label><label>Дата поступления<input v-model="upts.receivedDate" type="date" /></label></div>
+     <label v-if="upts.status==='DONE'">Результат завершения<textarea v-model="upts.completionNote" required maxlength="2000" rows="2" /></label>
+     <p class="work-muted">Пробная модель УПТС. Типы и состояния уточняются с подразделением. Шаблон работ можно применить после создания проекта.</p>
+    </template>
     <label>Цель и ожидаемый результат<textarea v-model="form.description" rows="4" maxlength="20000" /></label>
     <label>Видимость<select v-model="visibility" :disabled="!ownsProject">
      <option value="PRIVATE">Личный проект</option>
