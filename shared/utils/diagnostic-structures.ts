@@ -67,7 +67,7 @@ export const structureImportHeaders: Record<string, StructureField> = {
   'регион расположения':'region', 'район расположения':'district', 'код иссо':'issoCode',
   'оценка тс':'conditionRating', 'класс ак':'classAk', 'класс нк':'classNk', 'класс энз':'classEnz',
   'длина, м':'lengthMetres', 'запланированные работы':'plannedWorks',
-  'эксплуатирующая организация':'operator', 'ввод в эксплуатацию':'commissionedYear',
+  'эксплуатирующая организация':'operator', 'ввод в эксплуатацию':'commissionedYear', 'год ввода в эксплуатацию':'commissionedYear',
   'экспертное заключение':'expertOpinion', '№ договора':'contractNumber', 'исполнитель':'executor', 'примечание':'note',
 };
 export function structureHeaderKey(value: string): StructureField | undefined {
@@ -87,28 +87,30 @@ export function planStructureImport(matrix: readonly (readonly string[])[], exis
   const seenHeaders=new Set<string>();
   keys.forEach(key=>{ if(key && seenHeaders.has(key)) throw new Error('В файле повторяется столбец: '+key); if(key)seenHeaders.add(key); });
   const plan:StructureImportPlan={total:0,records:[],skipped:[],errors:[],ignoredHeaders:headers.filter((h,i)=>h.trim()&&!keys[i])};
-  const seen=new Set(existing.map(row=>normalizeStructureText(row.issoCode)));
+  const seen=new Set(existing.map(row=>row.issoCode.normalize('NFC').trim().toUpperCase()));
   for(let index=1;index<matrix.length;index++) {
     const cells=matrix[index] || [];
     if(!cells.some(c=>c.trim()))continue;
     plan.total++;
     const text:Partial<Record<StructureField,string>>={};
     keys.forEach((key,col)=>{if(key)text[key]=(cells[col]||'').trim();});
-    const code=text.issoCode || '', normalized=normalizeStructureText(code), row=index+1;
+    const code=text.issoCode || '', normalized=code.normalize('NFC').trim().toUpperCase(), row=index+1;
     if(code && seen.has(normalized)) {plan.skipped.push({row,code,reason:'Код уже есть в списке или ранее в этом файле'});continue;}
+    if(code.length>200 || cells.some(c=>c.includes('\0')||c.length>16000)){plan.errors.push({row,code,reason:'Слишком длинное значение или недопустимый символ.'});continue;}
+    if(text.contractNumber||text.executor){plan.errors.push({row,code,reason:'Договор и исполнитель назначаются отдельно. Перенесите эти сведения в примечание, если нужно сохранить их как текст.'});continue;}
     const missing=required.filter(k=>!text[k]);
     if(missing.length){plan.errors.push({row,code,reason:'Не заполнены: '+missing.map(k=>Object.keys(structureImportHeaders).find(h=>structureImportHeaders[h]===k)).join(', ')});continue;}
     if(structureLocationMetres(text.location || '')===null){plan.errors.push({row,code,reason:'Местоположение должно иметь формат км+м, например 16+550'});continue;}
     const rawLength=(text.lengthMetres||'').replace(/\s/g,'').replace(',','.');
-    if(rawLength && (!/^\d+(?:\.\d+)?$/.test(rawLength)||!Number.isFinite(Number(rawLength)))){plan.errors.push({row,code,reason:'Длина должна быть неотрицательным числом'});continue;}
+    if(rawLength && (!/^\d{1,12}(?:\.\d{1,6})?$/.test(rawLength)||!Number.isFinite(Number(rawLength)))){plan.errors.push({row,code,reason:'Длина должна быть неотрицательным числом'});continue;}
     const record:StructureRecord={
       id:'preview:'+normalized,sourceRow:row,sourceFile:fileName,sourceOrdinal:text.sourceOrdinal||'',
       management:text.management||'',structureName:text.structureName||'',issoType:text.issoType||'',
       additionalId:text.additionalId||'',roadName:text.roadName||'',location:text.location||'',
       placementType:text.placementType||'',obstacleType:text.obstacleType||'',obstacleName:text.obstacleName||'',
-      region:text.region||'',district:text.district||'',issoCode:code,conditionRating:text.conditionRating||'',
+      region:text.region||'',district:text.district||'',issoCode:normalized,conditionRating:text.conditionRating||'',
       classAk:text.classAk||'',classNk:text.classNk||'',classEnz:text.classEnz||'',
-      lengthMetres:rawLength?Number(Number(rawLength).toPrecision(15)):null,plannedWorks:text.plannedWorks||'',
+      lengthRaw:rawLength,lengthMetres:rawLength?Number(rawLength):null,plannedWorks:text.plannedWorks||'',
       operator:text.operator||'',commissionedYear:text.commissionedYear||'',expertOpinion:text.expertOpinion||'',
       contractNumber:text.contractNumber||'',executor:text.executor||'',note:[text.note,note.trim()].filter(Boolean).join('\n'),
     };

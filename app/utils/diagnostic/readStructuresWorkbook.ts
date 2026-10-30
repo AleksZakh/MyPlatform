@@ -13,7 +13,7 @@ export async function readStructuresWorkbook(file:File):Promise<StructureWorkboo
   const sheets:StructureWorkbookSheet[]=[];
   for(const sheet of workbook.worksheets) {
     if(!sheet.actualRowCount)continue;
-    if(sheet.rowCount>10001 || sheet.columnCount>100) throw new Error('Для предварительного просмотра поддерживается до 10 000 строк и 100 столбцов на листе.');
+    if(sheet.rowCount>20001 || sheet.columnCount>100) throw new Error('Для предварительного просмотра поддерживается до 20 000 строк и 100 столбцов на листе.');
     const rows:string[][]=[];
     for(let r=1;r<=sheet.rowCount;r++) {
       const row:string[]=[];

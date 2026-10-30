@@ -40,7 +40,7 @@ function moveDetailTab(event:KeyboardEvent,index:number){
 <section class="structures-workspace">
   <DiagnosticModuleTabs active="structures"/>
   <div class="st-page">
-    <header class="st-heading"><div><h1>Сооружения</h1><p>Единый справочник сооружений</p></div><div class="st-heading-actions"><button class="st-filters-toggle" :aria-expanded="filtersOpen" aria-controls="st-filters" @click="filtersOpen=!filtersOpen"><Icon name="lucide:sliders-horizontal"/>Фильтры{{ activeFilters?' ('+activeFilters+')':'' }}</button><button :disabled="loading" @click="refresh"><Icon name="lucide:refresh-cw"/>Обновить</button><button class="st-primary" :disabled="importLoading||loading||!!loadError" @click="openImport"><Icon name="lucide:file-up"/>{{ importLoading?'Проверка кодов…':'Проверить Excel' }}</button></div></header>
+    <header class="st-heading"><div><h1>Сооружения</h1><p>Единый справочник сооружений</p></div><div class="st-heading-actions"><button class="st-filters-toggle" :aria-expanded="filtersOpen" aria-controls="st-filters" @click="filtersOpen=!filtersOpen"><Icon name="lucide:sliders-horizontal"/>Фильтры{{ activeFilters?' ('+activeFilters+')':'' }}</button><button :disabled="loading" @click="refresh"><Icon name="lucide:refresh-cw"/>Обновить</button><button class="st-primary" :disabled="importLoading||loading||!!loadError" @click="openImport"><Icon name="lucide:file-up"/>{{ importLoading?'Проверка кодов…':'Импорт Excel' }}</button></div></header>
     <div v-if="notice" class="st-notice" role="status"><span>{{ notice }}</span><button aria-label="Закрыть уведомление" @click="notice=''">×</button></div>
     <div v-if="loadError||catalogError" class="st-notice st-error" role="alert"><span>{{ loadError||catalogError }}</span><button :disabled="loading" @click="refresh">Повторить</button></div>
     <div class="st-layout">
@@ -86,6 +86,6 @@ function moveDetailTab(event:KeyboardEvent,index:number){
     </div></template>
     <template #footer><span class="st-muted">Просмотр сведений</span><button @click="cardOpen=false">Закрыть</button></template>
   </USlideover>
-  <StructuresImportPreview v-model:open="importOpen" :existing="existingCodes" preview-only/>
+  <StructuresImportPreview v-model:open="importOpen" :existing="existingCodes" @imported="refresh"/>
 </section>
 </template>
