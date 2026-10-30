@@ -35,7 +35,7 @@
         class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-6"
       >
         <UCard
-          v-for="n in 4"
+          v-for="n in 5"
           :key="n"
           class="h-40 flex flex-col justify-between"
         >
@@ -54,18 +54,11 @@
         />
       </div>
     </section>
-    <NuxtLink to="/departments/upts" class="upts-home-tile">
-      <span class="upts-home-icon"><Icon name="lucide:map-pinned" /></span>
-      <span><strong>Управление подготовки территории строительства</strong><small>Проекты, объекты, работа сотрудников и документы · УПТС</small></span>
-      <span aria-hidden="true">→</span>
-    </NuxtLink>
     <LibraryHomeTile />
   </div>
 </template>
 
 <style scoped>
-.upts-home-tile{margin-top:24px;padding:22px;display:flex;align-items:center;gap:18px;border:1px solid #cbd5e1;border-radius:16px;background:linear-gradient(110deg,#eef4ff,#fff);color:#172338}.upts-home-tile strong{display:block;font-size:18px}.upts-home-tile small{display:block;margin-top:5px;color:#52627a}.upts-home-tile>span:last-child{margin-left:auto}.upts-home-icon{font-size:28px;color:#2563eb}.dark .upts-home-tile{background:#1e293b;color:#e2e8f0;border-color:#475569}.dark .upts-home-tile small{color:#cbd5e1}
-
 .main-area {
   background-color: aliceblue;
   position: absolute;

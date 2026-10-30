@@ -11,8 +11,8 @@
   box-sizing: border-box;
 }
 .upts-sidebar {
-  background: #20314c;
-  color: #d8e3f2;
+  background: linear-gradient(160deg, #52525b 0%, #3f3f46 45%, #27272a 100%);
+  color: #e4e4e7;
   padding: 24px 15px;
   display: flex;
   flex-direction: column;
@@ -20,7 +20,7 @@
   border-radius: 0 18px 18px 0;
 }
 .upts-back {
-  color: #b7c8df;
+  color: #d4d4d8;
   font-size: 13px;
   padding: 0 12px;
 }
@@ -37,7 +37,7 @@
   display: block;
   margin-top: 4px;
   font-size: 11px;
-  color: #a9bdd5;
+  color: #d4d4d8;
 }
 .upts-sidebar nav {
   display: flex;
@@ -47,7 +47,7 @@
 .upts-root .upts-sidebar nav button {
   border: 0;
   background: transparent;
-  color: #c4d3e7;
+  color: #e4e4e7;
   display: flex;
   align-items: center;
   text-align: left;
@@ -61,8 +61,8 @@
   color: white;
   box-shadow: 0 5px 20px #0b1e3a40;
 }
-.upts-root .upts-sidebar nav button:hover {
-  background: #354963;
+.upts-root .upts-sidebar nav button:not([aria-current='page']):hover {
+  background: #ffffff18;
   color: white;
 }
 .upts-sidebar nav button > span:first-child {
@@ -83,7 +83,7 @@
 }
 .upts-sidebar-note p {
   font-size: 11px;
-  color: #9eb3cc;
+  color: #d4d4d8;
   margin-top: 10px;
   line-height: 1.7;
 }
@@ -98,7 +98,7 @@
 .upts-all-work {
   font-size: 12px;
   padding: 0 12px;
-  color: #b7c8df;
+  color: #d4d4d8;
 }
 .upts-main {
   padding: 26px 28px;

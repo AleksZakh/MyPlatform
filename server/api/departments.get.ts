@@ -50,6 +50,17 @@ export default defineEventHandler(() => {
         { label: 'Отбор проб', url: '/departments/lab/sampling' },
       ],
     },
+    {
+      id: 'upts',
+      name: 'Подготовка территории (УПТС)',
+      slug: '/departments/upts',
+      icon: 'i-lucide-map-pinned',
+      manager: null,
+      employeeCount: null,
+      quickLinks: [
+        { label: 'Управление проектами', url: '/departments/upts' },
+      ],
+    },
     //streamline-freehand-color:amusement-park-strength-meter
   ];
 });

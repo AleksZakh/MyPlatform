@@ -7,6 +7,7 @@ export const departmentPages = [
   { key: 'it', label: 'IT и разработка', to: '/departments/it' },
   { key: 'diagnostic', label: 'Диагностика', to: '/departments/diagnostic' },
   { key: 'lab', label: 'Лабораторный контроль', to: '/departments/lab' },
+  { key: 'upts', label: 'УПТС', to: '/departments/upts' },
 ] as const
 export const toolPages = [
   { label: 'Статистика', to: '/admin/statistics', description: 'Использование разделов, документов и коммуникаций Space.', icon: 'lucide:chart-no-axes-combined', resource: 'system.usage-statistics' },

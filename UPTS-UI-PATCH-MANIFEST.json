@@ -1,0 +1,30 @@
+{
+  "base": "Space-UPTS-pilot-20261030.zip installed",
+  "files": [
+    {
+      "path": "app/pages/index.vue",
+      "before": "ff86fbf4d6c718a7a19eb9677f978b5f97a2c2f57cf8623290df3f59eb1d0f79",
+      "after": "4ff41ab4eee266849e56312dae71ac1f774e6243801c638ad0017eb0786a87df"
+    },
+    {
+      "path": "server/api/departments.get.ts",
+      "before": "771d72ad4c565bca21b2343e3b73761b4e6436204503cebec758f79559b79059",
+      "after": "20420127b80cb877a0c1b85d50fe6918d1fe61478f7f4805fd84cee050333d49"
+    },
+    {
+      "path": "app/components/DepartmentCard.vue",
+      "before": "c9a9a51b17d622d9e65e7c59ccbc7e78fb9c110f9eeb09a97aaf2a508e5208a5",
+      "after": "0483fd44ec5fbace0fd0c3ad124ac52f2511911fd42d3f006d28872160848f09"
+    },
+    {
+      "path": "shared/navigation/catalog.ts",
+      "before": "5a4640c2627b998f175777fc0004d841c844322299890271445d2677afb9e449",
+      "after": "a909755fe254dca0b64eb4764bd96b88172ef6a89036b0389a418302e0422d57"
+    },
+    {
+      "path": "app/assets/css/upts.css",
+      "before": "f62c2aee702218b65dd787d3109eebc74c0024a51377374cc3b747cce4fb27d0",
+      "after": "f65b83f2b0f7ed3d6de5b7540ac1692961f909b7d13ab21e46eada59517afda5"
+    }
+  ]
+}

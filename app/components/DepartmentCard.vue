@@ -25,7 +25,7 @@
             {{ department.name }}
           </NuxtLink>
           <span class="text-xs text-gray-500 dark:text-gray-400">
-            Сотрудников: {{ department.employeeCount }}
+            {{ department.employeeCount == null ? 'Состав уточняется' : `Сотрудников: ${department.employeeCount}` }}
           </span>
         </div>
       </div>
@@ -61,14 +61,16 @@
     <template #footer>
       <div class="flex items-center gap-2">
         <UAvatar
+          v-if="department.manager"
           :src="department.manager.avatar"
           :alt="department.manager.name"
           size="xs"
         />
+        <span v-else class="flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-400" aria-hidden="true"><UIcon name="i-lucide-user-round" class="w-4 h-4" /></span>
         <div class="text-xs">
           <p class="text-gray-400 dark:text-gray-500">Руководитель</p>
           <p class="font-medium text-gray-700 dark:text-gray-200 line-clamp-1">
-            {{ department.manager.name }}
+            {{ department.manager?.name || 'Не указан' }}
           </p>
         </div>
       </div>
@@ -83,8 +85,8 @@ defineProps<{
     name: string;
     slug: string;
     icon: string;
-    employeeCount: number;
-    manager: { name: string; avatar: string };
+    employeeCount: number | null;
+    manager: { name: string; avatar: string } | null;
     quickLinks: Array<{ label: string; url: string }>;
   };
 }>();
