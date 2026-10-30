@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import {computed,reactive,ref} from 'vue';
+import {computed,reactive,ref,watch,onBeforeUnmount} from 'vue';
+import type {ContractStructureListItem} from '~~/shared/types/diagnostic-contract-structures';
 import CreatableNameSelect from '../../common/CreatableNameSelect.vue';
 import {contractDateTime} from '~~/shared/utils/diagnostic-contract-search';
 import type {ContractRecord,ContractInput,DiagnosticCatalog} from '~~/shared/types/diagnostic-contracts';
@@ -8,6 +9,27 @@ const props=defineProps<{contract:ContractRecord|null;catalog:DiagnosticCatalog;
 const emit=defineEmits<{close:[];edit:[];save:[ContractRecord]}>();
 const tabs=['Карточка договора','Работы с договором','Перечень сооружений'];
 const tab=ref(0),error=ref(''),saving=ref(false),confirmClose=ref(false);
+const structures=ref<ContractStructureListItem[]>([]);
+const structuresLoading=ref(false),structuresError=ref('');
+let structuresRequest=0;
+async function loadStructures(){
+ const request=++structuresRequest,contractId=props.contract?.id;
+ structures.value=[];structuresError.value='';structuresLoading.value=false;
+ if(!contractId)return;
+ structuresLoading.value=true;
+ try{
+  const rows=await $fetch<ContractStructureListItem[]>('/api/diagnostic/contracts/'+contractId+'/structures');
+  if(request===structuresRequest)structures.value=rows;
+ }catch(e:any){
+  if(request===structuresRequest)structuresError.value=e?.data?.message||'Не удалось загрузить сооружения. Повторите попытку.';
+ }finally{if(request===structuresRequest)structuresLoading.value=false;}
+}
+watch(()=>[tab.value,props.contract?.id] as const,()=>{
+ if(tab.value===2)void loadStructures();
+ else {structuresRequest++;structuresLoading.value=false;}
+});
+onBeforeUnmount(()=>{structuresRequest++;});
+
 type Draft=Omit<ContractInput,'counterpartyId'|'direction'> & {counterpartyId:number|null;direction:ContractInput['direction']|''};
 const c=props.contract;
 const form=reactive<Draft>({number:c?.number??'',date:c?.date??'',counterpartyId:c?.counterpartyId??null,direction:c?.direction??'',executor:c?.executor??null,start:c?.start??null,finish:c?.finish??null,stages:c?.stages??null,hours:c?.hours??null,amount:c?.amount??null,note:c?.note??null,projectTypeId:c?.projectTypeId??null,supervisorId:c?.supervisorId??null,relatedContractId:c?.relatedContractId??null});
@@ -94,7 +116,15 @@ const summaryColumns=[
      </div>
     </form>
     <section v-if="tab===1"><header class="contract-section-head"><h2>Перечень работ с договором</h2><button disabled title="Подключим справочник работ отдельным этапом">Добавить работы</button></header><div class="contract-detail-table"><table><thead><tr><th rowspan="2">#</th><th rowspan="2">Работа</th><th colspan="3">План</th><th colspan="3">Факт</th><th rowspan="2">Примечания</th></tr><tr><th>Дата нач.</th><th>Дата оконч.</th><th>Исполнитель</th><th>Дата нач.</th><th>Дата оконч.</th><th>Исполнитель</th></tr></thead><tbody><tr><td colspan="9">Работы с договором не найдены. Справочник ещё не подключён.</td></tr></tbody></table></div></section>
-    <section v-if="tab===2"><header class="contract-section-head"><h2>Перечень сооружений</h2><div><button disabled title="Следующий этап">Добавить сооружения</button><button disabled title="Следующий этап">Добавить работы</button></div></header><div class="contract-detail-table"><table><thead><tr><th>#</th><th>Код ИССО</th><th>Сооружение</th><th>Название автодороги</th><th>Место, км</th><th>Доп. инф.</th><th>Название осн. препятствия</th><th>Район расположения</th></tr></thead><tbody><tr><td colspan="8">Сооружения не найдены. Справочник ещё не подключён.</td></tr></tbody></table></div></section>
+    <section v-if="tab===2"><header class="contract-section-head"><h2>Перечень сооружений</h2><div><button disabled title="Следующий этап">Добавить сооружения</button><button disabled title="Следующий этап">Добавить работы</button></div></header><div class="contract-detail-table"><table><thead><tr><th>#</th><th>Код ИССО</th><th>Сооружение</th><th>Название автодороги</th><th>Место, км</th><th>Доп. инф.</th><th>Название осн. препятствия</th><th>Район расположения</th></tr></thead><tbody>
+<tr v-if="structuresLoading"><td colspan="8" role="status"><span class="animate-pulse motion-reduce:animate-none">Загрузка сооружений…</span></td></tr>
+<tr v-else-if="structuresError"><td colspan="8" role="alert">{{ structuresError }} <button type="button" @click="loadStructures">Повторить загрузку</button></td></tr>
+<tr v-else-if="!contract"><td colspan="8">Сохраните договор, чтобы просмотреть связанные сооружения.</td></tr>
+<tr v-else-if="!structures.length"><td colspan="8">К этому договору пока не привязаны сооружения.</td></tr>
+<template v-else><tr v-for="(structure,index) in structures" :key="structure.id">
+<td>{{ index+1 }}</td><td>{{ structure.code }}</td><td>{{ structure.structureName }}</td><td>{{ structure.roadName }}</td><td>{{ structure.location }}</td><td>{{ structure.additionalId }}</td><td>{{ structure.obstacleName }}</td><td>{{ structure.district }}</td>
+</tr></template>
+</tbody></table></div></section>
    </div>
   </template>
   <template #footer><div class="contract-footer-content"><div class="contract-secondary-actions"><button type="button" @click="auxiliary='documents'"><Icon name="lucide:folder-open" />Документы к договору</button><button type="button" @click="auxiliary='summary'"><Icon name="lucide:table-2" />Сводная таблица работ</button></div><small>{{ readOnly?'Режим просмотра':'Поля со звёздочкой обязательны. Остальные можно заполнить позже.' }}</small><div v-if="confirmClose" class="contract-discard" role="alert">Отменить несохранённые изменения?<button :disabled="saving" @click="emit('close')">Да, закрыть</button><button @click="confirmClose=false">Продолжить</button></div><div class="contract-footer-actions"><button v-if="contract&&readOnly&&canEdit" type="button" @click="emit('edit')"><Icon name="lucide:pencil" />Редактировать</button><button v-if="!readOnly" :disabled="saving||catalogBusy" class="contract-save" type="submit" form="diagnostic-contract-form">{{ saving?'Сохранение…':'Сохранить' }}</button><button @click="close">{{ readOnly?'Закрыть':'Отменить' }}</button></div></div></template>
