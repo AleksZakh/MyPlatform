@@ -1388,6 +1388,7 @@ model DiagnosticProjectType {
 }
 
 model DiagnosticContract {
+  legacyImport DiagnosticContractLegacyRow?
   id Int @id @default(autoincrement())
   number String @db.VarChar(150)
   date DateTime @db.Date
@@ -1605,4 +1606,19 @@ model DiagnosticStructureWork {
   @@index([contractStructureId, deletedAt])
   @@index([workId])
   @@map("diagnostic_structure_works")
+}
+
+model DiagnosticContractLegacyRow {
+  legacyId Int @id
+  contractId Int @unique
+  contract DiagnosticContract @relation(fields:[contractId],references:[id],onDelete:Restrict)
+  sourceHash String @db.VarChar(64)
+  rawData Json
+  supervisorText String @default("") @db.Text
+  relatedText String @default("") @db.Text
+  expectedStructures Int?
+  workCount Int?
+  importedById Int
+  importedAt DateTime @default(now())
+  @@map("diagnostic_contract_legacy_rows")
 }
