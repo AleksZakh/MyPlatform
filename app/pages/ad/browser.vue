@@ -1,420 +1,331 @@
-<!-- pages/ad/browser.vue -->
-<template>
-  <div class="p-6">
-    <h1 class="text-2xl font-bold mb-1">Сотрудники</h1>
-
-    <div class="flex gap-2 p-4 bg-gray-100 rounded-lg mb-1">
-      <button
-        class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition"
-        @click="loadUsers"
-        :disabled="loading"
-      >
-        Загрузить пользователей
-      </button>
-      <button
-        class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded transition"
-        @click="loadGroups"
-        :disabled="loading"
-      >
-        Загрузить группы
-      </button>
-      <button
-        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition"
-        @click="loadAll"
-        :disabled="loading"
-      >
-        Загрузить всё
-      </button>
-    </div>
-
-    <div v-if="loading" class="text-center py-8">
-      <div
-        class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"
-      ></div>
-      <p class="mt-2 text-gray-600">Загрузка данных...</p>
-    </div>
-
-    <!-- Таблица пользователей -->
-    <div v-if="users && users.length > 0" class="mb-8">
-      <h2 class="text-xl font-semibold mb-4">
-        Пользователи ({{ filteredUsers.length }} из {{ users.length }})
-      </h2>
-
-      <!-- Поиск -->
-      <div class="mb-4 relative w-fit">
-        <div
-          v-if="searchQuery"
-          @click="fieldClear"
-          class="absolute -right-4 -top-2"
-        >
-          <Icon
-            name="material-symbols-light:close-rounded"
-            class="hover:text-red-500"
-            mode="svg"
-          />
-        </div>
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="Поиск по имени, фамилии, email, телефону или отделу..."
-          class="w-full md:w-96 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
-
-      <div class="overflow-x-auto shadow-md rounded-lg">
-        <table class="min-w-full bg-white border border-gray-200">
-          <thead class="bg-gray-100">
-            <tr>
-              <th
-                v-for="column in columns"
-                :key="column.key"
-                @click="sortBy(column.key)"
-                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition"
-              >
-                <div class="flex items-center gap-1">
-                  {{ column.label }}
-                  <span v-if="sortKey === column.key" class="text-blue-500">
-                    {{ sortDirection === 'asc' ? '↑' : '↓' }}
-                  </span>
-                </div>
-              </th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-200">
-            <tr
-              v-for="user in paginatedUsers"
-              :key="user.sAMAccountName || user.cn"
-              class="hover:bg-gray-50 transition"
-            >
-              <td class="px-4 py-2 font-medium text-sm text-gray-900">
-                {{ user.cn || '-' }}
-              </td>
-              <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
-                {{ user.telephoneNumber || '-' }}
-              </td>
-              <td
-                class="px-4 py-2 text-sm text-blue-600 hover:underline hover:underline-offset-4"
-              >
-                <a :href="`mailto:${user.mail}`" v-if="user.mail">{{
-                  user.mail
-                }}</a>
-                <span v-else class="text-gray-400">-</span>
-              </td>
-              <td class="px-4 py-2 text-sm text-gray-900">
-                {{ user.department || '-' }}
-              </td>
-              <td class="px-4 py-2 text-sm text-gray-900">
-                {{ user.title || '-' }}
-              </td>
-              <td class="px-4 py-2 text-sm text-gray-900">
-                {{ user.l || '-' }}
-              </td>
-            </tr>
-            <tr v-if="filteredUsers.length === 0">
-              <td
-                :colspan="columns.length"
-                class="px-6 py-8 text-center text-gray-500"
-              >
-                Пользователи не найдены
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Пагинация -->
-      <div class="flex justify-between items-center mt-4">
-        <div class="text-sm text-gray-600">
-          Показано с {{ startIndex + 1 }} по {{ endIndex }} из
-          {{ filteredUsers.length }}
-        </div>
-        <div class="flex gap-2">
-          <button
-            @click="prevPage"
-            :disabled="currentPage === 1"
-            class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            ← Назад
-          </button>
-          <span class="px-3 py-1">
-            Страница {{ currentPage }} из {{ totalPages }}
-          </span>
-          <button
-            @click="nextPage"
-            :disabled="currentPage === totalPages"
-            class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Вперед →
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Таблица групп -->
-    <div v-if="groups && groups.length > 0" class="mb-8">
-      <h2 class="text-xl font-semibold mb-4">Группы ({{ groups.length }})</h2>
-
-      <div class="overflow-x-auto shadow-md rounded-lg">
-        <table class="min-w-full bg-white border border-gray-200">
-          <thead class="bg-gray-100">
-            <tr>
-              <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Название группы
-              </th>
-              <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Описание
-              </th>
-              <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Количество участников
-              </th>
-              <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Distinguished Name
-              </th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-200">
-            <tr
-              v-for="group in groups.slice(0, 50)"
-              :key="group.cn || group.name"
-              class="hover:bg-gray-50 transition"
-            >
-              <td
-                class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
-              >
-                {{ group.cn || group.name || '-' }}
-              </td>
-              <td class="px-6 py-4 text-sm text-gray-900">
-                {{ group.description || '-' }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                {{ group.member?.length || 0 }}
-              </td>
-              <td
-                class="px-6 py-4 text-sm text-gray-500 font-mono truncate max-w-md"
-              >
-                {{ group.dn || '-' }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <p v-if="groups.length > 50" class="text-sm text-gray-500 mt-2">
-        * Показаны первые 50 групп из {{ groups.length }}
-      </p>
-    </div>
-
-    <!-- Состояние когда нет данных -->
-    <div
-      v-if="!loading && !users && !groups"
-      class="text-center py-12 text-gray-500"
-    >
-      <p>Нажмите на кнопку выше, чтобы загрузить данные из Active Directory</p>
-    </div>
-  </div>
-</template>
-
-<script setup>
-const users = ref(null);
-const groups = ref(null);
-const loading = ref(false);
-
-// Сортировка
-const sortKey = ref('cn'); // сортировка по фамилии по умолчанию
-const sortDirection = ref('asc');
-
-// Поиск
-const searchQuery = ref('');
-const fieldClear = () => {
-  searchQuery.value = '';
-};
-
-// Пагинация
-const currentPage = ref(1);
-const itemsPerPage = ref(20);
-
-// Колонки таблицы
-const columns = [
-  { key: 'cn', label: 'ФИО' },
+<script setup lang="ts">
+import { usePhoneDirectory } from '~/composables/usePhoneDirectory';
+import type { ContactDTO } from '~~/shared/types/contacts';
+useHead({ title: 'Телефонный справочник — Space' });
+const {
+  contacts,
+  loading,
+  error,
+  search,
+  department,
+  departments,
+  page,
+  pageCount,
+  filtered,
+  rows,
+  start,
+  end,
+  updatedLabel,
+  sortKey,
+  descending,
+  sort,
+  load,
+} = usePhoneDirectory();
+const columns: { key: Exclude<keyof ContactDTO, 'id'>; label: string }[] = [
+  { key: 'fullName', label: 'ФИО' },
   { key: 'telephoneNumber', label: 'Телефон' },
-  // telephoneNumber
-  { key: 'mail', label: 'Email' },
-  { key: 'department', label: 'Отдел' },
-  { key: 'title', label: 'Должность' },
-  { key: 'l', label: 'Город' },
+  { key: 'email', label: 'Электронная почта' },
+  { key: 'department', label: 'Подразделение' },
+  { key: 'position', label: 'Должность' },
 ];
-
-// Сортировка пользователей
-const sortBy = (key) => {
-  if (sortKey.value === key) {
-    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc';
-  } else {
-    sortKey.value = key;
-    sortDirection.value = 'asc';
-  }
-};
-
-// Фильтрация пользователей
-const filteredUsers = computed(() => {
-  if (!users.value) return [];
-
-  let filtered = [...users.value];
-
-  // Поиск по всем текстовым полям
-  if (searchQuery.value.trim()) {
-    const query = searchQuery.value.toLowerCase();
-    filtered = filtered.filter((user) => {
-      return (
-        (user.cn?.toLowerCase() || '').includes(query) ||
-        (user.telephoneNumber?.toLowerCase() || '').includes(query) ||
-        (user.mail?.toLowerCase() || '').includes(query) ||
-        (user.department?.toLowerCase() || '').includes(query) ||
-        (user.title?.toLowerCase() || '').includes(query) ||
-        (user.l?.toLowerCase() || '').includes(query)
-      );
-    });
-  }
-
-  // Сортировка
-  filtered.sort((a, b) => {
-    let aVal = a[sortKey.value] || '';
-    let bVal = b[sortKey.value] || '';
-
-    // Для строк - сортировка без учета регистра
-    if (typeof aVal === 'string') {
-      aVal = aVal.toLowerCase();
-      bVal = bVal.toLowerCase();
-    }
-
-    if (aVal < bVal) return sortDirection.value === 'asc' ? -1 : 1;
-    if (aVal > bVal) return sortDirection.value === 'asc' ? 1 : -1;
-    return 0;
-  });
-
-  return filtered;
-});
-
-// Пагинация
-const totalPages = computed(() =>
-  Math.ceil(filteredUsers.value.length / itemsPerPage.value)
-);
-const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage.value);
-const endIndex = computed(() =>
-  Math.min(startIndex.value + itemsPerPage.value, filteredUsers.value.length)
-);
-const paginatedUsers = computed(() =>
-  filteredUsers.value.slice(startIndex.value, endIndex.value)
-);
-
-const prevPage = () => {
-  if (currentPage.value > 1) {
-    currentPage.value--;
-  }
-};
-
-const nextPage = () => {
-  if (currentPage.value < totalPages.value) {
-    currentPage.value++;
-  }
-};
-
-// Сброс пагинации при изменении фильтров
-watch([filteredUsers, searchQuery], () => {
-  currentPage.value = 1;
-});
-
-async function loadUsers() {
-  loading.value = true;
-  try {
-    const response = await fetch('/api/ad/get-users');
-    const data = await response.json();
-    users.value = data.users;
-    groups.value = null; // очищаем группы при загрузке пользователей
-    currentPage.value = 1;
-    searchQuery.value = '';
-    console.log('Загружено пользователей:', data.count);
-  } catch (error) {
-    console.error('Ошибка:', error);
-  } finally {
-    loading.value = false;
-  }
-}
-
-async function loadGroups() {
-  loading.value = true;
-  try {
-    const response = await fetch('/api/ad/get-groups');
-    const data = await response.json();
-    groups.value = data.groups;
-    users.value = null; // очищаем пользователей при загрузке групп
-    console.log('Загружено групп:', data.count);
-  } catch (error) {
-    console.error('Ошибка:', error);
-  } finally {
-    loading.value = false;
-  }
-}
-
-async function loadAll() {
-  loading.value = true;
-  try {
-    // Загружаем пользователей и групп параллельно
-    const [usersRes, groupsRes] = await Promise.all([
-      fetch('/api/ad/get-users'),
-      fetch('/api/ad/get-groups'),
-    ]);
-
-    const usersData = await usersRes.json();
-    const groupsData = await groupsRes.json();
-
-    users.value = usersData.users;
-    groups.value = groupsData.groups;
-    currentPage.value = 1;
-    searchQuery.value = '';
-
-    console.log('Загружено пользователей:', usersData.count);
-    console.log('Загружено групп:', groupsData.count);
-  } catch (error) {
-    console.error('Ошибка:', error);
-  } finally {
-    loading.value = false;
-  }
-}
 </script>
 
+<template>
+  <section class="phone-directory">
+    <header class="phone-heading">
+      <div>
+        <h1>Телефонный справочник</h1>
+        <p>Контакты сотрудников компании</p>
+      </div>
+      <button :disabled="loading" @click="load">
+        <Icon name="lucide:refresh-cw" />Обновить
+      </button>
+    </header>
+    <div class="phone-filters">
+      <label class="phone-search"
+        >Поиск
+        <input
+          v-model="search"
+          type="search"
+          maxlength="200"
+          placeholder="ФИО, телефон, почта, должность"
+        />
+      </label>
+      <label
+        >Подразделение
+        <select v-model="department" aria-label="Подразделение">
+          <option value="">Все подразделения</option>
+          <option v-for="name in departments" :key="name" :value="name">
+            {{ name }}
+          </option>
+        </select>
+      </label>
+      <button
+        v-if="search || department"
+        @click="
+          search = '';
+          department = '';
+        "
+      >
+        Сбросить
+      </button>
+    </div>
+    <div v-if="error" class="phone-error" role="alert">
+      <span>{{ error }}</span
+      ><button :disabled="loading" @click="load">Повторить</button>
+    </div>
+    <div class="phone-table" :aria-busy="loading">
+      <table>
+        <caption class="phone-sr-only">
+          Контакты сотрудников компании
+        </caption>
+        <thead>
+          <tr>
+            <th
+              v-for="column in columns"
+              :key="column.key"
+              scope="col"
+              :aria-sort="
+                sortKey === column.key
+                  ? descending
+                    ? 'descending'
+                    : 'ascending'
+                  : 'none'
+              "
+            >
+              <button @click="sort(column.key)">
+                {{ column.label }}
+                <span v-if="sortKey === column.key" aria-hidden="true">{{
+                  descending ? '↓' : '↑'
+                }}</span>
+              </button>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-if="loading">
+            <td :colspan="columns.length" class="phone-empty">
+              <span role="status">Загрузка контактов…</span>
+            </td>
+          </tr>
+          <template v-else>
+            <tr v-for="contact in rows" :key="contact.id">
+              <td class="phone-name">{{ contact.fullName }}</td>
+              <td>{{ contact.telephoneNumber || '—' }}</td>
+              <td>
+                <a
+                  v-if="contact.email"
+                  :href="`mailto:${encodeURIComponent(contact.email)}`"
+                  >{{ contact.email }}</a
+                ><span v-else>—</span>
+              </td>
+              <td>{{ contact.department || '—' }}</td>
+              <td>{{ contact.position || '—' }}</td>
+            </tr>
+            <tr v-if="!rows.length">
+              <td :colspan="columns.length" class="phone-empty">
+                {{
+                  error
+                    ? 'Контакты не загружены.'
+                    : contacts.length
+                      ? 'По вашему запросу сотрудники не найдены.'
+                      : 'В справочнике пока нет контактов.'
+                }}
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+    <footer class="phone-footer">
+      <div aria-live="polite">
+        <span v-if="!loading"
+          >Показано: {{ filtered.length ? start + 1 : 0 }}–{{ end }} из
+          {{ filtered.length }}</span
+        >
+        <small v-if="updatedLabel"
+          >Данные обновлены: {{ updatedLabel }} (МСК)</small
+        >
+      </div>
+      <nav aria-label="Страницы справочника">
+        <button :disabled="loading || page <= 1" @click="page--">
+          ← Назад
+        </button>
+        <span>Страница {{ page }} из {{ pageCount }}</span>
+        <button :disabled="loading || page >= pageCount" @click="page++">
+          Вперёд →
+        </button>
+      </nav>
+    </footer>
+  </section>
+</template>
+
 <style scoped>
-/* Дополнительные стили для улучшения внешнего вида */
-table {
+.phone-directory {
+  padding: 20px 24px;
+  min-height: 100%;
+  background: var(--space-bg, #f5f7fb);
+  color: var(--space-text, #263445);
   font-size: 14px;
 }
-
-th {
-  user-select: none;
+.phone-heading,
+.phone-filters,
+.phone-footer,
+.phone-footer nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
 }
-
-button:disabled {
-  cursor: not-allowed;
+.phone-heading {
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.phone-heading h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 650;
+}
+.phone-heading p {
+  margin: 4px 0 0;
+  color: var(--space-muted, #667589);
+}
+.phone-directory button,
+.phone-directory input,
+.phone-directory select {
+  font: inherit;
+  padding: 7px 10px;
+  border: 1px solid var(--space-line, #cbd5e1);
+  border-radius: 5px;
+  background: var(--space-panel, #fff);
+  color: inherit;
+}
+.phone-directory button {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.phone-directory button:hover:not(:disabled) {
+  border-color: var(--space-accent, #2563eb);
+}
+.phone-directory button:disabled {
   opacity: 0.5;
+  cursor: not-allowed;
 }
-
-/* Анимация загрузки */
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.phone-filters {
+  align-items: end;
+  margin-bottom: 12px;
 }
-
-.animate-spin {
-  animation: spin 1s linear infinite;
+.phone-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.phone-filters .phone-search {
+  flex: 1;
+  min-width: 220px;
+}
+.phone-filters select {
+  max-width: 420px;
+}
+.phone-error {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px;
+  margin-bottom: 12px;
+  background: var(--space-danger-bg, #fee4e2);
+  color: var(--space-danger, #b42318);
+  border-radius: 5px;
+}
+.phone-table {
+  overflow: auto;
+  border: 1px solid var(--space-line, #cbd5e1);
+  border-radius: 7px;
+}
+.phone-table table {
+  width: 100%;
+  min-width: 800px;
+  border-collapse: collapse;
+  background: var(--space-panel, #fff);
+  text-align: left;
+}
+.phone-table th,
+.phone-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--space-line, #d4dce5);
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+.phone-table th {
+  background: var(--space-raised, #edf2f7);
+  white-space: nowrap;
+}
+.phone-table th button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  justify-content: start;
+  font-weight: 600;
+}
+.phone-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.phone-table tbody tr:hover {
+  background: var(--space-hover, #f1f5f9);
+}
+.phone-table .phone-name {
+  font-weight: 500;
+  min-width: 210px;
+}
+.phone-table a {
+  color: var(--space-accent, #176b88);
+}
+.phone-table a:hover {
+  text-decoration: underline;
+}
+.phone-table .phone-empty {
+  text-align: center;
+  padding: 30px 12px;
+  color: var(--space-muted, #667589);
+}
+.phone-footer {
+  justify-content: space-between;
+  margin-top: 12px;
+  font-size: 12px;
+}
+.phone-footer small {
+  display: block;
+  margin-top: 4px;
+  color: var(--space-muted, #667589);
+}
+.phone-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+@media (max-width: 700px) {
+  .phone-directory {
+    padding: 12px;
+  }
+  .phone-filters label,
+  .phone-filters select {
+    width: 100%;
+    max-width: 100%;
+  }
+  .phone-footer nav {
+    gap: 8px;
+  }
 }
 </style>

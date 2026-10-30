@@ -379,7 +379,7 @@ const {
                 <div class="upts-panel-head">
                   <h2>Работа команды</h2>
                   <button @click="section = 'employees'">
-                    По сотрудникам →
+                    Загрузка сотрудников →
                   </button>
                 </div>
                 <div
@@ -668,7 +668,7 @@ const {
                 {{
                   employeeId
                     ? workUserName(people.find((p) => p.id === employeeId))
-                    : 'Работа сотрудников'
+                    : 'Загрузка сотрудников'
                 }}
               </h2>
               <p class="work-muted">

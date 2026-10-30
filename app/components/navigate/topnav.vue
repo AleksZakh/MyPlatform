@@ -17,20 +17,12 @@
 
     <!-- Menu -->
 
-    <div class="p-5 grid items-center gap-1">
+    <div class="p-5 flex flex-wrap items-center gap-1">
 
       <div>
         <NuxtLink to="/">
           <Icon name="line-md:home" />
           Главная
-        </NuxtLink>
-      </div>
-
-
-      <div class="mr-5">
-        <NuxtLink to="/ad/browser">
-          <Icon name="teenyicons:users-outline" />
-          Сотрудники
         </NuxtLink>
       </div>
 
@@ -50,6 +42,11 @@
 
       <div>
         <NuxtLink to="/library" class="flex items-center gap-2 px-4"><Icon name="lucide:library" />Библиотека</NuxtLink>
+      </div>
+      <div>
+        <NuxtLink to="/ad/browser" class="flex items-center gap-2 px-4">
+          <Icon name="lucide:contact-round" />Телефонный справочник
+        </NuxtLink>
       </div>
     </div>
 
@@ -310,12 +307,3 @@ const logout = async () => {
 </script>
 
 
-<style scoped>
-
-.grid {
-  display: grid;
-  grid-template-columns:
-    1fr 1fr 1fr 1fr 1fr 1fr 1fr;
-}
-
-</style>

@@ -116,7 +116,7 @@ export function useUptsWorkspace() {
     { key: 'projects', label: 'Проекты', icon: 'lucide:folders' },
     { key: 'tasks', label: 'Задачи', icon: 'lucide:columns-3' },
     { key: 'objects', label: 'Участки и объекты', icon: 'lucide:map-pinned' },
-    { key: 'employees', label: 'Сотрудники', icon: 'lucide:users' },
+    { key: 'employees', label: 'Загрузка сотрудников', icon: 'lucide:users' },
     { key: 'contracts', label: 'Договоры', icon: 'lucide:files' },
   ];
   const projectEditor = ref(false),

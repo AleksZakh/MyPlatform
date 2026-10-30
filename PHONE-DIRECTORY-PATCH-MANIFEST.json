@@ -1,0 +1,44 @@
+{
+  "files": [
+    {
+      "path": "app/components/navigate/topnav.vue",
+      "before_sha256": "69344d906a3893bb86335b90d8d7a1a8644bc9b6eaf9dc68c8c2755987a47860",
+      "after_sha256": "97f1fae51d84a741026d99af26260353d55555edf762097f02d929882a8bf441"
+    },
+    {
+      "path": "app/pages/ad/browser.vue",
+      "before_sha256": "88820c55e1ad245f00cb155ec6b60dbb99122ce21be8bee9cc928decec3e49e8",
+      "after_sha256": "dfa7c0787641641b3746176034a2d09d7cc403c140d49b7eb148c41743d71941"
+    },
+    {
+      "path": "app/composables/useUptsWorkspace.ts",
+      "before_sha256": "da98065cf98b38409a328d9b095e8416a5342e2accdf8bfba66f950227e0b032",
+      "after_sha256": "fa20fd9cc540945c5c2fcd0bcf6d8b6db4f6fb95dedc23dc9a574726b6d249f5"
+    },
+    {
+      "path": "app/components/upts/UptsWorkspace.vue",
+      "before_sha256": "159653e62fec99c1e902692c77b39899cf6222dbb00f3a5ceeb4da5b3d6e5164",
+      "after_sha256": "df52d5943f4058af0cd2258c0263fe6d310c760e44cd82a056816d0817ebcc38"
+    },
+    {
+      "path": "shared/navigation/catalog.ts",
+      "before_sha256": "a909755fe254dca0b64eb4764bd96b88172ef6a89036b0389a418302e0422d57",
+      "after_sha256": "8a60d91988de8042c8daec97a4b059c7c657e19489412dffef2b90f306839e39"
+    },
+    {
+      "path": "shared/types/contacts.ts",
+      "before_sha256": null,
+      "after_sha256": "23a342ddc2d0f031e7735c23a38819e01f2835e3b6a5c924683bc370cd4538c3"
+    },
+    {
+      "path": "server/api/contacts.get.ts",
+      "before_sha256": null,
+      "after_sha256": "e3cb752fb911d2ecbea67fafd4a2423fd08adcb4d082a18f459835a1e12d3d83"
+    },
+    {
+      "path": "app/composables/usePhoneDirectory.ts",
+      "before_sha256": null,
+      "after_sha256": "ff3a258e133941dd6a206f14ebfaa611908a19e0c8b43029e4dc333c6c8ded80"
+    }
+  ]
+}
