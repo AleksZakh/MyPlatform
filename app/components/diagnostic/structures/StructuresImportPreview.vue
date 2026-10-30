@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, nextTick } from 'vue';
 import {structureRequestError} from '~/composables/diagnostic/useStructures';
 import {parseStructureImportBatch} from '~~/shared/utils/diagnostic-structure-import';
 import type { StructureRecord } from '~~/shared/types/diagnostic-structures';
@@ -11,32 +11,41 @@ const busy=ref(false), fileName=ref(''), note=ref(''), error=ref(''), sheets=ref
 const started=ref(false),finished=ref(false),cursor=ref(0),createdCount=ref(0),skippedCount=ref(0),targetCount=ref(0);
 let pending:StructureRecord[]=[];
 let generation=0;
+const toast=useToast();
+const readingProgress=ref('');
+const importedCodes=ref<Pick<StructureRecord,'issoCode'>[]>([]);
+const fileInput=ref<HTMLInputElement|null>(null);
+function resetRun(){started.value=false;finished.value=false;cursor.value=0;createdCount.value=0;skippedCount.value=0;targetCount.value=0;pending=[];}
+function rememberCodes(codes:string[]){importedCodes.value.push(...codes.map(issoCode=>({issoCode})));}
 const prepared=computed(()=>{
   const sheet=sheets.value[sheetIndex.value];
   if(!sheet)return {plan:null,error:''};
-  try{return {plan:planStructureImport(sheet.rows,props.existing,fileName.value,note.value),error:''};}
+  try{return {plan:planStructureImport(sheet.rows,[...props.existing,...importedCodes.value],fileName.value,note.value),error:''};}
   catch(e){return {plan:null,error:e instanceof Error?e.message:'Не удалось проверить столбцы.'};}
 });
 const plan=computed(()=>prepared.value.plan);
-watch(()=>props.open,open=>{if(!open){generation++;busy.value=false;started.value=false;finished.value=false;cursor.value=0;createdCount.value=0;skippedCount.value=0;targetCount.value=0;pending=[];fileName.value='';note.value='';error.value='';sheets.value=[];sheetIndex.value=0;inputKey.value++;}});
-async function choose(files:FileList|null){
-  if(busy.value||started.value||!files?.length)return;
+watch(()=>props.open,open=>{if(!open){generation++;busy.value=false;readingProgress.value='';started.value=false;finished.value=false;cursor.value=0;createdCount.value=0;skippedCount.value=0;targetCount.value=0;pending=[];fileName.value='';note.value='';error.value='';sheets.value=[];sheetIndex.value=0;inputKey.value++;}});
+async function choose(files:FileList|File[]|null){
+  if(busy.value||!files?.length)return;
+  resetRun();
   sheets.value=[];error.value='';fileName.value='';sheetIndex.value=0;
   if(files.length!==1){error.value='Выберите один Excel-файл.';return;}
   const file=files[0];if(!file)return;
-  const current=++generation;busy.value=true;fileName.value=file.name;
-  try{const parsed=await readStructuresWorkbook(file);if(current===generation)sheets.value=parsed;}
+  const current=++generation;busy.value=true;fileName.value=file.name;readingProgress.value='Открытие книги…';
+  try{await nextTick();await new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve())));
+    const parsed=await readStructuresWorkbook(file,message=>{if(current===generation)readingProgress.value=message;});if(current===generation)sheets.value=parsed;}
   catch(e){if(current===generation)error.value=e instanceof Error?e.message:'Не удалось прочитать Excel. Проверьте файл.';}
-  finally{if(current===generation)busy.value=false;}
+  finally{if(current===generation){busy.value=false;inputKey.value++;}}
 }
-function picked(event:Event){void choose((event.target as HTMLInputElement).files);}
+function picked(event:Event){const input=event.target as HTMLInputElement;const files=Array.from(input.files||[]);input.value='';void choose(files);}
+function reread(){fileInput.value?.click();}
 function dropped(event:DragEvent){dragging.value=false;void choose(event.dataTransfer?.files||null);}
 function close(){if(!busy.value)emit('update:open',false);}
 async function apply(){
-  if(props.previewOnly||busy.value||finished.value||!plan.value||plan.value.errors.length||!plan.value.records.length)return;
+  if(props.previewOnly||busy.value||finished.value||(!started.value&&(!plan.value||plan.value.errors.length||!plan.value.records.length)))return;
   error.value='';
   if(!started.value){
-    pending=plan.value.records.map(row=>({...row}));
+    pending=plan.value!.records.map(row=>({...row}));
     // Validate every batch before the first write, including lengths and unsupported links.
     try{for(let i=0;i<pending.length;i+=25)parseStructureImportBatch({fileName:fileName.value,records:pending.slice(i,i+25)});}
     catch(e){error.value=e instanceof Error?e.message:'Некорректные данные.';return;}
@@ -49,10 +58,12 @@ async function apply(){
       const result=await $fetch<{created:string[];skipped:string[]}>('/api/diagnostic/structures/import',{
         method:'POST',headers:{'x-space-diagnostic':'1'},body:{fileName:fileName.value,records},retry:0,
       });
+      rememberCodes([...result.created,...result.skipped]);
       createdCount.value+=result.created.length;skippedCount.value+=result.skipped.length;cursor.value+=records.length;
     }
     finished.value=true;
-  }catch(e){error.value=structureRequestError(e)+' Завершённые пакеты сохранены. Нажмите «Продолжить импорт» или повторно загрузите файл: существующие коды будут пропущены.';}
+    toast.add({title:'Импорт сооружений завершён',description:`Создано: ${createdCount.value}. Пропущено сервером: ${skippedCount.value}.`,color:'success',duration:12000});
+  }catch(e){toast.add({title:'Импорт остановлен',description:structureRequestError(e),color:'error',duration:12000});error.value=structureRequestError(e)+' Завершённые пакеты сохранены. Нажмите «Продолжить импорт» или повторно загрузите файл: существующие коды будут пропущены.';}
   finally{busy.value=false;emit('imported');}
 }
 </script>
@@ -63,13 +74,14 @@ async function apply(){
       <div class="st-import-toolbar" :class="{'st-import-has-sheet':sheets.length}">
         <div class="st-drop" :class="{'st-drop-active':dragging}" @dragover.prevent="dragging=true" @dragleave.prevent="dragging=false" @drop.prevent="dropped">
           <Icon name="lucide:file-up" aria-hidden="true"/>
-          <div class="st-drop-controls"><label>Excel-файл<input :key="inputKey" type="file" accept=".xlsx" :disabled="busy||started" @change="picked"/></label><small>Выберите или перетащите .xlsx · до 2 МБ</small></div>
+          <div class="st-drop-controls"><label>Excel-файл<input ref="fileInput" :key="inputKey" type="file" accept=".xlsx" :disabled="busy" @change="picked"/></label><small>Выберите или перетащите .xlsx · до 2 МБ</small></div>
         </div>
         <label v-if="sheets.length" class="st-import-sheet">Лист<select v-model.number="sheetIndex" :disabled="busy||started"><option v-for="(sheet,index) in sheets" :key="sheet.name" :value="index">{{ sheet.name }}</option></select></label>
         <label class="st-import-note">Примечание для добавляемых сооружений<textarea v-model="note" rows="2" maxlength="2000" :disabled="busy||started" placeholder="Например, название обследования или группы"/></label>
       </div>
-      <p v-if="busy&&!started" role="status">Чтение файла {{ fileName }}…</p>
-      <p v-else-if="fileName" class="st-import-filename">Файл: {{ fileName }}</p>
+      <div v-if="busy&&!started" class="st-import-reading" role="status" aria-live="polite"><span class="st-import-spinner" aria-hidden="true"/><div><strong>Чтение файла {{ fileName }}</strong><p>{{ readingProgress }}</p></div></div>
+      <p v-else-if="fileName" class="st-import-filename">Файл: {{ fileName }} <button type="button" :disabled="busy" @click="reread">Выбрать исправленный файл</button></p>
+      <p v-if="error||prepared.error||plan?.errors.length" class="st-muted">Исправьте файл и выберите его снова здесь, даже с тем же именем. Закрывать окно не нужно.</p>
       <p v-if="previewOnly" class="st-preview-note">Проверка файла без записи в справочник. Существующие коды сверены со всей базой на момент открытия окна. Результаты остаются в этом окне.</p><p v-else class="st-preview-note">После проверки нажмите «Импортировать». Новые сооружения сохраняются в справочник. Существующие коды, включая архивные, пропускаются без изменения данных. Требуется право создания сооружений.</p>
       <p v-if="started" class="st-preview-note" role="status">{{ finished?'Импорт завершён.':'Импорт:' }} Обработано {{ cursor }} из {{ targetCount }}. Создано: {{ createdCount }}. Пропущено сервером: {{ skippedCount }}.</p>
       <p v-if="error||prepared.error" role="alert" class="st-error">{{ error||prepared.error }}</p>
@@ -85,6 +97,14 @@ async function apply(){
       <div v-if="!fileName&&!busy&&!error" class="st-import-empty"><Icon name="lucide:table-2" aria-hidden="true"/><p>Выберите Excel-файл — здесь появятся результаты проверки и таблица сооружений.</p></div>
       </div>
     </template>
-    <template #footer><span class="st-muted">{{ previewOnly?'Проверка файла без сохранения':'Сохранение в справочник сооружений' }}</span><button type="button" :disabled="busy" @click="close">Закрыть</button><button v-if="!previewOnly" type="button" class="st-primary" :disabled="busy||finished||!plan?.records.length||!!plan?.errors.length" @click="apply">{{ finished?'Импорт завершён':started?'Продолжить импорт':'Импортировать ('+(plan?.records.length||0)+')' }}</button></template>
+    <template #footer><span class="st-muted">{{ busy?(started?'Импорт: '+cursor+' из '+targetCount:readingProgress):finished?'Импорт завершён · создано '+createdCount:previewOnly?'Проверка файла без сохранения':'Сохранение в справочник сооружений' }}</span><button type="button" :disabled="busy" @click="close">Закрыть</button><button v-if="!previewOnly" type="button" class="st-primary" :disabled="busy||finished||(!started&&(!plan?.records.length||!!plan?.errors.length))" @click="apply">{{ finished?'Импорт завершён':started?'Продолжить импорт':'Импортировать ('+(plan?.records.length||0)+')' }}</button></template>
   </UModal>
 </template>
+
+<style scoped>
+.st-import-reading{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid currentColor;border-radius:8px;color:var(--ui-primary,#0284c7)}
+.st-import-reading p{margin:4px 0 0;font-size:13px}
+.st-import-spinner{display:inline-block;width:22px;height:22px;flex:0 0 22px;border:3px solid currentColor;border-right-color:transparent;border-radius:50%;animation:st-import-spin .8s linear infinite}
+@keyframes st-import-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.st-import-spinner{animation:none}}
+</style>

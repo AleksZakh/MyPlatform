@@ -2,9 +2,10 @@ import { structureHeaderKey } from '~~/shared/utils/diagnostic-structures';
 
 /** Local workbook preview only: no upload, API call or database write. */
 export interface StructureWorkbookSheet { name:string; rows:string[][]; }
-export async function readStructuresWorkbook(file:File):Promise<StructureWorkbookSheet[]> {
+export async function readStructuresWorkbook(file:File,onProgress?:(message:string)=>void):Promise<StructureWorkbookSheet[]> {
   if(!/\.xlsx$/i.test(file.name)) throw new Error('Выберите файл .xlsx.');
   if(file.size>2*1024*1024) throw new Error('Размер файла не должен превышать 2 МБ.');
+  onProgress?.('Распаковка Excel…');
   const {default:ExcelJS}=await import('exceljs');
   const workbook=new ExcelJS.Workbook();
   // ExcelJS accepts ArrayBuffer in browsers; its Node-oriented declaration calls it Buffer.
@@ -16,6 +17,7 @@ export async function readStructuresWorkbook(file:File):Promise<StructureWorkboo
     if(sheet.rowCount>20001 || sheet.columnCount>100) throw new Error('Для предварительного просмотра поддерживается до 20 000 строк и 100 столбцов на листе.');
     const rows:string[][]=[];
     for(let r=1;r<=sheet.rowCount;r++) {
+      if(r===1||r%250===0){onProgress?.(`Лист «${sheet.name}»: ${Math.min(r,sheet.rowCount)} из ${sheet.rowCount} строк`);await new Promise<void>(resolve=>setTimeout(resolve,0));}
       const row:string[]=[];
       for(let c=1;c<=sheet.columnCount;c++) {
         const cell=sheet.getCell(r,c), value=cell.value;
@@ -38,5 +40,6 @@ export async function readStructuresWorkbook(file:File):Promise<StructureWorkboo
     sheets.push({name:sheet.name,rows});
   }
   if(!sheets.length)throw new Error('В книге нет заполненных листов.');
+  onProgress?.('Проверка данных…');
   return sheets;
 }
