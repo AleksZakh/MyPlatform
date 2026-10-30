@@ -1,6 +1,5 @@
 .upts-root {
-  display: grid;
-  grid-template-columns: 208px minmax(0, 1fr);
+  display: block;
   min-height: calc(100vh - 90px);
   background: var(--work-bg);
   font-size: 14px;
@@ -10,125 +9,110 @@
 .upts-root * {
   box-sizing: border-box;
 }
-.upts-sidebar {
-  background: linear-gradient(160deg, #52525b 0%, #3f3f46 45%, #27272a 100%);
-  color: #e4e4e7;
-  padding: 24px 15px;
-  display: flex;
-  flex-direction: column;
-  gap: 26px;
-  border-radius: 0 18px 18px 0;
-}
-.upts-back {
-  color: #d4d4d8;
-  font-size: 13px;
-  padding: 0 12px;
-}
-.upts-brand {
-  padding: 0 12px;
-}
-.upts-brand > span {
-  font-size: 29px;
-  font-weight: 750;
-  letter-spacing: 3px;
-  color: white;
-}
-.upts-brand small {
-  display: block;
-  margin-top: 4px;
-  font-size: 11px;
-  color: #d4d4d8;
-}
-.upts-sidebar nav {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.upts-root .upts-sidebar nav button {
-  border: 0;
-  background: transparent;
-  color: #e4e4e7;
+/* Same palette, spacing and active underline as DiagnosticModuleTabs. */
+.upts-topbar {
+  --upts-nav-bg: #e9e9eb;
+  --upts-nav-text: #263445;
+  --upts-nav-muted: #667589;
+  --upts-nav-line: #d4dce5;
+  --upts-nav-accent: #176b88;
   display: flex;
   align-items: center;
-  text-align: left;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  padding: 0 16px;
+  min-height: 52px;
+  background: var(--upts-nav-bg);
+  color: var(--upts-nav-text);
+  border-bottom: 1px solid var(--upts-nav-line);
+}
+.upts-module-links {
+  display: flex;
+  align-items: stretch;
+  gap: 22px;
+  overflow-x: auto;
+  min-width: 0;
+  flex: 1;
+  white-space: nowrap;
+}
+.upts-root .upts-module-links > button,
+.upts-root .upts-module-links > a {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 6px;
+  padding: 15px 0 12px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--upts-nav-muted);
+  font: inherit;
+  text-decoration: none;
+}
+.upts-root .upts-module-links > [aria-current="page"] {
+  font-weight: 700;
+  color: var(--upts-nav-accent);
+  border-bottom-color: var(--upts-nav-accent);
+}
+.upts-root .upts-module-links > :hover {
+  color: var(--upts-nav-accent);
+}
+.upts-module-links small {
+  font-size: 11px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--upts-nav-text) 8%, transparent);
+}
+.upts-module-tools {
   gap: 12px;
-  padding: 12px;
-  font-size: 13px;
-  border-radius: 9px;
+  padding: 7px 0;
 }
-.upts-root .upts-sidebar nav button[aria-current='page'] {
-  background: #3b82f6;
-  color: white;
-  box-shadow: 0 5px 20px #0b1e3a40;
+.upts-root .upts-module-tools > button,
+.upts-root .upts-module-tools > a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid #aebdcc;
+  border-radius: 4px;
+  padding: 6px 10px;
+  background: transparent;
+  color: var(--upts-nav-text);
+  font: inherit;
+  text-decoration: none;
 }
-.upts-root .upts-sidebar nav button:not([aria-current='page']):hover {
-  background: #ffffff18;
-  color: white;
+.upts-root .upts-module-tools > .work-primary {
+  background: var(--upts-nav-accent);
+  border-color: var(--upts-nav-accent);
+  color: var(--upts-nav-bg);
 }
-.upts-sidebar nav button > span:first-child {
-  font-size: 18px;
+.upts-root .upts-topbar :is(a, button):focus-visible {
+  outline: 2px solid var(--upts-nav-accent);
+  outline-offset: -2px;
 }
-.upts-sidebar nav small {
-  margin-left: auto;
-  font-size: 11px;
-  padding: 1px 6px;
-  border-radius: 5px;
-  background: #ffffff20;
-}
-.upts-sidebar-note {
-  margin-top: auto;
-  padding: 15px 12px;
-  border-top: 1px solid #ffffff1c;
-  font-size: 12px;
-}
-.upts-sidebar-note p {
-  font-size: 11px;
-  color: #d4d4d8;
-  margin-top: 10px;
-  line-height: 1.7;
-}
-.upts-dot {
-  display: inline-block;
-  height: 7px;
-  width: 7px;
-  background: #54d6b4;
-  border-radius: 50%;
-  margin-right: 5px;
-}
-.upts-all-work {
-  font-size: 12px;
-  padding: 0 12px;
-  color: #d4d4d8;
+html.dark .upts-topbar {
+  --upts-nav-bg: #344757;
+  --upts-nav-text: #edf3f8;
+  --upts-nav-muted: #bac9d6;
+  --upts-nav-line: #506579;
+  --upts-nav-accent: #78d6ea;
 }
 .upts-main {
-  padding: 26px 28px;
+  padding: 13px 14px;
   min-width: 0;
   max-width: 1900px;
   width: 100%;
-  margin: auto;
+  margin: 0 auto;
 }
 .upts-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 20px;
-  margin-bottom: 24px;
-}
-.upts-eyebrow {
-  font-size: 11px;
-  color: var(--work-muted);
-  letter-spacing: 0.04em;
-  margin: 0 0 7px;
+  margin-bottom: 12px;
 }
 .upts-heading h1 {
-  font-size: 27px;
-  letter-spacing: -0.7px;
-  font-weight: 750;
-  line-height: 1.25;
-  margin: 0 0 7px;
-}
-.upts-heading .work-muted {
-  font-size: 12px;
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 0;
 }
 .upts-root .work-actions button {
   display: inline-flex;
@@ -139,13 +123,13 @@
 }
 .upts-filters {
   display: flex;
-  gap: 12px;
+  gap: 6px;
   align-items: end;
   background: var(--work-panel);
   border: 1px solid var(--work-line);
   padding: 13px 16px;
   border-radius: 12px;
-  margin-bottom: 19px;
+  margin-bottom: 9.5px;
   flex-wrap: wrap;
 }
 .upts-root label {
@@ -191,15 +175,15 @@
   padding: 10px 14px;
   background: color-mix(in srgb, var(--work-panel) 85%, #3b82f6 15%);
   font-size: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 }
 .upts-project-strip {
   display: flex;
-  gap: 18px;
+  gap: 9px;
   align-items: center;
   flex-wrap: wrap;
   font-size: 12px;
-  margin-bottom: 18px;
+  margin-bottom: 9px;
 }
 .upts-project-strip .work-actions {
   margin-left: auto;
@@ -210,8 +194,8 @@
 .upts-metrics {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 14px;
-  margin-bottom: 22px;
+  gap: 7px;
+  margin-bottom: 11px;
 }
 .upts-metrics article {
   padding: 16px 18px;
@@ -267,9 +251,9 @@
 }
 .upts-project-tabs {
   display: flex;
-  gap: 22px;
+  gap: 11px;
   border-bottom: 1px solid var(--work-line);
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   overflow: auto;
 }
 .upts-root .upts-project-tabs button {
@@ -280,20 +264,20 @@
   padding: 10px 2px;
   white-space: nowrap;
 }
-.upts-root .upts-project-tabs button[aria-pressed='true'] {
+.upts-root .upts-project-tabs button[aria-pressed="true"] {
   color: var(--work-accent);
   border-bottom-color: var(--work-accent);
 }
 .upts-dashboard {
   display: grid;
   grid-template-columns: minmax(0, 2.2fr) minmax(250px, 1fr);
-  gap: 20px;
+  gap: 10px;
   align-items: start;
 }
 .upts-dashboard-main,
 .upts-dashboard-side {
   display: grid;
-  gap: 20px;
+  gap: 10px;
   min-width: 0;
 }
 .upts-panel {
@@ -314,7 +298,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 15px;
+  margin-bottom: 7.5px;
 }
 .upts-root .upts-panel-head > button {
   font-size: 11px;
@@ -567,7 +551,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 15px;
-  margin-bottom: 18px;
+  margin-bottom: 9px;
   flex-wrap: wrap;
 }
 .upts-section-head p {
@@ -578,7 +562,7 @@
   display: grid;
   grid-template-columns: repeat(5, minmax(220px, 1fr));
   overflow: auto;
-  gap: 13px;
+  gap: 6.5px;
   padding-bottom: 16px;
 }
 .upts-project-column {
@@ -699,10 +683,10 @@
 .upts-footnote {
   font-size: 11px;
   color: var(--work-muted);
-  margin-top: 16px;
+  margin-top: 8px;
 }
 .upts-onboarding {
-  margin-top: 22px;
+  margin-top: 11px;
   padding: 24px;
   border: 1px dashed var(--work-line);
   border-radius: 12px;
@@ -733,7 +717,7 @@
   gap: 12px;
   font-size: 10px;
   color: var(--work-muted);
-  padding: 24px 0 0;
+  padding: 12px 0 0;
 }
 .upts-root .work-column {
   background: var(--work-bg);
@@ -765,9 +749,10 @@
 }
 .upts-root .work-board--status {
   grid-template-columns: repeat(4, minmax(210px, 1fr));
-  margin-top: 20px;
+  margin-top: 10px;
 }
 .upts-root .work-board {
+  gap: 7px;
   max-width: 100%;
   overflow: auto;
 }
@@ -776,21 +761,15 @@
 }
 @media (min-width: 1800px) {
   .upts-main {
-    padding: 32px 40px;
+    padding: 16px 20px;
   }
   .upts-dashboard {
     grid-template-columns: minmax(0, 2.5fr) minmax(300px, 1fr);
   }
 }
 @media (max-width: 1250px) {
-  .upts-root {
-    grid-template-columns: 175px minmax(0, 1fr);
-  }
   .upts-main {
-    padding: 20px;
-  }
-  .upts-sidebar {
-    padding: 20px 10px;
+    padding: 10px;
   }
   .upts-heading h1 {
     font-size: 23px;
@@ -802,7 +781,7 @@
     grid-template-columns: 1fr 1fr;
   }
   .upts-metrics {
-    gap: 8px;
+    gap: 4px;
   }
   .upts-metrics article {
     padding: 13px;
@@ -818,37 +797,8 @@
   }
 }
 @media (max-width: 800px) {
-  .upts-root {
-    display: block;
-  }
-  .upts-sidebar {
-    padding: 12px 16px;
-    border-radius: 0;
-    gap: 10px;
-  }
-  .upts-sidebar nav {
-    flex-direction: row;
-    overflow: auto;
-  }
-  .upts-brand {
-    display: none;
-  }
-  .upts-sidebar nav button {
-    white-space: nowrap;
-  }
-  .upts-sidebar-note,
-  .upts-all-work {
-    display: none;
-  }
   .upts-main {
-    padding: 16px;
-  }
-  .upts-heading {
-    flex-wrap: wrap;
-    gap: 14px;
-  }
-  .upts-eyebrow {
-    font-size: 10px;
+    padding: 8px;
   }
   .upts-metrics {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -872,7 +822,7 @@
     min-width: 180px;
   }
   .upts-project-strip {
-    gap: 10px;
+    gap: 5px;
   }
   .upts-panel {
     padding: 16px;
@@ -902,4 +852,16 @@
   flex-shrink: 1;
   min-width: 0;
   max-width: 100%;
+}
+
+@media (max-width: 1100px) {
+  .upts-module-links {
+    flex-basis: 100%;
+  }
+  .upts-module-tools {
+    flex-wrap: wrap;
+  }
+  .upts-topbar {
+    row-gap: 0;
+  }
 }

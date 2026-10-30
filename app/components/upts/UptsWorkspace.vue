@@ -95,67 +95,51 @@ const {
 </script>
 <template>
   <section class="work-root upts-root">
-    <aside class="upts-sidebar">
-      <NuxtLink to="/" class="upts-back">← Space</NuxtLink>
-      <div class="upts-brand">
-        <span>УПТС</span><small>Территория. Проекты. Люди.</small>
-      </div>
-      <nav aria-label="Разделы УПТС">
+    <header class="upts-topbar">
+      <nav class="upts-module-links" aria-label="Разделы УПТС">
+        <NuxtLink
+          to="/"
+          class="upts-home"
+          aria-label="На главную Space"
+          title="На главную Space"
+        >
+          <Icon name="lucide:arrow-left" />
+        </NuxtLink>
         <button
           v-for="n in nav"
           :key="n.key"
           :aria-current="section === n.key ? 'page' : undefined"
           @click="section = n.key"
         >
-          <Icon :name="n.icon" /><span>{{ n.label }}</span
-          ><small v-if="n.key === 'projects'">{{ data.projects.length }}</small>
+          <Icon :name="n.icon" /><span>{{ n.label }}</span>
+          <small v-if="n.key === 'projects'">{{ data.projects.length }}</small>
         </button>
       </nav>
-      <div class="upts-sidebar-note">
-        <span class="upts-dot" /> Пробная версия
-        <p>Состав работ и правила готовности уточняем вместе с отделом.</p>
+      <div class="upts-module-tools work-actions">
+        <NuxtLink
+          to="/projects"
+          class="upts-space-link"
+          title="Все задачи Space"
+          aria-label="Все задачи Space"
+        >
+          <Icon name="lucide:external-link" />
+        </NuxtLink>
+        <button
+          :disabled="loading || exporting || !!error"
+          @click="exportExcel"
+        >
+          <Icon name="lucide:download" />{{
+            exporting ? 'Формируем…' : 'Excel'
+          }}
+        </button>
+        <button v-if="context" class="work-primary" @click="editProject()">
+          + Проект
+        </button>
       </div>
-      <NuxtLink to="/projects" class="upts-all-work"
-        >Все задачи Space ↗</NuxtLink
-      >
-    </aside>
+    </header>
     <main class="upts-main">
       <header class="upts-heading">
-        <div>
-          <p class="upts-eyebrow">
-            Управление подготовки территории строительства
-          </p>
-          <h1>
-            {{
-              project
-                ? project.name
-                : section === 'employees'
-                  ? 'Работа сотрудников'
-                  : 'Проекты и территория'
-            }}
-          </h1>
-          <p class="work-muted">
-            {{
-              project
-                ? UPTS_TYPES[project.upts.projectType]
-                : 'Рабочее пространство подразделения'
-            }}
-            <span v-if="project?.upts.isDemo" class="upts-badge amber"
-              >Демонстрационные данные</span
-            >
-          </p>
-        </div>
-        <div class="work-actions">
-          <button
-            :disabled="loading || exporting || !!error"
-            @click="exportExcel"
-          >
-            <Icon name="lucide:download" />
-            {{ exporting ? 'Формируем…' : 'Excel' }}</button
-          ><button v-if="context" class="work-primary" @click="editProject()">
-            + Проект
-          </button>
-        </div>
+        <h1>Управление подготовки территории строительства</h1>
       </header>
       <div class="upts-filters">
         <label
@@ -203,6 +187,9 @@ const {
       </p>
       <template v-if="!loading && !error && context">
         <div v-if="project" class="upts-project-strip">
+          <span v-if="project.upts.isDemo" class="upts-badge amber"
+            >Демонстрационные данные</span
+          >
           <span :class="['upts-badge', statusClass(project.upts.status)]">{{
             UPTS_STATUSES[project.upts.status]
           }}</span

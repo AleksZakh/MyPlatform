@@ -1,0 +1,15 @@
+{
+  "base": "Установленная пробная версия УПТС + Space-UPTS-ui-fix-20261030.zip",
+  "files": [
+    {
+      "path": "app/components/upts/UptsWorkspace.vue",
+      "before_sha256": "4a0a0956683dc3bb08f89e2a2f639062c4d2a1d7fc1ad31dc067d3defd58d194",
+      "after_sha256": "159653e62fec99c1e902692c77b39899cf6222dbb00f3a5ceeb4da5b3d6e5164"
+    },
+    {
+      "path": "app/assets/css/upts.css",
+      "before_sha256": "f65b83f2b0f7ed3d6de5b7540ac1692961f909b7d13ab21e46eada59517afda5",
+      "after_sha256": "9deff78040f5ee04f58f40a5acce993791f584a5b5e1fe0cc1e1a811aeb42c9c"
+    }
+  ]
+}
