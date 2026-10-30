@@ -1,0 +1,124 @@
+/* Shared diagnostic blue-grey palette. Loaded after legacy theme sheets.
+ * Important is limited to compatibility with existing per-module overrides.
+ * Light, print and the separate high-contrast mode keep their own palette.
+ */
+@media screen {
+  html.dark:not([data-space-contrast="high"]) {
+    --space-dark-bg: #263542;
+    --space-dark-panel: #344757;
+    --space-dark-raised: #3b4f60;
+    --space-dark-field: #20313f;
+    --space-dark-line: #506579;
+    --space-dark-text: #edf3f8;
+    --space-dark-muted: #bac9d6;
+    --space-dark-hover: #20313f;
+    --space-dark-selection: #284968;
+    --space-bg: var(--space-dark-bg) !important;
+    --space-panel: var(--space-dark-panel) !important;
+    --space-raised: var(--space-dark-raised) !important;
+    --space-field: var(--space-dark-field) !important;
+    --space-line: var(--space-dark-line) !important;
+    --space-field-border: #61778b !important;
+    --space-text: var(--space-dark-text) !important;
+    --space-muted: var(--space-dark-muted) !important;
+    --space-hover: var(--space-dark-hover);
+    --space-selection: var(--space-dark-selection) !important;
+    --space-accent: #93c5fd !important;
+    --space-blue-soft: var(--space-dark-selection) !important;
+    --ui-bg: var(--space-panel) !important;
+    --ui-bg-muted: var(--space-bg) !important;
+    --ui-bg-elevated: var(--space-raised) !important;
+    --ui-bg-accented: var(--space-selection) !important;
+    --ui-bg-inverted: var(--space-text) !important;
+    --ui-text: var(--space-text) !important;
+    --ui-text-highlighted: var(--space-text) !important;
+    --ui-text-muted: var(--space-muted) !important;
+    --ui-text-dimmed: var(--space-muted) !important;
+    --ui-text-toned: #d3dee7 !important;
+    --ui-text-inverted: var(--space-bg) !important;
+    --ui-border: var(--space-line) !important;
+    --ui-border-muted: var(--space-line) !important;
+    --ui-border-accented: var(--space-field-border) !important;
+    /* The old laboratory sheet sets these on html when its route is open. */
+    --space-graphite-bg: var(--space-bg) !important;
+    --space-graphite-panel: var(--space-panel) !important;
+    --space-graphite-raised: var(--space-raised) !important;
+    --space-graphite-field: var(--space-field) !important;
+    --space-graphite-line: var(--space-line) !important;
+    --space-graphite-field-line: var(--space-field-border) !important;
+    --space-graphite-text: var(--space-text) !important;
+    --space-graphite-muted: var(--space-muted) !important;
+    --space-graphite-accent: var(--space-accent) !important;
+    --space-graphite-hover: var(--space-hover) !important;
+    --space-graphite-selected: var(--space-selection) !important;
+  }
+
+  html.dark:not([data-space-contrast="high"]) :is(body, .layout-content, .sidebar) {
+    background-color: var(--space-bg) !important;
+    color: var(--space-text);
+  }
+  html.dark:not([data-space-contrast="high"]) :is(.layout-wrapper > nav, .layout-wrapper > footer) {
+    background-color: var(--space-panel) !important;
+    color: var(--space-text);
+    border-color: var(--space-line);
+  }
+  html.dark:not([data-space-contrast="high"]) :is(.bg-zinc-50, .bg-zinc-100, .bg-neutral-50, .bg-neutral-100) {
+    background-color: var(--space-panel) !important;
+  }
+  html.dark:not([data-space-contrast="high"]) :is(.bg-sky-50, .bg-sky-100, .bg-blue-50, .bg-blue-100, .bg-indigo-50) {
+    background-color: var(--space-selection) !important;
+  }
+  html.dark:not([data-space-contrast="high"]) :is(.hover\:bg-zinc-50, .hover\:bg-zinc-100, .hover\:bg-gray-50, .hover\:bg-gray-100, .hover\:bg-slate-50, .hover\:bg-slate-100, .hover\:bg-sky-50, .department-card):hover {
+    background-color: var(--space-hover) !important;
+  }
+  html.dark:not([data-space-contrast="high"]) .department-card {
+    color: var(--space-text);
+    border-color: var(--space-line);
+  }
+  html.dark:not([data-space-contrast="high"]) :is([role=option][data-highlighted], [role=option][aria-selected=true]) {
+    background-color: var(--space-selection);
+    color: var(--space-text);
+  }
+
+  /* Legacy administration panels declare local palettes; use the same tokens. */
+  html.dark:not([data-space-contrast="high"]) .admin-dashboard {
+    --ad-bg: var(--space-dark-bg) !important;
+    --ad-card: var(--space-dark-panel) !important;
+    --ad-text: var(--space-dark-text) !important;
+    --ad-muted: var(--space-dark-muted) !important;
+    --ad-line: var(--space-dark-line) !important;
+    --ad-track: var(--space-dark-raised) !important;
+  }
+  html.dark:not([data-space-contrast="high"]) .admin-users-sneat {
+    --space-surface: var(--space-dark-panel) !important;
+    --space-panel: var(--space-dark-bg) !important;
+    --space-text: var(--space-dark-text) !important;
+    --space-muted: var(--space-dark-muted) !important;
+    --space-line: var(--space-dark-line) !important;
+    --space-selection: var(--space-dark-selection) !important;
+  }
+  html.dark:not([data-space-contrast="high"]) .role-preview {
+    --rp-bg: var(--space-dark-bg) !important;
+    --rp-card: var(--space-dark-panel) !important;
+    --rp-text: var(--space-dark-text) !important;
+    --rp-muted: var(--space-dark-muted) !important;
+    --rp-line: var(--space-dark-line) !important;
+    --rp-input: var(--space-dark-field) !important;
+    --rp-soft: var(--space-dark-selection) !important;
+  }
+  html.dark:not([data-space-contrast="high"]) .access-structure-nav {
+    background: var(--space-dark-panel) !important;
+    color: var(--space-dark-muted) !important;
+    border-color: var(--space-dark-line) !important;
+  }
+  html.dark:not([data-space-contrast="high"]) .upts-topbar {
+    --upts-nav-bg: var(--space-dark-panel);
+    --upts-nav-text: var(--space-dark-text);
+    --upts-nav-muted: var(--space-dark-muted);
+    --upts-nav-line: var(--space-dark-line);
+  }
+  html.dark:not([data-space-contrast="high"]):has(.lab-area) .space-record-window .parent > fieldset {
+    background: var(--space-dark-panel) !important;
+    border-color: var(--space-dark-line) !important;
+  }
+}

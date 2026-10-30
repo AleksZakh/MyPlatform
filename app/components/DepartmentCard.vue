@@ -1,7 +1,7 @@
 <!-- components/DepartmentCard.vue -->
 <template>
   <UCard
-    class="flex flex-col h-full transition-all duration-250 hover:-translate-y-1 hover:shadow-lg hover:bg-zinc-50"
+    class="department-card flex flex-col h-full transition-all duration-250 hover:-translate-y-1 hover:shadow-lg hover:bg-zinc-50"
     :ui="{
       body: 'p-5 flex-1',
       header: 'p-3',

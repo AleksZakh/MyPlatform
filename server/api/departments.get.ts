@@ -1,5 +1,10 @@
-// server/api/departments.get.ts
-export default defineEventHandler(() => {
+// Department metadata reads only the saved AD cache; no live LDAP request.
+import { defineEventHandler } from 'h3';
+import { adCache } from '../utils/adCache';
+import { resolveDepartmentManager } from '../utils/department-manager';
+export default defineEventHandler(async () => {
+  const cachedUsers = await adCache.getUsers();
+  const uptsManager = resolveDepartmentManager(cachedUsers, 'Евгений Миронычев');
   return [
     {
       id: 'hr',
@@ -55,7 +60,7 @@ export default defineEventHandler(() => {
       name: 'Подготовка территории (УПТС)',
       slug: '/departments/upts',
       icon: 'i-lucide-map-pinned',
-      manager: null,
+      manager: uptsManager,
       employeeCount: null,
       quickLinks: [
         { label: 'Управление проектами', url: '/departments/upts' },

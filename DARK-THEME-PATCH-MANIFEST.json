@@ -1,0 +1,34 @@
+{
+  "files": [
+    {
+      "path": "app/assets/css/main.css",
+      "before_sha256": "3eca1d9df8b6eb95e2b2e84953e2f47815d48ea3e57378d734ac6900fcd9be10",
+      "after_sha256": "96af0c333f5e2a96e4be33177590e9495df874b7b91a8fdc6c9c5edb3c4f26dd"
+    },
+    {
+      "path": "app/components/DepartmentCard.vue",
+      "before_sha256": "0483fd44ec5fbace0fd0c3ad124ac52f2511911fd42d3f006d28872160848f09",
+      "after_sha256": "d8599ae7b42c273f421d323201a6cfa5429921697bc19018e702cda1baaf2d30"
+    },
+    {
+      "path": "server/api/departments.get.ts",
+      "before_sha256": "20420127b80cb877a0c1b85d50fe6918d1fe61478f7f4805fd84cee050333d49",
+      "after_sha256": "c0a755e0224f80cef523e5bcbce15d4ff815f5fc55bd3f00407f0d46dcb17104"
+    },
+    {
+      "path": "app/assets/css/portal-dark.css",
+      "before_sha256": null,
+      "after_sha256": "db45e969d4cdf6fa4aa8d94777a1838f054b622e4423c4cc158874c453ab6992"
+    },
+    {
+      "path": "server/utils/department-manager.ts",
+      "before_sha256": null,
+      "after_sha256": "7078af7804aaf047d960a7a8ab6e303615cb8cc382a5c1072daa1b833f3c8c4b"
+    },
+    {
+      "path": "tests/department-manager.test.ts",
+      "before_sha256": null,
+      "after_sha256": "6b3a956f084847b5080b479ab009b45297160d844218166128758cff39efec26"
+    }
+  ]
+}
