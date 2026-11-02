@@ -1417,6 +1417,7 @@ model DiagnosticContract {
   relatedContract DiagnosticContract? @relation("DiagnosticRelated",fields:[relatedContractId],references:[id],onDelete:Restrict)
   relatedExpenses DiagnosticContract[] @relation("DiagnosticRelated")
   structures DiagnosticContractStructure[]
+  contractWorks DiagnosticContractWork[]
   version Int @default(1)
   createdById Int
   updatedById Int
@@ -1502,6 +1503,7 @@ model DiagnosticWork {
   group        DiagnosticWorkGroup @relation(fields: [groupId], references: [id], onDelete: Restrict)
   category     DiagnosticWorkCategory @relation(fields: [categoryId, groupId], references: [id, groupId], onDelete: Restrict)
   structureAssignments DiagnosticStructureWork[]
+  contractAssignments DiagnosticContractWork[]
   @@unique([groupId, sequence])
   @@index([deletedAt, groupId, sequence])
   @@map("diagnostic_works")
@@ -1688,4 +1690,39 @@ model UptsContract {
   files WorkProjectFile[]
   @@index([projectId])
   @@map("upts_contracts")
+}
+
+model DiagnosticContractWork {
+ id Int @id @default(autoincrement())
+ contractId Int
+ workId Int
+ contract DiagnosticContract @relation(fields:[contractId],references:[id],onDelete:Restrict)
+ work DiagnosticWork @relation(fields:[workId],references:[id],onDelete:Restrict)
+ code String @db.VarChar(100)
+ name String @db.VarChar(300)
+ criteria String @db.Text
+ planStart DateTime? @db.Date
+ planFinish DateTime? @db.Date
+ planHours Decimal? @db.Decimal(14,4)
+ planExecutor String @default("") @db.Text
+ factStart DateTime? @db.Date
+ factFinish DateTime? @db.Date
+ factHours Decimal? @db.Decimal(14,4)
+ factExecutor String @default("") @db.Text
+ status String @db.VarChar(100)
+ note String @default("") @db.Text
+ legacyId Int? @unique
+ legacyUserWorkId String? @db.Text
+ sourceHash String? @db.VarChar(64)
+ rawData Json?
+ version Int @default(1)
+ createdById Int
+ updatedById Int
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ deletedAt DateTime?
+ deletedById Int?
+ @@index([contractId,deletedAt])
+ @@index([workId])
+ @@map("diagnostic_contract_works")
 }

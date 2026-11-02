@@ -2,6 +2,7 @@
 import {computed,reactive,ref,watch,onBeforeUnmount} from 'vue';
 import type {ContractStructureListItem} from '~~/shared/types/diagnostic-contract-structures';
 import CreatableNameSelect from '../../common/CreatableNameSelect.vue';
+import ContractWorks from './ContractWorks.vue';
 import {contractDateTime} from '~~/shared/utils/diagnostic-contract-search';
 import type {ContractRecord,ContractInput,DiagnosticCatalog} from '~~/shared/types/diagnostic-contracts';
 import {contractStatus} from '~~/shared/utils/diagnostic-contracts';
@@ -115,7 +116,7 @@ const summaryColumns=[
       <span><strong>Обновлено:</strong> {{ contract.editor }} · {{ contractDateTime(contract.updatedAt) }}</span>
      </div>
     </form>
-    <section v-if="tab===1"><header class="contract-section-head"><h2>Перечень работ с договором</h2><button disabled title="Подключим справочник работ отдельным этапом">Добавить работы</button></header><div class="contract-detail-table"><table><thead><tr><th rowspan="2">#</th><th rowspan="2">Работа</th><th colspan="3">План</th><th colspan="3">Факт</th><th rowspan="2">Примечания</th></tr><tr><th>Дата нач.</th><th>Дата оконч.</th><th>Исполнитель</th><th>Дата нач.</th><th>Дата оконч.</th><th>Исполнитель</th></tr></thead><tbody><tr><td colspan="9">Работы с договором не найдены. Справочник ещё не подключён.</td></tr></tbody></table></div></section>
+    <ContractWorks v-if="tab===1" :contract-id="contract?.id??null" />
     <section v-if="tab===2"><header class="contract-section-head"><h2>Перечень сооружений</h2><div><button disabled title="Следующий этап">Добавить сооружения</button><button disabled title="Следующий этап">Добавить работы</button></div></header><div class="contract-detail-table"><table><thead><tr><th>#</th><th>Код ИССО</th><th>Сооружение</th><th>Название автодороги</th><th>Место, км</th><th>Доп. инф.</th><th>Название осн. препятствия</th><th>Район расположения</th></tr></thead><tbody>
 <tr v-if="structuresLoading"><td colspan="8" role="status"><span class="animate-pulse motion-reduce:animate-none">Загрузка сооружений…</span></td></tr>
 <tr v-else-if="structuresError"><td colspan="8" role="alert">{{ structuresError }} <button type="button" @click="loadStructures">Повторить загрузку</button></td></tr>
