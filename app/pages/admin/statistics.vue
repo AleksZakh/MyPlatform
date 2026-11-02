@@ -50,3 +50,12 @@ const { days, actorId, kind, page, busy, error, report, label, date, load, reset
   </template>
 </section>
 </template>
+
+<style>
+.dark .statistics-page .statistics-cards .iconify {
+ color:#93c5fd !important;
+ background:transparent !important;
+ opacity:1;
+ flex-shrink:0;
+}
+</style>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import DiagnosticModuleTabs from '../DiagnosticModuleTabs.vue';
 import ContractEditor from './ContractEditor.vue';
-import { ref } from 'vue';
+import { ref,onMounted } from 'vue';
 import { useContractsPreview } from '~/composables/diagnostic/useContractsPreview';
 import { contractStatuses,directionLabels,type ContractRecord as ContractPreview } from '~~/shared/types/diagnostic-contracts';
 const {catalog,rights,loading,error,trash,load,message,contracts,savePreview,status,search,selectedId,selected,sortKey,descending,rows,counts,formatDate,money,sort,reset}=useContractsPreview();
@@ -9,6 +9,29 @@ const modules=['Договоры','Библиотека работ','Соору�
 const toast=useSpaceToast();
 const editMode=ref(false);
 const notice=ref('');
+const pinnedStatus=ref<string|null>(null);
+const startTabKey='space:diagnostic:contracts:start-tab:v1';
+onMounted(()=>{
+ try{
+  const stored=localStorage.getItem(startTabKey);
+  if(contractStatuses.some(t=>t.key===stored)){
+   pinnedStatus.value=stored;
+   status.value=stored as typeof status.value;
+  }
+ }catch{/* Storage may be unavailable; the workspace remains usable. */}
+});
+function pinStartTab(){
+ try{
+  if(pinnedStatus.value===status.value){
+   localStorage.removeItem(startTabKey);pinnedStatus.value=null;
+   toast.add({title:'Закрепление стартовой вкладки снято',color:'success'});
+  }else{
+   localStorage.setItem(startTabKey,status.value);pinnedStatus.value=status.value;
+   toast.add({title:'Стартовая вкладка закреплена в этом браузере',color:'success'});
+  }
+ }catch{toast.add({title:'Не удалось сохранить настройку браузера',color:'error'});}
+}
+
 const editorOpen=ref(false),editing=ref<ContractPreview|null>(null);
 function create(){editMode.value=true;editing.value=null;editorOpen.value=true;}
 function saved(row:ContractPreview){savePreview(row);status.value=row.status;search.value='';editorOpen.value=false;toast.add({title:'Договор сохранён',color:'success'});void load();}
@@ -29,10 +52,11 @@ async function remove(){const row=selected.value;if(!row||!rights.value.DELETE)r
    <div class="diagnostic-register">
     <div class="diagnostic-register-main">
      <div v-if="!trash" class="diagnostic-status-tabs" role="tablist" aria-label="Статус договоров"><button v-for="(tab,i) in contractStatuses" :id="`contract-tab-${tab.key}`" :key="tab.key" role="tab" :aria-selected="status===tab.key" aria-controls="contract-panel" :tabindex="status===tab.key?0:-1" @click="status=tab.key" @keydown.right.prevent="moveTab($event,i,1)" @keydown.left.prevent="moveTab($event,i,-1)">{{ tab.label }} <small>{{ counts[tab.key] }}</small></button></div>
+     <div v-if="!trash" style="padding:6px 12px;display:flex;align-items:center;gap:8px"><button type="button" class="diagnostic-quick" :aria-pressed="pinnedStatus===status" @click="pinStartTab"><Icon name="lucide:pin" aria-hidden="true"/> {{ pinnedStatus===status?'Открепить стартовую вкладку':'Открывать эту вкладку при входе' }}</button><small v-if="pinnedStatus">При входе: {{ contractStatuses.find(t=>t.key===pinnedStatus)?.label }}</small></div>
      <div id="contract-panel" role="tabpanel" :aria-labelledby="`contract-tab-${status}`" class="diagnostic-table-scroll" :aria-busy="loading" tabindex="0">
       <table class="space-data-table"><caption class="sr-only">Договоры — {{ contractStatuses.find(t=>t.key===status)?.label }}</caption><thead><tr><th v-for="column in columns" :key="column.key" scope="col" :aria-sort="sortKey===column.key?(descending?'descending':'ascending'):'none'"><button @click="sort(column.key)">{{ column.label }} <span v-if="sortKey===column.key" aria-hidden="true">{{ descending?'↓':'↑' }}</span></button></th></tr></thead>
        <tbody><tr v-if="loading"><td colspan="8" class="diagnostic-empty"><span role="status">Загрузка договоров…</span></td></tr><tr v-for="row in (loading ? [] : rows)" :key="row.id" :class="{'is-selected':selectedId===row.id}" @click="selectedId=row.id" @dblclick="selectedId=row.id;open()"><td><span :class="row.direction==='INCOME'?'diagnostic-income':'diagnostic-expense'">{{ directionLabels[row.direction] }}</span></td><td><button :aria-pressed="selectedId===row.id" @click.stop="selectedId=row.id">{{ row.number }}</button></td><td>{{ formatDate(row.date) }}</td><td>{{ row.counterparty }}</td><td>{{ row.executor }}</td><td class="numeric">{{ row.buildings }}</td><td>{{ formatDate(row.finish) }}</td><td class="numeric">{{ money(row.amount) }}</td></tr>
-       <tr v-if="!loading && !error && !rows.length"><td colspan="8" class="diagnostic-empty">Договоры не найдены. <button @click="search=''">Сбросить поиск</button></td></tr></tbody>
+       <tr v-if="!loading && !error && !rows.length"><td colspan="8" class="diagnostic-empty">{{ search ? 'По вашему запросу договоры не найдены.' : 'В этой вкладке пока нет договоров. Выберите другую вкладку.' }} <button v-if="search" @click="search=''">Сбросить поиск</button></td></tr></tbody>
       </table>
      </div>
      <footer class="diagnostic-summary">Показано: {{ rows.length }} <span v-if="selected">· Выбран: {{ selected.number }}</span></footer>
