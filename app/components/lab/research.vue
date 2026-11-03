@@ -21,7 +21,7 @@
     }"
   >
     <template #event_journal>
-      <LabEventJournal />
+      <ResourceGate resource="lab.event-journal"><LabEventJournal /></ResourceGate>
     </template>
 
     <template #file_system>
@@ -32,6 +32,7 @@
 
 
 <script setup lang="ts">
+import ResourceGate from "~/components/access/ResourceGate.vue";
 const items = [
   {
     label:

@@ -12,6 +12,7 @@ import { INVITATION_LIFETIME, INVITATION_COOLDOWN, bypassInvitationCooldown } fr
 import { notifyActiveProjectInvite } from './invitation-mail';
 import { directoryGroupUserIds } from '../domain-group-directory.service';
 import type { Prisma } from '@prisma/client';
+import { isUptsDepartment } from '../../../shared/utils/upts-membership';
 const roleInput=z.enum(['MANAGER','CURATOR','MEMBER','OBSERVER']);
 const idInput=z.number().int().positive().max(2147483647);
 const inviteInput=z.object({version:idInput,role:roleInput,target:invitationTarget}).strict();
@@ -35,8 +36,9 @@ export async function inviteToProject(event:H3Event,id:number,raw:unknown){
   const p=await manager(tx,id,a);version(p.version,v.version);checkRole(p.ownerId,a,v.role);
   await activeUsers(tx,[a.id]);
   if(p.ownerId===userId||p.members.some(m=>m.userId===userId))fail(409,'Сотрудник уже входит в команду проекта.');
-  const u=await tx.user.findUnique({where:{id:userId}});
+  const u=await tx.user.findUnique({where:{id:userId},include:{department:true}});
   if(!u||(u.status!=='ACTIVE'&&!(u.authType==='DOMAIN'&&u.status==='PENDING_ACTIVATION')))fail(409,'Сотрудник недоступен для приглашения.');
+  if(await tx.uptsProject.findUnique({where:{projectId:id}}) && !isUptsDepartment(u.department))fail(403,'В проекты УПТС можно приглашать только сотрудников этого подразделения.');
   const now=new Date();const prior=await tx.workProjectInvitation.findUnique({where:{projectId_userId:{projectId:id,userId}}});
   if(prior&&['PENDING','SENDING'].includes(prior.status)&&prior.expiresAt>now)fail(409,'Приглашение уже ожидает ответа.');
   const sender=await tx.user.findUnique({where:{id:a.id},select:{login:true,authType:true,status:true}});
@@ -72,12 +74,12 @@ export async function cancelInvitation(event:H3Event,id:number,invitationId:stri
  });
 }
 export async function myInvitations(event:H3Event){const a=await workActor(event);
- return prisma.workProjectInvitation.findMany({where:{userId:a.id,status:'PENDING',expiresAt:{gt:new Date()},project:{archivedAt:null,scope:{not:'PRIVATE'}}},select:{id:true,role:true,expiresAt:true,project:{select:{id:true,name:true,color:true}},inviter:{select:userSelect}},orderBy:{createdAt:'desc'}});
+ return prisma.workProjectInvitation.findMany({where:{userId:a.id,status:'PENDING',expiresAt:{gt:new Date()},project:{archivedAt:null,scope:{not:'PRIVATE'},...(!a.uptsMember?{upts:{is:null}}:{})}},select:{id:true,role:true,expiresAt:true,project:{select:{id:true,name:true,color:true}},inviter:{select:userSelect}},orderBy:{createdAt:'desc'}});
 }
 export async function respondToInvitation(event:H3Event,invitationId:string,raw:unknown){
  const a=await workActor(event),v=parse(responseInput,raw);if(!z.string().uuid().safeParse(invitationId).success)fail(400,'Неверное приглашение.');
  return mutation(event,a,'WorkProject',v.decision==='ACCEPT'?'INVITE_ACCEPT':'INVITE_DECLINE',async tx=>{
-  const row=await tx.workProjectInvitation.findFirst({where:{id:invitationId,userId:a.id},include:{project:{include:projectInclude},inviter:{select:{id:true,status:true}}}});
+  const row=await tx.workProjectInvitation.findFirst({where:{id:invitationId,userId:a.id,...(!a.uptsMember?{project:{upts:{is:null}}}:{})},include:{project:{include:projectInclude},inviter:{select:{id:true,status:true}}}});
   if(!row)fail(404,'Приглашение не найдено.');
   const p=row.project;
   // Repeated accepted requests return success only while the membership still exists.

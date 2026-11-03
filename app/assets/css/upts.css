@@ -108,6 +108,12 @@ html.dark .upts-topbar {
 .upts-heading {
   margin-bottom: 12px;
 }
+.upts-department-name {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--work-muted);
+}
 .upts-heading h1 {
   font-size: 23px;
   font-weight: 700;

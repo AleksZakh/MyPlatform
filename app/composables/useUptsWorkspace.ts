@@ -165,6 +165,7 @@ export function useUptsWorkspace() {
           e.data?.message ||
           'Не удалось открыть УПТС. Проверьте подключение и применение миграции.';
         data.value = { projects: [], tasks: [], today: portalToday() };
+        if (Number(e?.statusCode || e?.response?.status) === 403) await navigateTo('/access-denied', { replace: true });
       }
     } finally {
       if (alive && n === serial) loading.value = false;

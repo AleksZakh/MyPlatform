@@ -39,7 +39,7 @@ export default defineNuxtRouteMiddleware(
         statusCode === 403
       ) {
         return navigateTo(
-          '/',
+          statusCode === 401 ? '/login' : '/access-denied',
           {
             replace:
               true,

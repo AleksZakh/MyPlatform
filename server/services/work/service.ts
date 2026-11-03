@@ -1,3 +1,4 @@
+import { isUptsDepartment } from '../../../shared/utils/upts-membership';
 import { orderedTaskIds } from './task-order';
 import { createError, getQuery, type H3Event } from 'h3';
 import { Prisma } from '@prisma/client';
@@ -17,7 +18,9 @@ export function fail(statusCode:number,message:string):never {throw createError(
 export function version(current:number,requested:number|undefined){if(current!==requested)fail(409,'Запись уже изменилась. Обновите список и откройте её заново.');}
 export const projectDTO=(p:Project,a:Actor)=>({...p,canManage:managesProject(p,a),canCreateTask:createsTask(p,a),role:projectRole(p,a)});
 const taskDTO=(t:Task,a:Actor)=>({...t,...taskRights(t,a),project:t.project ? {id:t.project.id,name:t.project.name,color:t.project.color}:null});
-export async function visibleProject(db:DB,id:number,a:Actor){const p=await db.workProject.findFirst({where:{id,...projectWhere(a)},include:projectInclude});return p || fail(404,'Проект не найден или недоступен.');}
+export async function visibleProject(db:DB,id:number,a:Actor){
+ if(a.uptsMember){const user=await db.user.findUnique({where:{id:a.id},select:{status:true,department:{select:{key:true,name:true,isActive:true}}}});a={...a,uptsMember:user?.status==='ACTIVE'&&isUptsDepartment(user.department)};}
+ const p=await db.workProject.findFirst({where:{id,...projectWhere(a)},include:projectInclude});return p || fail(404,'Проект не найден или недоступен.');}
 async function visibleTask(db:DB,id:number,a:Actor){const t=await db.workTask.findFirst({where:{id,...taskWhere(a)},include:taskInclude});return t || fail(404,'Задача не найдена или недоступна.');}
 export async function activeUsers(db:DB,ids:number[]){if(!ids.length)return;const unique=[...new Set(ids)];const n=await db.user.count({where:{id:{in:unique},status:'ACTIVE'}});if(n!==unique.length)fail(400,'Один из участников неактивен или не найден.');}
 function auditSnapshot(value:unknown):Prisma.InputJsonValue {
@@ -56,11 +59,12 @@ export async function projects(event:H3Event){
 export async function getProject(event:H3Event,id:number){const a=await workActor(event);return projectDTO(await visibleProject(prisma,id,a),a);}
 export async function saveProject(event:H3Event,raw:unknown,id?:number){
  const a=await workActor(event),v=parse(projectInput,raw);
+ if(v.upts&&!a.uptsMember)fail(403,'Создавать проекты УПТС могут только сотрудники подразделения.');
  const groupId=v.groupId===undefined?undefined:v.groupId;
  const shared=v.scope!=='PRIVATE';const grant=shared?await hasWorkGrant(event,'CREATE'):false;
  return mutation(event,a,'WorkProject',id?'UPDATE':'CREATE',async tx=>{
   const old=id?await visibleProject(tx,id,a):await tx.workProject.findUnique({where:{clientKey:v.clientKey},include:projectInclude});
-  if(!id&&old){if(old.ownerId!==a.id)fail(409,'Ключ операции уже использован.');await ensureProjectDirectory(old.id);return {id:old.id,value:projectDTO(old,a),changed:false};}
+  if(!id&&old){if(old.ownerId!==a.id)fail(409,'Ключ операции уже использован.');await visibleProject(tx,old.id,a);await ensureProjectDirectory(old.id);return {id:old.id,value:projectDTO(old,a),changed:false};}
   const selectedGroupId=groupId===undefined?(old?.groupId??null):groupId;
   if(old){if(!managesProject(old,a))fail(403,'Изменять проект может руководитель.');version(old.version,v.version);if(old.archivedAt)fail(409,'Сначала восстановите проект из архива.');
    if(old.ownerId!==a.id&&(old.scope!==v.scope||old.departmentId!==v.departmentId||old.groupId!==selectedGroupId))fail(403,'Видимость и принадлежность изменяет владелец проекта.');}

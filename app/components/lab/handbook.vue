@@ -17,27 +17,28 @@
   >
     <!-- Слот для вкладки "ПЛП" -->
     <template #plp>
-      <LabPlpForm />
+      <ResourceGate resource="lab.plps"><LabPlpForm /></ResourceGate>
     </template>
 
     <!-- Слот для вкладки "Материалы" -->
     <template #materials>
-      <LabMaterialsForm />
+      <ResourceGate resource="lab.materials"><LabMaterialsForm /></ResourceGate>
     </template>
 
     <!-- Слот для вкладки "Производители" -->
     <template #manufacturers>
-      <LabManufacturersForm />
+      <ResourceGate resource="lab.manufacturers"><LabManufacturersForm /></ResourceGate>
     </template>
 
     <!-- Слот для вкладки "Объекты" -->
     <template #objects>
-      <LabObjectsForm />
+      <ResourceGate resource="lab.test-objects"><LabObjectsForm /></ResourceGate>
     </template>
   </UTabs>
 </template>
 
 <script setup lang="ts">
+import ResourceGate from "~/components/access/ResourceGate.vue";
 const items = [
   {
     label: 'ПЛП',

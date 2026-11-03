@@ -26,7 +26,7 @@ export function useContractsPreview(){
    const [options,...grants]=await Promise.all([$fetch<DiagnosticCatalog>('/api/diagnostic/catalog'),...(['CREATE','UPDATE','DELETE'] as const).map(action=>$fetch<{allowed:boolean}>('/api/access/check',{query:{resource:'diagnostic.contracts',action}}))]);
    if(current!==generation)return;
    contracts.value=list;catalog.value=options;rights.value={CREATE:grants[0]!.allowed,UPDATE:grants[1]!.allowed,DELETE:grants[2]!.allowed};today.value=moscowToday();
-  }catch(e){if(current!==generation)return;contracts.value=[];rights.value={CREATE:false,UPDATE:false,DELETE:false};catalog.value.canManageTrash=false;error.value=message(e);}finally{if(current===generation)loading.value=false;}
+  }catch(e){if(current!==generation)return;contracts.value=[];rights.value={CREATE:false,UPDATE:false,DELETE:false};catalog.value.canManageTrash=false;error.value=message(e);if(Number((e as any)?.statusCode || (e as any)?.response?.status)===403)await navigateTo('/access-denied',{replace:true});}finally{if(current===generation)loading.value=false;}
  }
  function savePreview(row:ContractRecord){const i=contracts.value.findIndex(r=>r.id===row.id);if(i<0)contracts.value.push(row);else contracts.value[i]=row;}
  watch(trash,()=>{reset();void load();});
