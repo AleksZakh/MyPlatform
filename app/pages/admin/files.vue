@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import DiskManager from '~/components/admin/storage/DiskManager.vue'
 import type { StorageItem } from '~/composables/useStorageManager'
 useSeoMeta({ title: 'Space — файловое хранилище' })
 const { mode, directory, query, type, page, items, total, busy, error, selected, checked, refresh, open, mutate, upload } = useStorageManager()
+const activeTab = ref<'storage' | 'disk'>('storage')
 const operation = ref(''), name = ref(''), destination = ref(''), operationError = ref(''), saving = ref(false), notice = ref('')
 const chosenFile = ref<File | null>(null), recordQuery = ref(''), recordId = ref(''), purpose = ref('extra'), preview = ref(false)
 const operationPaths = ref<string[]>([]), replacePath = ref('')
@@ -41,7 +43,9 @@ onMounted(refresh)
 </script>
 <template>
   <div class="storage-page">
-    <header><h1>Файловое хранилище</h1><div class="tabs"><button :class="{ active: mode==='folders' }" @click="mode='folders'">Каталоги</button><button :class="{ active: mode==='documents' }" @click="mode='documents'">Документы</button><button @click="refresh" :disabled="busy">Обновить</button></div></header>
+    <header><h1>Файловое хранилище</h1><div class="tabs"><button :class="{ active: activeTab==='storage' && mode==='folders' }" @click="activeTab='storage';mode='folders'">Каталоги</button><button :class="{ active: activeTab==='storage' && mode==='documents' }" @click="activeTab='storage';mode='documents'">Документы</button><button :class="{ active: activeTab==='disk' }" :aria-pressed="activeTab==='disk'" @click="activeTab='disk'">Управление диском</button><button v-if="activeTab==='storage'" @click="refresh" :disabled="busy">Обновить</button></div></header>
+    <DiskManager v-if="activeTab==='disk'" />
+    <template v-else>
     <p v-if="error" class="error" role="alert">{{ error }}</p><p v-if="notice" role="status">{{ notice }}</p>
     <div class="storage-grid"><main>
       <nav v-if="mode==='folders'" class="breadcrumbs" aria-label="Путь в хранилище"><button @click="folder('')"><Icon name="lucide:folder-open" /> Хранилище</button><template v-for="c in crumbs" :key="c.path"><span>/</span><button @click="folder(c.path)">{{ c.label }}</button></template></nav>
@@ -59,6 +63,7 @@ onMounted(refresh)
       <template v-if="operation==='upload'||operation==='replace'"><label>Файл<input type="file" accept=".pdf,.jpg,.jpeg,.png,.xlsx" @change="chosenFile=($event.target as HTMLInputElement).files?.[0]||null"></label><p>{{ chosenFile?.name }}</p><template v-if="operation==='upload'"><form class="search" @submit.prevent="searchRecords"><input v-model="recordQuery" placeholder="Номер акта или ID записи"><button>Найти запись</button></form><label>Запись реестра<select v-model="recordId"><option value="">Выберите запись</option><option v-for="r in records" :key="r.id" :value="String(r.id)">№ {{ r.id }} · {{ r.samplingActNumber }} · {{ r.testLocation.testObject.name }}</option></select></label><label>Назначение<select v-model="purpose"><option value="extra">Дополнительное вложение</option><option value="sampling">Акт отбора</option><option value="quality">Документ о качестве</option><option value="protocol">Протокол испытаний</option></select></label></template><p v-else>Новый файл заменит выбранный документ во всех связанных записях.</p></template>
       <p v-if="['rename','move'].includes(operation)">Связанные пути в БД будут обновлены. К имени добавляется уникальный идентификатор.</p><p class="error" v-if="operationError" role="alert">{{ operationError }}</p><div class="actions"><button :disabled="saving" @click="apply">{{ saving?'Выполняется…':'Подтвердить' }}</button><button :disabled="saving" @click="operation=''">Отмена</button></div></section></div>
     <div v-if="preview&&selected" class="overlay"><section class="dialog preview" role="dialog" aria-modal="true" aria-label="Просмотр документа"><button @click="preview=false">Закрыть</button><iframe v-if="/\.(pdf|png|jpe?g)$/i.test(selected.path)" :src="selected.url" title="Документ"></iframe><p v-else>Для этого формата доступно скачивание. <a :href="downloadUrl">Скачать файл</a></p></section></div>
+    </template>
   </div>
 </template>
 <style scoped>

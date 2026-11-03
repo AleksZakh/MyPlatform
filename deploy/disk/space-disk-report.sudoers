@@ -1,0 +1,2 @@
+# Only the root-owned read-only helper; no arguments, shells or cleanup commands.
+space ALL=(root) NOPASSWD: /usr/local/sbin/space-disk-report ""
