@@ -7,7 +7,7 @@ export function appVersion(env: NodeJS.ProcessEnv = process.env): AppVersion {
   const installed = env.SPACE_RELEASE_INSTALLED_AT || '';
   const validDate = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(installed) && Number.isFinite(Date.parse(installed));
   return {
-    application: 'Space / MyPlatform', release, commit: release ? release.slice(-12) : null,
+    application: 'Space', release, commit: release ? release.slice(-12) : null,
     installedAt: release && validDate ? new Date(installed).toISOString() : null,
     environment: env.NODE_ENV === 'production' ? 'production' : 'development',
   };

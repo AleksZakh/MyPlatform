@@ -28,7 +28,7 @@ onBeforeUnmount(() => controller?.abort());
 
 <template>
   <section class="about-page" aria-labelledby="about-title">
-    <div class="about-heading"><div><h1 id="about-title">О программе</h1><p>Корпоративный портал Space / MyPlatform</p></div>
+    <div class="about-heading"><div><h1 id="about-title">О программе</h1><p>Корпоративный портал Space</p></div>
       <button type="button" :disabled="loading" @click="load">{{ loading ? 'Загрузка…' : 'Обновить' }}</button>
     </div>
     <div v-if="loading" class="about-card" role="status">Получаем сведения о работающем приложении…</div>
