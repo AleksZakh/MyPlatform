@@ -13,6 +13,7 @@
         <Icon name="streamline-freehand-color:help-headphones-customer-support-human" size="22"/>
         <a class="hover:decoration-solid" href="mailto:hd@avtodor-eng.ru">Техническая поддержка</a>
       </div>
+      <NuxtLink to="/about" class="about-footer-link ml-4 text-sm hover:underline">О программе</NuxtLink>
     </template>
 
     <!-- <template #default>
@@ -107,6 +108,8 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.about-footer-link { color: inherit; white-space: nowrap; }
+.about-footer-link:focus-visible { outline: 2px solid var(--space-accent, #2563eb); outline-offset: 3px; }
 .max-messenger-fixed {
   position: fixed;
   bottom: calc(20px + env(safe-area-inset-bottom, 0px));

@@ -1,9 +1,9 @@
 import { createError, defineEventHandler, setHeader } from 'h3';
-import { getAccessActor } from '../../services/access-control.service';
-import { isUptsDepartment } from '../../../shared/utils/upts-membership';
+import { workActor } from '../../services/work/access';
 export default defineEventHandler(async event => {
   setHeader(event, 'Cache-Control', 'private, no-store');
   if (event.context.externalSessionRevoked) throw createError({ statusCode: 401 });
-  const { user } = await getAccessActor(event);
-  return { allowed: isUptsDepartment(user.department) };
+  const actor = await workActor(event);
+  if (actor.uptsAccessUnavailable) throw createError({ statusCode: 503, message: 'Не удалось проверить группы УПТС в Active Directory.' });
+  return { allowed: actor.uptsMember };
 });

@@ -114,11 +114,12 @@ def prepare(source):
 
 def config_for(target):
     name = target.name
+    installed_at = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z')
     common = dict(cwd=str(target), interpreter=NODE, node_args=f'--env-file={ENV_FILE}',
                   exec_mode='fork', instances=1, autorestart=True, watch=False,
                   restart_delay=3000, min_uptime='10s', max_restarts=10, kill_timeout=30000, time=True)
-    return {'apps': [dict(common, name='space-app', script=str(target/'scripts/start-space.mjs'), env=dict(NODE_ENV='production', HOST='127.0.0.1', PORT='3000', NUXT_HOST='127.0.0.1', NUXT_PORT='3000', SPACE_RELEASE_ID=name, SPACE_LOG_DIR='/var/log/space')),
-                     dict(common, name='space-ws', script=str(target/'dist-server/websocket.js'), env=dict(NODE_ENV='production', WS_PORT='5050', SPACE_RELEASE_ID=name, SPACE_LOG_DIR='/var/log/space'))]}
+    return {'apps': [dict(common, name='space-app', script=str(target/'scripts/start-space.mjs'), env=dict(NODE_ENV='production', HOST='127.0.0.1', PORT='3000', NUXT_HOST='127.0.0.1', NUXT_PORT='3000', SPACE_RELEASE_ID=name, SPACE_RELEASE_INSTALLED_AT=installed_at, SPACE_LOG_DIR='/var/log/space')),
+                     dict(common, name='space-ws', script=str(target/'dist-server/websocket.js'), env=dict(NODE_ENV='production', WS_PORT='5050', SPACE_RELEASE_ID=name, SPACE_RELEASE_INSTALLED_AT=installed_at, SPACE_LOG_DIR='/var/log/space'))]}
 
 def snapshot():
     processes = json.loads(pm2('jlist', capture=True).stdout)
@@ -129,7 +130,7 @@ def snapshot():
         e = matches[0]['pm2_env']
         if e.get('status') != 'online': raise ValueError(f'{name} is not online')
         # Do not write the PM2 environment dump: it can contain credentials.
-        env = {k: str(e[k]) for k in ('NODE_ENV','HOST','PORT','NUXT_HOST','NUXT_PORT','WS_PORT','SPACE_RELEASE_ID','LAB_EXPORT_WORKER','SPACE_LOG_DIR') if k in e}
+        env = {k: str(e[k]) for k in ('NODE_ENV','HOST','PORT','NUXT_HOST','NUXT_PORT','WS_PORT','SPACE_RELEASE_ID','SPACE_RELEASE_INSTALLED_AT','LAB_EXPORT_WORKER','SPACE_LOG_DIR') if k in e}
         apps.append(dict(name=name, cwd=e['pm_cwd'], script=e['pm_exec_path'], interpreter=NODE,
                          node_args=f'--env-file={ENV_FILE}', exec_mode='fork', instances=1,
                          autorestart=True, watch=False, restart_delay=3000, kill_timeout=30000, time=True, env=env))
@@ -187,10 +188,11 @@ def switch(target, compatible):
     json_write(JOURNAL, journal)
     try:
         atomic_link(target)
-        launch(config_for(target))
+        config = config_for(target)
+        launch(config)
         if not healthy(target.name): raise RuntimeError('New release failed readiness check')
         pm2('save')
-        json_write(STATE, {'current': target.name, 'previous': journal})
+        json_write(STATE, {'current': target.name, 'installedAt': config['apps'][0]['env']['SPACE_RELEASE_INSTALLED_AT'], 'previous': journal})
         JOURNAL.unlink()
         print('ACTIVE:', target.name)
     except BaseException:

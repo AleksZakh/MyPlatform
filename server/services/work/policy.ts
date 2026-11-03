@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import { spaceGroupMembership } from '../space-group-access.service';
-export type Actor = { id: number; departmentId: number | null; directoryGroupIds?: string[]; uptsMember?: boolean };
+export type Actor = { id: number; departmentId: number | null; directoryGroupIds?: string[]; uptsMember?: boolean; isSystemAdmin?: boolean };
 export type ProjectPolicy = { ownerId: number; scope: string; departmentId: number | null; archivedAt: Date | string | null; members: {userId:number;role:string}[] };
 export function projectRole(p: ProjectPolicy, a: Actor): string | null {
  return p.ownerId === a.id ? 'OWNER' : p.members.find(m => m.userId === a.id)?.role || null;

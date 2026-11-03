@@ -21,6 +21,17 @@ class Releases(unittest.TestCase):
     def test_invalid_release_name(self):
         for value in ('../../etc', 'current', '20261007T190000Z-abcdef123456/../'):
             with self.assertRaises(ValueError): d.release_path(value)
+    def test_activation_date_matches_processes_and_survives_snapshot(self):
+        config = d.config_for(self.target)
+        installed = config['apps'][0]['env']['SPACE_RELEASE_INSTALLED_AT']
+        self.assertTrue(installed.endswith('Z'))
+        self.assertEqual(config['apps'][1]['env']['SPACE_RELEASE_INSTALLED_AT'], installed)
+        processes = [{'name': app['name'], 'pm2_env': {**app['env'], 'status': 'online', 'pm_cwd': app['cwd'], 'pm_exec_path': app['script'], 'SECRET': 'never-export'}} for app in config['apps']]
+        from types import SimpleNamespace
+        with patch.object(d, 'pm2', return_value=SimpleNamespace(stdout=json.dumps(processes))):
+            saved = d.snapshot()
+        self.assertEqual(saved['apps'][0]['env']['SPACE_RELEASE_INSTALLED_AT'], installed)
+        self.assertNotIn('SECRET', saved['apps'][0]['env'])
     def test_pointer_is_atomic_and_rejects_directory(self):
         d.atomic_link(self.target)
         self.assertEqual((d.BASE/'current').resolve(), self.target)
@@ -32,12 +43,18 @@ class Releases(unittest.TestCase):
         self.assertEqual(launch.call_args.args[0], self.old)
         self.assertFalse((d.BASE/'current').exists()); self.assertFalse(d.JOURNAL.exists())
     def test_success_and_manual_rollback_snapshot(self):
+        prior_date = '2026-10-01T09:00:00Z'
+        for app in self.old['apps']: app['env']['SPACE_RELEASE_INSTALLED_AT'] = prior_date
+        d.json_write(d.STATE, {'current': 'legacy', 'installedAt': prior_date})
         with patch.object(d, 'snapshot', return_value=self.old), patch.object(d, 'launch'), patch.object(d, 'healthy', return_value=True), patch.object(d, 'pm2'), patch.object(d.shutil, 'chown'), patch.object(Path, 'mkdir'):
             d.switch(self.target, True)
             state = json.loads(d.STATE.read_text())
             self.assertEqual(state['current'], self.target.name)
+            self.assertTrue(state['installedAt'].endswith('Z'))
             self.assertEqual(state['previous']['oldConfig'], self.old)
             d.restore_previous(state['previous'])
+            self.assertEqual(json.loads(d.STATE.read_text())['installedAt'], prior_date)
+            self.assertEqual(state['previous']['oldConfig']['apps'][0]['env']['SPACE_RELEASE_INSTALLED_AT'], prior_date)
         self.assertFalse((d.BASE/'current').exists())
     def test_compatibility_required(self):
         with self.assertRaises(ValueError): d.switch(self.target, False)

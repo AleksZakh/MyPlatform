@@ -1,4 +1,4 @@
-import { isUptsDepartment } from '../../../shared/utils/upts-membership';
+import { hasUptsMembership } from '../upts-membership';
 import { orderedTaskIds } from './task-order';
 import { createError, getQuery, type H3Event } from 'h3';
 import { Prisma } from '@prisma/client';
@@ -19,7 +19,7 @@ export function version(current:number,requested:number|undefined){if(current!==
 export const projectDTO=(p:Project,a:Actor)=>({...p,canManage:managesProject(p,a),canCreateTask:createsTask(p,a),role:projectRole(p,a)});
 const taskDTO=(t:Task,a:Actor)=>({...t,...taskRights(t,a),project:t.project ? {id:t.project.id,name:t.project.name,color:t.project.color}:null});
 export async function visibleProject(db:DB,id:number,a:Actor){
- if(a.uptsMember){const user=await db.user.findUnique({where:{id:a.id},select:{status:true,department:{select:{key:true,name:true,isActive:true}}}});a={...a,uptsMember:user?.status==='ACTIVE'&&isUptsDepartment(user.department)};}
+ if(a.uptsMember){const user=await db.user.findUnique({where:{id:a.id},select:{id:true,status:true,department:{select:{key:true,name:true,isActive:true}}}});a={...a,uptsMember:await hasUptsMembership(db,user,!!a.isSystemAdmin,a.directoryGroupIds)};}
  const p=await db.workProject.findFirst({where:{id,...projectWhere(a)},include:projectInclude});return p || fail(404,'Проект не найден или недоступен.');}
 async function visibleTask(db:DB,id:number,a:Actor){const t=await db.workTask.findFirst({where:{id,...taskWhere(a)},include:taskInclude});return t || fail(404,'Задача не найдена или недоступна.');}
 export async function activeUsers(db:DB,ids:number[]){if(!ids.length)return;const unique=[...new Set(ids)];const n=await db.user.count({where:{id:{in:unique},status:'ACTIVE'}});if(n!==unique.length)fail(400,'Один из участников неактивен или не найден.');}
@@ -59,7 +59,7 @@ export async function projects(event:H3Event){
 export async function getProject(event:H3Event,id:number){const a=await workActor(event);return projectDTO(await visibleProject(prisma,id,a),a);}
 export async function saveProject(event:H3Event,raw:unknown,id?:number){
  const a=await workActor(event),v=parse(projectInput,raw);
- if(v.upts&&!a.uptsMember)fail(403,'Создавать проекты УПТС могут только сотрудники подразделения.');
+ if(v.upts&&!a.uptsMember)fail(403,'Нет доступа к созданию проектов УПТС. Обратитесь к администратору.');
  const groupId=v.groupId===undefined?undefined:v.groupId;
  const shared=v.scope!=='PRIVATE';const grant=shared?await hasWorkGrant(event,'CREATE'):false;
  return mutation(event,a,'WorkProject',id?'UPDATE':'CREATE',async tx=>{

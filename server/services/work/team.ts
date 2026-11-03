@@ -12,7 +12,8 @@ import { INVITATION_LIFETIME, INVITATION_COOLDOWN, bypassInvitationCooldown } fr
 import { notifyActiveProjectInvite } from './invitation-mail';
 import { directoryGroupUserIds } from '../domain-group-directory.service';
 import type { Prisma } from '@prisma/client';
-import { isUptsDepartment } from '../../../shared/utils/upts-membership';
+import { hasUptsMembership, resolveUptsMembership } from '../upts-membership';
+import { isSystemAdminLogin } from '../../../shared/utils/access-decision';
 const roleInput=z.enum(['MANAGER','CURATOR','MEMBER','OBSERVER']);
 const idInput=z.number().int().positive().max(2147483647);
 const inviteInput=z.object({version:idInput,role:roleInput,target:invitationTarget}).strict();
@@ -32,13 +33,21 @@ export async function inviteToProject(event:H3Event,id:number,raw:unknown){
  const a=await workActor(event),v=parse(inviteInput,raw);
  const before=await manager(prisma,id,a);version(before.version,v.version);checkRole(before.ownerId,a,v.role);
  const userId='userId' in v.target?v.target.userId:await provisionInvitationContact(event,a.id,v.target.directoryLogin,v.target.directoryObjectId);
+ // Resolve the invitee's AD groups before taking the project transaction lock.
+ let inviteeDirectoryIds:string[]=[];
+ if(await prisma.uptsProject.findUnique({where:{projectId:id}})){
+  const invitee=await prisma.user.findUnique({where:{id:userId},include:{department:true}});
+  if(invitee){const membership=await resolveUptsMembership(event,invitee,isSystemAdminLogin(invitee.login,useRuntimeConfig(event).adminLogins),[],true);
+   if(membership.unavailable)fail(503,'Не удалось проверить группы приглашённого сотрудника в Active Directory.');
+   inviteeDirectoryIds=membership.directoryIds;}
+ }
  const reservation=await mutation(event,a,'WorkProject','INVITE',async tx=>{
   const p=await manager(tx,id,a);version(p.version,v.version);checkRole(p.ownerId,a,v.role);
   await activeUsers(tx,[a.id]);
   if(p.ownerId===userId||p.members.some(m=>m.userId===userId))fail(409,'Сотрудник уже входит в команду проекта.');
   const u=await tx.user.findUnique({where:{id:userId},include:{department:true}});
   if(!u||(u.status!=='ACTIVE'&&!(u.authType==='DOMAIN'&&u.status==='PENDING_ACTIVATION')))fail(409,'Сотрудник недоступен для приглашения.');
-  if(await tx.uptsProject.findUnique({where:{projectId:id}}) && !isUptsDepartment(u.department))fail(403,'В проекты УПТС можно приглашать только сотрудников этого подразделения.');
+  if(await tx.uptsProject.findUnique({where:{projectId:id}}) && !await hasUptsMembership(tx,u,isSystemAdminLogin(u.login,useRuntimeConfig(event).adminLogins),inviteeDirectoryIds,true))fail(403,'У сотрудника нет доступа к УПТС. Добавьте его в подразделение или группу УПТС.');
   const now=new Date();const prior=await tx.workProjectInvitation.findUnique({where:{projectId_userId:{projectId:id,userId}}});
   if(prior&&['PENDING','SENDING'].includes(prior.status)&&prior.expiresAt>now)fail(409,'Приглашение уже ожидает ответа.');
   const sender=await tx.user.findUnique({where:{id:a.id},select:{login:true,authType:true,status:true}});

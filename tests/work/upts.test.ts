@@ -19,7 +19,7 @@ const storage = process.env.WORK_PROJECT_FILES_ROOT || '';
 if (!storage.includes('space-project-files-test-'))
   throw new Error('Use disposable space-project-files-test- storage');
 const db = new PrismaClient({ datasources: { db: { url } } });
-Object.assign(globalThis, h3, { workTestDb: db });
+Object.assign(globalThis, h3, { workTestDb: db, useRuntimeConfig: () => ({ adminLogins: ['admin'] }) });
 const generated: string[] = [];
 async function handler(file: string) {
   const out = await build({
@@ -57,7 +57,7 @@ async function handler(file: string) {
                 : args.path === 'groups'
                   ? 'export async function resolveDomainGroupIds(){return [];} export async function directoryGroupUserIds(){return [];}'
                   : `
- export async function getAccessActor(e){const id=Number(e.node.req.headers['x-test-user']);if(!id)throw Object.assign(new Error('auth'),{statusCode:401});const user=await globalThis.workTestDb.user.findUnique({where:{id},include:{department:true}});if(!user||user.status!=='ACTIVE')throw Object.assign(new Error('inactive'),{statusCode:403});return {user,isSystemAdmin:id===4};}
+ export async function getAccessActor(e){const id=Number(e.node.req.headers['x-test-user']);if(!id)throw Object.assign(new Error('auth'),{statusCode:401});const user=await globalThis.workTestDb.user.findUnique({where:{id},include:{department:true}});if(!user||user.status!=='ACTIVE')throw Object.assign(new Error('inactive'),{statusCode:403});return {user,isSystemAdmin:id===6};}
  export async function requirePermission(e){const a=await getAccessActor(e);if(a.user.id!==2)throw Object.assign(new Error('denied'),{statusCode:403});return {userId:a.user.id};}
  `,
           }));
@@ -84,7 +84,8 @@ test('UPTS: shared work model, access, object reuse, templates, folders, Excel a
         { id: 3, login: 'member' },
         { id: 4, login: 'outsider' },
         { id: 5, login: 'observer' },
-      ].map((u) => ({ ...u, departmentId:u.id===4?null:department.id, status: 'ACTIVE', authType: 'EXTERNAL' })),
+        { id: 6, login: 'admin' },
+      ].map((u) => ({ ...u, departmentId:[4,6].includes(u.id)?null:department.id, status: 'ACTIVE', authType: 'EXTERNAL' })),
     });
     const routes = [
       ['/upts/access', 'upts/access.get', 'get'],
@@ -169,6 +170,15 @@ test('UPTS: shared work model, access, object reuse, templates, folders, Excel a
     assert.equal((await request('/upts', 4)).status, 403);
     assert.equal((await ok(await request('/upts/access', 4))).allowed, false);
     assert.equal((await ok(await request('/upts/access', 2))).allowed, true);
+    assert.equal((await ok(await request('/upts/access', 6))).allowed, true);
+    assert.equal((await request('/upts', 6)).status, 200);
+    const uptsGroup = await db.spaceGroup.create({data:{name:'УПТС',users:{create:{userId:4}}}});
+    assert.equal((await ok(await request('/upts/access',4))).allowed,true);
+    assert.equal((await request('/upts',4)).status,200);
+    assert.equal((await request(`/projects/${p.id}`,4)).status,404,'Group access does not grant every project');
+    await db.spaceGroupUser.delete({where:{groupId_userId:{groupId:uptsGroup.id,userId:4}}});
+    assert.equal((await ok(await request('/upts/access',4))).allowed,false);
+
     assert.equal(
       (await request(`/upts/projects/${p.id}/objects`, 4)).status,
       403,
@@ -470,10 +480,18 @@ test('UPTS: shared work model, access, object reuse, templates, folders, Excel a
     const {upts: omitted, ...retryWithoutUpts} = input;
     assert.equal((await request('/projects',2,'POST',retryWithoutUpts)).status,404);
     assert.equal((await request('/tasks',2,'POST',task)).status,409);
-    // Admin/manager/project membership cannot replace department membership.
+    // A project role alone cannot replace department/group membership; admins are exempt.
     await db.workProjectMember.create({data:{projectId:p.id,userId:4,role:'MANAGER'}});
     assert.equal((await request(`/projects/${p.id}`,4)).status,404);
     assert.equal((await request(`/projects/${p.id}/files/${file.id}`,4)).status,404);
+    await db.spaceGroupUser.create({data:{groupId:uptsGroup.id,userId:4}});
+    assert.equal((await request(`/projects/${p.id}`,4)).status,200);
+    assert.equal((await request(`/projects/${p.id}/files/${file.id}`,4)).status,200);
+    await db.spaceGroupUser.delete({where:{groupId_userId:{groupId:uptsGroup.id,userId:4}}});
+    assert.equal((await request(`/projects/${p.id}`,4)).status,404);
+    await db.workProjectMember.create({data:{projectId:p.id,userId:6,role:'MANAGER'}});
+    assert.equal((await request(`/projects/${p.id}`,6)).status,200);
+
     await db.user.update({where:{id:2},data:{departmentId:department.id}});
     await db.department.update({where:{id:department.id},data:{isActive:false}});
     assert.equal((await request('/upts')).status,403);
