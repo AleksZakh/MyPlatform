@@ -23,34 +23,25 @@ export function taskSummary(
     percent: tasks.length ? Math.round((done / tasks.length) * 100) : 0,
   };
 }
-export function filterUpts(
-  data: UptsSnapshot,
-  filters: {
-    projectId?: number | null;
-    employeeId?: number | null;
-    q?: string;
-  },
-) {
+export function filterUpts(data: UptsSnapshot, filters: {
+  projectId?: number | null; contractId?: number | null; employeeId?: number | null; q?: string;
+}) {
   const q = (filters.q || '').trim().toLocaleLowerCase('ru');
-  let projects = data.projects.filter(
-    (p) => !filters.projectId || p.id === filters.projectId,
-  );
-  let tasks = data.tasks.filter((t) =>
-    projects.some((p) => p.id === t.projectId),
-  );
-  if (filters.employeeId)
-    tasks = tasks.filter((t) => t.assigneeId === filters.employeeId);
-  if (q)
-    tasks = tasks.filter((t) =>
-      [
-        t.title,
-        t.description,
-        t.project?.name,
-        t.assignee?.fullName,
-        t.assignee?.login,
-      ].some((v) => v?.toLocaleLowerCase('ru').includes(q)),
-    );
-  if (filters.employeeId || q)
-    projects = projects.filter((p) => tasks.some((t) => t.projectId === p.id));
-  return { ...data, projects, tasks };
+  const matches = (...values: (string | null | undefined)[]) => !q || values.some(v => v?.toLocaleLowerCase('ru').includes(q));
+  let projects = data.projects.filter(p => (!filters.projectId || p.id === filters.projectId) && (!filters.contractId || p.upts.contracts.some(c=>c.id===filters.contractId)));
+  const byId = new Map(projects.map(p=>[p.id,p]));
+  const tasks = data.tasks.filter(t => {
+    const p=byId.get(t.projectId!); if(!p) return false;
+    if(filters.contractId && t.uptsContractId!==filters.contractId) return false;
+    if(filters.employeeId && t.assigneeId!==filters.employeeId) return false;
+    const c=p.upts.contracts.find(c=>c.id===t.uptsContractId);
+    return matches(t.title,t.description,p.name,t.assignee?.fullName,t.assignee?.login,c?.number,c?.name);
+  });
+  projects=projects.map(p=>({...p,upts:{...p.upts,contracts:p.upts.contracts.filter(c=>
+    (!filters.contractId||c.id===filters.contractId) &&
+    (!filters.employeeId||tasks.some(t=>t.uptsContractId===c.id)) &&
+    (matches(c.number,c.name,p.name)||tasks.some(t=>t.uptsContractId===c.id))
+  )}}));
+  if(filters.employeeId||q)projects=projects.filter(p=>tasks.some(t=>t.projectId===p.id)||p.upts.contracts.length>0||(!filters.employeeId&&matches(p.name)));
+  return {...data,projects,tasks};
 }

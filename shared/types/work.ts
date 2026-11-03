@@ -14,6 +14,7 @@ export type WorkProjectDTO = {
 };
 export type WorkTaskDTO = {
  uptsObjectId?: number | null;
+ uptsContractId?: number | null;
  id: number; title: string; description: string; kind: string; status: string; priority: string; visibility: string;
  creatorId: number; assigneeId: number | null; departmentId: number | null; projectId: number | null;
  plannedDate: string | null; startDate: string | null; dueDate: string | null; blockedReason: string; version: number;

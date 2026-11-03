@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs';
+import { UPTS_CONTRACT_TYPES } from '../../shared/types/upts-library';
 import {
   UPTS_STATUSES,
   UPTS_TYPES,
@@ -17,6 +18,7 @@ export async function uptsWorkbook(
   data: UptsSnapshot,
   filters: {
     projectId?: unknown;
+    contractId?: unknown;
     employeeId?: unknown;
     q?: unknown;
     archived?: unknown;
@@ -55,6 +57,7 @@ export async function uptsWorkbook(
     ['Параметр', 'Значение'],
     [
       ['Дата среза (Москва)', data.today],
+      ['Договор', String(filters.contractId || 'Все доступные')],
       ['Проект', String(filters.projectId || 'Все доступные')],
       ['Исполнитель', String(filters.employeeId || 'Все')],
       ['Поиск', String(filters.q || '')],
@@ -69,7 +72,7 @@ export async function uptsWorkbook(
       ],
       [
         'Объекты и договоры',
-        'Все объекты и договоры проектов, вошедших в отфильтрованный срез.',
+        'Договоры — по выбранному договору, поиску и исполнителю. Объекты — на уровне проекта; без распределения по договорам.',
       ],
     ],
   );
@@ -118,6 +121,7 @@ export async function uptsWorkbook(
       'ID',
       'Проект',
       'Объект',
+      'Договор',
       'Задача',
       'Исполнитель',
       'Статус',
@@ -134,6 +138,7 @@ export async function uptsWorkbook(
         t.id,
         t.project?.name,
         o?.object.name || 'Общая задача',
+        p?.upts.contracts.find(c=>c.id===t.uptsContractId)?.number || 'Без привязки',
         t.title,
         workUserName(t.assignee),
         WORK_STATUSES[t.status as keyof typeof WORK_STATUSES],
@@ -201,6 +206,7 @@ export async function uptsWorkbook(
     'Договоры',
     [
       'Проект',
+      'Тип договора',
       'Номер',
       'Наименование',
       'Контрагент',
@@ -211,6 +217,7 @@ export async function uptsWorkbook(
     data.projects.flatMap((p) =>
       p.upts.contracts.map((c) => [
         p.name,
+        c.contractType ? UPTS_CONTRACT_TYPES[c.contractType] : 'Не указан',
         c.number,
         c.name,
         c.counterparty,

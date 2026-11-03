@@ -450,7 +450,7 @@ test('UPTS: shared work model, access, object reuse, templates, folders, Excel a
     assert.equal(book.getWorksheet('Задачи')!.rowCount, 12);
     const formulaRow = book
       .getWorksheet('Задачи')!
-      .getColumn(4)
+      .getColumn(5)
       .values.find((v) => typeof v === 'string' && v.startsWith('=HYPERLINK'));
     assert.equal(formulaRow, template.items[0]!.title);
     const scoped = await ok(

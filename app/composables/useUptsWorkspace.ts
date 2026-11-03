@@ -30,6 +30,9 @@ export function useUptsWorkspace() {
     exporting = ref(false),
     section = ref('overview'),
     view = ref('board');
+  const selectedContractId = ref<number | null>(Number(route.query.contractId) || null);
+  const allContracts = computed(() => data.value.projects.flatMap(p => p.upts.contracts.map(c=>({...c,project:p}))));
+  const contract = computed(() => allContracts.value.find(c=>c.id===selectedContractId.value)||null);
   const selectedId = ref<number | null>(Number(route.query.projectId) || null),
     employeeId = ref<number | null>(null),
     search = ref(''),
@@ -40,6 +43,7 @@ export function useUptsWorkspace() {
   const filtered = computed(() =>
     filterUpts(data.value, {
       projectId: selectedId.value,
+      contractId: selectedContractId.value,
       employeeId: employeeId.value,
       q: search.value,
     }),
@@ -79,7 +83,7 @@ export function useUptsWorkspace() {
         return {
           user,
           ...taskSummary(list, data.value.today),
-          projects: new Set(list.map((t) => t.projectId)).size,
+          projects: new Set(list.map((t) => t.uptsContractId).filter(Boolean)).size,
         };
       })
       .sort((a, b) => b.overdue - a.overdue || b.active - a.active);
@@ -113,11 +117,12 @@ export function useUptsWorkspace() {
   );
   const nav = [
     { key: 'overview', label: 'Обзор', icon: 'lucide:layout-dashboard' },
-    { key: 'projects', label: 'Проекты', icon: 'lucide:folders' },
+    { key: 'contracts', label: 'Договоры', icon: 'lucide:files' },
+    { key: 'library', label: 'Библиотека работ', icon: 'lucide:library' },
     { key: 'tasks', label: 'Задачи', icon: 'lucide:columns-3' },
     { key: 'objects', label: 'Участки и объекты', icon: 'lucide:map-pinned' },
     { key: 'employees', label: 'Загрузка сотрудников', icon: 'lucide:users' },
-    { key: 'contracts', label: 'Договоры', icon: 'lucide:files' },
+    { key: 'projects', label: 'Проекты Space', icon: 'lucide:folders' },
   ];
   const projectEditor = ref(false),
     editingProject = ref<WorkProjectDTO | null>(null),
@@ -153,6 +158,8 @@ export function useUptsWorkspace() {
       if (alive && n === serial) {
         context.value = c;
         data.value = s;
+        if(contract.value){selectedId.value=contract.value.projectId;activeContract.value=contract.value.id;}
+        if(selectedContractId.value && !s.projects.some(p=>p.upts.contracts.some(c=>c.id===selectedContractId.value))) selectedContractId.value=null;
         if (
           selectedId.value &&
           !s.projects.some((p) => p.id === selectedId.value)
@@ -189,9 +196,16 @@ export function useUptsWorkspace() {
     load();
   });
   watch(selectedId, () => {
+    if(contract.value && selectedId.value !== contract.value.projectId) selectedContractId.value=null;
     activeContract.value = null;
-  });
+  }, {flush:'sync'});
+  watch(selectedContractId, id=>{const c=allContracts.value.find(c=>c.id===id);if(c) selectedId.value=c.projectId;else selectedId.value=null;activeContract.value=id;}, {flush:'sync'});
+  function openContract(c: UptsContractDTO) { selectedContractId.value=c.id; section.value='overview'; }
+  function contractStats(c: UptsContractDTO) { return taskSummary(tasks.value.filter(t=>t.uptsContractId===c.id),data.value.today); }
+  async function contractSaved(c: UptsContractDTO) { contractEditor.value=false;await load();openContract(c); }
+
   function openProject(p: UptsProjectDTO) {
+    selectedContractId.value=null;
     selectedId.value = p.id;
     section.value = 'overview';
   }
@@ -288,6 +302,7 @@ export function useUptsWorkspace() {
     contractEditor.value = true;
   }
   function showFiles(p: UptsProjectDTO, contractId?: number) {
+    selectedContractId.value = contractId || null;
     selectedId.value = p.id;
     activeContract.value = contractId || null;
     section.value = 'files';
@@ -300,6 +315,7 @@ export function useUptsWorkspace() {
         responseType: 'blob',
         query: {
           projectId: selectedId.value || undefined,
+          contractId: selectedContractId.value || undefined,
           employeeId: employeeId.value || undefined,
           q: search.value,
           archived: archived.value ? '1' : '0',
@@ -320,6 +336,7 @@ export function useUptsWorkspace() {
     }
   }
   function clearFilters() {
+    selectedContractId.value=null;
     selectedId.value = null;
     employeeId.value = null;
     search.value = '';
@@ -347,6 +364,7 @@ export function useUptsWorkspace() {
     })[status] || 'blue';
 
   return {
+    selectedContractId, allContracts, contract, openContract, contractStats, contractSaved,
     context,
     data,
     loading,

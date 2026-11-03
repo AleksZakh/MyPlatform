@@ -46,6 +46,7 @@ export type UptsContractDTO = {
   projectId: number;
   number: string;
   name: string;
+  contractType?: import('./upts-library').UptsContractType | null;
   counterparty: string;
   signedDate: string | null;
   dueDate: string | null;

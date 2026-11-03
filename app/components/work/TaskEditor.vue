@@ -3,11 +3,12 @@ import { ref, reactive, computed, onMounted, watch } from 'vue';
 import TaskSurface from './TaskSurface.vue';import PersonPicker from './PersonPicker.vue';
 import { WORK_STATUSES,WORK_KINDS,WORK_PRIORITIES,workUserName,type WorkTaskDTO,type WorkProjectDTO,type WorkContext,type WorkUser } from '~~/shared/types/work';
 import { dateKey } from '~~/shared/utils/work-board';
-const props=defineProps<{task:WorkTaskDTO|null;projects:WorkProjectDTO[];project?:WorkProjectDTO|null;context:WorkContext}>();
+const props=defineProps<{task:WorkTaskDTO|null;projects:WorkProjectDTO[];project?:WorkProjectDTO|null;context:WorkContext;uptsContractId?:number|null}>();
+const contractOptions=ref<{id:number;number:string;name:string}[]>([]);
 const objectOptions=ref<{id:number;object:{name:string}}[]>([]);
 const emit=defineEmits<{close:[];saved:[];createProject:[]}>();const {error,saving,send}=useWorkApi();
 const task=props.task;const own=props.context.userId;
-const form=reactive({uptsObjectId:task?.uptsObjectId||null,clientKey:crypto.randomUUID(),version:task?.version,title:task?.title||'',description:task?.description||'',kind:task?.kind||'TASK',status:task?.status||'TODO',priority:task?.priority||'NORMAL',
+const form=reactive({uptsContractId:task?.uptsContractId??props.uptsContractId??null,uptsObjectId:task?.uptsObjectId||null,clientKey:crypto.randomUUID(),version:task?.version,title:task?.title||'',description:task?.description||'',kind:task?.kind||'TASK',status:task?.status||'TODO',priority:task?.priority||'NORMAL',
  projectId:task?.projectId||props.project?.id||null,visibility:task?.visibility||(props.project?'PROJECT':'PRIVATE'),departmentId:task?.departmentId||null,assigneeId:task?task.assigneeId:own,
  participantIds:task?.participants.map(p=>p.userId)||[] as number[],plannedDate:dateKey(task?.plannedDate)||'',startDate:dateKey(task?.startDate)||'',dueDate:dateKey(task?.dueDate)||'',blockedReason:task?.blockedReason||''});
 const relationship=ref(form.projectId?'PROJECT':'STANDALONE');const participant=ref<number|null>(null);
@@ -19,6 +20,8 @@ watch(relationship,v=>{if(v==='STANDALONE'){form.projectId=null;form.visibility=
 watch(()=>form.projectId,v=>{if(v){form.visibility='PROJECT';form.departmentId=null;form.participantIds=[];}});
 let objectRequest=0;
 watch(()=>form.projectId,async (id,old)=>{const serial=++objectRequest;if(old!==undefined&&id!==old)form.uptsObjectId=null;objectOptions.value=[];if(!id)return;try{const rows=await $fetch<typeof objectOptions.value>(`/api/upts/projects/${id}/objects`);if(serial===objectRequest)objectOptions.value=rows;}catch{}},{immediate:true});
+let contractRequest=0;
+watch(()=>form.projectId,async (id,old)=>{const serial=++contractRequest;if(old!==undefined&&id!==old)form.uptsContractId=null;contractOptions.value=[];if(!id)return;try{const rows=await $fetch<typeof contractOptions.value>(`/api/upts/projects/${id}/contracts`);if(serial===contractRequest)contractOptions.value=rows;}catch{}},{immediate:true});
 async function save(){if(canProgress.value){const r=await send('/api/work/tasks/'+task!.id,'PATCH',{version:task!.version,status:form.status,plannedDate:form.plannedDate||null});if(r)emit('saved');return;}
  const body={...form,plannedDate:form.plannedDate||null,startDate:form.startDate||null,dueDate:form.dueDate||null};
  const r=await send(task?'/api/work/tasks/'+task.id:'/api/work/tasks',task?'PUT':'POST',body);if(r)emit('saved');}
@@ -37,6 +40,7 @@ defineExpose({useProject:(p:WorkProjectDTO)=>{relationship.value='PROJECT';form.
    <div class="work-two"><label>К чему относится задача?<select v-model="relationship"><option value="STANDALONE">Самостоятельная задача</option><option value="PROJECT">Задача в рамках проекта</option></select></label>
    <label v-if="relationship==='PROJECT'">Проект<select v-model="form.projectId" required><option :value="null">Выберите проект</option><option v-for="p in projects.filter(p=>p.canCreateTask||p.id===form.projectId)" :key="p.id" :value="p.id">{{ p.name }}</option></select></label>
    <label v-else>Кто видит задачу?<select v-model="form.visibility"><option value="PRIVATE">Только я</option><option value="PARTICIPANTS" :disabled="!context.canAssign">Участники задачи</option><option value="DEPARTMENT" :disabled="!context.canAssign||!context.department">Моё подразделение</option></select></label></div>
+   <label v-if="contractOptions.length">Договор УПТС<select v-model="form.uptsContractId"><option :value="null">Без привязки к договору</option><option v-for="c in contractOptions" :key="c.id" :value="c.id">{{ c.number }} · {{ c.name }}</option></select></label>
    <label v-if="objectOptions.length">Объект в проекте<select v-model="form.uptsObjectId"><option :value="null">Общая задача проекта</option><option v-for="o in objectOptions" :key="o.id" :value="o.id">{{ o.object.name }}</option></select></label>
    <label>Описание и ожидаемый результат<textarea v-model="form.description" rows="4" maxlength="20000" /></label>
    <div class="work-two"><label>Тип<select v-model="form.kind"><option v-for="(label,key) in WORK_KINDS" :key="key" :value="key">{{ label }}</option></select></label><label>Приоритет<select v-model="form.priority"><option v-for="(label,key) in WORK_PRIORITIES" :key="key" :value="key">{{ label }}</option></select></label></div>

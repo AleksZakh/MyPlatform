@@ -5,7 +5,7 @@ const id = z.number().int().positive().max(2147483647);
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(v => {
  const d = new Date(v+'T00:00:00Z'); return Number.isFinite(d.getTime()) && d.toISOString().slice(0,10) === v && v >= '1900-01-01' && v <= '2200-12-31';
 }, 'Неверная дата').nullable();
-const base = { uptsObjectId: id.nullable().optional(), title: z.string().trim().min(1).max(250), description: z.string().trim().max(20000),
+const base = { uptsContractId: id.nullable().optional(), uptsObjectId: id.nullable().optional(), title: z.string().trim().min(1).max(250), description: z.string().trim().max(20000),
  kind: z.enum(['TASK','BUG','IMPROVEMENT','RESEARCH','MILESTONE']), status: z.enum(['TODO','IN_PROGRESS','REVIEW','DONE']),
  priority: z.enum(['LOW','NORMAL','HIGH','URGENT']), visibility: z.enum(['PRIVATE','PARTICIPANTS','DEPARTMENT','PROJECT']),
  projectId: id.nullable(), departmentId: id.nullable(), assigneeId: id.nullable(),

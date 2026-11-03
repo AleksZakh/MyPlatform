@@ -1,3 +1,4 @@
+import { contractTypeSchema } from './upts-library';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { getQuery, type H3Event } from 'h3';
@@ -60,6 +61,7 @@ const contractInput = z
     version: id.optional(),
     number: z.string().trim().min(1).max(100),
     name: z.string().trim().min(1).max(250),
+    contractType: contractTypeSchema.nullable().optional(),
     counterparty: z.string().trim().max(250),
     signedDate: uptsDay,
     dueDate: uptsDay,
@@ -81,6 +83,7 @@ export async function snapshot(event: H3Event) {
   const a = await workActor(event),
     q = getQuery(event);
   const projectId = q.projectId ? positiveId(q.projectId) : null,
+    contractId = q.contractId ? positiveId(q.contractId) : null,
     employeeId = q.employeeId ? positiveId(q.employeeId) : null;
   // Consistent snapshot and no silent truncation: XLSX and screen use the same complete scope.
   const data = await prisma.$transaction(
@@ -141,6 +144,7 @@ export async function snapshot(event: H3Event) {
   );
   return filterUpts(JSON.parse(JSON.stringify(data)) as UptsSnapshot, {
     projectId,
+    contractId,
     employeeId,
     q: String(q.q || '').slice(0, 200),
   });
@@ -292,6 +296,7 @@ export async function saveContract(
       }
       if (old) version(old.version, v.version);
       const data = {
+        ...(v.contractType !== undefined ? { contractType: v.contractType } : {}),
         number: v.number,
         name: v.name,
         counterparty: v.counterparty,

@@ -1209,6 +1209,10 @@ const actionLabel =
     const labels:
       Record<string, string> = {
 
+        APPLY: 'Применение набора работ',
+        ARCHIVE: 'Архивирование',
+        RESTORE: 'Восстановление',
+        EXPORT: 'Экспорт',
         CREATE:
           'Создание',
 
@@ -1306,6 +1310,11 @@ const entityLabel =
     const labels:
       Record<string, string> = {
 
+        UptsContract: 'Договор УПТС',
+        UptsWorkDefinition: 'Работа библиотеки УПТС',
+        UptsWorkTemplate: 'Шаблон работ УПТС',
+        WorkTask: 'Задача',
+        WorkProject: 'Проект Space',
         DiagnosticContract: 'Договор диагностики',
         DiagnosticCounterparty: 'Контрагент диагностики',
         DiagnosticProjectType: 'Тип проекта диагностики',
