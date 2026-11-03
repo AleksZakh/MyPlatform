@@ -1,15 +1,17 @@
-import { defineEventHandler, readMultipartFormData, createError } from 'h3'
+import { defineEventHandler, readMultipartFormData, createError, getHeader } from 'h3'
 import { mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { prisma } from '../../../utils/prisma'
-import { requireAdmin } from '../../../utils/require-admin'
+import { diskAdmin } from '../../../services/storage/disk'
 import { detectMigrationDocument } from '../../../../shared/utils/migration-document'
 import { checkedStoragePath, labPath, storageRoot, storageSegment, normalizeStoragePath } from '../../../services/storage/paths'
 import { executeChanges, recoverStorageOperations, withStorageLock } from '../../../services/storage/operations'
 import { fileReferences } from '../../../services/storage/references'
+import { storageDepartments, ensureDepartmentDirectory } from '../../../services/storage/departments'
 export default defineEventHandler(async event => {
-  const admin = await requireAdmin(event)
+  const admin = await diskAdmin(event)
+  if (getHeader(event, 'x-space-storage') !== '1') throw createError({ statusCode: 403, message: 'Загрузите документ через файловое хранилище Space.' })
   event.context.storageActorLogin = admin.login
   const form = await readMultipartFormData(event), files = form?.filter(x => x.filename) || []
   if (files.length !== 1 || !files[0]?.data.length || files[0].data.length > 50 * 1024 * 1024) throw createError({ statusCode: 400, message: 'Один файл до 50 МБ' })
@@ -19,6 +21,19 @@ export default defineEventHandler(async event => {
   const samplingId = Number(text('samplingId')), type = text('type'), replacePath = text('replacePath')
   try { return await withStorageLock(async () => {
     await recoverStorageOperations()
+    const departmentDirectory = text('departmentDirectory')
+    if (departmentDirectory) {
+      if (replacePath) throw new Error('Для замены используйте карточку файла')
+      const directory = normalizeStoragePath(departmentDirectory)
+      const department = (await storageDepartments()).find(d => d.key !== 'lab' && (directory === d.path || directory.startsWith(d.path + '/')))
+      if (!department) throw new Error('Выберите каталог подразделения')
+      if (directory === department.path) await ensureDepartmentDirectory(directory)
+      await checkedStoragePath(directory)
+      const stem = storageSegment(path.parse(file.filename || 'document').name)
+      const target = `${directory}/${stem}_${randomUUID()}.${format.extension}`
+      const id = await executeChanges(event, 'department-upload', [{ source: null, target, refs: [] }], file.data)
+      return { success: true, operationId: id }
+    }
     if (replacePath) {
       const source = normalizeStoragePath(replacePath), refs = (await fileReferences()).filter(r => { try { return normalizeStoragePath(r.path) === source } catch { return false } })
       if (!refs.length) throw new Error('Файл не связан с БД. Для загрузки укажите запись.')

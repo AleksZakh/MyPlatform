@@ -7,5 +7,5 @@ export default defineEventHandler(async event => {
   // Log who requested the operation without filesystem paths or process data.
   await writeAuditEvent({ event, actorUserId: actor.id, category: 'ADMIN', action: 'DISK_SCAN_REQUEST', result: 'SUCCESS',
     resourceKey: 'system.file-storage', entityType: 'DiskInspection', note: 'Запрошена проверка диска без удаления файлов' });
-  return scanDisk();
+  return scanDisk(event);
 });

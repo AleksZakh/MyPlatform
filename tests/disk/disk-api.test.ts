@@ -18,9 +18,10 @@ test('Disk API is admin-only, fixed-command, no-store and throttled; report vali
       b.onResolve({ filter: /access-control\.service$/ }, () => ({ path: 'auth', namespace: 'test' }));
       b.onResolve({ filter: /utils\/auditLog$/ }, () => ({ path: 'audit', namespace: 'test' }));
       b.onResolve({ filter: /^node:child_process$/ }, () => ({ path: 'exec', namespace: 'test' }));
+      b.onResolve({ filter: /\/scanner$|^\.\/scanner$/ }, () => ({ path: 'scanner', namespace: 'test' }));
       b.onLoad({ filter: /.*/, namespace: 'test' }, ({ path }) => ({ loader: 'js', contents: path === 'auth' ? `
         export async function getAccessActor(e){const id=Number(e.node.req.headers['x-test-user']);if(!id)throw Object.assign(new Error('auth'),{statusCode:401});return {user:{id,status:'ACTIVE'},isSystemAdmin:id===2};}
-      ` : path === 'audit' ? `export async function writeAuditEvent(e){globalThis.__diskTest.audits.push(e.action);}` : `
+      ` : path === 'audit' ? `export async function writeAuditEvent(e){globalThis.__diskTest.audits.push(e.action);}` : path === 'scanner' ? `export const scannerCommand='/usr/local/sbin/space-disk-report';export async function scannerStatus(){return {ready:true,code:'READY',message:'OK'};}` : `
         export function execFile(file,args,options,callback){globalThis.__diskTest.calls.push({file,args,options});setTimeout(()=>callback(null,JSON.stringify(globalThis.__diskTest.report)),10);}
       ` }));
     } }] });
@@ -43,7 +44,7 @@ test('Disk API is admin-only, fixed-command, no-store and throttled; report vali
     const scan=await request('/scan',2,true);assert.equal(scan.status,200);assert.equal((await scan.json()).candidateBytes,4096);
     assert.equal(calls.length,1);assert.equal(calls[0].file,'/usr/bin/sudo');
     assert.deepEqual(calls[0].args,['-n','--','/usr/local/sbin/space-disk-report']);assert.equal(calls[0].options.shell,undefined);
-    assert.equal((await request('/scan',2,true)).status,429);assert.equal(calls.length,1);
+    const throttled=await request('/scan',2,true);assert.equal(throttled.status,429);assert.ok(Number(throttled.headers.get('retry-after'))>0);assert.equal(calls.length,1);
     const service=await bundle('server/services/storage/disk.ts');
     assert.deepEqual(service.volumeNumbers({blocks:100n,bsize:1024n,bfree:20n,bavail:15n,files:1000n,ffree:400n}),
       {total:102400,used:81920,available:15360,reserved:5120,usedPercent:84.2,inodes:1000,freeInodes:400});

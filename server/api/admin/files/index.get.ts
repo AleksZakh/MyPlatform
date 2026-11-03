@@ -1,12 +1,14 @@
 import { defineEventHandler, getQuery, createError } from 'h3'
 import { readdir, lstat } from 'node:fs/promises'
-import { requireAdmin } from '../../../utils/require-admin'
+import { diskAdmin } from '../../../services/storage/disk'
 import { fileReferences } from '../../../services/storage/references'
 import { checkedStoragePath, normalizeStoragePath, storageUrl } from '../../../services/storage/paths'
+import { storageDepartments, directoryExists } from '../../../services/storage/departments'
 
 export default defineEventHandler(async event => {
-  await requireAdmin(event)
+  await diskAdmin(event)
   const query = getQuery(event), mode = String(query.mode || 'folders')
+  const departments = await storageDepartments()
   const refs = await fileReferences()
   const byPath = new Map<string, typeof refs>()
   for (const ref of refs) {
@@ -27,13 +29,21 @@ export default defineEventHandler(async event => {
   }
   try {
     const relative = normalizeStoragePath(String(query.path || ''), true)
+    if (departments.some(d => d.path === relative) && !await directoryExists(relative)) return { items: [], total: 0, departments, initialized: false }
     const dir = await checkedStoragePath(relative)
     const entries = await readdir(dir, { withFileTypes: true })
     const items = await Promise.all(entries.filter(e => !e.name.startsWith('.') && !e.isSymbolicLink()).map(async entry => {
       const p = [relative, entry.name].filter(Boolean).join('/')
       return entry.isDirectory() ? { name: entry.name, path: p, folder: true, references: [], state: 'present', size: null, modified: null } : fileItem(p)
     }))
+    if (!relative) {
+      for (const department of departments) {
+        const existing = items.find(i => i.path === department.path && i.folder)
+        if (existing) existing.name = department.name
+        else if (department.active || await directoryExists(department.path)) items.push({ name: department.name, path: department.path, folder: true, references: [], state: 'present', size: null, modified: null })
+      }
+    }
     items.sort((a,b) => Number(b.folder) - Number(a.folder) || a.name.localeCompare(b.name, 'ru'))
-    return { items, total: items.length, page: 1, pageSize: items.length }
+    return { items, total: items.length, page: 1, pageSize: items.length, departments, initialized: true }
   } catch { throw createError({ statusCode: 400, message: 'Каталог недоступен или путь недопустим.' }) }
 })
