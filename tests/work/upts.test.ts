@@ -33,6 +33,8 @@ async function handler(file: string) {
       {
         name: 'upts-test-context',
         setup(b) {
+          b.onResolve({filter:/chat\/invitations$/},()=>({path:'mail',namespace:'test'}));
+          b.onResolve({filter:/invitation-mail$/},()=>({path:'mail',namespace:'test'}));
           b.onResolve({ filter: /domain-group-directory.service$/ }, () => ({
             path: 'groups',
             namespace: 'test',
@@ -50,10 +52,12 @@ async function handler(file: string) {
             contents:
               args.path === 'db'
                 ? 'export const prisma=globalThis.workTestDb;'
+                : args.path === 'mail'
+                  ? 'export async function provisionInvitationContact(){throw new Error("No external calls in tests");} export async function inviteDomainContact(){throw new Error("No mail in tests");} export async function notifyActiveProjectInvite(){throw new Error("No mail in tests");}'
                 : args.path === 'groups'
-                  ? 'export async function resolveDomainGroupIds(){return [];}'
+                  ? 'export async function resolveDomainGroupIds(){return [];} export async function directoryGroupUserIds(){return [];}'
                   : `
- export async function getAccessActor(e){const id=Number(e.node.req.headers['x-test-user']);if(!id)throw Object.assign(new Error('auth'),{statusCode:401});const user=await globalThis.workTestDb.user.findUnique({where:{id},include:{department:true}});if(!user||user.status!=='ACTIVE')throw Object.assign(new Error('inactive'),{statusCode:403});return {user,isSystemAdmin:false};}
+ export async function getAccessActor(e){const id=Number(e.node.req.headers['x-test-user']);if(!id)throw Object.assign(new Error('auth'),{statusCode:401});const user=await globalThis.workTestDb.user.findUnique({where:{id},include:{department:true}});if(!user||user.status!=='ACTIVE')throw Object.assign(new Error('inactive'),{statusCode:403});return {user,isSystemAdmin:id===4};}
  export async function requirePermission(e){const a=await getAccessActor(e);if(a.user.id!==2)throw Object.assign(new Error('denied'),{statusCode:403});return {userId:a.user.id};}
  `,
           }));
@@ -73,16 +77,25 @@ test('UPTS: shared work model, access, object reuse, templates, folders, Excel a
     router = h3.createRouter(),
     server = createServer(h3.toNodeListener(app));
   try {
+    const department = await db.department.create({data:{key:"upts",name:"Управление подготовки территории строительства"}});
     await db.user.createMany({
       data: [
         { id: 2, login: 'owner' },
         { id: 3, login: 'member' },
         { id: 4, login: 'outsider' },
         { id: 5, login: 'observer' },
-      ].map((u) => ({ ...u, status: 'ACTIVE', authType: 'EXTERNAL' })),
+      ].map((u) => ({ ...u, departmentId:u.id===4?null:department.id, status: 'ACTIVE', authType: 'EXTERNAL' })),
     });
     const routes = [
+      ['/upts/access', 'upts/access.get', 'get'],
+      ['/invitations', 'work/invitations/index.get', 'get'],
+      ['/invitations/:invitationId', 'work/invitations/[invitationId].post', 'post'],
+      ['/projects/:id/invitations', 'work/projects/[id]/invitations.post', 'post'],
       ['/upts', 'upts/index.get', 'get'],
+      ['/projects', 'work/projects/index.get', 'get'],
+      ['/projects/:id', 'work/projects/[id].get', 'get'],
+      ['/tasks', 'work/tasks/index.get', 'get'],
+      ['/tasks/:id', 'work/tasks/[id].get', 'get'],
       ['/upts/demo', 'upts/demo.post', 'post'],
       ['/upts/objects', 'upts/objects.get', 'get'],
       ['/upts/export', 'upts/export.get', 'get'],
@@ -153,10 +166,12 @@ test('UPTS: shared work model, access, object reuse, templates, folders, Excel a
     assert.equal(snapshot.tasks.length, 9);
     assert.equal(taskSummary(snapshot.tasks, snapshot.today).overdue, 1);
     assert.equal((await request('/upts', 0)).status, 401);
-    assert.equal((await ok(await request('/upts', 4))).projects.length, 0);
+    assert.equal((await request('/upts', 4)).status, 403);
+    assert.equal((await ok(await request('/upts/access', 4))).allowed, false);
+    assert.equal((await ok(await request('/upts/access', 2))).allowed, true);
     assert.equal(
       (await request(`/upts/projects/${p.id}/objects`, 4)).status,
-      404,
+      403,
     );
     await db.workProject.update({
       where: { id: p.id },
@@ -241,6 +256,13 @@ test('UPTS: shared work model, access, object reuse, templates, folders, Excel a
       },
     };
     const p2 = await ok(await request('/projects', 2, 'POST', input));
+    assert.equal((await request(`/projects/${p2.id}`,3)).status,404,'Department membership does not grant every project');
+    assert.equal((await request(`/projects/${p2.id}/invitations`,2,'POST',{version:p2.version,role:'MEMBER',target:{userId:4}})).status,403);
+    const invitationId=randomUUID();
+    await db.workProjectInvitation.create({data:{id:invitationId,projectId:p2.id,userId:4,inviterId:2,role:'MEMBER',status:'PENDING',expiresAt:new Date(Date.now()+3600000)}});
+    assert.deepEqual(await ok(await request('/invitations',4)),[]);
+    assert.equal((await request(`/invitations/${invitationId}`,4,'POST',{decision:'ACCEPT'})).status,404);
+    assert.equal(await db.workProjectMember.count({where:{projectId:p2.id,userId:4}}),0);
     const link = {
       clientKey: randomUUID(),
       objectId: object.objectId,
@@ -432,9 +454,31 @@ test('UPTS: shared work model, access, object reuse, templates, folders, Excel a
     await eb.xlsx.load(Buffer.from(await employeeReport.arrayBuffer()) as any);
     assert.equal(eb.getWorksheet('Задачи')!.rowCount, scoped.tasks.length + 1);
     const hiddenReport = await request(`/upts/export?projectId=${p.id}`, 4);
-    const hb = new ExcelJS.Workbook();
-    await hb.xlsx.load(Buffer.from(await hiddenReport.arrayBuffer()) as any);
-    assert.equal(hb.getWorksheet('Задачи')!.rowCount, 1);
+    assert.equal(hiddenReport.status, 403);
+    // Revocation applies to an existing owner and all shared work routes immediately.
+    await db.user.update({where:{id:2},data:{departmentId:null}});
+    assert.equal((await request('/upts')).status,403);
+    assert.equal((await request('/upts/objects')).status,403);
+    assert.equal((await request('/upts/export')).status,403);
+    assert.equal((await request(`/projects/${p.id}`)).status,404);
+    assert.equal((await request(`/tasks/${savedTask.id}`)).status,404);
+    assert.equal((await request(`/projects/${p.id}/files/${file.id}`)).status,404);
+    assert.equal((await request(`/projects/${p.id}/files?scope=SHARED&contractId=${contract.id}`)).status,404);
+    assert.equal((await ok(await request('/projects'))).total,0);
+    assert.equal((await ok(await request('/tasks'))).total,0);
+    assert.equal((await request('/projects',2,'POST',input)).status,403);
+    const {upts: omitted, ...retryWithoutUpts} = input;
+    assert.equal((await request('/projects',2,'POST',retryWithoutUpts)).status,404);
+    assert.equal((await request('/tasks',2,'POST',task)).status,409);
+    // Admin/manager/project membership cannot replace department membership.
+    await db.workProjectMember.create({data:{projectId:p.id,userId:4,role:'MANAGER'}});
+    assert.equal((await request(`/projects/${p.id}`,4)).status,404);
+    assert.equal((await request(`/projects/${p.id}/files/${file.id}`,4)).status,404);
+    await db.user.update({where:{id:2},data:{departmentId:department.id}});
+    await db.department.update({where:{id:department.id},data:{isActive:false}});
+    assert.equal((await request('/upts')).status,403);
+    await db.department.update({where:{id:department.id},data:{isActive:true}});
+    assert.equal((await request('/upts')).status,200);
     const current = await db.workProject.findUniqueOrThrow({
       where: { id: p.id },
     });

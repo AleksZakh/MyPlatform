@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { getQuery, type H3Event } from 'h3';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../utils/prisma';
-import { workActor } from './work/access';
+import { uptsActor as workActor } from './upts-access';
 import {
   projectWhere,
   taskRights,

@@ -31,7 +31,7 @@ export async function getAccessActor(event: H3Event, db: Prisma.TransactionClien
     where: { id: userId },
     select: {
       id: true, login: true, email: true, authType: true, status: true, directoryObjectId: true,
-      department: { select: { id: true, name: true, isActive: true } },
+      department: { select: { id: true, key: true, name: true, isActive: true } },
     },
   })
   if (user) event.context.usageActor = user;

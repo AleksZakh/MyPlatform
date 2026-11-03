@@ -2,6 +2,7 @@ import { createError, getHeader, setHeader, type H3Event } from 'h3';
 import { prisma } from '../../utils/prisma';
 import { resolveDomainGroupIds } from '../domain-group-directory.service';
 import { getAccessActor, requirePermission } from '../access-control.service';
+import { isUptsDepartment } from '../../../shared/utils/upts-membership';
 export async function workActor(event:H3Event) {
  setHeader(event,'Cache-Control','private, no-store');
  if(event.context.externalSessionRevoked) throw createError({statusCode:401});
@@ -19,7 +20,7 @@ export async function workActor(event:H3Event) {
   }catch{directoryGroupIds=[];} // Fail closed for AD-derived access; direct roles still work.
  }
 
- return {directoryGroupIds,id:actor.user.id,departmentId:actor.user.department?.isActive ? actor.user.department.id : null,
+ return {uptsMember:isUptsDepartment(user.department),directoryGroupIds,id:actor.user.id,departmentId:actor.user.department?.isActive ? actor.user.department.id : null,
  department:actor.user.department?.isActive ? actor.user.department : null,isSystemAdmin:actor.isSystemAdmin};
 }
 export async function hasWorkGrant(event:H3Event, action:'CREATE'|'UPDATE') {

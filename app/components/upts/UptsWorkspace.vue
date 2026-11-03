@@ -139,7 +139,8 @@ const {
     </header>
     <main class="upts-main">
       <header class="upts-heading">
-        <h1>Управление подготовки территории строительства</h1>
+        <h1>Учёт земельно-кадастровых работ</h1>
+        <p class="upts-department-name">Управление подготовки территории строительства</p>
       </header>
       <div class="upts-filters">
         <label

@@ -15,7 +15,7 @@
         }"
       >
         <template #incomingInspection>
-          <LabIncominginspection />
+          <ResourceGate resource="lab.sampling-tests"><LabIncominginspection /></ResourceGate>
         </template>
         <template #eventsLog>
           <LabResearch  />
@@ -33,6 +33,7 @@
 </template>
 
 <script setup lang="ts">
+import ResourceGate from "~/components/access/ResourceGate.vue";
 
 // const { user, clear } = useUserSession();
 const userStore = useUserStore();

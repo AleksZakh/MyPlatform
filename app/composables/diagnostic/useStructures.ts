@@ -30,7 +30,7 @@ export function useStructures(){
       acceptingPage=true;page.value=result.page;acceptingPage=false;
       pageCount.value=result.pageCount;total.value=result.total;matched.value=result.matched;pageRows.value=result.items;
       selectedId.value=result.items[0]?.id||'';
-    }catch(e){if(!disposed&&generation===listGeneration){clearList();total.value=0;pageCount.value=1;loadError.value=structureRequestError(e);}}
+    }catch(e){if(!disposed&&generation===listGeneration){clearList();total.value=0;pageCount.value=1;loadError.value=structureRequestError(e);if(Number((e as any)?.statusCode || (e as any)?.response?.status)===403)await navigateTo('/access-denied',{replace:true});}}
     finally{if(generation===listGeneration&&!disposed)loading.value=false;}
   }
   function schedule(){

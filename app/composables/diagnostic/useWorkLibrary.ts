@@ -38,7 +38,7 @@ export function useWorkLibrary() {
       ]);
       rows.value = list; catalog.value = options;
       permissions.value = { create: !!grants[0]?.allowed, update: !!grants[1]?.allowed, delete: !!grants[2]?.allowed };
-    } catch (e) { rows.value = []; catalog.value = { groups: [], categories: [] }; permissions.value = { create: false, update: false, delete: false }; loadError.value = workError(e); }
+    } catch (e) { rows.value = []; catalog.value = { groups: [], categories: [] }; permissions.value = { create: false, update: false, delete: false }; loadError.value = workError(e); if(Number((e as any)?.statusCode || (e as any)?.response?.status)===403)await navigateTo('/access-denied',{replace:true}); }
     finally { loading.value = false; }
   }
   async function save(value: WorkInput & { id?: number; version?: number }) {
