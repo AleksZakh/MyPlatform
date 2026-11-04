@@ -1,6 +1,6 @@
 // server/api/reference/search.get.ts
 import { PrismaClient } from '@prisma/client';
-import { defineEventHandler, getQuery } from 'h3';
+import { createError, defineEventHandler, getQuery, setHeader } from 'h3';
 
 const prisma = new PrismaClient();
 
@@ -19,6 +19,7 @@ const ALLOWED_TARGETS: Record<string, string[]> = {
 };
 
 export default defineEventHandler(async (event) => {
+  setHeader(event, 'Cache-Control', 'no-store');
   const query = getQuery(event);
   // console.log('query ====> ', query)
   const targetModel = String(query.model || '');
@@ -45,7 +46,9 @@ export default defineEventHandler(async (event) => {
     }
 
     // Строим where условие с поиском по частичному совпадению
-    const whereCondition: any = {};
+    // Every whitelisted model has soft deletion. Use the same active-record
+    // filter as the catalog pages, including when a search term is provided.
+    const whereCondition: any = { deletedAt: null };
     
     if (searchValue) {
       // Для PostgreSQL используем contains с insensitive режимом

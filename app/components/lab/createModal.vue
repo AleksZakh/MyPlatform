@@ -822,10 +822,11 @@
 
 <script setup lang="ts">
 import '~/assets/css/lab-record-fields.css'
+import { useLabRecentOptions } from '~/composables/useLabRecentOptions'
 import { sortLabOptions } from '~~/shared/utils/lab-recent-options'
 import CreatableNameSelect from "./CreatableNameSelect.vue";
 const { expanded } = useRecordWindow();
-const { preferences, load: loadPreferences } = useUserPreferences();
+const { recent: recentHistory, load: loadRecentOptions } = useLabRecentOptions();
 import * as z from 'zod'
 
 import type {
@@ -1583,12 +1584,12 @@ const state =
 
 const locationItems = ref<string[]>([])
 const recentOptions = computed(() => ({
-  plpItems: sortLabOptions(plpItems.value, preferences.value.labRecent.plp),
-  testObjectItems: sortLabOptions(testObjectItems.value, preferences.value.labRecent.object),
-  locationItems: sortLabOptions(locationItems.value, preferences.value.labRecent.location),
-  materialItems: sortLabOptions(materialItems.value, preferences.value.labRecent.material),
-  manufacturerNames: sortLabOptions(manufacturerNames.value, preferences.value.labRecent.manufacturer),
-  inspectorItems: sortLabOptions(inspectorItems.value, preferences.value.labRecent.inspector),
+  plpItems: sortLabOptions(plpItems.value, recentHistory.value.plp),
+  testObjectItems: sortLabOptions(testObjectItems.value, recentHistory.value.object),
+  locationItems: sortLabOptions(locationItems.value, recentHistory.value.location),
+  materialItems: sortLabOptions(materialItems.value, recentHistory.value.material),
+  manufacturerNames: sortLabOptions(manufacturerNames.value, recentHistory.value.manufacturer),
+  inspectorItems: sortLabOptions(inspectorItems.value, recentHistory.value.inspector),
 }))
 const locationsLoading = ref(false)
 const locationsError = ref('')
@@ -2356,7 +2357,7 @@ watch(
 
 onMounted(
   async () => {
-    await Promise.all([loadReferenceData(), loadPreferences()])
+    await Promise.all([loadReferenceData(), loadRecentOptions()])
 
     editLockTimer =
       setInterval(
