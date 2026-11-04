@@ -1,4 +1,9 @@
 import { z } from 'zod';
+const recentNames = z.array(z.string().min(1)).max(50);
+const labRecentSchema = z.object({
+  plp: recentNames.optional(), object: recentNames.optional(), location: recentNames.optional(),
+  material: recentNames.optional(), manufacturer: recentNames.optional(), inspector: recentNames.optional(),
+}).strict();
 export const displaySchema = z.object({
   theme: z.enum(['system', 'light', 'dark']).default('system'),
   contrast: z.enum(['normal', 'high']).default('normal'),
@@ -15,6 +20,7 @@ export const tableSchema = z.object({ visibleColumns: ids.min(1), columnOrder: i
 export const preferencesSchema = z.object({
   display: displaySchema.default(() => displaySchema.parse({})), notifications: notificationsSchema.default(() => notificationsSchema.parse({})),
   labTable: tableSchema.default(null),
+  labRecent: labRecentSchema.default(() => ({})),
 }).strict();
 export const preferencesPatchSchema = z.object({ display: displaySchema.optional(), notifications: notificationsSchema.optional(), labTable: tableSchema.optional() }).strict().refine(v => Object.keys(v).length > 0);
 export type UserPreferences = z.infer<typeof preferencesSchema>;

@@ -1,0 +1,43 @@
+/* Only the laboratory registry dialogs. Other departments retain their palette. */
+@media screen {
+  html.dark:not([data-space-contrast="high"]) .space-record-window.lab-record-window {
+    --space-graphite-field: #4b6276 !important;
+    --space-field: #4b6276 !important;
+    --space-graphite-field-line: #8298ab !important;
+  }
+
+  html.dark:not([data-space-contrast="high"]):has(.lab-area) .space-record-window.lab-record-window :is(
+    .lab-record-value,
+    input:not([type="checkbox"]):not([type="radio"]),
+    textarea, select, [role="combobox"],
+    [data-slot="base"]:has([role="spinbutton"]),
+    .document-drop-zone
+  ) {
+    background-color: #4b6276 !important;
+    color: #f3f7fb !important;
+    border-color: var(--lab-record-field-line, #8298ab) !important;
+    --tw-ring-color: var(--lab-record-field-line, #8298ab);
+  }
+
+  html.dark:not([data-space-contrast="high"]):has(.lab-area) .space-record-window.lab-record-window .lab-record-value {
+    border: 1px solid #8298ab;
+    padding: 4px 8px;
+  }
+
+  html.dark:not([data-space-contrast="high"]):has(.lab-area) .space-record-window.lab-record-window :is(input, textarea)::placeholder {
+    color: #d3dee7 !important;
+  }
+
+  html.dark:not([data-space-contrast="high"]):has(.lab-area) .space-record-window.lab-record-window .document-drop-zone[data-dragging="true"] {
+    background-color: #365c80 !important;
+    --lab-record-field-line: var(--space-graphite-accent);
+  }
+
+  html.dark:not([data-space-contrast="high"]):has(.lab-area) .space-record-window.lab-record-window .document-drop-zone.border-green-500 {
+    --lab-record-field-line: var(--space-graphite-success);
+  }
+
+  html.dark:not([data-space-contrast="high"]):has(.lab-area) .space-record-window.lab-record-window :is([aria-invalid="true"], .border-red-500) {
+    --lab-record-field-line: var(--space-graphite-danger);
+  }
+}

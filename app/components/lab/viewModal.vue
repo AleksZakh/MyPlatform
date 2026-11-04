@@ -4,7 +4,7 @@
     class="custom-modal"
     :ui="{
       content:
-        expanded ? 'space-record-window w-screen max-w-none h-dvh max-h-dvh bg-gray-100 flex flex-col' : 'space-record-window sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl w-full max-h-[94vh] bg-gray-100 flex flex-col',
+        expanded ? 'space-record-window lab-record-window w-screen max-w-none h-dvh max-h-dvh bg-gray-100 flex flex-col' : 'space-record-window lab-record-window sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl w-full max-h-[94vh] bg-gray-100 flex flex-col',
       body: 'flex-1 min-h-0 overflow-auto',
       header: 'shrink-0',
       footer: 'shrink-0',
@@ -431,6 +431,7 @@
 
 
 <script setup lang="ts">
+import '~/assets/css/lab-record-fields.css'
 const { expanded } = useRecordWindow();
 import {
   defineComponent,
@@ -552,7 +553,7 @@ const InfoValue =
               'div',
               {
                 class: [
-                  'mt-1 px-2 shadow-sm rounded-sm text-lg text-gray-800 min-w-70 bg-gray-50',
+                  'lab-record-value mt-1 px-2 shadow-sm rounded-sm text-lg text-gray-800 min-w-0 break-words bg-gray-50',
 
                   componentProps.mono
                     ? 'font-mono'
@@ -627,7 +628,7 @@ const FileValue =
                     type: 'button',
                     title: getFileName(componentProps.path!),
                     'aria-label': `Открыть ${componentProps.label}: ${getFileName(componentProps.path!)}`,
-                    class: 'mt-1 p-2 w-fit rounded-md focus-visible:outline-2 focus-visible:outline-blue-500',
+                    class: 'lab-record-value mt-1 p-2 w-fit rounded-md focus-visible:outline-2 focus-visible:outline-blue-500',
                     onClick:
                       () =>
                         emitComponent(
@@ -647,7 +648,7 @@ const FileValue =
                   'span',
                   {
                     class:
-                      'text-md text-gray-400 mt-1',
+                      'lab-record-value text-md text-gray-400 mt-1 rounded-sm',
                   },
                   '—',
                 ),

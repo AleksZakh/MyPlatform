@@ -5,6 +5,7 @@
 .nitro
 .cache
 .env
+.space-updates
 dist
 
 # Node dependencies

@@ -8,9 +8,9 @@
     class="custom-modal bg-sky-100 shadow-blue-200 max-h-full w-full border border-gray-300"
     :ui="{
       content:
-        expanded ? 'space-record-window w-screen max-w-none h-dvh max-h-dvh bg-gray-100 overflow-hidden flex flex-col' : 'space-record-window max-w-[1500px] max-h-[94vh] bg-gray-100 overflow-hidden flex flex-col',
+        expanded ? 'space-record-window lab-record-window w-screen max-w-none h-dvh max-h-dvh bg-gray-100 overflow-hidden flex flex-col' : 'space-record-window lab-record-window max-w-[1500px] max-h-[94vh] bg-gray-100 overflow-hidden flex flex-col',
       body:
-        'min-h-0 flex-1 overflow-y-auto overflow-x-hidden',
+        'min-h-0 flex-1 overflow-y-auto overflow-x-hidden flex flex-col',
       header:
         'shrink-0',
     }"
@@ -124,7 +124,7 @@
                   v-model="
                     state.samplingTest.plpName
                   "
-                  :items="plpItems"
+                  :items="recentOptions.plpItems"
                   :searchable="true"
                   :search-input="{
                     placeholder:
@@ -152,7 +152,7 @@
                     state.samplingTest
                       .testObjectName
                   "
-                  :items="testObjectItems"
+                  :items="recentOptions.testObjectItems"
                   :searchable="true"
                   :search-input="{
                     placeholder:
@@ -267,7 +267,7 @@
                   </span>
                 </template>
 
-                <CreatableNameSelect v-model="state.samplingTest.testLocationName" :items="locationItems" :loading="locationsLoading" placeholder="Выберите или создайте место отбора" />
+                <CreatableNameSelect v-model="state.samplingTest.testLocationName" :items="recentOptions.locationItems" :loading="locationsLoading" placeholder="Выберите или создайте место отбора" label="Место отбора проб" :disabled="baseSectionDisabled" />
                 <p v-if="locationsError" role="alert" class="text-sm text-red-600">{{ locationsError }} <button type="button" @click="loadLocationItems()">Повторить</button></p>
               </UFormField>
 
@@ -289,7 +289,7 @@
                     state.samplingTest
                       .inspectorName
                   "
-                  :items="inspectorItems"
+                  :items="recentOptions.inspectorItems"
                   create-item
                   :searchable="true"
                   :search-input="{
@@ -380,7 +380,7 @@
                     state.receiptMaterial
                       .materialName
                   "
-                  :items="materialItems"
+                  :items="recentOptions.materialItems"
                   :searchable="true"
                   :search-input="{
                     placeholder:
@@ -527,7 +527,7 @@
                   </span>
                 </template>
 
-                <CreatableNameSelect v-model="state.receiptMaterial.manufacturerName" :items="manufacturerNames" placeholder="Выберите или создайте изготовителя" />
+                <CreatableNameSelect v-model="state.receiptMaterial.manufacturerName" :items="recentOptions.manufacturerNames" placeholder="Выберите или создайте изготовителя" label="Предприятие-изготовитель" :disabled="baseSectionDisabled" />
               </UFormField>
 
 
@@ -821,8 +821,11 @@
 
 
 <script setup lang="ts">
+import '~/assets/css/lab-record-fields.css'
+import { sortLabOptions } from '~~/shared/utils/lab-recent-options'
 import CreatableNameSelect from "./CreatableNameSelect.vue";
 const { expanded } = useRecordWindow();
+const { preferences, load: loadPreferences } = useUserPreferences();
 import * as z from 'zod'
 
 import type {
@@ -1579,6 +1582,14 @@ const state =
 
 
 const locationItems = ref<string[]>([])
+const recentOptions = computed(() => ({
+  plpItems: sortLabOptions(plpItems.value, preferences.value.labRecent.plp),
+  testObjectItems: sortLabOptions(testObjectItems.value, preferences.value.labRecent.object),
+  locationItems: sortLabOptions(locationItems.value, preferences.value.labRecent.location),
+  materialItems: sortLabOptions(materialItems.value, preferences.value.labRecent.material),
+  manufacturerNames: sortLabOptions(manufacturerNames.value, preferences.value.labRecent.manufacturer),
+  inspectorItems: sortLabOptions(inspectorItems.value, preferences.value.labRecent.inspector),
+}))
 const locationsLoading = ref(false)
 const locationsError = ref('')
 let locationRequest = 0
@@ -2345,7 +2356,7 @@ watch(
 
 onMounted(
   async () => {
-    await loadReferenceData()
+    await Promise.all([loadReferenceData(), loadPreferences()])
 
     editLockTimer =
       setInterval(
@@ -2400,6 +2411,9 @@ defineExpose({
  * ========================================================== */
 
 .incoming-control-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 auto;
   width: 100%;
   min-width: 0;
 }
@@ -2407,7 +2421,8 @@ defineExpose({
 .parent {
   width: 100%;
   min-width: 0;
-  align-items: start;
+  flex: 1 0 auto;
+  align-items: stretch;
   grid-template-columns:
     repeat(
       3,
@@ -2537,8 +2552,8 @@ defineExpose({
 
 }
 
-.parent > *:last-child {
-  margin-bottom: 16px;
+.incoming-control-form > .sticky {
+  flex-shrink: 0;
 }
 
 :deep(.uselectmenu-content) {

@@ -80,7 +80,8 @@ export async function handleFileUpload(
     if (!fileFields.includes(fieldName)) continue;
 
     // Извлекаем расширение файла
-    const rawFilename = Buffer.from(item.filename, 'latin1').toString('utf-8');
+    // Multipart readers already decode UTF-8; a second Latin-1 conversion corrupts names.
+    const rawFilename = item.filename;
     let fileExt = path.extname(rawFilename).toLowerCase();
     if (fileExt === '.jfif') {
       const bytes = item.data;

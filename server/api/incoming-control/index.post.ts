@@ -1,3 +1,5 @@
+import { readLabMultipartFormData } from '../../utils/labMultipart'
+import { rememberLabSelection } from '../../services/lab/recent-options.service'
 // server/api/incoming-control/index.post.ts
 
 import fs from 'node:fs'
@@ -9,7 +11,6 @@ import {
 import {
   createError,
   defineEventHandler,
-  readMultipartFormData,
 } from 'h3'
 
 import {
@@ -111,7 +112,7 @@ export default defineEventHandler(
 
     try {
       const multipartData =
-        await readMultipartFormData(
+        await readLabMultipartFormData(
           event,
         )
 
@@ -609,6 +610,15 @@ export default defineEventHandler(
                 actorEmail,
               })
             }
+
+            await rememberLabSelection(tx, permission.userId, {
+              plp: created.plp.name,
+              object: created.testLocation.testObject.name,
+              location: created.testLocation.name,
+              material: created.receiptMaterial.material.name,
+              manufacturer: created.receiptMaterial.manufacturer?.name || '',
+              inspector: created.inspector.name,
+            })
 
             return created
           },

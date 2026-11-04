@@ -1,3 +1,5 @@
+import { readLabMultipartFormData } from '../../utils/labMultipart'
+import { rememberLabSelection } from '../../services/lab/recent-options.service'
 // server/api/incoming-control/[id].put.ts
 
 import fs from 'node:fs'
@@ -10,7 +12,6 @@ import {
   createError,
   defineEventHandler,
   getRouterParam,
-  readMultipartFormData,
 } from 'h3'
 
 import {
@@ -576,7 +577,7 @@ export default defineEventHandler(
 
     try {
       const multipartData =
-        await readMultipartFormData(
+        await readLabMultipartFormData(
           event,
         )
 
@@ -1493,7 +1494,7 @@ export default defineEventHandler(
             }
 
 
-            return await tx.samplingTest
+            const saved = await tx.samplingTest
               .findUnique({
                 where: {
                   id:
@@ -1525,6 +1526,18 @@ export default defineEventHandler(
                     true,
                 },
               })
+
+            if (intent.baseChanged && saved) {
+              await rememberLabSelection(tx, permission.userId, {
+                plp: saved.plp.name,
+                object: saved.testLocation.testObject.name,
+                location: saved.testLocation.name,
+                material: saved.receiptMaterial.material.name,
+                manufacturer: saved.receiptMaterial.manufacturer?.name || '',
+                inspector: saved.inspector.name,
+              })
+            }
+            return saved
           },
 
           {
