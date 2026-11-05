@@ -35,12 +35,12 @@ export function filterUpts(data: UptsSnapshot, filters: {
     if(filters.contractId && t.uptsContractId!==filters.contractId) return false;
     if(filters.employeeId && t.assigneeId!==filters.employeeId) return false;
     const c=p.upts.contracts.find(c=>c.id===t.uptsContractId);
-    return matches(t.title,t.description,p.name,t.assignee?.fullName,t.assignee?.login,c?.number,c?.name,c?.objectDetails?.road,c?.objectDetails?.stage,c?.objectDetails?.sourceCadastralNumber);
+    return matches(t.title,t.description,p.name,t.assignee?.fullName,t.assignee?.login,c?.number,c?.name,c?.objectDetails?.road,c?.objectDetails?.stage,c?.objectDetails?.sourceCadastralNumber,c?.objectDetails?.basisContractNumber);
   });
   projects=projects.map(p=>({...p,upts:{...p.upts,contracts:p.upts.contracts.filter(c=>
     (!filters.contractId||c.id===filters.contractId) &&
     (!filters.employeeId||tasks.some(t=>t.uptsContractId===c.id)) &&
-    (matches(c.number,c.name,p.name,c.objectDetails?.road,c.objectDetails?.stage,c.objectDetails?.sourceCadastralNumber)||tasks.some(t=>t.uptsContractId===c.id))
+    (matches(c.number,c.name,p.name,c.objectDetails?.road,c.objectDetails?.stage,c.objectDetails?.sourceCadastralNumber,c.objectDetails?.basisContractNumber)||tasks.some(t=>t.uptsContractId===c.id))
   )}}));
   if(filters.employeeId||q)projects=projects.filter(p=>tasks.some(t=>t.projectId===p.id)||p.upts.contracts.length>0||(!filters.employeeId&&matches(p.name)));
   return {...data,projects,tasks};

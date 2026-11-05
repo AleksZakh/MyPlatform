@@ -90,12 +90,13 @@ test('UPTS object card, work kinds matrix, role/result snapshots and protected a
   for(const [type,numbers]of Object.entries(counts))assert.deepEqual(lib.templates.filter((t:any)=>t.contractType===type&&t.active).map((t:any)=>t.items.length),numbers);
   assert(lib.templates.filter((t:any)=>t.active).every((t:any)=>t.workKindKey));
   assert(!lib.templates.some((t:any)=>t.active&&t.contractType==='OTHER'));
-  const details={road:'М-12',stage:'Этап 2',rightHolders:['Организация А','Организация Б'],region:'Московская область',dealType:'Аренда',sourceCadastralNumber:'50:01:0000000:1',sourceArea:'1200,5',rightKind:'Собственность',permittedUses:['Автомобильные дороги'],accountingType:'Первичный учёт',kuvdEntries:[{number:'КУВД-1',date:'2026-11-05'},{number:'КУВД-2',date:null}],curatorId:2,engineerId:3,workKindKey:'LAND_DIVISION',otherDescription:''};
+  const details={basisContractNumber:'УРИ-2023-857',basisContractDate:'2023-04-28',road:'М-12',stage:'Этап 2',rightHolders:['Организация А','Организация Б'],region:'Московская область',dealType:'Аренда',sourceCadastralNumber:'50:01:0000000:1',sourceArea:'1200,5',rightKind:'Собственность',permittedUses:['Автомобильные дороги'],accountingType:'Первичный учёт',kuvdEntries:[{number:'КУВД-1',date:'2026-11-05'},{number:'КУВД-2',date:null}],curatorId:2,engineerId:3,workKindKey:'LAND_DIVISION',otherDescription:''};
   const body={clientKey:randomUUID(),number:'УСЛ-1',name:'Участок у развязки',counterparty:'',signedDate:null,dueDate:null,contractType:'LAND',objectDetails:details,templateId:template.id,templateVersion:template.version,manualWorks:[]};
   assert.equal((await request('/contracts',2,'POST',{...body,objectDetails:{...details,workKindKey:'OKS_DIVISION'}})).status,400);
   assert.equal((await request('/contracts',2,'POST',{...body,objectDetails:{...details,engineerId:4}})).status,400);
   assert.equal((await request('/contracts',2,'POST',{...body,objectDetails:{...details,sourceArea:'-1'}})).status,400);
   assert.equal((await request('/contracts',2,'POST',{...body,objectDetails:{...details,kuvdEntries:[{number:'X',date:'2026-02-31'}]}})).status,400);
+  assert.equal((await request('/contracts',2,'POST',{...body,objectDetails:{...details,basisContractDate:'2026-02-31'}})).status,400);
   const c=await ok(await request('/contracts',2,'POST',body));assert.deepEqual(c.objectDetails,details);
   const auditCount=await db.auditLog.count();assert.equal((await ok(await request('/contracts',2,'POST',body))).id,c.id);assert.equal(await db.auditLog.count(),auditCount);
   const tasks=await db.workTask.findMany({where:{uptsContractId:c.id},orderBy:{id:'asc'}});assert.equal(tasks.length,10);

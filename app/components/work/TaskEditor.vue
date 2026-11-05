@@ -41,7 +41,7 @@ async function remove(){const r=await send('/api/work/tasks/'+task!.id,'DELETE',
 const comment=ref(''),commentKey=ref(crypto.randomUUID()),comments=ref<{id:number;body:string;createdAt:string;author:WorkUser}[]>([]),commentsError=ref(''),hasMore=ref(false);
 async function loadComments(more=false){if(!task)return;try{const rows=await $fetch<typeof comments.value>('/api/work/tasks/'+task.id+'/comments',{query:{after:more?comments.value.at(-1)?.id:undefined}});comments.value=more?[...comments.value,...rows]:rows;hasMore.value=rows.length===100;commentsError.value='';}catch{commentsError.value='Не удалось загрузить обсуждение.';}}
 async function postComment(){const r=await send('/api/work/tasks/'+task!.id+'/comments','POST',{clientKey:commentKey.value,body:comment.value});if(r){comment.value='';commentKey.value=crypto.randomUUID();await loadComments();}}
-onMounted(()=>loadComments());
+onMounted(()=>{if(!isUpts.value)loadComments();});
 defineExpose({useProject:(p:WorkProjectDTO)=>{relationship.value='PROJECT';form.projectId=p.id;form.visibility='PROJECT';form.departmentId=null;form.participantIds=[];}});
 </script>
 <template><TaskSurface :slide="!!task" :title="form.title || (isUpts?'Новая работа':'Новая задача')" :subtitle="subtitle" :color="task?workTaskColor(task):undefined" @close="emit('close')">
@@ -51,31 +51,31 @@ defineExpose({useProject:(p:WorkProjectDTO)=>{relationship.value='PROJECT';form.
    <div v-if="!isUpts" class="work-two"><label>К чему относится задача?<select v-model="relationship"><option value="STANDALONE">Самостоятельная задача</option><option value="PROJECT">Задача в рамках проекта</option></select></label>
    <label v-if="relationship==='PROJECT'">Проект<select v-model="form.projectId" required><option :value="null">Выберите проект</option><option v-for="p in projects.filter(p=>p.canCreateTask||p.id===form.projectId)" :key="p.id" :value="p.id">{{ p.name }}</option></select></label>
    <label v-else>Кто видит задачу?<select v-model="form.visibility"><option value="PRIVATE">Только я</option><option value="PARTICIPANTS" :disabled="!context.canAssign">Участники задачи</option><option value="DEPARTMENT" :disabled="!context.canAssign||!context.department">Моё подразделение</option></select></label></div>
-   <label v-if="contractOptions.length">Объект<select v-model="form.uptsContractId"><option :value="null">Без привязки к объекту</option><option v-for="c in contractOptions" :key="c.id" :value="c.id">{{ c.number }} · {{ c.name }}</option></select></label>
-   <label v-if="objectOptions.length">Связанный участок<select v-model="form.uptsObjectId"><option :value="null">Общая задача проекта</option><option v-for="o in objectOptions" :key="o.id" :value="o.id">{{ o.object.name }}</option></select></label>
+   <label v-if="contractOptions.length && (!isUpts || !form.uptsContractId)">Объект<select v-model="form.uptsContractId"><option :value="null">Без привязки к объекту</option><option v-for="c in contractOptions" :key="c.id" :value="c.id">{{ c.number }} · {{ c.name }}</option></select></label>
+   <label v-if="!isUpts && objectOptions.length">Связанный участок<select v-model="form.uptsObjectId"><option :value="null">Общая задача проекта</option><option v-for="o in objectOptions" :key="o.id" :value="o.id">{{ o.object.name }}</option></select></label>
    <dl v-if="task?.uptsWorkMeta" class="upts-work-reference">
     <template v-if="task.uptsWorkMeta.workKindKey"><dt>Вид работ</dt><dd>{{ workKindName(task.uptsWorkMeta.workKindKey) }}</dd></template>
     <dt>Ответственная роль</dt><dd>{{ task.uptsWorkMeta.responsibleRole ? UPTS_WORK_ROLES[task.uptsWorkMeta.responsibleRole] : 'Не указана' }}</dd>
     <dt>Ожидаемый результат</dt><dd>{{ task.uptsWorkMeta.expectedResult || 'Не указан' }}</dd>
    </dl>
-   <label>Описание и ожидаемый результат<textarea v-model="form.description" rows="4" maxlength="20000" /></label>
-   <div class="work-two"><label>Тип<select v-model="form.kind"><option v-for="(label,key) in WORK_KINDS" :key="key" :value="key">{{ label }}</option></select></label><label>Приоритет<select v-model="form.priority"><option v-for="(label,key) in WORK_PRIORITIES" :key="key" :value="key">{{ label }}</option></select></label></div>
+   <label v-if="!isUpts">Описание и ожидаемый результат<textarea v-model="form.description" rows="4" maxlength="20000" /></label>
+   <div v-if="!isUpts" class="work-two"><label>Тип<select v-model="form.kind"><option v-for="(label,key) in WORK_KINDS" :key="key" :value="key">{{ label }}</option></select></label><label>Приоритет<select v-model="form.priority"><option v-for="(label,key) in WORK_PRIORITIES" :key="key" :value="key">{{ label }}</option></select></label></div>
    <PersonPicker v-if="form.visibility!=='PRIVATE'" v-model="form.assigneeId" :initial="task?.assignee" :options="assignable" label="Исполнитель" />
    <template v-if="isUpts && selectedProject?.canManage">
     <small v-if="staffLoading" role="status">Загружаем сотрудников УПТС…</small>
     <p v-if="staffError" class="work-error" role="alert">{{ staffError }} <button type="button" @click="loadStaff">Повторить</button></p>
-    <p class="work-muted">Новый исполнитель будет добавлен в команду и получит доступ к объекту и его работам. Для объекта «Только мне» сначала измените видимость в настройках доступа.</p>
+    <p v-if="form.assigneeId && form.assigneeId!==selectedProject.ownerId && !selectedProject.members.some(m=>m.userId===form.assigneeId)" class="work-muted">Новый исполнитель будет добавлен в команду и получит доступ к объекту и его работам. Для объекта «Только мне» сначала измените видимость в настройках доступа.</p>
    </template>
-   <div v-if="form.visibility==='PARTICIPANTS'"><PersonPicker v-model="participant" label="Добавить участника" /><button type="button" :disabled="!participant" @click="participant&&!form.participantIds.includes(participant)&&form.participantIds.push(participant);participant=null">Добавить</button><div class="work-badges"><button v-for="id in form.participantIds" :key="id" type="button" @click="form.participantIds=form.participantIds.filter(x=>x!==id)">Участник #{{ id }} ×</button></div></div>
-   <div class="work-two"><label>Начало работы<input v-model="form.startDate" type="date" /></label><label>Крайний срок<input v-model="form.dueDate" type="date" /></label></div>
-   <label>Что мешает выполнению?<input v-model="form.blockedReason" maxlength="1000" placeholder="Например, ожидаем выгрузку от заказчика" /></label>
+   <div v-if="!isUpts && form.visibility==='PARTICIPANTS'"><PersonPicker v-model="participant" label="Добавить участника" /><button type="button" :disabled="!participant" @click="participant&&!form.participantIds.includes(participant)&&form.participantIds.push(participant);participant=null">Добавить</button><div class="work-badges"><button v-for="id in form.participantIds" :key="id" type="button" @click="form.participantIds=form.participantIds.filter(x=>x!==id)">Участник #{{ id }} ×</button></div></div>
+   <div v-if="!isUpts" class="work-two"><label>Начало работы<input v-model="form.startDate" type="date" /></label><label>Крайний срок<input v-model="form.dueDate" type="date" /></label></div>
+   <label v-if="!isUpts">Что мешает выполнению?<input v-model="form.blockedReason" maxlength="1000" placeholder="Например, ожидаем выгрузку от заказчика" /></label>
   </fieldset>
-  <fieldset :disabled="saving||(readOnly&&!canProgress)"><div class="work-two"><label>Состояние<select v-model="form.status"><option v-for="(label,key) in WORK_STATUSES" :key="key" :value="key">{{ label }}</option></select></label><label>Запланировать работу на<input v-model="form.plannedDate" type="date" /></label></div></fieldset>
-  <p class="work-muted">Плановый день можно переносить независимо от крайнего срока. Календарь — по московскому времени.</p>
+  <fieldset :disabled="saving||(readOnly&&!canProgress)"><div class="work-two"><label>Состояние<select v-model="form.status"><option v-for="(label,key) in WORK_STATUSES" :key="key" :value="key">{{ label }}</option></select></label><label v-if="!isUpts">Запланировать работу на<input v-model="form.plannedDate" type="date" /></label></div></fieldset>
+  <p v-if="!isUpts" class="work-muted">Плановый день можно переносить независимо от крайнего срока. Календарь — по московскому времени.</p>
   <div class="work-actions"><button v-if="!readOnly||canProgress" class="work-primary" :disabled="saving" type="submit">{{ saving?'Сохранение…':'Сохранить' }}</button><button type="button" @click="emit('close')">Закрыть</button><button v-if="task?.canDelete" type="button" class="work-danger" :disabled="saving" @click="confirmingDelete=true">Удалить</button></div>
   <div v-if="confirmingDelete" class="work-confirm"><p>Удалить задачу из рабочих списков? История сохранится.</p><button type="button" :disabled="saving" @click="remove">Да, удалить</button><button type="button" @click="confirmingDelete=false">Отмена</button></div>
  </form>
- <section v-if="task" class="work-discussion"><h3>Обсуждение</h3><p v-if="commentsError" role="alert">{{ commentsError }} <button @click="loadComments()">Повторить</button></p>
+ <section v-if="task && !isUpts" class="work-discussion"><h3>Обсуждение</h3><p v-if="commentsError" role="alert">{{ commentsError }} <button @click="loadComments()">Повторить</button></p>
  <article v-for="c in comments" :key="c.id"><strong>{{ workUserName(c.author) }}</strong><small>{{ c.createdAt.slice(0,10) }}</small><p>{{ c.body }}</p></article>
  <button v-if="hasMore" @click="loadComments(true)">Ещё комментарии</button><form v-if="task.canComment" @submit.prevent="postComment"><label>Комментарий<textarea v-model="comment" required maxlength="5000" rows="2" /></label><button :disabled="saving||!comment.trim()">Отправить</button></form>
  </section>

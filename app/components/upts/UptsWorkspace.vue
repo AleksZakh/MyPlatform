@@ -31,7 +31,7 @@ import ProjectFiles from '../work/ProjectFiles.vue';
 import Members from '../work/Members.vue';
 import Modal from '../work/Modal.vue';
 import ObjectEditor from './ObjectEditor.vue';
-import ObjectFacts from './ObjectFacts.vue';
+import ObjectCard from './ObjectCard.vue';
 import ContractEditor from './ContractEditor.vue';
 import TemplateEditor from './TemplateEditor.vue';
 import WorkLibrary from './WorkLibrary.vue';
@@ -266,10 +266,8 @@ const {
         <template v-if="section === 'overview'">
           <div class="upts-dashboard">
             <div class="upts-dashboard-main">
-              <section v-if="contract" class="upts-panel">
-                <div class="upts-panel-head"><h2>Объект {{ contract.number }}</h2><button v-if="canManage" @click="editContract(contract)">Изменить</button></div>
-                <h3>{{ contract.name }}</h3><ObjectFacts :object="contract" />
-                <div class="work-actions"><button @click="section='tasks'">Работы объекта</button><button @click="showFiles(contract.project,contract.id)">Документы</button><button v-if="canManage" class="work-primary" @click="contractWorks=true">Добавить работы</button></div>
+              <section v-if="contract" class="upts-object-summary">
+                <ObjectCard :object="contract" :owner="contract.project.owner" :count="contractStats(contract).total" :can-manage="canManage" @open="canManage ? editContract(contract) : section='tasks'" @edit="editContract(contract)" @works="section='tasks'" @add="contractWorks=true" @files="showFiles(contract.project,contract.id)" />
               </section>
               <section v-else-if="project" class="upts-panel">
                 <div class="upts-panel-head">
@@ -311,7 +309,7 @@ const {
               </section>
               <section v-else class="upts-panel">
                 <div class="upts-panel-head"><h2>Реестр объектов</h2><button @click="section='contracts'">Все объекты →</button></div>
-                <div v-if="contractRows.length" class="upts-portfolio"><button v-for="c in contractRows.slice(0,6)" :key="c.id" class="upts-portfolio-row" @click="openContract(c)"><span class="upts-project-symbol" :style="{background:c.color || uptsContractColor(c.id)}"><Icon name="lucide:files" /></span><span><strong>{{ c.number }} · {{ c.name }}</strong><small>{{ c.contractType?UPTS_CONTRACT_TYPES[c.contractType]:'Тип не указан' }}</small><small>{{ workUserName(c.project.owner) }}</small></span><span>{{ formatWorkDate(c.dueDate)||'Без срока' }}</span><span class="upts-mini-progress"><b>{{ contractStats(c).done }}/{{ contractStats(c).total }}</b><progress :value="contractStats(c).percent" max="100" /></span></button></div>
+                <div v-if="contractRows.length" class="upts-object-cards"><ObjectCard v-for="c in contractRows.slice(0,6)" :key="c.id" :object="c" :owner="c.project.owner" :count="contractStats(c).total" :can-manage="c.project.canManage && !c.project.archivedAt" @open="openContract(c)" @edit="editContract(c)" @works="openContract(c); section='tasks'" @add="openContract(c); contractWorks=true" @files="showFiles(c.project,c.id)" /></div>
                 <p v-else class="work-empty">Объектов в выбранном срезе нет. Создайте объект кнопкой «+ Объект».</p>
                 <p class="work-muted">Показатели объектов рассчитаны только по привязанным задачам. Старые задачи без привязки доступны во вкладке «Задачи» при выборе всех объектов.</p>
               </section>
@@ -710,7 +708,7 @@ const {
         </section>
         <section v-else-if="section === 'contracts'" class="upts-panel">
           <div class="upts-section-head"><h2>Объекты</h2><button class="work-primary" @click="editContract()">+ Объект</button></div>
-          <div class="work-table-wrap"><table><thead><tr><th>Номер / наименование</th><th>Тип объекта</th><th>Ответственный</th><th>Срок</th><th>Работы</th><th>Документы</th></tr></thead><tbody><tr v-for="c in contractRows" :key="c.id" class="upts-colored-row" :style="{'--contract-color':c.color || uptsContractColor(c.id)}"><td><button class="upts-link" @click="openContract(c)">{{ c.number }} · {{ c.name }}</button></td><td>{{ c.contractType?UPTS_CONTRACT_TYPES[c.contractType]:'Не указан' }}</td><td>{{ workUserName(c.project.owner) }}</td><td>{{ formatWorkDate(c.dueDate)||'—' }}</td><td>{{ contractStats(c).done }}/{{ contractStats(c).total }} выполнено</td><td><button @click="showFiles(c.project,c.id)"><Icon name="lucide:folder-open" />Папка</button></td></tr></tbody></table><p v-if="!contractRows.length" class="work-empty">Объектов пока нет.</p></div>
+          <div v-if="contractRows.length" class="upts-object-cards"><ObjectCard v-for="c in contractRows" :key="c.id" :object="c" :owner="c.project.owner" :count="contractStats(c).total" :can-manage="c.project.canManage && !c.project.archivedAt" @open="openContract(c)" @edit="editContract(c)" @works="openContract(c); section='tasks'" @add="openContract(c); contractWorks=true" @files="showFiles(c.project,c.id)" /></div><p v-else class="work-empty">Объектов пока нет.</p>
         </section>
         <section v-else-if="section === 'files' && project" class="upts-panel">
           <div class="upts-section-head">
@@ -800,7 +798,7 @@ const {
         load();
       "
     />
-    <ContractEditor v-if="contractEditor" :project-id="project?.id" :projects="data.projects" :contract="editingContract" @close="contractEditor=false" @saved="contractSaved" />
+    <ContractEditor v-if="contractEditor" :tasks="data.tasks" :project-id="project?.id" :projects="data.projects" :contract="editingContract" @close="contractEditor=false" @saved="contractSaved" />
     <ContractWorks v-if="contractWorks && contract" :contract="contract" @close="contractWorks=false" @saved="contractWorks=false; load()" />
     <TemplateEditor
       v-if="templateEditor && project"
@@ -865,3 +863,5 @@ const {
 </template>
 <style src="~/assets/css/work.css"></style>
 <style src="~/assets/css/upts.css"></style>
+
+<style scoped>.upts-object-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),250px));gap:12px;align-items:start;margin-top:12px}.upts-object-summary{min-width:0}</style>

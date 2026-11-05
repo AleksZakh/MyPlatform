@@ -8,6 +8,8 @@ import { fail } from './work/service';
 const text = z.string().trim().max(500);
 const person = z.number().int().positive().max(2147483647).nullable().optional();
 export const objectDetailsSchema = z.object({
+  basisContractNumber: z.string().trim().max(250).optional(),
+  basisContractDate: uptsDay.optional(),
   road: text.optional(), stage: text.optional(),
   rightHolders: z.array(text.min(1)).max(30).optional(),
   region: text.optional(), dealType: text.optional(),

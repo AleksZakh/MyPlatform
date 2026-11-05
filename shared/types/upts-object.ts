@@ -1,5 +1,7 @@
 /** Object card. Internal contract IDs/routes remain stable for existing links and files. */
 export type UptsObjectDetails = {
+  basisContractNumber?: string;
+  basisContractDate?: string | null;
   road?: string;
   stage?: string;
   rightHolders?: string[];
