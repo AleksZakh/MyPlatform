@@ -15,6 +15,7 @@ export type WorkProjectDTO = {
 };
 export type WorkTaskDTO = {
  uptsObjectId?: number | null;
+ uptsWorkMeta?: import("./upts-object").UptsWorkMeta | null;
  uptsContractId?: number | null;
  uptsContract?: { id:number; number:string; name:string; color:string|null } | null;
  id: number; title: string; description: string; kind: string; status: string; priority: string; visibility: string;

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted } from "vue";
+import { workKindsFor, workKindName, UPTS_WORK_ROLES } from '~~/shared/utils/upts-work-kinds';
+import WorkSetPreview from './WorkSetPreview.vue';
 import Modal from "../work/Modal.vue";
 import {
   UPTS_CONTRACT_TYPES,
@@ -16,12 +18,16 @@ const lib = ref<UptsLibrary | null>(null),
   showArchived = ref(false),
   search = ref(""),
   notice = ref("");
+const workKindKey=ref<string|null>(null);
+const kinds=computed(()=>workKindsFor(type.value));
+watch(type,()=>{workKindKey.value=null;});
 const { send, saving, error } = useWorkApi();
 const works = computed(
   () =>
     lib.value?.works.filter(
       (w) =>
         w.contractType === type.value &&
+        (!workKindKey.value || lib.value?.templates.some(t=>t.active && t.workKindKey===workKindKey.value && t.items.some(i=>i.workId===w.id))) &&
         (showArchived.value || w.active) &&
         w.name
           .toLocaleLowerCase("ru")
@@ -33,6 +39,7 @@ const templates = computed(
     lib.value?.templates.filter(
       (t) =>
         t.contractType === type.value &&
+        (!workKindKey.value || t.workKindKey===workKindKey.value) &&
         (showArchived.value || t.active) &&
         t.name
           .toLocaleLowerCase("ru")
@@ -48,6 +55,9 @@ const form = reactive({
   contractType: "LAND" as UptsContractType,
   active: true,
   workIds: [] as number[],
+  workKindKey:null as string|null,
+  responsibleRole:null as "CURATOR"|"ENGINEER"|null,
+  expectedResult:"",
 });
 const choices = computed(
   () =>
@@ -61,6 +71,7 @@ watch(
   () => form.contractType,
   () => {
     form.workIds = [];
+    form.workKindKey=null;
   },
   { flush: "sync" },
 );
@@ -91,6 +102,10 @@ function edit(
     name: item ? (copy ? item.name + " — копия" : item.name) : "",
     active: copy ? true : (item?.active ?? true),
     workIds: item && "items" in item ? item.items.map((i) => i.workId) : [],
+    workKindKey:item && "items" in item ? item.workKindKey ?? null : workKindKey.value,
+    responsibleRole:item && !('items' in item) ? item.responsibleRole ?? null : null,
+    expectedResult:item && !('items' in item) ? item.expectedResult ?? '' : '',
+
   });
 }
 function shift(index: number, delta: number) {
@@ -103,11 +118,11 @@ function shift(index: number, delta: number) {
 async function save() {
   const base =
     "/api/upts/library/" + (editing.value === "work" ? "works" : "templates");
-  const { workIds, ...fields } = form;
+  const { workIds,workKindKey,responsibleRole,expectedResult, ...fields } = form;
   const result = await send(
     editingId.value ? `${base}/${editingId.value}` : base,
     editingId.value ? "PUT" : "POST",
-    editing.value === "template" ? { ...fields, workIds } : fields,
+    editing.value === "template" ? { ...fields, workIds,workKindKey } : {...fields,responsibleRole,expectedResult},
   );
   if (result) {
     editing.value = null;
@@ -131,7 +146,7 @@ async function save() {
     </div>
     <div class="upts-library-filters">
       <label
-        >Тип договора<select v-model="type">
+        >Тип объекта<select v-model="type">
           <option
             v-for="(name, key) in UPTS_CONTRACT_TYPES"
             :key="key"
@@ -140,7 +155,7 @@ async function save() {
             {{ name }}
           </option>
         </select></label
-      ><label
+      ><label>Вид работ<select v-model="workKindKey"><option :value="null">Все виды работ</option><option v-for="k in kinds" :key="k.key" :value="k.key">{{ k.name }}</option></select></label><label
         >Поиск<input v-model="search" type="search" maxlength="200" /></label
       ><label class="work-check"
         ><input v-model="showArchived" type="checkbox" />Включая архив</label
@@ -154,7 +169,7 @@ async function save() {
         <p class="work-muted">
           {{
             tab === "works"
-              ? "Работы сгруппированы по типу договора. Архивные записи сохраняются в истории."
+              ? "Тип объекта определяет доступные виды работ. Каждый вид объединяет отдельные работы в шаблон. Архивные записи сохраняются в истории."
               : "Порядок и состав работ можно настроить. Изменение шаблона не меняет уже созданные задачи."
           }}
         </p>
@@ -175,13 +190,14 @@ async function save() {
           <thead>
             <tr>
               <th>Работа</th>
-              <th>Состояние</th>
+              <th>Ответственная роль</th><th>Ожидаемый результат</th><th>Состояние</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="w in works" :key="w.id">
               <td>{{ w.name }}</td>
+              <td>{{ w.responsibleRole ? UPTS_WORK_ROLES[w.responsibleRole] : "Не указана" }}</td><td>{{ w.expectedResult || "Не указан" }}</td>
               <td>{{ w.active ? "Действует" : "Архив" }}</td>
               <td>
                 <button v-if="lib.canManage" @click="edit('work', w)">
@@ -193,7 +209,7 @@ async function save() {
         </table>
         <p v-if="!works.length" class="work-empty">
           Работ пока нет. Для типа «Иное» можно вводить работы вручную в
-          договоре.
+          объекте.
         </p>
       </div>
       <div v-else class="upts-template-list">
@@ -207,14 +223,9 @@ async function save() {
               ><button @click="edit('template', t, true)">Копировать</button>
             </div>
           </div>
-          <ol>
-            <li v-for="i in t.items" :key="i.workId">
-              {{ i.work.name }}
-              <span v-if="!i.work.active" class="upts-danger"
-                >— работа в архиве; шаблон нельзя применить</span
-              >
-            </li>
-          </ol>
+          <p class="work-muted">Вид работ: {{ workKindName(t.workKindKey) || 'Не задан (прежний или пользовательский шаблон)' }}</p>
+          <WorkSetPreview :works="t.items.map(i=>i.work)" />
+          <p v-if="t.items.some(i=>!i.work.active)" class="upts-danger">В шаблоне есть архивные работы; применение недоступно.</p>
         </article>
         <p v-if="!templates.length" class="work-empty">Шаблонов пока нет.</p>
       </div>
@@ -235,7 +246,7 @@ async function save() {
               required
               maxlength="250" /></label
           ><label
-            >Тип договора<select
+            >Тип объекта<select
               v-model="form.contractType"
               :disabled="!!editingId"
             >
@@ -251,6 +262,8 @@ async function save() {
             ><input v-model="form.active" type="checkbox" />Действует (снимите
             отметку для архива)</label
           >
+          <template v-if="editing === 'work'"><label>Ответственная роль<select v-model="form.responsibleRole"><option :value="null">Не указана</option><option v-for="(label,key) in UPTS_WORK_ROLES" :key="key" :value="key">{{ label }}</option></select></label><label>Ожидаемый результат<textarea v-model="form.expectedResult" rows="3" maxlength="2000" /></label></template>
+          <label v-if="editing === 'template'">Вид работ<select v-model="form.workKindKey"><option :value="null">Не задан</option><option v-for="k in workKindsFor(form.contractType)" :key="k.key" :value="k.key">{{ k.name }}</option></select></label>
           <template v-if="editing === 'template'"
             ><p>Выберите работы, затем задайте их порядок.</p>
             <label v-for="w in choices" :key="w.id" class="work-check"

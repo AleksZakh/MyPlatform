@@ -117,10 +117,10 @@ export function useUptsWorkspace() {
   );
   const nav = [
     { key: 'overview', label: 'Обзор', icon: 'lucide:layout-dashboard' },
-    { key: 'contracts', label: 'Договоры', icon: 'lucide:files' },
+    { key: 'contracts', label: 'Объекты', icon: 'lucide:files' },
     { key: 'library', label: 'Библиотека работ', icon: 'lucide:library' },
     { key: 'tasks', label: 'Задачи', icon: 'lucide:columns-3' },
-    { key: 'objects', label: 'Участки и объекты', icon: 'lucide:map-pinned' },
+    { key: 'objects', label: 'Участки и сооружения', icon: 'lucide:map-pinned' },
     { key: 'employees', label: 'Загрузка сотрудников', icon: 'lucide:users' },
     { key: 'projects', label: 'Проекты Space', icon: 'lucide:folders' },
   ];

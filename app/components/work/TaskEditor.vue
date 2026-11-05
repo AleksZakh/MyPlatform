@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue';
+import { UPTS_WORK_ROLES, workKindName } from '~~/shared/utils/upts-work-kinds';
 import TaskSurface from './TaskSurface.vue';import PersonPicker from './PersonPicker.vue';
 import { workTaskContext,workTaskColor,WORK_STATUSES,WORK_KINDS,WORK_PRIORITIES,workUserName,type WorkTaskDTO,type WorkProjectDTO,type WorkContext,type WorkUser } from '~~/shared/types/work';
 import { dateKey } from '~~/shared/utils/work-board';
@@ -50,15 +51,20 @@ defineExpose({useProject:(p:WorkProjectDTO)=>{relationship.value='PROJECT';form.
    <div v-if="!isUpts" class="work-two"><label>К чему относится задача?<select v-model="relationship"><option value="STANDALONE">Самостоятельная задача</option><option value="PROJECT">Задача в рамках проекта</option></select></label>
    <label v-if="relationship==='PROJECT'">Проект<select v-model="form.projectId" required><option :value="null">Выберите проект</option><option v-for="p in projects.filter(p=>p.canCreateTask||p.id===form.projectId)" :key="p.id" :value="p.id">{{ p.name }}</option></select></label>
    <label v-else>Кто видит задачу?<select v-model="form.visibility"><option value="PRIVATE">Только я</option><option value="PARTICIPANTS" :disabled="!context.canAssign">Участники задачи</option><option value="DEPARTMENT" :disabled="!context.canAssign||!context.department">Моё подразделение</option></select></label></div>
-   <label v-if="contractOptions.length">Договор<select v-model="form.uptsContractId"><option :value="null">Без привязки к договору</option><option v-for="c in contractOptions" :key="c.id" :value="c.id">{{ c.number }} · {{ c.name }}</option></select></label>
-   <label v-if="objectOptions.length">Объект в проекте<select v-model="form.uptsObjectId"><option :value="null">Общая задача проекта</option><option v-for="o in objectOptions" :key="o.id" :value="o.id">{{ o.object.name }}</option></select></label>
+   <label v-if="contractOptions.length">Объект<select v-model="form.uptsContractId"><option :value="null">Без привязки к объекту</option><option v-for="c in contractOptions" :key="c.id" :value="c.id">{{ c.number }} · {{ c.name }}</option></select></label>
+   <label v-if="objectOptions.length">Связанный участок<select v-model="form.uptsObjectId"><option :value="null">Общая задача проекта</option><option v-for="o in objectOptions" :key="o.id" :value="o.id">{{ o.object.name }}</option></select></label>
+   <dl v-if="task?.uptsWorkMeta" class="upts-work-reference">
+    <template v-if="task.uptsWorkMeta.workKindKey"><dt>Вид работ</dt><dd>{{ workKindName(task.uptsWorkMeta.workKindKey) }}</dd></template>
+    <dt>Ответственная роль</dt><dd>{{ task.uptsWorkMeta.responsibleRole ? UPTS_WORK_ROLES[task.uptsWorkMeta.responsibleRole] : 'Не указана' }}</dd>
+    <dt>Ожидаемый результат</dt><dd>{{ task.uptsWorkMeta.expectedResult || 'Не указан' }}</dd>
+   </dl>
    <label>Описание и ожидаемый результат<textarea v-model="form.description" rows="4" maxlength="20000" /></label>
    <div class="work-two"><label>Тип<select v-model="form.kind"><option v-for="(label,key) in WORK_KINDS" :key="key" :value="key">{{ label }}</option></select></label><label>Приоритет<select v-model="form.priority"><option v-for="(label,key) in WORK_PRIORITIES" :key="key" :value="key">{{ label }}</option></select></label></div>
    <PersonPicker v-if="form.visibility!=='PRIVATE'" v-model="form.assigneeId" :initial="task?.assignee" :options="assignable" label="Исполнитель" />
    <template v-if="isUpts && selectedProject?.canManage">
     <small v-if="staffLoading" role="status">Загружаем сотрудников УПТС…</small>
     <p v-if="staffError" class="work-error" role="alert">{{ staffError }} <button type="button" @click="loadStaff">Повторить</button></p>
-    <p class="work-muted">Новый исполнитель будет добавлен в команду и получит доступ к договору и его работам. Для договора «Только мне» сначала измените видимость в настройках доступа.</p>
+    <p class="work-muted">Новый исполнитель будет добавлен в команду и получит доступ к объекту и его работам. Для объекта «Только мне» сначала измените видимость в настройках доступа.</p>
    </template>
    <div v-if="form.visibility==='PARTICIPANTS'"><PersonPicker v-model="participant" label="Добавить участника" /><button type="button" :disabled="!participant" @click="participant&&!form.participantIds.includes(participant)&&form.participantIds.push(participant);participant=null">Добавить</button><div class="work-badges"><button v-for="id in form.participantIds" :key="id" type="button" @click="form.participantIds=form.participantIds.filter(x=>x!==id)">Участник #{{ id }} ×</button></div></div>
    <div class="work-two"><label>Начало работы<input v-model="form.startDate" type="date" /></label><label>Крайний срок<input v-model="form.dueDate" type="date" /></label></div>
@@ -74,3 +80,5 @@ defineExpose({useProject:(p:WorkProjectDTO)=>{relationship.value='PROJECT';form.
  <button v-if="hasMore" @click="loadComments(true)">Ещё комментарии</button><form v-if="task.canComment" @submit.prevent="postComment"><label>Комментарий<textarea v-model="comment" required maxlength="5000" rows="2" /></label><button :disabled="saving||!comment.trim()">Отправить</button></form>
  </section>
 </TaskSurface></template>
+
+<style scoped>.upts-work-reference{padding:12px;border:1px solid var(--work-line);border-radius:8px;margin:0}.upts-work-reference dt{font-size:12px;color:var(--work-muted);margin-top:5px}.upts-work-reference dd{margin:3px 0;overflow-wrap:anywhere}</style>

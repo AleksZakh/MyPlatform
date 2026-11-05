@@ -27,7 +27,7 @@ async function visibleTask(db:DB,id:number,a:Actor){const t=await db.workTask.fi
 export async function activeUsers(db:DB,ids:number[]){if(!ids.length)return;const unique=[...new Set(ids)];const n=await db.user.count({where:{id:{in:unique},status:'ACTIVE'}});if(n!==unique.length)fail(400,'Один из участников неактивен или не найден.');}
 function auditSnapshot(value:unknown):Prisma.InputJsonValue {
  const v=value as Record<string,any>; const result:Record<string,any>={};
- for(const key of ['color','contractType','uptsContractId','title','items','created','templateId','workIds','active','upts','objectId','goal','cadastral','rights','restrictions','documents','handover','note','number','counterparty','name','id','version','status','priority','scope','visibility','projectId','departmentId','assigneeId','archivedAt','deletedAt','plannedDate','startDate','dueDate','invitationId','userId','groupId','addedIds','role','expiresAt'])if(v?.[key]!==undefined)result[key]=v[key];
+ for(const key of ['objectDetails','uptsWorkMeta','color','contractType','uptsContractId','title','items','created','templateId','workIds','active','upts','objectId','goal','cadastral','rights','restrictions','documents','handover','note','number','counterparty','name','id','version','status','priority','scope','visibility','projectId','departmentId','assigneeId','archivedAt','deletedAt','plannedDate','startDate','dueDate','invitationId','userId','groupId','addedIds','role','expiresAt'])if(v?.[key]!==undefined)result[key]=v[key];
  if(Array.isArray(v?.members))result.members=v.members.map((m:any)=>({userId:m.userId,role:m.role}));
  return JSON.parse(JSON.stringify(result));
 }
@@ -173,7 +173,7 @@ export async function saveTask(event:H3Event,raw:unknown,id?:number){const a=awa
  if(objectId&&(!project||!await tx.uptsProjectObject.findFirst({where:{id:objectId,projectId:project.id}})))fail(400,'Объект не принадлежит проекту задачи.');
  const contractId=v.uptsContractId===undefined?(old?.projectId===v.projectId?old?.uptsContractId??null:null):v.uptsContractId;
  if(contractId&&(!project||!await tx.uptsContract.findFirst({where:{id:contractId,projectId:project.id}})))fail(400,'Договор не принадлежит проекту задачи.');
- const data={uptsContractId:contractId,uptsObjectId:objectId,title:v.title,description:v.description,kind:v.kind,status:v.status,priority:v.priority,visibility:v.visibility,
+ const data={...(old && old.uptsContractId!==contractId ? {uptsWorkMeta:Prisma.DbNull}:{}),uptsContractId:contractId,uptsObjectId:objectId,title:v.title,description:v.description,kind:v.kind,status:v.status,priority:v.priority,visibility:v.visibility,
  projectId:v.projectId,departmentId:v.departmentId,assigneeId:v.assigneeId,plannedDate:dbDay(v.plannedDate),startDate:dbDay(v.startDate),dueDate:dbDay(v.dueDate),blockedReason:v.blockedReason};
  const saved=id?await tx.workTask.update({where:{id},data:{...data,version:{increment:1}}}):await tx.workTask.create({data:{...data,clientKey:v.clientKey,creatorId:a.id}});
  await tx.workTaskParticipant.deleteMany({where:{taskId:saved.id}});

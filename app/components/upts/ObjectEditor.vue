@@ -85,7 +85,7 @@ onMounted(() => {
 </script>
 <template>
   <Modal
-    :title="l ? l.object.name : 'Добавить объект в проект'"
+    :title="l ? l.object.name : 'Добавить участок / сооружение в проект'"
     @close="emit('close')"
     ><form class="work-form" @submit.prevent="save">
       <p v-if="error || catalogError" class="work-error" role="alert">

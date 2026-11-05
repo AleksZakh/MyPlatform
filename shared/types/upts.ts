@@ -42,6 +42,7 @@ export type UptsObjectLink = {
   version: number;
 } & Record<keyof typeof UPTS_AXES, Readiness>;
 export type UptsContractDTO = {
+  objectDetails?: import("./upts-object").UptsObjectDetails;
   id: number;
   projectId: number;
   number: string;

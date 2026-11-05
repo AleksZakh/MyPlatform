@@ -31,6 +31,7 @@ import ProjectFiles from '../work/ProjectFiles.vue';
 import Members from '../work/Members.vue';
 import Modal from '../work/Modal.vue';
 import ObjectEditor from './ObjectEditor.vue';
+import ObjectFacts from './ObjectFacts.vue';
 import ContractEditor from './ContractEditor.vue';
 import TemplateEditor from './TemplateEditor.vue';
 import WorkLibrary from './WorkLibrary.vue';
@@ -141,7 +142,7 @@ const {
           }}
         </button>
         <button v-if="context" class="work-primary" @click="editContract()">
-          + Договор
+          + Объект
         </button>
       </div>
     </header>
@@ -151,7 +152,7 @@ const {
         <p class="upts-department-name">Управление подготовки территории строительства</p>
       </header>
       <div v-if="section!=='library'" class="upts-filters">
-        <label>Договор<select v-model="selectedContractId"><option :value="null">Все доступные договоры</option><option v-for="c in allContracts" :key="c.id" :value="c.id">{{ c.number }} · {{ c.name }}</option></select></label>
+        <label>Объект<select v-model="selectedContractId"><option :value="null">Все доступные объекты</option><option v-for="c in allContracts" :key="c.id" :value="c.id">{{ c.number }} · {{ c.name }}</option></select></label>
         <label v-if="section==='projects'">Проект Space<select v-model="selectedId"><option :value="null">Все проекты</option><option v-for="p in data.projects" :key="p.id" :value="p.id">{{ p.name }}</option></select></label>
         <label
           >Исполнитель<select v-model="employeeId">
@@ -165,7 +166,7 @@ const {
             v-model="search"
             type="search"
             maxlength="200"
-            placeholder="Договор, работа или сотрудник" /></label
+            placeholder="Объект, работа или сотрудник" /></label
         ><button :disabled="loading" aria-label="Обновить данные" @click="load">
           <Icon name="lucide:refresh-cw" /></button
         ><button
@@ -181,16 +182,16 @@ const {
         {{ error || saveError }}
       </p>
       <p v-if="loading" role="status" class="upts-notice">
-        Загружаем договоры и задачи…
+        Загружаем объекты и задачи…
       </p>
       <p v-if="(employeeId || search) && section!=='library'" class="upts-notice">
         Задачи и показатели отфильтрованы{{
           employeeId ? ' по основному исполнителю' : ''
-        }}{{ search ? ' по поисковому запросу' : '' }}. Договоры отбираются по связанным задачам и реквизитам; объекты показываются на уровне рабочей области.
+        }}{{ search ? ' по поисковому запросу' : '' }}. Объекты отбираются по связанным задачам и реквизитам; участки и сооружения показываются на уровне рабочей области.
       </p>
       <template v-if="!loading && !error && context">
         <div v-if="project && section!=='library'" class="upts-project-strip">
-          <strong v-if="contract" class="upts-contract-heading" :style="{'--contract-color':contract.color || uptsContractColor(contract.id)}">Договор {{ contract.number }} · {{ contract.name }}</strong>
+          <strong v-if="contract" class="upts-contract-heading" :style="{'--contract-color':contract.color || uptsContractColor(contract.id)}">Объект {{ contract.number }} · {{ contract.name }}</strong>
           <span v-if="project.upts.isDemo" class="upts-badge amber"
             >Демонстрационные данные</span
           >
@@ -205,7 +206,7 @@ const {
           <div class="work-actions">
             <button v-if="canManage" @click="editProject(project)">
               Настройки доступа</button
-            ><button v-if="contract && canManage" @click="editContract(contract)">Карточка договора</button><button v-if="contract && canManage" @click="contractWorks=true">Добавить работы</button><button @click="section = 'team'">Команда</button
+            ><button v-if="contract && canManage" @click="editContract(contract)">Карточка объекта</button><button v-if="contract && canManage" @click="contractWorks=true">Добавить работы</button><button @click="section = 'team'">Команда</button
             ><button @click="section = 'files'">Документы</button
             ><NuxtLink :to="`/projects?projectId=${project.id}`"
               >Открыть в Space ↗</NuxtLink
@@ -214,9 +215,9 @@ const {
         </div>
         <div v-if="section!=='library'" class="upts-metrics">
           <article>
-            <span>Договоров в срезе</span><strong>{{ contractRows.length }}</strong
+            <span>Объектов в срезе</span><strong>{{ contractRows.length }}</strong
             ><small>{{
-              contract ? 'Выбранный договор' : 'Доступные вам договоры УПТС'
+              contract ? 'Выбранный объект' : 'Доступные вам объекты УПТС'
             }}</small>
           </article>
           <article>
@@ -245,7 +246,7 @@ const {
         <nav
           v-if="project && section!=='library'"
           class="upts-project-tabs"
-          aria-label="Рабочая область договора"
+          aria-label="Рабочая область объекта"
         >
           <button
             v-for="n in [
@@ -266,9 +267,9 @@ const {
           <div class="upts-dashboard">
             <div class="upts-dashboard-main">
               <section v-if="contract" class="upts-panel">
-                <div class="upts-panel-head"><h2>Договор {{ contract.number }}</h2><button v-if="canManage" @click="editContract(contract)">Изменить</button></div>
-                <h3>{{ contract.name }}</h3><dl class="upts-facts"><div><dt>Тип договора</dt><dd>{{ contract.contractType?UPTS_CONTRACT_TYPES[contract.contractType]:'Не указан — уточните в карточке' }}</dd></div><div><dt>Контрагент</dt><dd>{{ contract.counterparty||'Не указан' }}</dd></div><div><dt>Дата договора</dt><dd>{{ formatWorkDate(contract.signedDate)||'—' }}</dd></div><div><dt>Срок договора</dt><dd>{{ formatWorkDate(contract.dueDate)||'—' }}</dd></div></dl>
-                <div class="work-actions"><button @click="section='tasks'">Работы договора</button><button @click="showFiles(contract.project,contract.id)">Документы</button><button v-if="canManage" class="work-primary" @click="contractWorks=true">Добавить работы</button></div>
+                <div class="upts-panel-head"><h2>Объект {{ contract.number }}</h2><button v-if="canManage" @click="editContract(contract)">Изменить</button></div>
+                <h3>{{ contract.name }}</h3><ObjectFacts :object="contract" />
+                <div class="work-actions"><button @click="section='tasks'">Работы объекта</button><button @click="showFiles(contract.project,contract.id)">Документы</button><button v-if="canManage" class="work-primary" @click="contractWorks=true">Добавить работы</button></div>
               </section>
               <section v-else-if="project" class="upts-panel">
                 <div class="upts-panel-head">
@@ -309,14 +310,14 @@ const {
                 </p>
               </section>
               <section v-else class="upts-panel">
-                <div class="upts-panel-head"><h2>Реестр договоров</h2><button @click="section='contracts'">Все договоры →</button></div>
+                <div class="upts-panel-head"><h2>Реестр объектов</h2><button @click="section='contracts'">Все объекты →</button></div>
                 <div v-if="contractRows.length" class="upts-portfolio"><button v-for="c in contractRows.slice(0,6)" :key="c.id" class="upts-portfolio-row" @click="openContract(c)"><span class="upts-project-symbol" :style="{background:c.color || uptsContractColor(c.id)}"><Icon name="lucide:files" /></span><span><strong>{{ c.number }} · {{ c.name }}</strong><small>{{ c.contractType?UPTS_CONTRACT_TYPES[c.contractType]:'Тип не указан' }}</small><small>{{ workUserName(c.project.owner) }}</small></span><span>{{ formatWorkDate(c.dueDate)||'Без срока' }}</span><span class="upts-mini-progress"><b>{{ contractStats(c).done }}/{{ contractStats(c).total }}</b><progress :value="contractStats(c).percent" max="100" /></span></button></div>
-                <p v-else class="work-empty">Договоров в выбранном срезе нет. Создайте договор кнопкой «+ Договор».</p>
-                <p class="work-muted">Показатели договоров рассчитаны только по привязанным задачам. Старые задачи без привязки доступны во вкладке «Задачи» при выборе всех договоров.</p>
+                <p v-else class="work-empty">Объектов в выбранном срезе нет. Создайте объект кнопкой «+ Объект».</p>
+                <p class="work-muted">Показатели объектов рассчитаны только по привязанным задачам. Старые задачи без привязки доступны во вкладке «Задачи» при выборе всех объектов.</p>
               </section>
               <section v-if="project" class="upts-panel">
                 <div class="upts-panel-head">
-                  <h2>Готовность объектов</h2>
+                  <h2>Готовность участков и сооружений</h2>
                   <button @click="section = 'objects'">Открыть реестр →</button>
                 </div>
                 <p class="work-muted">
@@ -456,7 +457,7 @@ const {
                 <h3>{{ p.name }}</h3>
                 <p>
                   {{ p.upts.objects.length }} объекта ·
-                  {{ p.upts.contracts.length }} договоров
+                  {{ p.upts.contracts.length }} объектов
                 </p>
                 <span>{{ workUserName(p.owner) }}</span
                 ><progress :value="projectStats(p).percent" max="100" />
@@ -509,7 +510,7 @@ const {
             </div>
           </div>
           <p v-if="!project" class="work-muted">
-            Для добавления работ выберите договор.
+            Для добавления работ выберите объект.
           </p>
           <Board
             v-if="view === 'board'"
@@ -534,7 +535,7 @@ const {
             <table>
               <thead>
                 <tr>
-                  <th>Задача / договор</th>
+                  <th>Задача / объект</th>
                   <th>Объект</th>
                   <th>Исполнитель</th>
                   <th>Состояние</th>
@@ -584,9 +585,9 @@ const {
         <section v-else-if="section === 'objects'" class="upts-panel">
           <div class="upts-section-head">
             <div>
-              <h2>Участки и объекты</h2>
+              <h2>Участки и сооружения</h2>
               <p class="work-muted">
-                Объекты и готовность относятся к рабочей области Space. Распределение объектов по договорам пока не задано.
+                Участки и сооружения и их готовность относятся к рабочей области Space. Привязка к отдельной карточке учёта пока не задана.
               </p>
             </div>
             <button v-if="canManage" class="work-primary" @click="editObject()">
@@ -661,7 +662,7 @@ const {
               <thead>
                 <tr>
                   <th>Сотрудник</th>
-                  <th>Договоров с задачами</th>
+                  <th>Объектов с задачами</th>
                   <th>Открыто</th>
                   <th>Выполнено</th>
                   <th>Просрочено</th>
@@ -708,12 +709,12 @@ const {
           </div>
         </section>
         <section v-else-if="section === 'contracts'" class="upts-panel">
-          <div class="upts-section-head"><h2>Договоры</h2><button class="work-primary" @click="editContract()">+ Договор</button></div>
-          <div class="work-table-wrap"><table><thead><tr><th>Номер / наименование</th><th>Тип договора</th><th>Ответственный</th><th>Срок</th><th>Работы</th><th>Документы</th></tr></thead><tbody><tr v-for="c in contractRows" :key="c.id" class="upts-colored-row" :style="{'--contract-color':c.color || uptsContractColor(c.id)}"><td><button class="upts-link" @click="openContract(c)">{{ c.number }} · {{ c.name }}</button></td><td>{{ c.contractType?UPTS_CONTRACT_TYPES[c.contractType]:'Не указан' }}</td><td>{{ workUserName(c.project.owner) }}</td><td>{{ formatWorkDate(c.dueDate)||'—' }}</td><td>{{ contractStats(c).done }}/{{ contractStats(c).total }} выполнено</td><td><button @click="showFiles(c.project,c.id)"><Icon name="lucide:folder-open" />Папка</button></td></tr></tbody></table><p v-if="!contractRows.length" class="work-empty">Договоров пока нет.</p></div>
+          <div class="upts-section-head"><h2>Объекты</h2><button class="work-primary" @click="editContract()">+ Объект</button></div>
+          <div class="work-table-wrap"><table><thead><tr><th>Номер / наименование</th><th>Тип объекта</th><th>Ответственный</th><th>Срок</th><th>Работы</th><th>Документы</th></tr></thead><tbody><tr v-for="c in contractRows" :key="c.id" class="upts-colored-row" :style="{'--contract-color':c.color || uptsContractColor(c.id)}"><td><button class="upts-link" @click="openContract(c)">{{ c.number }} · {{ c.name }}</button></td><td>{{ c.contractType?UPTS_CONTRACT_TYPES[c.contractType]:'Не указан' }}</td><td>{{ workUserName(c.project.owner) }}</td><td>{{ formatWorkDate(c.dueDate)||'—' }}</td><td>{{ contractStats(c).done }}/{{ contractStats(c).total }} выполнено</td><td><button @click="showFiles(c.project,c.id)"><Icon name="lucide:folder-open" />Папка</button></td></tr></tbody></table><p v-if="!contractRows.length" class="work-empty">Объектов пока нет.</p></div>
         </section>
         <section v-else-if="section === 'files' && project" class="upts-panel">
           <div class="upts-section-head">
-            <h2>{{ contract ? 'Документы договора' : 'Документы рабочей области' }}</h2>
+            <h2>{{ contract ? 'Документы объекта' : 'Документы рабочей области' }}</h2>
             <label
               >Папка<select v-model="activeContract">
                 <option :value="null">Общие материалы проекта</option>
@@ -722,7 +723,7 @@ const {
                   :key="c.id"
                   :value="c.id"
                 >
-                  Договор {{ c.number }} · {{ c.name }}
+                  Объект {{ c.number }} · {{ c.name }}
                 </option>
               </select></label
             >
@@ -748,9 +749,9 @@ const {
         <div v-if="!data.projects.length && !archived && section!=='library'" class="upts-onboarding">
           <Icon name="lucide:folder-plus" />
           <div>
-            <h2>Первый договор УПТС</h2>
+            <h2>Первый объект УПТС</h2>
             <p>
-              Создайте договор и выберите тип работ. Для знакомства с прежними проектами доступен учебный пример.
+              Создайте объект и выберите тип работ. Для знакомства с прежними проектами доступен учебный пример.
             </p>
           </div>
           <div class="work-actions">
@@ -817,7 +818,7 @@ const {
       ><div class="work-form">
         <p>
           Будет создан личный учебный проект с тремя условными объектами,
-          девятью задачами и одним договором. Он появится и в «Задачах и
+          девятью задачами и одним объектом. Он появится и в «Задачах и
           проектах» Space.
         </p>
         <p>

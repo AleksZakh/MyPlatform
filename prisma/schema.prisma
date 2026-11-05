@@ -1176,6 +1176,7 @@ model WorkProjectMember {
   @@map("work_project_members")
 }
 model WorkTask {
+  uptsWorkMeta Json?
   uptsContractId Int?
   uptsContract UptsContract? @relation(fields: [uptsContractId], references: [id], onDelete: Restrict)
   @@index([uptsContractId])
@@ -1680,6 +1681,7 @@ model UptsProjectObject {
   @@map("upts_project_objects")
 }
 model UptsContract {
+  objectDetails Json @default("{}")
   color String? @db.VarChar(7)
   contractType String? @db.VarChar(20)
   tasks WorkTask[]
@@ -1700,6 +1702,8 @@ model UptsContract {
 }
 
 model UptsWorkDefinition {
+  responsibleRole String? @db.VarChar(20)
+  expectedResult String @default("") @db.Text
   id Int @id @default(autoincrement())
   clientKey String @unique @db.Uuid
   name String @db.VarChar(250)
@@ -1711,6 +1715,7 @@ model UptsWorkDefinition {
   @@map("upts_work_definitions")
 }
 model UptsWorkTemplate {
+  workKindKey String? @db.VarChar(40)
   id Int @id @default(autoincrement())
   clientKey String @unique @db.Uuid
   name String @db.VarChar(250)

@@ -1,3 +1,5 @@
+import { objectDetailsSchema, checkObjectKind, checkObjectPeople } from './upts-object-input';
+import { validWorkKind } from '../../shared/utils/upts-work-kinds';
 import { uptsContractColor } from '../../shared/utils/upts-color';
 import { uptsPeople } from './upts-people';
 import { randomUUID } from "node:crypto";
@@ -19,6 +21,7 @@ import {
 } from "./work/file-storage";
 
 type DB = Prisma.TransactionClient;
+const stableJson=(value:unknown):string => JSON.stringify(value,(_key,v)=>v && typeof v==='object' && !Array.isArray(v) ? Object.fromEntries(Object.keys(v).sort().map(k=>[k,v[k]])) : v);
 const id = z.number().int().positive().max(2147483647);
 export const contractTypeSchema = z.enum([
   "LAND",
@@ -37,8 +40,9 @@ const entry = z
     active: z.boolean(),
   })
   .strict();
+const workInput = entry.extend({responsibleRole:z.enum(["CURATOR","ENGINEER"]).nullable().optional(),expectedResult:z.string().trim().max(2000).optional()}).strict();
 const templateInput = entry
-  .extend({ workIds: z.array(id).min(1).max(50) })
+  .extend({ workIds: z.array(id).min(1).max(50), workKindKey:z.string().max(40).nullable().optional() })
   .strict()
   .refine(
     (v) => new Set(v.workIds).size === v.workIds.length,
@@ -134,14 +138,14 @@ export async function library(event: H3Event) {
 }
 export async function saveWork(event: H3Event, raw: unknown, workId?: number) {
   const a = await editor(event),
-    v = parse(entry, raw);
+    v = parse(workInput, raw);
   return transact(event, a, async (tx) => {
     const old = await tx.uptsWorkDefinition.findUnique({
       where: workId ? { id: workId } : { clientKey: v.clientKey },
     });
     if (workId && !old) fail(404, "Работа не найдена.");
     if (!workId && old) {
-      if (old.name !== v.name || old.contractType !== v.contractType)
+      if (old.name !== v.name || old.contractType !== v.contractType || (v.responsibleRole!==undefined && old.responsibleRole!==v.responsibleRole) || (v.expectedResult!==undefined && old.expectedResult!==v.expectedResult))
         fail(409, "Ключ операции уже использован.");
       return old;
     }
@@ -167,6 +171,8 @@ export async function saveWork(event: H3Event, raw: unknown, workId?: number) {
       name: v.name,
       contractType: v.contractType,
       active: v.active,
+      ...(v.responsibleRole!==undefined?{responsibleRole:v.responsibleRole}:{}),
+      ...(v.expectedResult!==undefined?{expectedResult:v.expectedResult}:{}),
     };
     const saved = old
       ? await tx.uptsWorkDefinition.update({
@@ -208,6 +214,7 @@ export async function saveWorkTemplate(
 ) {
   const a = await editor(event),
     v = parse(templateInput, raw);
+  if(!validWorkKind(v.contractType,v.workKindKey)) fail(400,"Вид работ не соответствует типу объекта.");
   return transact(event, a, async (tx) => {
     const old = await tx.uptsWorkTemplate.findUnique({
       where: templateId ? { id: templateId } : { clientKey: v.clientKey },
@@ -218,6 +225,7 @@ export async function saveWorkTemplate(
       if (
         old.name !== v.name ||
         old.contractType !== v.contractType ||
+        (v.workKindKey!==undefined && old.workKindKey!==v.workKindKey) ||
         JSON.stringify(old.items.map((i) => i.workId)) !==
           JSON.stringify(v.workIds)
       )
@@ -258,6 +266,7 @@ export async function saveWorkTemplate(
       name: v.name,
       contractType: v.contractType,
       active: v.active,
+      ...(v.workKindKey!==undefined?{workKindKey:v.workKindKey}:{}),
     };
     const saved = old
       ? await tx.uptsWorkTemplate.update({
@@ -313,9 +322,11 @@ async function titlesFor(
     templateVersion: number | null;
     manualWorks: string[];
     selectedWorks?: { id: number; version: number }[];
+    workKindKey?:string|null;
   },
   allowManual = false,
 ) {
+  if(!validWorkKind(type,v.workKindKey))fail(400,"Вид работ не соответствует типу объекта.");
   const selected = v.selectedWorks || [];
   if (Number(!!v.templateId) + Number(!!v.manualWorks.length) + Number(!!selected.length) > 1)
     fail(400, "Выберите один способ добавления: библиотека, шаблон или ручной ввод.");
@@ -324,9 +335,9 @@ async function titlesFor(
     return selected.map(item=>{
       const work=rows.find(w=>w.id===item.id);
       if(!work || !work.active || work.contractType!==type)
-        fail(400,'Работа недоступна или не соответствует типу договора. Обновите библиотеку.');
+        fail(400,'Работа недоступна или не соответствует типу объекта. Обновите библиотеку.');
       version(work.version,item.version);
-      return work.name;
+      return {name:work.name,definitionId:work.id,responsibleRole:work.responsibleRole,expectedResult:work.expectedResult,workKindKey:v.workKindKey || null};
     });
   }
   if (v.templateId) {
@@ -342,24 +353,25 @@ async function titlesFor(
       t.contractType !== type ||
       t.items.some((i) => !i.work.active || i.work.contractType !== type)
     )
-      fail(400, "Шаблон недоступен или не соответствует типу договора.");
+      fail(400, "Шаблон недоступен или не соответствует типу объекта.");
     version(t.version, v.templateVersion ?? undefined);
-    return t.items.map((i) => i.work.name);
+    if(v.workKindKey && t.workKindKey!==v.workKindKey)fail(400,"Шаблон не соответствует виду работ.");
+    return t.items.map((i) => ({name:i.work.name,definitionId:i.work.id,responsibleRole:i.work.responsibleRole,expectedResult:i.work.expectedResult,workKindKey:t.workKindKey}));
   }
   if (v.manualWorks.length && type !== "OTHER" && !allowManual)
     fail(
       400,
       "Ручной состав предназначен для типа «Иное». Для других типов выберите шаблон.",
     );
-  if (v.manualWorks.length && !type) fail(400,"Сначала укажите тип договора в карточке.");
-  return v.manualWorks;
+  if (v.manualWorks.length && !type) fail(400,"Сначала укажите тип объекта в карточке.");
+  return v.manualWorks.map(name=>({name,definitionId:undefined,responsibleRole:null,expectedResult:"",workKindKey:v.workKindKey || null}));
 }
 async function managedContract(tx: DB, a: Actor, contractId: number) {
   const c = await tx.uptsContract.findUnique({ where: { id: contractId } });
-  if (!c) fail(404, "Договор не найден.");
+  if (!c) fail(404, "Объект не найден.");
   const p = await visibleProject(tx, c.projectId, a);
   if (!managesProject(p, a) || p.archivedAt)
-    fail(403, "Изменения доступны руководителю активного проекта договора.");
+    fail(403, "Изменения доступны руководителю активного проекта объекта.");
   return c;
 }
 async function addWorks(
@@ -367,7 +379,7 @@ async function addWorks(
   event: H3Event,
   a: Actor,
   c: { id: number; projectId: number },
-  titles: string[],
+  titles: Awaited<ReturnType<typeof titlesFor>>,
   keys?: string[],
 ) {
   const taskIds: number[] = [];
@@ -375,7 +387,8 @@ async function addWorks(
     const task = await tx.workTask.create({
       data: {
         clientKey: keys?.[i] ?? randomUUID(),
-        title: titles[i]!,
+        title: titles[i]!.name,
+        uptsWorkMeta: {definitionId:titles[i]!.definitionId,workKindKey:titles[i]!.workKindKey,responsibleRole:titles[i]!.responsibleRole,expectedResult:titles[i]!.expectedResult},
         projectId: c.projectId,
         uptsContractId: c.id,
         creatorId: a.id,
@@ -388,6 +401,7 @@ async function addWorks(
       projectId: c.projectId,
       uptsContractId: c.id,
       status: task.status,
+      uptsWorkMeta:task.uptsWorkMeta,
     });
     taskIds.push(task.id);
   }
@@ -405,17 +419,20 @@ const contractInput = z
     signedDate: uptsDay,
     dueDate: uptsDay,
     contractType: contractTypeSchema,
+    objectDetails:objectDetailsSchema.optional(),
     ...selection,
   })
   .strict()
   .refine(
     (v) => !v.signedDate || !v.dueDate || v.signedDate <= v.dueDate,
-    "Дата договора позже срока.",
+    "Дата объекта позже срока.",
   );
 export async function createContract(event: H3Event, raw: unknown) {
   const a = await uptsActor(event),
     v = parse(contractInput, raw);
-  if(v.projectId && v.visibility) fail(400,'Для выбранной видимости создайте отдельный договор.');
+  checkObjectKind(v.contractType,v.objectDetails);
+  await checkObjectPeople(event,v.objectDetails);
+  if(v.projectId && v.visibility) fail(400,'Для выбранной видимости создайте отдельный объект.');
   if(v.visibility==='TEAM' && !v.memberIds.some(id=>id!==a.id)) fail(400,'Выберите сотрудников.');
   if(v.visibility!=='TEAM' && v.memberIds.length) fail(400,'Список сотрудников допустим только для групповой видимости.');
   const staffIds=v.memberIds.length ? new Set((await uptsPeople(event)).map(u=>u.id)) : new Set<number>();
@@ -432,13 +449,15 @@ export async function createContract(event: H3Event, raw: unknown) {
       if (
         old.number !== v.number ||
         old.name !== v.name ||
-        old.contractType !== v.contractType
+        old.contractType !== v.contractType ||
+        (v.objectDetails!==undefined && stableJson(old.objectDetails)!==stableJson(v.objectDetails))
       )
         fail(409, "Ключ операции уже использован.");
       await ensureContractDirectory(old.projectId, old.id);
       return old;
     }
     const titles = await titlesFor(tx, v.contractType, v);
+    if(v.objectDetails?.workKindKey && v.templateId && titles.some(w=>w.workKindKey!==v.objectDetails!.workKindKey)) fail(400,"Шаблон не соответствует выбранному виду работ.");
     let projectId = v.projectId;
     if (projectId) {
       const p = await visibleProject(tx, projectId, a);
@@ -471,7 +490,7 @@ export async function createContract(event: H3Event, raw: unknown) {
         scope: p.scope,
         ownerId: a.id,
         memberIds: v.memberIds,
-        reason: "Рабочая область договора УПТС",
+        reason: "Рабочая область объекта УПТС",
       });
     }
     let c = await tx.uptsContract.create({
@@ -482,6 +501,7 @@ export async function createContract(event: H3Event, raw: unknown) {
         name: v.name,
         counterparty: v.counterparty,
         contractType: v.contractType,
+        objectDetails:v.objectDetails || {},
         signedDate: dbDay(v.signedDate),
         dueDate: dbDay(v.dueDate),
       },
@@ -495,14 +515,14 @@ export async function createContract(event: H3Event, raw: unknown) {
       templateId: v.templateId,
       templateVersion: v.templateVersion,
       taskIds,
-      works: titles,
+      works: titles.map(w=>w.name),
     });
     return c;
   });
 }
 // A stable key is persisted with the operation; retries cannot duplicate a whole set.
 const applyInput = z
-  .object({ clientKey: z.string().uuid(), contractVersion: id, ...selection,
+  .object({ clientKey: z.string().uuid(), contractVersion: id, ...selection, workKindKey:z.string().max(40).nullable().optional(),
     selectedWorks: z.array(z.object({id,version:id}).strict()).max(50)
       .refine(items=>new Set(items.map(w=>w.id)).size===items.length,'Работы не должны повторяться.').optional(),
   })
@@ -524,6 +544,7 @@ export async function applyContractWorks(
       templateId: v.templateId,
       templateVersion: v.templateVersion,
       manualWorks: v.manualWorks,
+      ...(v.workKindKey ? {workKindKey:v.workKindKey} : {}),
       // Preserve fingerprints of template/manual requests created before this update.
       ...(v.selectedWorks?.length ? {selectedWorks:v.selectedWorks} : {}),
     });
@@ -562,7 +583,7 @@ export async function applyContractWorks(
       templateId: v.templateId,
       templateVersion: v.templateVersion,
       selectedWorks: v.selectedWorks || [],
-      works: titles,
+      works: titles.map(w=>w.name),
       taskIds,
     });
     return { created: titles.length };

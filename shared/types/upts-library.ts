@@ -8,6 +8,8 @@ export const UPTS_CONTRACT_TYPES = {
 } as const;
 export type UptsContractType = keyof typeof UPTS_CONTRACT_TYPES;
 export type UptsWorkDefinition = {
+  responsibleRole?: "CURATOR" | "ENGINEER" | null;
+  expectedResult?: string;
   id: number;
   name: string;
   contractType: UptsContractType;
@@ -15,6 +17,7 @@ export type UptsWorkDefinition = {
   version: number;
 };
 export type UptsWorkTemplate = {
+  workKindKey?: string | null;
   id: number;
   name: string;
   contractType: UptsContractType;

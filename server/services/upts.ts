@@ -1,3 +1,5 @@
+import { objectDetailsSchema, checkObjectKind, checkObjectPeople } from './upts-object-input';
+import type { UptsObjectDetails } from '../../shared/types/upts-object';
 import { uptsContractColor } from '../../shared/utils/upts-color';
 import { contractTypeSchema } from './upts-library';
 import { randomUUID } from 'node:crypto';
@@ -64,6 +66,7 @@ const contractInput = z
     number: z.string().trim().min(1).max(100),
     name: z.string().trim().min(1).max(250),
     contractType: contractTypeSchema.nullable().optional(),
+    objectDetails:objectDetailsSchema.optional(),
     counterparty: z.string().trim().max(250),
     signedDate: uptsDay,
     dueDate: uptsDay,
@@ -71,7 +74,7 @@ const contractInput = z
   .strict()
   .refine(
     (v) => !v.signedDate || !v.dueDate || v.signedDate <= v.dueDate,
-    'Дата договора позже срока.',
+    'Дата объекта позже срока.',
   );
 async function managed(db: DB, projectId: number, a: Actor) {
   const p = await visibleProject(db, projectId, a);
@@ -276,6 +279,8 @@ export async function saveContract(
 ) {
   const a = await workActor(event),
     v = parse(contractInput, raw);
+  const previous = contractId ? await prisma.uptsContract.findFirst({where:{id:contractId,projectId}}) : null;
+  await checkObjectPeople(event,v.objectDetails,previous?.objectDetails as UptsObjectDetails);
   return mutation(
     event,
     a,
@@ -290,7 +295,7 @@ export async function saveContract(
         : await tx.uptsContract.findUnique({
             where: { clientKey: v.clientKey },
           });
-      if (contractId && !old) fail(404, 'Договор не найден.');
+      if (contractId && !old) fail(404, 'Объект не найден.');
       if (old && old.projectId !== projectId)
         fail(409, 'Ключ операции уже использован.');
       if (!contractId && old) {
@@ -298,7 +303,9 @@ export async function saveContract(
         return { id: old.id, value: old, changed: false };
       }
       if (old) version(old.version, v.version);
+      checkObjectKind(v.contractType === undefined ? old?.contractType || null : v.contractType,v.objectDetails ?? old?.objectDetails as UptsObjectDetails);
       const data = {
+        ...(v.objectDetails!==undefined?{objectDetails:v.objectDetails}:{}),
         ...(v.contractType !== undefined ? { contractType: v.contractType } : {}),
         number: v.number,
         name: v.name,

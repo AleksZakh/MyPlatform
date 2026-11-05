@@ -1,3 +1,4 @@
+import { workKindName, UPTS_WORK_ROLES } from '../../shared/utils/upts-work-kinds';
 import ExcelJS from 'exceljs';
 import { UPTS_CONTRACT_TYPES } from '../../shared/types/upts-library';
 import {
@@ -57,7 +58,7 @@ export async function uptsWorkbook(
     ['Параметр', 'Значение'],
     [
       ['Дата среза (Москва)', data.today],
-      ['Договор', String(filters.contractId || 'Все доступные')],
+      ['Объект', String(filters.contractId || 'Все доступные')],
       ['Проект', String(filters.projectId || 'Все доступные')],
       ['Исполнитель', String(filters.employeeId || 'Все')],
       ['Поиск', String(filters.q || '')],
@@ -71,8 +72,8 @@ export async function uptsWorkbook(
         'Процент означает долю выполненных задач; готовность объекта учитывается отдельно по пяти направлениям.',
       ],
       [
-        'Объекты и договоры',
-        'Договоры — по выбранному договору, поиску и исполнителю. Объекты — на уровне проекта; без распределения по договорам.',
+        'Область объектов и недвижимости',
+        'Объекты — по выбранному объекту, поиску и исполнителю. Участки и сооружения — на уровне проекта; без распределения по карточкам учёта.',
       ],
     ],
   );
@@ -120,8 +121,8 @@ export async function uptsWorkbook(
     [
       'ID',
       'Проект',
+      'Связанный участок',
       'Объект',
-      'Договор',
       'Задача',
       'Исполнитель',
       'Статус',
@@ -130,6 +131,9 @@ export async function uptsWorkbook(
       'Срок',
       'Просрочено',
       'Препятствие',
+      'Вид работ',
+      'Ответственная роль',
+      'Ожидаемый результат',
     ],
     data.tasks.map((t) => {
       const p = data.projects.find((p) => p.id === t.projectId),
@@ -147,6 +151,9 @@ export async function uptsWorkbook(
         formatWorkDate(t.dueDate),
         taskSummary([t], data.today).overdue ? 'Да' : 'Нет',
         t.blockedReason,
+        workKindName(t.uptsWorkMeta?.workKindKey),
+        t.uptsWorkMeta?.responsibleRole ? UPTS_WORK_ROLES[t.uptsWorkMeta.responsibleRole] : "",
+        t.uptsWorkMeta?.expectedResult || "",
       ];
     }),
   );
@@ -178,10 +185,10 @@ export async function uptsWorkbook(
     }),
   );
   sheet(
-    'Объекты',
+    'Участки и сооружения',
     [
       'Проект',
-      'Объект',
+      'Участок',
       'Кадастровый номер',
       'Адрес',
       'Цель',
@@ -203,16 +210,17 @@ export async function uptsWorkbook(
     ),
   );
   sheet(
-    'Договоры',
+    'Объекты',
     [
       'Проект',
-      'Тип договора',
+      'Тип объекта',
       'Номер',
       'Наименование',
       'Контрагент',
       'Дата',
       'Срок',
       'Папка относительно хранилища проектов',
+      'Дорога', 'Этап', 'Вид работ', 'Правообладатели', 'Область', 'Тип сделки', 'Кадастровый номер исходного ЗУ', 'Площадь исходного ЗУ, кв. м', 'Вид права', 'ВРИ исходного ЗУ', 'Тип учёта', 'КУВД', 'Куратор (ID)', 'Кадастровый инженер (ID)', 'Описание деятельности',
     ],
     data.projects.flatMap((p) =>
       p.upts.contracts.map((c) => [
@@ -224,6 +232,7 @@ export async function uptsWorkbook(
         formatWorkDate(c.signedDate),
         formatWorkDate(c.dueDate),
         `${p.id}/contracts/${c.id}`,
+        c.objectDetails?.road || '', c.objectDetails?.stage || '', workKindName(c.objectDetails?.workKindKey), c.objectDetails?.rightHolders?.join('; ') || '', c.objectDetails?.region || '', c.objectDetails?.dealType || '', c.objectDetails?.sourceCadastralNumber || '', c.objectDetails?.sourceArea || '', c.objectDetails?.rightKind || '', c.objectDetails?.permittedUses?.join('; ') || '', c.objectDetails?.accountingType || '', c.objectDetails?.kuvdEntries?.map(e=>e.number+' '+formatWorkDate(e.date)).join('; ') || '', c.objectDetails?.curatorId || '', c.objectDetails?.engineerId || '', c.objectDetails?.otherDescription || '', 
       ]),
     ),
   );
