@@ -10,6 +10,8 @@ const person = z.number().int().positive().max(2147483647).nullable().optional()
 export const objectDetailsSchema = z.object({
   basisContractNumber: z.string().trim().max(250).optional(),
   basisContractDate: uptsDay.optional(),
+  workStartDate: uptsDay.optional(),
+  stageCount: z.number().int().positive().max(2147483647).nullable().optional(),
   road: text.optional(), stage: text.optional(),
   rightHolders: z.array(text.min(1)).max(30).optional(),
   region: text.optional(), dealType: text.optional(),
@@ -24,6 +26,10 @@ export const objectDetailsSchema = z.object({
 }).strict();
 export function checkObjectKind(type:string|null, details?:UptsObjectDetails){
   if(!validWorkKind(type,details?.workKindKey)) fail(400,'Вид работ не соответствует типу объекта.');
+}
+export function checkObjectSchedule(details:UptsObjectDetails|undefined, dueDate:string|null){
+  if(details?.workStartDate && dueDate && details.workStartDate>dueDate)
+    fail(400,'Дата окончания работ не может быть раньше даты начала.');
 }
 // Roles in the card are business responsibilities. Access remains controlled by the object's team.
 // Unchanged references are retained if a member later leaves UPTS; new assignments require current membership.

@@ -1,4 +1,4 @@
-import { objectDetailsSchema, checkObjectKind, checkObjectPeople } from './upts-object-input';
+import { objectDetailsSchema, checkObjectKind, checkObjectPeople, checkObjectSchedule } from './upts-object-input';
 import type { UptsObjectDetails } from '../../shared/types/upts-object';
 import { uptsContractColor } from '../../shared/utils/upts-color';
 import { contractTypeSchema } from './upts-library';
@@ -303,6 +303,7 @@ export async function saveContract(
         return { id: old.id, value: old, changed: false };
       }
       if (old) version(old.version, v.version);
+      checkObjectSchedule(v.objectDetails ?? old?.objectDetails as UptsObjectDetails,v.dueDate);
       checkObjectKind(v.contractType === undefined ? old?.contractType || null : v.contractType,v.objectDetails ?? old?.objectDetails as UptsObjectDetails);
       const data = {
         ...(v.objectDetails!==undefined?{objectDetails:v.objectDetails}:{}),

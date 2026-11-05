@@ -1,4 +1,4 @@
-import { objectDetailsSchema, checkObjectKind, checkObjectPeople } from './upts-object-input';
+import { objectDetailsSchema, checkObjectKind, checkObjectPeople, checkObjectSchedule } from './upts-object-input';
 import { validWorkKind } from '../../shared/utils/upts-work-kinds';
 import { uptsContractColor } from '../../shared/utils/upts-color';
 import { uptsPeople } from './upts-people';
@@ -431,6 +431,7 @@ export async function createContract(event: H3Event, raw: unknown) {
   const a = await uptsActor(event),
     v = parse(contractInput, raw);
   checkObjectKind(v.contractType,v.objectDetails);
+  checkObjectSchedule(v.objectDetails,v.dueDate);
   await checkObjectPeople(event,v.objectDetails);
   if(v.projectId && v.visibility) fail(400,'Для выбранной видимости создайте отдельный объект.');
   if(v.visibility==='TEAM' && !v.memberIds.some(id=>id!==a.id)) fail(400,'Выберите сотрудников.');

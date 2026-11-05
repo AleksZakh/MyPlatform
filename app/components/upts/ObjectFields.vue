@@ -22,7 +22,6 @@ defineProps<{roads:string[];stages:string[]}>();
     <label>Условный номер<input v-model="number" required maxlength="100" /></label>
     <div v-for="(entry,i) in details.kuvdEntries" :key="i" class="upts-repeat-fields"><label>Номер КУВД<input v-model="entry.number" maxlength="100" /></label><label>Дата КУВД<input v-model="entry.date" type="date" /></label><button v-if="i" class="upts-add-field" type="button" @click="details.kuvdEntries!.splice(i,1)">Убрать запись КУВД</button></div>
     <button type="button" class="upts-add-field" :disabled="(details.kuvdEntries?.length||0)>=30" @click="(details.kuvdEntries ||= []).push({number:'',date:null})">Добавить запись КУВД</button>
-    <label>Номер договора<input v-model="details.basisContractNumber" maxlength="250" /></label>
     <label>Дата договора<input v-model="details.basisContractDate" type="date" /></label>
   </section>
 </template>

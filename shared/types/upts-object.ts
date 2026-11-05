@@ -2,6 +2,8 @@
 export type UptsObjectDetails = {
   basisContractNumber?: string;
   basisContractDate?: string | null;
+  workStartDate?: string | null;
+  stageCount?: number | null;
   road?: string;
   stage?: string;
   rightHolders?: string[];

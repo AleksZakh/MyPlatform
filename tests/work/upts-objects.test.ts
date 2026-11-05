@@ -90,13 +90,16 @@ test('UPTS object card, work kinds matrix, role/result snapshots and protected a
   for(const [type,numbers]of Object.entries(counts))assert.deepEqual(lib.templates.filter((t:any)=>t.contractType===type&&t.active).map((t:any)=>t.items.length),numbers);
   assert(lib.templates.filter((t:any)=>t.active).every((t:any)=>t.workKindKey));
   assert(!lib.templates.some((t:any)=>t.active&&t.contractType==='OTHER'));
-  const details={basisContractNumber:'УРИ-2023-857',basisContractDate:'2023-04-28',road:'М-12',stage:'Этап 2',rightHolders:['Организация А','Организация Б'],region:'Московская область',dealType:'Аренда',sourceCadastralNumber:'50:01:0000000:1',sourceArea:'1200,5',rightKind:'Собственность',permittedUses:['Автомобильные дороги'],accountingType:'Первичный учёт',kuvdEntries:[{number:'КУВД-1',date:'2026-11-05'},{number:'КУВД-2',date:null}],curatorId:2,engineerId:3,workKindKey:'LAND_DIVISION',otherDescription:''};
+  const details={workStartDate:'2026-11-01',stageCount:3,basisContractNumber:'УРИ-2023-857',basisContractDate:'2023-04-28',road:'М-12',stage:'Этап 2',rightHolders:['Организация А','Организация Б'],region:'Московская область',dealType:'Аренда',sourceCadastralNumber:'50:01:0000000:1',sourceArea:'1200,5',rightKind:'Собственность',permittedUses:['Автомобильные дороги'],accountingType:'Первичный учёт',kuvdEntries:[{number:'КУВД-1',date:'2026-11-05'},{number:'КУВД-2',date:null}],curatorId:2,engineerId:3,workKindKey:'LAND_DIVISION',otherDescription:''};
   const body={clientKey:randomUUID(),number:'УСЛ-1',name:'Участок у развязки',counterparty:'',signedDate:null,dueDate:null,contractType:'LAND',objectDetails:details,templateId:template.id,templateVersion:template.version,manualWorks:[]};
   assert.equal((await request('/contracts',2,'POST',{...body,objectDetails:{...details,workKindKey:'OKS_DIVISION'}})).status,400);
   assert.equal((await request('/contracts',2,'POST',{...body,objectDetails:{...details,engineerId:4}})).status,400);
   assert.equal((await request('/contracts',2,'POST',{...body,objectDetails:{...details,sourceArea:'-1'}})).status,400);
   assert.equal((await request('/contracts',2,'POST',{...body,objectDetails:{...details,kuvdEntries:[{number:'X',date:'2026-02-31'}]}})).status,400);
   assert.equal((await request('/contracts',2,'POST',{...body,objectDetails:{...details,basisContractDate:'2026-02-31'}})).status,400);
+  for(const stageCount of [0,-1,1.5,'3',2147483648])assert.equal((await request('/contracts',2,'POST',{...body,objectDetails:{...details,stageCount}})).status,400);
+  assert.equal((await request('/contracts',2,'POST',{...body,objectDetails:{...details,workStartDate:'2026-02-31'}})).status,400);
+  assert.equal((await request('/contracts',2,'POST',{...body,dueDate:'2026-10-31'})).status,400);
   const c=await ok(await request('/contracts',2,'POST',body));assert.deepEqual(c.objectDetails,details);
   const auditCount=await db.auditLog.count();assert.equal((await ok(await request('/contracts',2,'POST',body))).id,c.id);assert.equal(await db.auditLog.count(),auditCount);
   const tasks=await db.workTask.findMany({where:{uptsContractId:c.id},orderBy:{id:'asc'}});assert.equal(tasks.length,10);
@@ -107,6 +110,9 @@ test('UPTS object card, work kinds matrix, role/result snapshots and protected a
   const path=`/projects/${c.projectId}/contracts/${c.id}`;
   const edit={...body,version:c.version};delete (edit as any).templateId;delete (edit as any).templateVersion;delete (edit as any).manualWorks;
   assert.equal((await request(path,3,'PUT',edit)).status,403,'Department visibility does not grant editing');
+  assert.equal((await request(path,2,'PUT',{...edit,dueDate:'2026-10-31'})).status,400);
+  const withoutDetails={...edit,dueDate:'2026-10-31'};delete (withoutDetails as any).objectDetails;
+  assert.equal((await request(path,2,'PUT',withoutDetails)).status,400);
   const updated=await ok(await request(path,2,'PUT',{...edit,objectDetails:{...details,stage:'Этап 3',curatorId:3,engineerId:2}}));assert.equal(updated.objectDetails.stage,'Этап 3');
   assert.equal((await request(path,2,'PUT',edit)).status,409);
   const audit=await db.auditLog.findFirstOrThrow({where:{entityType:'UptsContract',entityId:c.id,action:'UPDATE'}});assert.equal((audit.afterData as any).objectDetails.stage,'Этап 3');
