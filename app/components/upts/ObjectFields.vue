@@ -20,11 +20,14 @@ defineProps<{roads:string[];stages:string[]}>();
     <label>Тип<select v-model="objectType" required><option value="" disabled>Не выбрано</option><option v-for="(label,key) in UPTS_CONTRACT_TYPES" :key="key" :value="key">{{ label }}</option></select></label>
     <label>Тип учёта<input v-model="details.accountingType" maxlength="500" /></label>
     <label>Условный номер<input v-model="number" required maxlength="100" /></label>
-    <div v-for="(entry,i) in details.kuvdEntries" :key="i" class="upts-repeat-fields"><label>Номер КУВД<input v-model="entry.number" maxlength="100" /></label><label>Дата КУВД<input v-model="entry.date" type="date" /></label><button v-if="i" class="upts-add-field" type="button" @click="details.kuvdEntries!.splice(i,1)">Убрать запись КУВД</button></div>
+    <div class="upts-kuvd-group">
+    <div v-for="(entry,i) in details.kuvdEntries" :key="i" class="upts-kuvd-entry"><label>Номер КУВД<input v-model="entry.number" maxlength="100" /></label><label>Дата КУВД<input v-model="entry.date" type="date" /></label><button v-if="i" class="upts-add-field" type="button" @click="details.kuvdEntries!.splice(i,1)">Убрать запись КУВД</button></div>
     <button type="button" class="upts-add-field" :disabled="(details.kuvdEntries?.length||0)>=30" @click="(details.kuvdEntries ||= []).push({number:'',date:null})">Добавить запись КУВД</button>
+    </div>
     <label>Дата договора<input v-model="details.basisContractDate" type="date" /></label>
   </section>
 </template>
 <style scoped>
-.upts-object-fields{display:grid;gap:12px;min-width:0}.upts-object-fields label{font-size:12px;color:var(--work-muted)}.upts-object-fields :is(input,select){color:var(--work-text)}.upts-repeat-fields{display:grid;gap:8px;min-width:0}.upts-repeat-fields label>span{display:flex;gap:6px;min-width:0}.upts-repeat-fields input{min-width:0;flex:1}.upts-object-fields .upts-add-field{justify-self:start;border:0;border-radius:0;border-bottom:1px dashed var(--work-muted);padding:0;background:transparent;color:var(--work-muted);font-size:12px}.upts-object-fields input[type=date]{max-width:260px}
+.upts-object-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 24px;align-items:start;min-width:0}.upts-object-fields>label{min-width:0}.upts-object-fields label{font-size:12px;color:var(--work-muted)}.upts-object-fields :is(input,select){color:var(--work-text)}.upts-repeat-fields{display:grid;gap:8px;min-width:0}.upts-repeat-fields label>span{display:flex;gap:6px;min-width:0}.upts-repeat-fields input{min-width:0;flex:1}.upts-object-fields .upts-add-field{justify-self:start;border:0;border-radius:0;border-bottom:1px dashed var(--work-muted);padding:0;background:transparent;color:var(--work-muted);font-size:12px}.upts-kuvd-group{grid-column:1/-1;display:grid;gap:8px;min-width:0}.upts-kuvd-entry{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 24px;min-width:0}.upts-kuvd-entry>button{grid-column:1/-1}
+@media(max-width:640px){.upts-object-fields,.upts-kuvd-entry{grid-template-columns:1fr}}
 </style>

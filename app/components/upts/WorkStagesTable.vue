@@ -5,7 +5,8 @@ import {UPTS_WORK_ROLES} from '~~/shared/utils/upts-work-kinds';
 import {WORK_STATUSES} from '~~/shared/types/work';
 const props=defineProps<{works:UptsStageWork[];stageCount:number}>();
 const stages=defineModel<Record<string,number|''>>({required:true});
-const selected=ref<string[]>([]),bulkStage=ref<number|''>(1);
+const selected=ref<string[]>([]),bulkStage=ref(1);
+watch(()=>props.stageCount,count=>{if(bulkStage.value>count)bulkStage.value=1;});
 watch(()=>props.works.map(w=>w.key),keys=>{selected.value=selected.value.filter(k=>keys.includes(k));});
 const allSelected=computed(()=>!!props.works.length && selected.value.length===props.works.length);
 const valid=(v:unknown)=>typeof v==='number' && Number.isInteger(v) && v>=1 && v<=props.stageCount;
@@ -17,7 +18,7 @@ function bulkApply(){if(!valid(bulkStage.value))return;stages.value={...stages.v
   <section class="upts-stages" aria-label="Распределение работ по этапам">
     <div class="upts-stage-toolbar">
       <span role="status">Выбрано: {{ selected.length }} из {{ works.length }}</span>
-      <label>Этап для выбранных<input v-model.number="bulkStage" type="number" step="any" /></label>
+      <label>Этап для выбранных<select v-model="bulkStage"><option v-for="stage in stageCount" :key="stage" :value="stage">{{ stage }}</option></select></label>
       <button type="button" :disabled="!selected.length || !valid(bulkStage)" @click="bulkApply">Назначить этап</button>
       <button type="button" :disabled="!selected.length" @click="selected=[]">Снять выделение</button>
     </div>
@@ -40,5 +41,17 @@ function bulkApply(){if(!valid(bulkStage.value))return;stages.value={...stages.v
   </section>
 </template>
 <style scoped>
-.upts-stages{min-width:0}.upts-stage-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:end;padding:10px;border:1px solid var(--work-line);border-radius:6px;background:var(--space-bg,var(--work-panel))}.upts-stage-toolbar>span{align-self:center;margin-right:auto}.upts-stage-toolbar label{max-width:145px}.upts-stage-table{width:100%;min-width:610px;font-size:13px;border-collapse:collapse;border:1px solid var(--work-line)}.upts-stage-table th,.upts-stage-table td{padding:9px 8px;text-align:left;vertical-align:top;border:1px solid var(--work-line);overflow-wrap:anywhere}.upts-stage-table th{background:var(--space-bg,var(--work-panel));font-weight:600}.upts-stage-table .is-selected{background:var(--space-selection-bg,#dbeafe33)}.upts-stage-number{width:80px;min-width:80px}.upts-stage-check{width:32px}.upts-stage-number input[aria-invalid=true]{border-color:#ef4444}.upts-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.upts-stages{min-width:0;--stage-head:#e9e9eb;--stage-hover:#e8f3f7;--stage-selected:#d5eaf2}
+.upts-stage-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:end;padding:10px;border:1px solid var(--work-line);border-radius:6px;background:var(--space-bg,var(--work-panel))}
+.upts-stage-toolbar>span{align-self:center;margin-right:auto}.upts-stage-toolbar label{min-width:140px}
+.upts-stage-table{width:100%;min-width:610px;font-size:13px;line-height:20px;border-collapse:collapse;border:0}
+.upts-stage-table th,.upts-stage-table td{padding:4px 9px;text-align:left;vertical-align:middle;border:0;border-bottom:1px solid var(--work-line);overflow-wrap:anywhere}
+.upts-stage-table th{padding:6px 9px;background:var(--stage-head);font-weight:500;color:var(--work-text)}
+.upts-stage-table tbody tr:hover{background:var(--stage-hover)}.upts-stage-table tbody tr.is-selected{background:var(--stage-selected)}
+.upts-stage-table th:nth-child(2){width:36%}.upts-stage-table th:nth-child(4){width:19%}
+.upts-stage-number{width:76px;min-width:76px}.upts-stage-check{width:32px}
+.upts-stage-table td.upts-stage-number input{height:24px;padding:1px 6px;font-size:13px;line-height:20px;border-radius:3px}
+.upts-stage-table input[type=checkbox]{display:block;margin:0;width:13px;height:13px}
+.upts-stage-number input[aria-invalid=true]{border-color:#ef4444}.upts-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+:global(html.dark) .upts-stages{--stage-head:var(--space-graphite-panel,#344757);--stage-hover:var(--space-graphite-hover,#293547);--stage-selected:var(--space-graphite-selected,#223d60)}
 </style>

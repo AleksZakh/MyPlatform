@@ -190,7 +190,7 @@ async function save() {
 }
 </script>
 <template>
-  <Modal full-height :title="c ? 'Объект ' + (details.sourceCadastralNumber || c.number) : 'Новый объект'" @close="emit('close')">
+  <Modal full-height wide :title="c ? 'Объект ' + (details.sourceCadastralNumber || c.number) : 'Новый объект'" @close="emit('close')">
     <form class="work-form upts-object-form" @submit.prevent="save" @invalid.capture="revealInvalid">
       <fieldset class="upts-object-general" :disabled="saving" aria-label="Общая информация по объекту">
         <legend>Общая информация по объекту</legend>
