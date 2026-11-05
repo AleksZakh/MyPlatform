@@ -1,3 +1,5 @@
+import {workStagesSchema,checkNewWorkStages} from './upts-work-stages';
+import type {UptsObjectDetails} from '../../shared/types/upts-object';
 import { objectDetailsSchema, checkObjectKind, checkObjectPeople, checkObjectSchedule } from './upts-object-input';
 import { validWorkKind } from '../../shared/utils/upts-work-kinds';
 import { uptsContractColor } from '../../shared/utils/upts-color';
@@ -310,6 +312,7 @@ export async function saveWorkTemplate(
   });
 }
 const selection = {
+  workStages: workStagesSchema,
   templateId: id.nullable(),
   templateVersion: id.nullable(),
   manualWorks: z.array(z.string().trim().min(1).max(250)).max(50),
@@ -380,15 +383,15 @@ async function addWorks(
   a: Actor,
   c: { id: number; projectId: number },
   titles: Awaited<ReturnType<typeof titlesFor>>,
-  keys?: string[],
+  workStages?: number[],
 ) {
   const taskIds: number[] = [];
   for (let i = 0; i < titles.length; i++) {
     const task = await tx.workTask.create({
       data: {
-        clientKey: keys?.[i] ?? randomUUID(),
+        clientKey: randomUUID(),
         title: titles[i]!.name,
-        uptsWorkMeta: {definitionId:titles[i]!.definitionId,workKindKey:titles[i]!.workKindKey,responsibleRole:titles[i]!.responsibleRole,expectedResult:titles[i]!.expectedResult},
+        uptsWorkMeta: {...(workStages ? {stageNumber:workStages[i]} : {}),definitionId:titles[i]!.definitionId,workKindKey:titles[i]!.workKindKey,responsibleRole:titles[i]!.responsibleRole,expectedResult:titles[i]!.expectedResult},
         projectId: c.projectId,
         uptsContractId: c.id,
         creatorId: a.id,
@@ -454,10 +457,16 @@ export async function createContract(event: H3Event, raw: unknown) {
         (v.objectDetails!==undefined && stableJson(old.objectDetails)!==stableJson(v.objectDetails))
       )
         fail(409, "Ключ операции уже использован.");
+      if(v.workStages){
+        const initial=await tx.auditLog.findFirst({where:{entityType:'UptsContract',entityId:old.id,action:'CREATE'},orderBy:{id:'asc'}});
+        const original=initial?.afterData as {workStages?:number[]}|null;
+        if(stableJson(original?.workStages || [])!==stableJson(v.workStages))fail(409,'Ключ операции уже использован с другим распределением по этапам.');
+      }
       await ensureContractDirectory(old.projectId, old.id);
       return old;
     }
     const titles = await titlesFor(tx, v.contractType, v);
+    checkNewWorkStages(v.workStages,titles.length,v.objectDetails);
     if(v.objectDetails?.workKindKey && v.templateId && titles.some(w=>w.workKindKey!==v.objectDetails!.workKindKey)) fail(400,"Шаблон не соответствует выбранному виду работ.");
     let projectId = v.projectId;
     if (projectId) {
@@ -510,12 +519,13 @@ export async function createContract(event: H3Event, raw: unknown) {
     c = await tx.uptsContract.update({where:{id:c.id},data:{color:uptsContractColor(c.id)}});
     if(!v.projectId) await tx.workProject.update({where:{id:projectId},data:{color:c.color!}});
     await ensureContractDirectory(projectId, c.id);
-    const taskIds = await addWorks(tx, event, a, c, titles);
+    const taskIds = await addWorks(tx, event, a, c, titles, v.workStages);
     await audit(tx, event, a, "UptsContract", c.id, "CREATE", {
       ...c,
       templateId: v.templateId,
       templateVersion: v.templateVersion,
       taskIds,
+      workStages: v.workStages || [],
       works: titles.map(w=>w.name),
     });
     return c;
@@ -548,6 +558,7 @@ export async function applyContractWorks(
       ...(v.workKindKey ? {workKindKey:v.workKindKey} : {}),
       // Preserve fingerprints of template/manual requests created before this update.
       ...(v.selectedWorks?.length ? {selectedWorks:v.selectedWorks} : {}),
+      ...(v.workStages ? {workStages:v.workStages} : {}),
     });
     if (prior) {
       if (
@@ -560,12 +571,13 @@ export async function applyContractWorks(
     }
     version(c.version, v.contractVersion);
     const titles = await titlesFor(tx, c.contractType, v, true);
+    checkNewWorkStages(v.workStages,titles.length,c.objectDetails as UptsObjectDetails);
     if (!titles.length)
       fail(
         400,
         "Выберите работу из библиотеки, непустой шаблон или введите название работы.",
       );
-    const taskIds = await addWorks(tx, event, a, c, titles);
+    const taskIds = await addWorks(tx, event, a, c, titles, v.workStages);
     await tx.uptsWorkApplication.create({
       data: {
         clientKey: v.clientKey,
@@ -584,9 +596,16 @@ export async function applyContractWorks(
       templateId: v.templateId,
       templateVersion: v.templateVersion,
       selectedWorks: v.selectedWorks || [],
+      workStages: v.workStages || [],
       works: titles.map(w=>w.name),
       taskIds,
     });
     return { created: titles.length };
   });
+}
+
+export async function contractStageWorks(event:H3Event,contractId:number){
+  const a=await uptsActor(event),c=await managedContract(prisma,a,contractId);
+  const tasks=await prisma.workTask.findMany({where:{uptsContractId:c.id,deletedAt:null},orderBy:{id:'asc'},select:{id:true,version:true,title:true,status:true,uptsWorkMeta:true}});
+  return {contractVersion:c.version,tasks};
 }

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { reactive, ref, computed, onMounted, watch, toRaw, nextTick } from "vue";
-import { WORK_STATUSES, workUserName, type WorkTaskDTO, type WorkUser } from '~~/shared/types/work';
+import { workUserName, type WorkTaskDTO, type WorkUser } from '~~/shared/types/work';
 import ObjectFields from './ObjectFields.vue';
-import WorkSetPreview from './WorkSetPreview.vue';
+import WorkStagesTable from './WorkStagesTable.vue';
 import { workKindsFor } from '~~/shared/utils/upts-work-kinds';
-import type { UptsObjectDetails } from '~~/shared/types/upts-object';
+import type { UptsObjectDetails, UptsTaskStageRow, UptsStageWork } from '~~/shared/types/upts-object';
 import Modal from "../work/Modal.vue";
 import type { UptsContractDTO, UptsProjectDTO } from "~~/shared/types/upts";
 import {
@@ -40,16 +40,29 @@ async function loadStaff(){
   finally{staffLoading.value=false;}
 }
 const tabs=[{key:'characteristics',label:'Характеристика объекта',icon:'lucide:map-pinned'},{key:'works',label:'Работы с объектом',icon:'lucide:list-checks'}] as const;
-const existingWorks=computed(()=>props.tasks?.filter(t=>t.uptsContractId===c?.id) || []);
+const existingWorks=ref<UptsTaskStageRow[]>([]), worksLoading=ref(!!c), worksError=ref('');
+const workStages=ref<Record<string,number|''>>({});
+const effectiveStageCount=computed(()=>Number.isInteger(stageCount.value) && Number(stageCount.value)>0 ? Number(stageCount.value) : 1);
+async function loadStageWorks(){
+ if(!c)return;worksLoading.value=true;worksError.value='';
+ try{
+  const data=await $fetch<{contractVersion:number;tasks:UptsTaskStageRow[]}>(`/api/upts/contracts/${c.id}/works`);
+  if(data.contractVersion!==c.version)throw new Error('Объект изменился. Закройте карточку и откройте её заново.');
+  existingWorks.value=data.tasks;
+  workStages.value=Object.fromEntries(data.tasks.map(t=>['task:'+t.id,t.uptsWorkMeta?.stageNumber ?? 1]));
+ }catch(e){worksError.value=e instanceof Error && e.message.startsWith('Объект изменился.')?e.message:'Не удалось загрузить работы объекта. Повторите загрузку перед сохранением.';}
+ finally{worksLoading.value=false;}
+}
+
 async function tabKey(event:KeyboardEvent,index:number){
   const next=event.key==='Home'?0:event.key==='End'?1:['ArrowRight','ArrowLeft'].includes(event.key)?1-index:null;
   if(next===null)return;event.preventDefault();const list=(event.currentTarget as HTMLElement).parentElement;activeTab.value=tabs[next]!.key;await nextTick();list?.querySelectorAll<HTMLButtonElement>('[role=tab]')[next]?.focus();
 }
 function revealInvalid(event:Event){
  const target=event.target as HTMLElement;
- if(target.closest('#upts-characteristics') && activeTab.value!=='characteristics'){
-  event.preventDefault();activeTab.value='characteristics';nextTick(()=>target.focus());
- }
+ const tab=target.closest('#upts-characteristics')?'characteristics':target.closest('#upts-object-works')?'works':null;
+ if(tab && activeTab.value!==tab){event.preventDefault();activeTab.value=tab;nextTick(()=>target.focus());}
+
 }
 const kinds = computed(()=>workKindsFor(form.contractType));
 const roads = computed(()=>[...new Set(props.projects.flatMap(p=>p.upts.contracts.map(c=>c.objectDetails?.road).filter((v):v is string=>!!v)))]);
@@ -84,6 +97,12 @@ const templates = computed(
 const template = computed(() =>
   templates.value.find((t) => t.id === templateId.value),
 );
+const manualNames=computed(()=>manual.value.split('\n').map(s=>s.trim()).filter(Boolean));
+const workRows=computed<UptsStageWork[]>(()=>c
+ ? existingWorks.value.map(t=>({key:'task:'+t.id,name:t.title,...t.uptsWorkMeta,status:t.status}))
+ : template.value ? template.value.items.map(i=>({key:'definition:'+i.work.id,...i.work}))
+ : manualNames.value.map((name,i)=>({key:'manual:'+i+':'+name,name})));
+let attempt:{source:string;key:string}|null=null;
 watch(
   () => form.contractType,
   () => {
@@ -107,19 +126,25 @@ async function load() {
 }
 onMounted(() => {
   loadStaff();
-  if (!c) load();
+  if (c) loadStageWorks(); else load();
 });
 async function save() {
   validationError.value='';
+  if(worksLoading.value || worksError.value)return;
   if(details.value.workStartDate && form.dueDate && details.value.workStartDate>form.dueDate){
     validationError.value='Дата окончания работ не может быть раньше даты начала.';return;
   }
   if(stageCount.value!=='' && (!Number.isInteger(stageCount.value) || stageCount.value<1 || stageCount.value>2147483647)){
     validationError.value='Количество этапов должно быть целым положительным числом.';return;
   }
+  const stageNumbers=workRows.value.map(w=>workStages.value[w.key] ?? 1);
+  if(stageNumbers.some(n=>typeof n!=='number' || !Number.isInteger(n) || n<1 || n>effectiveStageCount.value)){
+    validationError.value='Укажите каждой работе этап в пределах количества этапов объекта.';activeTab.value='works';return;
+  }
   const fields = {
     clientKey: form.clientKey,
     version: form.version,
+    ...(c?{taskStages:existingWorks.value.filter(t=>(workStages.value['task:'+t.id] ?? 1)!==(t.uptsWorkMeta?.stageNumber ?? 1)).map(t=>({id:t.id,version:t.version,stageNumber:workStages.value['task:'+t.id] ?? 1}))}:{}),
     number: form.number,
     name: c ? form.name : (details.value.sourceCadastralNumber?.trim() || form.number.trim()),
     counterparty: form.counterparty,
@@ -135,6 +160,8 @@ async function save() {
     signedDate: form.signedDate || null,
     dueDate: form.dueDate || null,
   };
+  const source=JSON.stringify({fields,templateId:templateId.value,manual:manualNames.value,stageNumbers});
+  if(!attempt || attempt.source!==source)attempt={source,key:crypto.randomUUID()};
   const result = await send<UptsContractDTO>(
     c
       ? `/api/upts/projects/${c.projectId}/contracts/${c.id}`
@@ -144,6 +171,8 @@ async function save() {
       ? fields
       : {
           ...fields,
+          clientKey:attempt.key,
+          workStages:stageNumbers,
           projectId: null,
           visibility: 'UPTS_DEPARTMENT',
           memberIds: [],
@@ -161,7 +190,7 @@ async function save() {
 }
 </script>
 <template>
-  <Modal :title="c ? 'Объект ' + (details.sourceCadastralNumber || c.number) : 'Новый объект'" @close="emit('close')">
+  <Modal full-height :title="c ? 'Объект ' + (details.sourceCadastralNumber || c.number) : 'Новый объект'" @close="emit('close')">
     <form class="work-form upts-object-form" @submit.prevent="save" @invalid.capture="revealInvalid">
       <fieldset class="upts-object-general" :disabled="saving" aria-label="Общая информация по объекту">
         <legend>Общая информация по объекту</legend>
@@ -190,22 +219,25 @@ async function save() {
             <p v-if="loading" role="status">Загружаем библиотеку…</p>
             <p v-if="libraryError" class="work-error" role="alert">{{ libraryError }} <button type="button" @click="load">Повторить</button></p>
             <label v-if="form.contractType!=='OTHER'">Шаблон работ<select v-model="templateId"><option :value="null">Без начального набора</option><option v-for="t in templates" :key="t.id" :value="t.id">{{ t.name }}</option></select></label>
-            <WorkSetPreview v-if="template" :works="template.items.map(i=>i.work)" />
+
             <label v-if="form.contractType==='OTHER'">Работы — одна строка на работу<textarea v-model="manual" rows="4" maxlength="12550" /></label>
             <p v-if="form.contractType!=='OTHER' && !details.workKindKey" class="work-muted">Выберите вид работ, чтобы увидеть его шаблоны.</p>
           </template>
           <template v-else>
-            <ul v-if="existingWorks.length" class="upts-existing-works"><li v-for="t in existingWorks" :key="t.id"><span>{{ t.title }}</span><small>{{ WORK_STATUSES[t.status as keyof typeof WORK_STATUSES] || t.status }}</small></li></ul>
-            <p v-else class="work-muted">Работ пока нет.</p>
+            <p v-if="worksLoading" role="status">Загружаем работы объекта…</p>
+            <p v-if="worksError" class="work-error" role="alert">{{ worksError }} <button type="button" @click="loadStageWorks">Повторить</button></p>
+            <p v-if="!worksLoading && !worksError && !existingWorks.length" class="work-muted">Работ пока нет.</p>
             <p class="work-muted">Изменение вида работ не заменяет существующие работы. Добавление доступно кнопкой «+ Работа» в карточке объекта.</p>
           </template>
+          <WorkStagesTable v-if="workRows.length" v-model="workStages" :works="workRows" :stage-count="effectiveStageCount" />
         </div>
       </fieldset>
-      <div class="work-actions upts-object-form-actions"><button class="work-primary" :disabled="saving || loading || (!c && !!libraryError)">{{ saving?'Сохранение…':'Сохранить' }}</button><button type="button" @click="emit('close')">Отмена</button></div>
+      <div class="work-actions upts-object-form-actions"><button class="work-primary" :disabled="saving || loading || worksLoading || !!worksError || (!c && !!libraryError)">{{ saving?'Сохранение…':'Сохранить' }}</button><button type="button" @click="emit('close')">Отмена</button></div>
     </form>
   </Modal>
 </template>
 <style scoped>
+.upts-object-form{min-height:100%;display:flex;flex-direction:column}.upts-object-form .upts-object-form-actions{margin-top:auto}
 .upts-object-form .upts-object-general{border:1px solid var(--work-line);border-radius:8px;padding:12px;margin:0 0 16px;min-width:0;background:var(--work-panel)}.upts-object-general legend{padding:0 6px;font-size:13px;font-weight:600;color:var(--work-text)}.upts-object-general-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.upts-object-general-grid label{min-width:0;font-size:12px;color:var(--work-muted)}.upts-object-general-grid :is(input,select){min-width:0;width:100%;color:var(--work-text)}.upts-object-general p{margin:8px 0 0}
 @media(max-width:600px){.upts-object-general-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:400px){.upts-object-general-grid{grid-template-columns:1fr}}

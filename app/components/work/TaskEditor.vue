@@ -54,6 +54,7 @@ defineExpose({useProject:(p:WorkProjectDTO)=>{relationship.value='PROJECT';form.
    <label v-if="contractOptions.length && (!isUpts || !form.uptsContractId)">Объект<select v-model="form.uptsContractId"><option :value="null">Без привязки к объекту</option><option v-for="c in contractOptions" :key="c.id" :value="c.id">{{ c.number }} · {{ c.name }}</option></select></label>
    <label v-if="!isUpts && objectOptions.length">Связанный участок<select v-model="form.uptsObjectId"><option :value="null">Общая задача проекта</option><option v-for="o in objectOptions" :key="o.id" :value="o.id">{{ o.object.name }}</option></select></label>
    <dl v-if="task?.uptsWorkMeta" class="upts-work-reference">
+    <template v-if="task.uptsWorkMeta.stageNumber"><dt>Этап работ</dt><dd>{{ task.uptsWorkMeta.stageNumber }}</dd></template>
     <template v-if="task.uptsWorkMeta.workKindKey"><dt>Вид работ</dt><dd>{{ workKindName(task.uptsWorkMeta.workKindKey) }}</dd></template>
     <dt>Ответственная роль</dt><dd>{{ task.uptsWorkMeta.responsibleRole ? UPTS_WORK_ROLES[task.uptsWorkMeta.responsibleRole] : 'Не указана' }}</dd>
     <dt>Ожидаемый результат</dt><dd>{{ task.uptsWorkMeta.expectedResult || 'Не указан' }}</dd>

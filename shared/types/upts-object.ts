@@ -21,8 +21,20 @@ export type UptsObjectDetails = {
   otherDescription?: string;
 };
 export type UptsWorkMeta = {
+  stageNumber?: number;
   definitionId?: number;
   workKindKey?: string | null;
   responsibleRole?: 'CURATOR' | 'ENGINEER' | null;
   expectedResult?: string;
+};
+export type UptsStageWork = {
+  key: string;
+  name: string;
+  responsibleRole?: 'CURATOR' | 'ENGINEER' | null;
+  expectedResult?: string;
+  status?: string;
+};
+export type UptsTaskStageRow = {
+  id: number; version: number; title: string; status: string;
+  uptsWorkMeta: UptsWorkMeta | null;
 };

@@ -134,6 +134,7 @@ export async function uptsWorkbook(
       'Вид работ',
       'Ответственная роль',
       'Ожидаемый результат',
+      'Этап работ',
     ],
     data.tasks.map((t) => {
       const p = data.projects.find((p) => p.id === t.projectId),
@@ -154,6 +155,7 @@ export async function uptsWorkbook(
         workKindName(t.uptsWorkMeta?.workKindKey),
         t.uptsWorkMeta?.responsibleRole ? UPTS_WORK_ROLES[t.uptsWorkMeta.responsibleRole] : "",
         t.uptsWorkMeta?.expectedResult || "",
+        t.uptsContractId ? (t.uptsWorkMeta?.stageNumber ?? 1) : "",
       ];
     }),
   );

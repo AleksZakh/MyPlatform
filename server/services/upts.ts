@@ -1,3 +1,4 @@
+import {taskStagesSchema,saveTaskStages} from './upts-work-stages';
 import { objectDetailsSchema, checkObjectKind, checkObjectPeople, checkObjectSchedule } from './upts-object-input';
 import type { UptsObjectDetails } from '../../shared/types/upts-object';
 import { uptsContractColor } from '../../shared/utils/upts-color';
@@ -67,6 +68,7 @@ const contractInput = z
     name: z.string().trim().min(1).max(250),
     contractType: contractTypeSchema.nullable().optional(),
     objectDetails:objectDetailsSchema.optional(),
+    taskStages:taskStagesSchema,
     counterparty: z.string().trim().max(250),
     signedDate: uptsDay,
     dueDate: uptsDay,
@@ -305,6 +307,8 @@ export async function saveContract(
       if (old) version(old.version, v.version);
       checkObjectSchedule(v.objectDetails ?? old?.objectDetails as UptsObjectDetails,v.dueDate);
       checkObjectKind(v.contractType === undefined ? old?.contractType || null : v.contractType,v.objectDetails ?? old?.objectDetails as UptsObjectDetails);
+      if(old)await saveTaskStages(tx,event,a,old.id,v.objectDetails ?? old.objectDetails as UptsObjectDetails,v.taskStages);
+      else if(v.taskStages?.length)fail(400,'У нового объекта нет сохранённых работ.');
       const data = {
         ...(v.objectDetails!==undefined?{objectDetails:v.objectDetails}:{}),
         ...(v.contractType !== undefined ? { contractType: v.contractType } : {}),

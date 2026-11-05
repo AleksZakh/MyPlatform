@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { workKindsFor } from '~~/shared/utils/upts-work-kinds';
-import WorkSetPreview from './WorkSetPreview.vue';
+import WorkStagesTable from './WorkStagesTable.vue';
+import type {UptsStageWork} from '~~/shared/types/upts-object';
 import Modal from '../work/Modal.vue';
 import type { UptsContractDTO } from '~~/shared/types/upts';
 import { UPTS_CONTRACT_TYPES, type UptsLibrary } from '~~/shared/types/upts-library';
@@ -21,6 +22,12 @@ const templates = computed(() => lib.value?.templates.filter(t => (!workKindKey.
 const chosen = computed(() => templates.value.find(t => t.id === templateId.value));
 const count = computed(() => mode.value === 'library' ? selected.value.length : mode.value === 'template' ? chosen.value?.items.length || 0 : manual.value.trim() ? 1 : 0);
 const canApply = computed(() => !!props.contract.contractType && !saving.value && !loading.value && !loadError.value && count.value > 0 && count.value <= 50);
+const stageCount=computed(()=>props.contract.objectDetails?.stageCount ?? 1);
+const workStages=ref<Record<string,number|''>>({});
+const workRows=computed<UptsStageWork[]>(()=>mode.value==='manual'
+ ? (manual.value.trim()?[{key:'manual',name:manual.value.trim()}]:[])
+ : (mode.value==='template'?chosen.value?.items.map(i=>i.work) || []:selected.value).map(w=>({key:'definition:'+w.id,...w})));
+const stagesValid=computed(()=>workRows.value.every(w=>{const n=workStages.value[w.key] ?? 1;return typeof n==='number' && Number.isInteger(n) && n>=1 && n<=stageCount.value;}));
 let attempt: { source: string; key: string } | null = null;
 async function load() {
   loading.value = true; loadError.value = '';
@@ -34,9 +41,10 @@ async function load() {
 watch(workKindKey,()=>{templateId.value=templates.value[0]?.id ?? null;});
 onMounted(load);
 async function apply() {
-  if (!canApply.value) return;
+  if (!canApply.value || !stagesValid.value) return;
   const body = {
     contractVersion: props.contract.version,
+    workStages:workRows.value.map(w=>workStages.value[w.key] ?? 1),
     workKindKey:workKindKey.value,
     templateId: mode.value === 'template' ? templateId.value : null,
     templateVersion: mode.value === 'template' ? chosen.value?.version ?? null : null,
@@ -78,22 +86,23 @@ async function apply() {
           <div v-if="selected.length">
             <strong>Выбрано: {{ selected.length }}</strong>
             <ul class="upts-work-selected"><li v-for="w in selected" :key="w.id">{{ w.name }} <button type="button" :aria-label="'Убрать из выбора: ' + w.name" @click="selectedIds = selectedIds.filter(id => id !== w.id)">×</button></li></ul>
-            <WorkSetPreview :works="selected" />
+
           </div>
         </template>
         <template v-else-if="mode === 'template'">
           <label>Шаблон<select v-model="templateId"><option :value="null">Выберите шаблон</option><option v-for="t in templates" :key="t.id" :value="t.id">{{ t.name }}</option></select></label>
-          <WorkSetPreview v-if="chosen" :works="chosen.items.map(i=>i.work)" />
+
           <p v-if="!templates.length" class="work-muted">Для этого типа объекта нет активных шаблонов.</p>
         </template>
         <template v-else>
           <label>Название работы<input v-model="manual" required maxlength="250" placeholder="Введите название отдельной работы" /></label>
           <p class="work-muted">Работа будет добавлена только в этот объект. Библиотека и шаблоны не изменятся.</p>
         </template>
+        <WorkStagesTable v-if="workRows.length" v-model="workStages" :works="workRows" :stage-count="stageCount" />
         <p class="work-muted">Будут созданы новые работы без исполнителей и сроков. Существующие работы сохранятся. Повторное добавление из нового окна создаст новые записи.</p>
       </fieldset>
       <div class="work-actions">
-        <button class="work-primary" :disabled="!canApply">{{ saving ? 'Добавление…' : count === 1 ? 'Добавить работу' : count ? `Добавить работы (${count})` : 'Добавить работы' }}</button>
+        <button class="work-primary" :disabled="!canApply || !stagesValid">{{ saving ? 'Добавление…' : count === 1 ? 'Добавить работу' : count ? `Добавить работы (${count})` : 'Добавить работы' }}</button>
         <button type="button" @click="emit('close')">Отмена</button>
       </div>
     </form>
