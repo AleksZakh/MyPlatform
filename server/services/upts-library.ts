@@ -312,8 +312,23 @@ async function titlesFor(
     templateId: number | null;
     templateVersion: number | null;
     manualWorks: string[];
+    selectedWorks?: { id: number; version: number }[];
   },
+  allowManual = false,
 ) {
+  const selected = v.selectedWorks || [];
+  if (Number(!!v.templateId) + Number(!!v.manualWorks.length) + Number(!!selected.length) > 1)
+    fail(400, "Выберите один способ добавления: библиотека, шаблон или ручной ввод.");
+  if (selected.length) {
+    const rows = await tx.uptsWorkDefinition.findMany({where:{id:{in:selected.map(w=>w.id)}}});
+    return selected.map(item=>{
+      const work=rows.find(w=>w.id===item.id);
+      if(!work || !work.active || work.contractType!==type)
+        fail(400,'Работа недоступна или не соответствует типу договора. Обновите библиотеку.');
+      version(work.version,item.version);
+      return work.name;
+    });
+  }
   if (v.templateId) {
     if (v.manualWorks.length)
       fail(400, "Выберите шаблон или ручной состав работ.");
@@ -331,11 +346,12 @@ async function titlesFor(
     version(t.version, v.templateVersion ?? undefined);
     return t.items.map((i) => i.work.name);
   }
-  if (v.manualWorks.length && type !== "OTHER")
+  if (v.manualWorks.length && type !== "OTHER" && !allowManual)
     fail(
       400,
       "Ручной состав предназначен для типа «Иное». Для других типов выберите шаблон.",
     );
+  if (v.manualWorks.length && !type) fail(400,"Сначала укажите тип договора в карточке.");
   return v.manualWorks;
 }
 async function managedContract(tx: DB, a: Actor, contractId: number) {
@@ -486,7 +502,10 @@ export async function createContract(event: H3Event, raw: unknown) {
 }
 // A stable key is persisted with the operation; retries cannot duplicate a whole set.
 const applyInput = z
-  .object({ clientKey: z.string().uuid(), contractVersion: id, ...selection })
+  .object({ clientKey: z.string().uuid(), contractVersion: id, ...selection,
+    selectedWorks: z.array(z.object({id,version:id}).strict()).max(50)
+      .refine(items=>new Set(items.map(w=>w.id)).size===items.length,'Работы не должны повторяться.').optional(),
+  })
   .strict();
 export async function applyContractWorks(
   event: H3Event,
@@ -505,6 +524,8 @@ export async function applyContractWorks(
       templateId: v.templateId,
       templateVersion: v.templateVersion,
       manualWorks: v.manualWorks,
+      // Preserve fingerprints of template/manual requests created before this update.
+      ...(v.selectedWorks?.length ? {selectedWorks:v.selectedWorks} : {}),
     });
     if (prior) {
       if (
@@ -516,11 +537,11 @@ export async function applyContractWorks(
       return { created: prior.count };
     }
     version(c.version, v.contractVersion);
-    const titles = await titlesFor(tx, c.contractType, v);
+    const titles = await titlesFor(tx, c.contractType, v, true);
     if (!titles.length)
       fail(
         400,
-        "Выберите непустой шаблон или заполните работы для типа «Иное».",
+        "Выберите работу из библиотеки, непустой шаблон или введите название работы.",
       );
     const taskIds = await addWorks(tx, event, a, c, titles);
     await tx.uptsWorkApplication.create({
@@ -540,6 +561,7 @@ export async function applyContractWorks(
       contractId,
       templateId: v.templateId,
       templateVersion: v.templateVersion,
+      selectedWorks: v.selectedWorks || [],
       works: titles,
       taskIds,
     });
