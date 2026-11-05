@@ -16,7 +16,7 @@ export const taskInput = z.object({ ...base, clientKey: z.string().uuid(), versi
 export const taskMove = z.object({ version: id, status: base.status.optional(), plannedDate: day.optional() }).strict()
  .refine(v => v.status !== undefined || v.plannedDate !== undefined);
 export const projectInput = z.object({ upts:uptsMetaInput.optional(), clientKey: z.string().uuid(), version: id.optional(), name: z.string().trim().min(1).max(200),
- description: z.string().trim().max(20000), color: z.string().regex(/^#[0-9a-fA-F]{6}$/), scope: z.enum(['PRIVATE','TEAM','DEPARTMENT','GROUP']),
+ description: z.string().trim().max(20000), color: z.string().regex(/^#[0-9a-fA-F]{6}$/), scope: z.enum(['PRIVATE','TEAM','DEPARTMENT','GROUP','UPTS_DEPARTMENT','UPTS_ALL']),
  departmentId: id.nullable(), groupId: id.nullable().optional(), startDate: day, dueDate: day }).strict()
  .refine(v => !v.startDate || !v.dueDate || v.startDate <= v.dueDate, 'Начало позже срока завершения');
 export const memberInput = z.object({ version: id, userId: id, role: z.enum(['MANAGER','CURATOR','MEMBER','OBSERVER']) }).strict();

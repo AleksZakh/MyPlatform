@@ -40,3 +40,6 @@ html[data-space-text="large"] .work-root{font-size:1rem}html[data-space-text="la
 .dark .work-root .work-calendar-task{background:color-mix(in srgb,var(--project-color) 25%,#e2e8f0 75%);color:#111827}.dark .work-root .work-calendar-task small{color:#263448}.dark .work-root .work-calendar-task:hover{background:color-mix(in srgb,var(--project-color) 35%,#e2e8f0 65%)}
 @media(max-width:1350px){.work-page-head--centered{grid-template-columns:minmax(0,1fr) auto}.work-page-head--centered .work-tabs{grid-column:1/-1;grid-row:2}.work-header-actions{grid-column:2;grid-row:1}}
 @media(max-width:700px){.work-page-head--centered{grid-template-columns:minmax(0,1fr)}.work-header-actions{grid-column:1;grid-row:3;justify-content:flex-start}.work-page-head--centered .work-tabs{justify-self:stretch;justify-content:center}.work-search{max-width:none;min-width:0;flex-basis:100%}.work-page-head--centered .work-tabs button{padding:9px 10px}}
+
+.work-card--contract {background:color-mix(in srgb,var(--project-color) 10%,var(--work-panel))}
+.work-root .work-card--contract .work-card-title {background:transparent}

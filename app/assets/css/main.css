@@ -14,3 +14,5 @@
 
 /* Portal-wide diagnostic palette; also reconciles legacy module themes. */
 @import './portal-dark.css';
+
+@import './modal-surfaces.css';

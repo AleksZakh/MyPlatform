@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uptsContractColor } from '~~/shared/utils/upts-color';
+import { workTaskColor, workTaskContext } from '~~/shared/types/work';
 import { useUptsWorkspace } from '~/composables/useUptsWorkspace';
 import {
   UPTS_TYPES,
@@ -188,7 +190,7 @@ const {
       </p>
       <template v-if="!loading && !error && context">
         <div v-if="project && section!=='library'" class="upts-project-strip">
-          <strong v-if="contract">Договор {{ contract.number }} · {{ contract.name }}</strong>
+          <strong v-if="contract" class="upts-contract-heading" :style="{'--contract-color':contract.color || uptsContractColor(contract.id)}">Договор {{ contract.number }} · {{ contract.name }}</strong>
           <span v-if="project.upts.isDemo" class="upts-badge amber"
             >Демонстрационные данные</span
           >
@@ -308,7 +310,7 @@ const {
               </section>
               <section v-else class="upts-panel">
                 <div class="upts-panel-head"><h2>Реестр договоров</h2><button @click="section='contracts'">Все договоры →</button></div>
-                <div v-if="contractRows.length" class="upts-portfolio"><button v-for="c in contractRows.slice(0,6)" :key="c.id" class="upts-portfolio-row" @click="openContract(c)"><span class="upts-project-symbol" style="background:#2563eb"><Icon name="lucide:files" /></span><span><strong>{{ c.number }} · {{ c.name }}</strong><small>{{ c.contractType?UPTS_CONTRACT_TYPES[c.contractType]:'Тип не указан' }}</small><small>{{ workUserName(c.project.owner) }}</small></span><span>{{ formatWorkDate(c.dueDate)||'Без срока' }}</span><span class="upts-mini-progress"><b>{{ contractStats(c).done }}/{{ contractStats(c).total }}</b><progress :value="contractStats(c).percent" max="100" /></span></button></div>
+                <div v-if="contractRows.length" class="upts-portfolio"><button v-for="c in contractRows.slice(0,6)" :key="c.id" class="upts-portfolio-row" @click="openContract(c)"><span class="upts-project-symbol" :style="{background:c.color || uptsContractColor(c.id)}"><Icon name="lucide:files" /></span><span><strong>{{ c.number }} · {{ c.name }}</strong><small>{{ c.contractType?UPTS_CONTRACT_TYPES[c.contractType]:'Тип не указан' }}</small><small>{{ workUserName(c.project.owner) }}</small></span><span>{{ formatWorkDate(c.dueDate)||'Без срока' }}</span><span class="upts-mini-progress"><b>{{ contractStats(c).done }}/{{ contractStats(c).total }}</b><progress :value="contractStats(c).percent" max="100" /></span></button></div>
                 <p v-else class="work-empty">Договоров в выбранном срезе нет. Создайте договор кнопкой «+ Договор».</p>
                 <p class="work-muted">Показатели договоров рассчитаны только по привязанным задачам. Старые задачи без привязки доступны во вкладке «Задачи» при выборе всех договоров.</p>
               </section>
@@ -395,7 +397,7 @@ const {
                   @click="editTask(t)"
                 >
                   <strong>{{ t.title }}</strong
-                  ><small>{{ allContracts.find(c=>c.id===t.uptsContractId)?.number || 'Без привязки к договору' }} · {{ t.project?.name }}</small>
+                  ><small>{{ workTaskContext(t) }}</small>
                   <p>{{ t.blockedReason || 'Истёк крайний срок' }}</p>
                   <span
                     >{{ workUserName(t.assignee) }} ·
@@ -541,11 +543,11 @@ const {
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="t in tasks" :key="t.id">
+                <tr v-for="t in tasks" :key="t.id" class="upts-colored-row" :style="{'--contract-color':workTaskColor(t)}">
                   <td>
                     <button class="upts-link" @click="editTask(t)">
                       {{ t.title }}</button
-                    ><small>{{ allContracts.find(c=>c.id===t.uptsContractId)?.number || 'Без привязки к договору' }} · {{ t.project?.name }}</small>
+                    ><small>{{ workTaskContext(t) }}</small>
                   </td>
                   <td>
                     {{
@@ -707,7 +709,7 @@ const {
         </section>
         <section v-else-if="section === 'contracts'" class="upts-panel">
           <div class="upts-section-head"><h2>Договоры</h2><button class="work-primary" @click="editContract()">+ Договор</button></div>
-          <div class="work-table-wrap"><table><thead><tr><th>Номер / наименование</th><th>Тип договора</th><th>Ответственный</th><th>Срок</th><th>Работы</th><th>Документы</th></tr></thead><tbody><tr v-for="c in contractRows" :key="c.id"><td><button class="upts-link" @click="openContract(c)">{{ c.number }} · {{ c.name }}</button></td><td>{{ c.contractType?UPTS_CONTRACT_TYPES[c.contractType]:'Не указан' }}</td><td>{{ workUserName(c.project.owner) }}</td><td>{{ formatWorkDate(c.dueDate)||'—' }}</td><td>{{ contractStats(c).done }}/{{ contractStats(c).total }} выполнено</td><td><button @click="showFiles(c.project,c.id)"><Icon name="lucide:folder-open" />Папка</button></td></tr></tbody></table><p v-if="!contractRows.length" class="work-empty">Договоров пока нет.</p></div>
+          <div class="work-table-wrap"><table><thead><tr><th>Номер / наименование</th><th>Тип договора</th><th>Ответственный</th><th>Срок</th><th>Работы</th><th>Документы</th></tr></thead><tbody><tr v-for="c in contractRows" :key="c.id" class="upts-colored-row" :style="{'--contract-color':c.color || uptsContractColor(c.id)}"><td><button class="upts-link" @click="openContract(c)">{{ c.number }} · {{ c.name }}</button></td><td>{{ c.contractType?UPTS_CONTRACT_TYPES[c.contractType]:'Не указан' }}</td><td>{{ workUserName(c.project.owner) }}</td><td>{{ formatWorkDate(c.dueDate)||'—' }}</td><td>{{ contractStats(c).done }}/{{ contractStats(c).total }} выполнено</td><td><button @click="showFiles(c.project,c.id)"><Icon name="lucide:folder-open" />Папка</button></td></tr></tbody></table><p v-if="!contractRows.length" class="work-empty">Договоров пока нет.</p></div>
         </section>
         <section v-else-if="section === 'files' && project" class="upts-panel">
           <div class="upts-section-head">

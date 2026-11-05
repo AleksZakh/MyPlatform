@@ -1,3 +1,4 @@
+import { uptsContractColor } from '../utils/upts-color';
 export const WORK_STATUSES = { TODO: 'Запланировано', IN_PROGRESS: 'В работе', REVIEW: 'На проверке', DONE: 'Готово' } as const;
 export const WORK_KINDS = { TASK: 'Задача', BUG: 'Ошибка', IMPROVEMENT: 'Улучшение', RESEARCH: 'Исследование', MILESTONE: 'Этап / веха' } as const;
 export const WORK_PRIORITIES = { LOW: 'Низкий', NORMAL: 'Обычный', HIGH: 'Высокий', URGENT: 'Срочный' } as const;
@@ -15,6 +16,7 @@ export type WorkProjectDTO = {
 export type WorkTaskDTO = {
  uptsObjectId?: number | null;
  uptsContractId?: number | null;
+ uptsContract?: { id:number; number:string; name:string; color:string|null } | null;
  id: number; title: string; description: string; kind: string; status: string; priority: string; visibility: string;
  creatorId: number; assigneeId: number | null; departmentId: number | null; projectId: number | null;
  plannedDate: string | null; startDate: string | null; dueDate: string | null; blockedReason: string; version: number;
@@ -24,3 +26,7 @@ export type WorkTaskDTO = {
 };
 export type WorkContext = { userId: number; department: WorkDepartment | null; departments: WorkDepartment[]; groups: {id:number;name:string}[]; canCreateShared: boolean; canAssign: boolean; isSystemAdmin: boolean };
 export const workUserName = (u: WorkUser | null | undefined) => u?.fullName || u?.login || (u ? `Сотрудник №${u.id}` : 'Без исполнителя');
+
+export const workTaskColor = (t: WorkTaskDTO) => t.uptsContract ? (t.uptsContract.color || uptsContractColor(t.uptsContract.id)) : t.uptsContractId ? uptsContractColor(t.uptsContractId) : t.project?.color || '#64748b';
+export const workTaskContext = (t: WorkTaskDTO) => t.uptsContract ? `${t.uptsContract.number} · ${t.uptsContract.name}` : t.project?.name || (t.visibility === 'PRIVATE' ? 'Личная задача' : 'Самостоятельная задача');
+export const UPTS_VISIBILITY = { PRIVATE: 'Только мне', TEAM: 'Группе сотрудников', UPTS_DEPARTMENT: 'Всем сотрудникам управления', UPTS_ALL: 'Всем' } as const;

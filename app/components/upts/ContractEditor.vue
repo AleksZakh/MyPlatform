@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { reactive, ref, computed, onMounted, watch } from "vue";
+import { UPTS_VISIBILITY, workUserName, type WorkUser } from '~~/shared/types/work';
 import Modal from "../work/Modal.vue";
 import type { UptsContractDTO, UptsProjectDTO } from "~~/shared/types/upts";
 import {
@@ -29,7 +30,13 @@ const form = reactive({
   dueDate: dateKey(c?.dueDate) || "",
   contractType: (c?.contractType || (c ? "" : "LAND")) as UptsContractType | "",
   projectId: c?.projectId ?? null,
+  visibility: "UPTS_DEPARTMENT" as keyof typeof UPTS_VISIBILITY,
+  memberIds: [] as number[],
 });
+const staff=ref<WorkUser[]>([]), staffLoading=ref(false), staffError=ref(''), staffQuery=ref('');
+const visibleStaff=computed(()=>staff.value.filter(u=>(workUserName(u)+' '+(u.login||'')).toLocaleLowerCase('ru-RU').includes(staffQuery.value.toLocaleLowerCase('ru-RU'))));
+async function loadStaff(){staffLoading.value=true;staffError.value='';try{staff.value=await $fetch<WorkUser[]>('/api/upts/people');}catch{staffError.value='Не удалось загрузить состав УПТС. Повторите загрузку.';}finally{staffLoading.value=false;}}
+watch(()=>form.visibility,v=>{if(v==='TEAM')loadStaff();else form.memberIds=[];});
 const templateId = ref<number | null>(null),
   manual = ref("");
 const templates = computed(
@@ -86,7 +93,9 @@ async function save() {
       ? fields
       : {
           ...fields,
-          projectId: form.projectId,
+          projectId: null,
+          visibility: form.visibility,
+          memberIds: form.visibility==='TEAM'?form.memberIds:[],
           templateId: templateId.value,
           templateVersion: template.value?.version ?? null,
           manualWorks: templateId.value
@@ -134,25 +143,21 @@ async function save() {
           ><label>Срок<input v-model="form.dueDate" type="date" /></label>
         </div>
         <template v-if="!c">
-          <label
-            >Рабочая область<select v-model="form.projectId">
-              <option :value="null">Создать отдельную область договора</option>
-              <option
-                v-for="p in projects.filter(
-                  (p) => p.canManage && !p.archivedAt,
-                )"
-                :key="p.id"
-                :value="p.id"
-              >
-                {{ p.name }}
-              </option>
-            </select></label
-          >
+          <label>Настройка видимости<select v-model="form.visibility">
+            <option v-for="(label,key) in UPTS_VISIBILITY" :key="key" :value="key">{{ label }}</option>
+          </select></label>
+          <template v-if="form.visibility==='TEAM'">
+            <label>Найти сотрудника<input v-model="staffQuery" type="search" placeholder="Имя или логин" /></label>
+            <p v-if="staffLoading" role="status">Загружаем сотрудников…</p>
+            <p v-if="staffError" class="work-error" role="alert">{{ staffError }} <button type="button" @click="loadStaff">Повторить</button></p>
+            <div class="upts-member-choices" role="group" aria-label="Сотрудники, которым виден договор">
+              <label v-for="u in visibleStaff" :key="u.id" class="work-check"><input v-model="form.memberIds" type="checkbox" :value="u.id" />{{ workUserName(u) }}</label>
+            </div>
+            <small>Выбрано: {{ form.memberIds.length }}</small>
+          </template>
           <p class="work-muted">
-            Новая область сначала доступна только вам. Добавьте сотрудников и
-            настройте доступ через «Команда» и «Настройки доступа». При выборе
-            существующей области используются её права. Папка договора создаётся
-            автоматически.
+            {{ form.visibility==='PRIVATE' ? 'Договор и работы видны только вам.' : form.visibility==='TEAM' ? 'Доступ получат вы и выбранные сотрудники.' : form.visibility==='UPTS_DEPARTMENT' ? 'Договор видят активные сотрудники подразделения и групп УПТС. Права редактирования задаются командой договора.' : 'Договор видят все пользователи, допущенные к УПТС, включая администраторов. Доступ другим отделам не открывается.' }}
+            Папка договора создаётся автоматически.
           </p>
           <p v-if="loading" role="status">Загружаем библиотеку…</p>
           <p v-if="libraryError" role="alert">
@@ -198,7 +203,7 @@ async function save() {
       <div class="work-actions">
         <button
           class="work-primary"
-          :disabled="saving || loading || (!c && !!libraryError)"
+          :disabled="saving || loading || (!c && (!!libraryError || (form.visibility==='TEAM' && (staffLoading || !!staffError || !form.memberIds.length))))"
         >
           Сохранить</button
         ><button type="button" @click="emit('close')">Отмена</button>
@@ -206,3 +211,7 @@ async function save() {
     </form></Modal
   >
 </template>
+
+<style scoped>
+.upts-member-choices{max-height:200px;overflow:auto;border:1px solid var(--work-line);border-radius:7px;padding:8px}.upts-member-choices label{display:flex;flex-direction:row;gap:8px;align-items:center;padding:5px}
+</style>

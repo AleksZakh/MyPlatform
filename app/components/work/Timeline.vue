@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { workTaskColor, workTaskContext } from '~~/shared/types/work';
 import { computed } from 'vue';
 import { compareWorkTasks } from '~~/shared/utils/work-order';
 import type { WorkTaskDTO } from '~~/shared/types/work';
@@ -6,7 +7,7 @@ import { formatWorkDate,dateKey,shiftDay } from '~~/shared/utils/work-board';
 const props=defineProps<{tasks:WorkTaskDTO[];today:string}>();const emit=defineEmits<{open:[WorkTaskDTO]}>();
 const scheduled=computed(()=>props.tasks.filter(t=>t.startDate||t.dueDate).sort((a,b)=>compareWorkTasks(a,b,'timeline')));
 const bounds=computed(()=>{const dates=scheduled.value.flatMap(t=>[dateKey(t.startDate),dateKey(t.dueDate)]).filter(Boolean).sort() as string[];const start=dates[0]||props.today;return {start,end:dates.at(-1)===start?shiftDay(start,1):dates.at(-1)||shiftDay(start,7)};});
-function style(t:WorkTaskDTO){const min=Date.parse(bounds.value.start),max=Date.parse(bounds.value.end);const start=Date.parse(dateKey(t.startDate)||dateKey(t.dueDate)!);const end=Date.parse(dateKey(t.dueDate)||dateKey(t.startDate)!);return {left:100*(start-min)/(max-min)+'%',width:Math.max(1,100*(end-start)/(max-min))+'%',background:t.project?.color||'#2563eb'};}
+function style(t:WorkTaskDTO){const min=Date.parse(bounds.value.start),max=Date.parse(bounds.value.end);const start=Date.parse(dateKey(t.startDate)||dateKey(t.dueDate)!);const end=Date.parse(dateKey(t.dueDate)||dateKey(t.startDate)!);return {left:100*(start-min)/(max-min)+'%',width:Math.max(1,100*(end-start)/(max-min))+'%',background:workTaskColor(t)};}
 </script>
 <template><div class="work-timeline">
  <p class="work-muted">Календарный план: задачи расположены по дате начала, а если она не задана — по сроку завершения. Задачи без этих дат доступны на доске. Автоматический расчёт зависимостей появится позже.</p>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import TaskSurface from './TaskSurface.vue';import PersonPicker from './PersonPicker.vue';
-import { WORK_STATUSES,WORK_KINDS,WORK_PRIORITIES,workUserName,type WorkTaskDTO,type WorkProjectDTO,type WorkContext,type WorkUser } from '~~/shared/types/work';
+import { workTaskContext,workTaskColor,WORK_STATUSES,WORK_KINDS,WORK_PRIORITIES,workUserName,type WorkTaskDTO,type WorkProjectDTO,type WorkContext,type WorkUser } from '~~/shared/types/work';
 import { dateKey } from '~~/shared/utils/work-board';
 const props=defineProps<{task:WorkTaskDTO|null;projects:WorkProjectDTO[];project?:WorkProjectDTO|null;context:WorkContext;uptsContractId?:number|null}>();
 const contractOptions=ref<{id:number;number:string;name:string}[]>([]);
@@ -14,7 +14,17 @@ const form=reactive({uptsContractId:task?.uptsContractId??props.uptsContractId??
 const relationship=ref(form.projectId?'PROJECT':'STANDALONE');const participant=ref<number|null>(null);
 const readOnly=computed(()=>!!task&&!task.canEditDetails);const canProgress=computed(()=>!!task?.canEdit&&!task.canEditDetails);
 const selectedProject=computed(()=>props.projects.find(p=>p.id===form.projectId)|| (props.project?.id===form.projectId?props.project:null));
-const assignable=computed(()=>selectedProject.value ? [selectedProject.value.owner,...selectedProject.value.members.filter(m=>['MANAGER','MEMBER'].includes(m.role)).map(m=>m.user)] : undefined);
+const isUpts=computed(()=>!!form.uptsContractId || !!(selectedProject.value as any)?.upts || contractOptions.value.length>0);
+const selectedContract=computed(()=>contractOptions.value.find(c=>c.id===form.uptsContractId));
+const subtitle=computed(()=>selectedContract.value ? `${selectedContract.value.number} · ${selectedContract.value.name}` : task ? workTaskContext(task) : selectedProject.value?.name);
+const staff=ref<WorkUser[]>([]),staffError=ref(''),staffLoading=ref(false);
+async function loadStaff(){staffLoading.value=true;staffError.value='';try{staff.value=await $fetch<WorkUser[]>('/api/upts/people');}catch{staffError.value='Не удалось загрузить полный состав УПТС. Проверьте соединение с AD и повторите.';}finally{staffLoading.value=false;}}
+watch(isUpts,yes=>{if(yes)loadStaff();},{immediate:true});
+const assignable=computed(()=>{
+ const p=selectedProject.value;if(!p)return undefined;
+ const team=[p.owner,...p.members.filter(m=>['MANAGER','MEMBER'].includes(m.role)).map(m=>m.user)];
+ return [...new Map([...(isUpts.value&&p.canManage?staff.value:[]),...team].map(u=>[u.id,u])).values()].sort((a,b)=>workUserName(a).localeCompare(workUserName(b),'ru'));
+});
 watch(()=>form.visibility,v=>{if(v==='PRIVATE'){form.assigneeId=own;form.participantIds=[];form.departmentId=null;}else if(v==='DEPARTMENT'){form.departmentId=props.context.department?.id||null;form.participantIds=[];}else form.departmentId=null;});
 watch(relationship,v=>{if(v==='STANDALONE'){form.projectId=null;form.visibility='PRIVATE';}else{form.visibility='PROJECT';form.departmentId=null;form.participantIds=[];}});
 watch(()=>form.projectId,v=>{if(v){form.visibility='PROJECT';form.departmentId=null;form.participantIds=[];}});
@@ -33,18 +43,23 @@ async function postComment(){const r=await send('/api/work/tasks/'+task!.id+'/co
 onMounted(()=>loadComments());
 defineExpose({useProject:(p:WorkProjectDTO)=>{relationship.value='PROJECT';form.projectId=p.id;form.visibility='PROJECT';form.departmentId=null;form.participantIds=[];}});
 </script>
-<template><TaskSurface :slide="!!task" :title="task?'Задача #'+task.id:'Новая задача'" @close="emit('close')">
+<template><TaskSurface :slide="!!task" :title="form.title || (isUpts?'Новая работа':'Новая задача')" :subtitle="subtitle" :color="task?workTaskColor(task):undefined" @close="emit('close')">
  <form class="work-form" @submit.prevent="save">
   <p v-if="error" class="work-error" role="alert">{{ error }}</p>
-  <fieldset :disabled="saving||readOnly"><label>Название задачи<input v-model="form.title" required maxlength="250" autofocus /></label>
-   <div class="work-two"><label>К чему относится задача?<select v-model="relationship"><option value="STANDALONE">Самостоятельная задача</option><option value="PROJECT">Задача в рамках проекта</option></select></label>
+  <fieldset :disabled="saving||readOnly"><label>{{ isUpts ? 'Название работы' : 'Название задачи' }}<input v-model="form.title" required maxlength="250" autofocus /></label>
+   <div v-if="!isUpts" class="work-two"><label>К чему относится задача?<select v-model="relationship"><option value="STANDALONE">Самостоятельная задача</option><option value="PROJECT">Задача в рамках проекта</option></select></label>
    <label v-if="relationship==='PROJECT'">Проект<select v-model="form.projectId" required><option :value="null">Выберите проект</option><option v-for="p in projects.filter(p=>p.canCreateTask||p.id===form.projectId)" :key="p.id" :value="p.id">{{ p.name }}</option></select></label>
    <label v-else>Кто видит задачу?<select v-model="form.visibility"><option value="PRIVATE">Только я</option><option value="PARTICIPANTS" :disabled="!context.canAssign">Участники задачи</option><option value="DEPARTMENT" :disabled="!context.canAssign||!context.department">Моё подразделение</option></select></label></div>
-   <label v-if="contractOptions.length">Договор УПТС<select v-model="form.uptsContractId"><option :value="null">Без привязки к договору</option><option v-for="c in contractOptions" :key="c.id" :value="c.id">{{ c.number }} · {{ c.name }}</option></select></label>
+   <label v-if="contractOptions.length">Договор<select v-model="form.uptsContractId"><option :value="null">Без привязки к договору</option><option v-for="c in contractOptions" :key="c.id" :value="c.id">{{ c.number }} · {{ c.name }}</option></select></label>
    <label v-if="objectOptions.length">Объект в проекте<select v-model="form.uptsObjectId"><option :value="null">Общая задача проекта</option><option v-for="o in objectOptions" :key="o.id" :value="o.id">{{ o.object.name }}</option></select></label>
    <label>Описание и ожидаемый результат<textarea v-model="form.description" rows="4" maxlength="20000" /></label>
    <div class="work-two"><label>Тип<select v-model="form.kind"><option v-for="(label,key) in WORK_KINDS" :key="key" :value="key">{{ label }}</option></select></label><label>Приоритет<select v-model="form.priority"><option v-for="(label,key) in WORK_PRIORITIES" :key="key" :value="key">{{ label }}</option></select></label></div>
    <PersonPicker v-if="form.visibility!=='PRIVATE'" v-model="form.assigneeId" :initial="task?.assignee" :options="assignable" label="Исполнитель" />
+   <template v-if="isUpts && selectedProject?.canManage">
+    <small v-if="staffLoading" role="status">Загружаем сотрудников УПТС…</small>
+    <p v-if="staffError" class="work-error" role="alert">{{ staffError }} <button type="button" @click="loadStaff">Повторить</button></p>
+    <p class="work-muted">Новый исполнитель будет добавлен в команду и получит доступ к договору и его работам. Для договора «Только мне» сначала измените видимость в настройках доступа.</p>
+   </template>
    <div v-if="form.visibility==='PARTICIPANTS'"><PersonPicker v-model="participant" label="Добавить участника" /><button type="button" :disabled="!participant" @click="participant&&!form.participantIds.includes(participant)&&form.participantIds.push(participant);participant=null">Добавить</button><div class="work-badges"><button v-for="id in form.participantIds" :key="id" type="button" @click="form.participantIds=form.participantIds.filter(x=>x!==id)">Участник #{{ id }} ×</button></div></div>
    <div class="work-two"><label>Начало работы<input v-model="form.startDate" type="date" /></label><label>Крайний срок<input v-model="form.dueDate" type="date" /></label></div>
    <label>Что мешает выполнению?<input v-model="form.blockedReason" maxlength="1000" placeholder="Например, ожидаем выгрузку от заказчика" /></label>

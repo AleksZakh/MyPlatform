@@ -21,8 +21,9 @@ export async function workActor(event:H3Event) {
  }
 
  const membership=await resolveUptsMembership(event,user,actor.isSystemAdmin,directoryGroupIds);
+ const staff=actor.isSystemAdmin ? await resolveUptsMembership(event,user,false,membership.directoryIds) : membership;
  directoryGroupIds=membership.directoryIds;
- return {uptsMember:membership.allowed,uptsAccessUnavailable:membership.unavailable,directoryGroupIds,id:actor.user.id,departmentId:actor.user.department?.isActive ? actor.user.department.id : null,
+ return {uptsStaff:staff.allowed,uptsMember:membership.allowed,uptsAccessUnavailable:membership.unavailable,directoryGroupIds,id:actor.user.id,departmentId:actor.user.department?.isActive ? actor.user.department.id : null,
  department:actor.user.department?.isActive ? actor.user.department : null,isSystemAdmin:actor.isSystemAdmin};
 }
 export async function hasWorkGrant(event:H3Event, action:'CREATE'|'UPDATE') {

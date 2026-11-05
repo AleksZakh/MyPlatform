@@ -1,3 +1,4 @@
+import { resolveUptsMembership } from '../upts-membership';
 import { hasUptsMembership } from '../upts-membership';
 import { orderedTaskIds } from './task-order';
 import { createError, getQuery, type H3Event } from 'h3';
@@ -10,7 +11,8 @@ import { projectWhere, taskWhere, projectRole, managesProject, createsTask, task
 import { parse, projectInput, taskInput, taskMove, memberInput, removeMemberInput, versionInput, archiveInput, commentInput, dbDay, positiveId } from './input';
 export const userSelect={id:true,login:true,fullName:true} as const;
 export const projectInclude={group:{select:{id:true,name:true,isActive:true}},owner:{select:userSelect},department:{select:{id:true,key:true,name:true}},members:{include:{user:{select:userSelect}}}} as const;
-const taskInclude={project:{include:projectInclude},assignee:{select:userSelect},participants:{select:{userId:true}},_count:{select:{comments:true}}} as const;
+export const contractSelect={id:true,number:true,name:true,color:true} as const;
+const taskInclude={uptsContract:{select:contractSelect},project:{include:projectInclude},assignee:{select:userSelect},participants:{select:{userId:true}},_count:{select:{comments:true}}} as const;
 type DB=Prisma.TransactionClient;
 type Project=Prisma.WorkProjectGetPayload<{include:typeof projectInclude}>;
 type Task=Prisma.WorkTaskGetPayload<{include:typeof taskInclude}>;
@@ -19,13 +21,13 @@ export function version(current:number,requested:number|undefined){if(current!==
 export const projectDTO=(p:Project,a:Actor)=>({...p,canManage:managesProject(p,a),canCreateTask:createsTask(p,a),role:projectRole(p,a)});
 const taskDTO=(t:Task,a:Actor)=>({...t,...taskRights(t,a),project:t.project ? {id:t.project.id,name:t.project.name,color:t.project.color}:null});
 export async function visibleProject(db:DB,id:number,a:Actor){
- if(a.uptsMember){const user=await db.user.findUnique({where:{id:a.id},select:{id:true,status:true,department:{select:{key:true,name:true,isActive:true}}}});a={...a,uptsMember:await hasUptsMembership(db,user,!!a.isSystemAdmin,a.directoryGroupIds)};}
+ if(a.uptsMember){const user=await db.user.findUnique({where:{id:a.id},select:{id:true,status:true,department:{select:{key:true,name:true,isActive:true}}}});a={...a,uptsStaff:await hasUptsMembership(db,user,false,a.directoryGroupIds),uptsMember:await hasUptsMembership(db,user,!!a.isSystemAdmin,a.directoryGroupIds)};}
  const p=await db.workProject.findFirst({where:{id,...projectWhere(a)},include:projectInclude});return p || fail(404,'Проект не найден или недоступен.');}
 async function visibleTask(db:DB,id:number,a:Actor){const t=await db.workTask.findFirst({where:{id,...taskWhere(a)},include:taskInclude});return t || fail(404,'Задача не найдена или недоступна.');}
 export async function activeUsers(db:DB,ids:number[]){if(!ids.length)return;const unique=[...new Set(ids)];const n=await db.user.count({where:{id:{in:unique},status:'ACTIVE'}});if(n!==unique.length)fail(400,'Один из участников неактивен или не найден.');}
 function auditSnapshot(value:unknown):Prisma.InputJsonValue {
  const v=value as Record<string,any>; const result:Record<string,any>={};
- for(const key of ['contractType','uptsContractId','title','items','created','templateId','workIds','active','upts','objectId','goal','cadastral','rights','restrictions','documents','handover','note','number','counterparty','name','id','version','status','priority','scope','visibility','projectId','departmentId','assigneeId','archivedAt','deletedAt','plannedDate','startDate','dueDate','invitationId','userId','groupId','addedIds','role','expiresAt'])if(v?.[key]!==undefined)result[key]=v[key];
+ for(const key of ['color','contractType','uptsContractId','title','items','created','templateId','workIds','active','upts','objectId','goal','cadastral','rights','restrictions','documents','handover','note','number','counterparty','name','id','version','status','priority','scope','visibility','projectId','departmentId','assigneeId','archivedAt','deletedAt','plannedDate','startDate','dueDate','invitationId','userId','groupId','addedIds','role','expiresAt'])if(v?.[key]!==undefined)result[key]=v[key];
  if(Array.isArray(v?.members))result.members=v.members.map((m:any)=>({userId:m.userId,role:m.role}));
  return JSON.parse(JSON.stringify(result));
 }
@@ -61,14 +63,18 @@ export async function saveProject(event:H3Event,raw:unknown,id?:number){
  const a=await workActor(event),v=parse(projectInput,raw);
  if(v.upts&&!a.uptsMember)fail(403,'Нет доступа к созданию проектов УПТС. Обратитесь к администратору.');
  const groupId=v.groupId===undefined?undefined:v.groupId;
+ const uptsScope=v.scope==='UPTS_DEPARTMENT'||v.scope==='UPTS_ALL';
+ if(uptsScope&&!a.uptsMember)fail(403,'Нет доступа к УПТС.');
  const shared=v.scope!=='PRIVATE';const grant=shared?await hasWorkGrant(event,'CREATE'):false;
  return mutation(event,a,'WorkProject',id?'UPDATE':'CREATE',async tx=>{
   const old=id?await visibleProject(tx,id,a):await tx.workProject.findUnique({where:{clientKey:v.clientKey},include:projectInclude});
   if(!id&&old){if(old.ownerId!==a.id)fail(409,'Ключ операции уже использован.');await visibleProject(tx,old.id,a);await ensureProjectDirectory(old.id);return {id:old.id,value:projectDTO(old,a),changed:false};}
+  if(uptsScope&&(!v.upts&&(!old||!await tx.uptsProject.findUnique({where:{projectId:old.id}}))))fail(400,'Видимость УПТС доступна только для договоров УПТС.');
+  if(uptsScope&&(v.departmentId||groupId))fail(400,'Состав УПТС определяется подразделением и группами УПТС.');
   const selectedGroupId=groupId===undefined?(old?.groupId??null):groupId;
   if(old){if(!managesProject(old,a))fail(403,'Изменять проект может руководитель.');version(old.version,v.version);if(old.archivedAt)fail(409,'Сначала восстановите проект из архива.');
    if(old.ownerId!==a.id&&(old.scope!==v.scope||old.departmentId!==v.departmentId||old.groupId!==selectedGroupId))fail(403,'Видимость и принадлежность изменяет владелец проекта.');}
-  if(shared&&(!old||old.scope==='PRIVATE'||old.departmentId!==v.departmentId||old.groupId!==selectedGroupId||old.scope!==v.scope)&&!grant)fail(403,'Создание общих проектов разрешает администратор.');
+  if(shared&&(!old||old.scope==='PRIVATE'||old.departmentId!==v.departmentId||old.groupId!==selectedGroupId||old.scope!==v.scope)&&!grant&&!(a.uptsMember&&old?.ownerId===a.id&&await tx.uptsProject.findUnique({where:{projectId:old.id}})&&['TEAM','UPTS_DEPARTMENT','UPTS_ALL'].includes(v.scope)))fail(403,'Создание общих проектов разрешает администратор.');
   if(v.scope==='PRIVATE'&&(v.departmentId||selectedGroupId||old?.members.length||(old&&await tx.workProjectInvitation.count({where:{projectId:old.id,status:{in:['PENDING','SENDING']},expiresAt:{gt:new Date()}}}))))fail(400,'Личный проект не может иметь подразделение, группу, участников или действующие приглашения. Сначала исключите участников и отмените приглашения.');
   if(v.departmentId&&selectedGroupId)fail(400,'Выберите подразделение или группу, не оба одновременно.');
   if(v.scope==='GROUP'&&!selectedGroupId)fail(400,'Выберите группу Space.');
@@ -127,6 +133,8 @@ export async function getTask(event:H3Event,id:number){const a=await workActor(e
 export async function saveTask(event:H3Event,raw:unknown,id?:number){const a=await workActor(event),v=parse(taskInput,raw);
  const needsShared=!v.projectId&&(v.visibility!=='PRIVATE'||(v.assigneeId!==null&&v.assigneeId!==a.id));
  const grant=needsShared?await hasWorkGrant(event,'UPDATE'):false;
+ const target=v.assigneeId&&a.uptsMember ? await prisma.user.findUnique({where:{id:v.assigneeId},include:{department:true}}) : null;
+ const targetMembership=target ? await resolveUptsMembership(event,target,false) : null;
  return mutation(event,a,'WorkTask',id?'UPDATE':'CREATE',async tx=>{
  const old=id?await visibleTask(tx,id,a):await tx.workTask.findUnique({where:{clientKey:v.clientKey},include:taskInclude});
  if(!id&&old){if(old.creatorId!==a.id||old.deletedAt||!(await tx.workTask.findFirst({where:{id:old.id,...taskWhere(a)}})))fail(409,'Ключ операции уже использован.');return {id:old.id,value:taskDTO(old,a),changed:false};}
@@ -135,7 +143,20 @@ export async function saveTask(event:H3Event,raw:unknown,id?:number){const a=awa
  if(old?.projectId!==v.projectId&&old?.project&&!managesProject(old.project,a))fail(403,'Переносить задачи из проекта может руководитель.');
  if(project){if(!createsTask(project,a))fail(403,'В проекте нет права на изменение задач.');
  if(v.visibility!=='PROJECT'||v.departmentId||v.participantIds.length)fail(400,'Доступ к задаче определяется проектом.');
- if(v.assigneeId&&v.assigneeId!==project.ownerId&&!project.members.some(m=>m.userId===v.assigneeId&&['MANAGER','MEMBER'].includes(m.role)))fail(400,'Выберите исполнителя из команды проекта.');
+ if(v.assigneeId&&v.assigneeId!==project.ownerId&&!project.members.some(m=>m.userId===v.assigneeId&&['MANAGER','MEMBER'].includes(m.role))){
+  const upts=await tx.uptsProject.findUnique({where:{projectId:project.id}});
+  if(!upts||!managesProject(project,a))fail(400,'Выберите исполнителя из команды проекта.');
+  if(project.scope==='PRIVATE')fail(400,'Для назначения другого исполнителя сначала измените видимость договора с «Только мне».');
+  if(targetMembership?.unavailable)fail(503,'Не удалось проверить группу исполнителя в AD. Повторите позже.');
+  const current=await tx.user.findUnique({where:{id:v.assigneeId},include:{department:true}});
+  if(current?.deletedAt||!targetMembership?.allowed||!await hasUptsMembership(tx,current,false,targetMembership.directoryIds))fail(400,'Исполнитель должен быть активным сотрудником УПТС.');
+  const existing=project.members.find(m=>m.userId===v.assigneeId);
+  // Never silently upgrade a deliberately assigned observer/curator role.
+  if(existing)fail(400,'Сначала измените роль сотрудника в команде договора на «Исполнитель».');
+  await tx.workProjectMember.create({data:{projectId:project.id,userId:v.assigneeId,role:'MEMBER'}});
+  await tx.workProject.update({where:{id:project.id},data:{version:{increment:1}}});
+  await writeAuditEvent({event,db:tx,actorUserId:a.id,category:'DATA',result:'SUCCESS',resourceKey:'projects.shared',entityType:'WorkProject',entityId:project.id,action:'MEMBER',afterData:{userId:v.assigneeId,role:'MEMBER',reason:'Назначение исполнителем работы УПТС'}});
+ }
  }else{
  if(v.visibility==='PROJECT')fail(400,'Выберите проект.');
  if(v.visibility==='PRIVATE'&&old&&old.creatorId!==a.id)fail(403,'Личной задачу может сделать только её автор.');

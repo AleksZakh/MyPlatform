@@ -5,7 +5,7 @@ const props=defineProps<{modelValue:number|null;options?:WorkUser[];disabled?:bo
 const emit=defineEmits<{'update:modelValue':[number|null]}>();
 const query=ref(''),rows=ref<WorkUser[]>([]),total=ref(0),page=ref(1),error=ref(''),loading=ref(false);let timer:ReturnType<typeof setTimeout>|undefined;let serial=0;
 const choices=computed(()=>{
- const base=props.options || rows.value;const filtered=props.options?base.filter(u=>workUserName(u).toLowerCase().includes(query.value.toLowerCase())):base;
+ const base=props.options || rows.value;const filtered=props.options?base.filter(u=>(workUserName(u)+' '+(u.login||'')).toLocaleLowerCase('ru-RU').includes(query.value.toLocaleLowerCase('ru-RU'))):base;
  const selected=props.initial?.id===props.modelValue?props.initial:base.find(u=>u.id===props.modelValue);
  return selected&&!filtered.some(u=>u.id===selected.id)?[selected,...filtered]:filtered;
 });

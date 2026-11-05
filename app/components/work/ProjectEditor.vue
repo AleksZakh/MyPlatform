@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { reactive, ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import Modal from './Modal.vue';
-import { WORK_COLORS, type WorkProjectDTO, type WorkContext } from '~~/shared/types/work';
+import { WORK_COLORS, UPTS_VISIBILITY, type WorkProjectDTO, type WorkContext } from '~~/shared/types/work';
 import { UPTS_TYPES, UPTS_STATUSES, type UptsProjectDTO } from '~~/shared/types/upts';
 import { dateKey } from '~~/shared/utils/work-board';
 const props=defineProps<{project:WorkProjectDTO|null;context:WorkContext;uptsMode?:boolean}>();
 const emit=defineEmits<{close:[];saved:[WorkProjectDTO]}>();
 const p=props.project;
 const meta=(p as UptsProjectDTO|null)?.upts;
+const contractMode=!!meta || !!p?.scope.startsWith('UPTS_') || !!props.uptsMode;
 const upts=reactive({projectType:meta?.projectType||'LAND',status:meta?.status||'INTAKE',basis:meta?.basis||'',initiator:meta?.initiator||'',receivedDate:dateKey(meta?.receivedDate)||'',completionNote:meta?.completionNote||''});
 const currentContext=ref(props.context),loading=ref(false),loadError=ref('');
 let alive=true;
@@ -30,8 +31,8 @@ async function save(){
  const scope=visibility.value==='SHARED'?affiliation.value:visibility.value;
  const result=await send<WorkProjectDTO>(p?'/api/work/projects/'+p.id:'/api/work/projects',p?'PUT':'POST',{
   ...form,scope,...(props.uptsMode?{upts:{...upts,receivedDate:upts.receivedDate||null}}:{}),
-  departmentId:scope!=='PRIVATE'&&affiliation.value==='DEPARTMENT'?form.departmentId:null,
-  groupId:scope!=='PRIVATE'&&affiliation.value==='GROUP'?form.groupId:null,
+  departmentId:!scope.startsWith('UPTS_')&&scope!=='PRIVATE'&&affiliation.value==='DEPARTMENT'?form.departmentId:null,
+  groupId:!scope.startsWith('UPTS_')&&scope!=='PRIVATE'&&affiliation.value==='GROUP'?form.groupId:null,
   startDate:form.startDate||null,dueDate:form.dueDate||null,
  });
  if(result)emit('saved',result);
@@ -51,12 +52,17 @@ async function save(){
      <p class="work-muted">Пробная модель УПТС. Типы и состояния уточняются с подразделением. Шаблон работ можно применить после создания проекта.</p>
     </template>
     <label>Цель и ожидаемый результат<textarea v-model="form.description" rows="4" maxlength="20000" /></label>
-    <label>Видимость<select v-model="visibility" :disabled="!ownsProject">
+    <label>{{ contractMode ? 'Настройка видимости' : 'Видимость' }}<select v-model="visibility" :disabled="!ownsProject">
+     <template v-if="contractMode"><option v-for="(label,key) in UPTS_VISIBILITY" :key="key" :value="key">{{ label }}</option>
+     <option v-if="visibility==='SHARED'" value="SHARED">Текущее подразделение / группа</option></template><template v-else>
      <option value="PRIVATE">Личный проект</option>
      <option value="TEAM" :disabled="!currentContext.canCreateShared&&(!p||p.scope==='PRIVATE')">Только команда проекта</option>
-     <option value="SHARED" :disabled="!currentContext.canCreateShared&&(!p||p.scope==='PRIVATE')">Команда и выбранное подразделение / группа</option>
+     <option value="SHARED" :disabled="!currentContext.canCreateShared&&(!p||p.scope==='PRIVATE')">Команда и выбранное подразделение / группа</option></template>
     </select></label>
-    <template v-if="visibility!=='PRIVATE'">
+    <p v-if="contractMode && visibility==='UPTS_DEPARTMENT'" class="work-muted">Просмотр для всех сотрудников подразделения и групп УПТС. Редактирование — по ролям команды.</p>
+    <p v-if="contractMode && visibility==='UPTS_ALL'" class="work-muted">Просмотр для всех допущенных к УПТС, включая администраторов.</p>
+    <p v-if="contractMode && visibility==='TEAM'" class="work-muted">Состав группы сотрудников настраивается во вкладке «Команда».</p>
+    <template v-if="visibility!=='PRIVATE' && !visibility.startsWith('UPTS_') && (!contractMode || visibility==='SHARED')">
      <div class="work-two">
       <label>Принадлежность проекта<select v-model="affiliation" :disabled="!ownsProject">
        <option value="NONE">Без привязки</option><option value="DEPARTMENT">Подразделение</option><option value="GROUP">Группа Space</option>
@@ -80,7 +86,7 @@ async function save(){
      <p v-else-if="affiliation==='DEPARTMENT'" class="work-muted">Активные сотрудники выбранного подразделения смогут читать проект и его задачи. Роли для редактирования назначаются на вкладке «Участники».</p>
      <p class="work-muted">Группа или подразделение определяет принадлежность проекта. Владельцем и ответственным за назначение руководителей остаётся создатель проекта.</p>
     </template>
-    <p v-if="!currentContext.canCreateShared" class="work-muted">Создание общих проектов и смена их принадлежности разрешаются в центре администрирования.</p>
+    <p v-if="!currentContext.canCreateShared && !contractMode" class="work-muted">Создание общих проектов и смена их принадлежности разрешаются в центре администрирования.</p>
     <div class="work-two"><label>Начало<input v-model="form.startDate" type="date" /></label><label>Плановое завершение<input v-model="form.dueDate" type="date" /></label></div>
     <label>Цвет проекта<input v-model="form.color" type="color" /></label>
     <div class="work-colors"><button v-for="c in WORK_COLORS" :key="c" :style="{background:c}" type="button" :aria-label="'Цвет '+c" :aria-pressed="form.color===c" @click="form.color=c"></button></div>

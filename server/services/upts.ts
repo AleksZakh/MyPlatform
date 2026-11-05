@@ -1,3 +1,4 @@
+import { uptsContractColor } from '../../shared/utils/upts-color';
 import { contractTypeSchema } from './upts-library';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
@@ -15,6 +16,7 @@ import {
   visibleProject,
   projectDTO,
   projectInclude,
+  contractSelect,
   userSelect,
   mutation,
   fail,
@@ -120,6 +122,7 @@ export async function snapshot(event: H3Event) {
       const tasks = await tx.workTask.findMany({
         where: taskWhere,
         include: {
+          uptsContract: { select: contractSelect },
           assignee: { select: userSelect },
           participants: { select: { userId: true } },
           _count: { select: { comments: true } },
@@ -303,7 +306,7 @@ export async function saveContract(
         signedDate: dbDay(v.signedDate),
         dueDate: dbDay(v.dueDate),
       };
-      const result = old
+      let result = old
         ? await tx.uptsContract.update({
             where: { id: old.id },
             data: { ...data, version: { increment: 1 } },
@@ -311,6 +314,7 @@ export async function saveContract(
         : await tx.uptsContract.create({
             data: { ...data, projectId, clientKey: v.clientKey },
           });
+      if(!old) result=await tx.uptsContract.update({where:{id:result.id},data:{color:uptsContractColor(result.id)}});
       await ensureContractDirectory(projectId, result.id);
       return { id: result.id, value: result };
     },

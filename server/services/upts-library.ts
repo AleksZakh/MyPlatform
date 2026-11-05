@@ -1,3 +1,5 @@
+import { uptsContractColor } from '../../shared/utils/upts-color';
+import { uptsPeople } from './upts-people';
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { H3Event } from "h3";
@@ -378,7 +380,9 @@ async function addWorks(
 const contractInput = z
   .object({
     clientKey: z.string().uuid(),
-    projectId: id.nullable(),
+    projectId: id.nullable().default(null),
+    visibility: z.enum(["PRIVATE","TEAM","UPTS_DEPARTMENT","UPTS_ALL"]).optional(),
+    memberIds: z.array(id).max(200).default([]),
     number: z.string().trim().min(1).max(100),
     name: z.string().trim().min(1).max(250),
     counterparty: z.string().trim().max(250),
@@ -395,12 +399,20 @@ const contractInput = z
 export async function createContract(event: H3Event, raw: unknown) {
   const a = await uptsActor(event),
     v = parse(contractInput, raw);
+  if(v.projectId && v.visibility) fail(400,'Для выбранной видимости создайте отдельный договор.');
+  if(v.visibility==='TEAM' && !v.memberIds.some(id=>id!==a.id)) fail(400,'Выберите сотрудников.');
+  if(v.visibility!=='TEAM' && v.memberIds.length) fail(400,'Список сотрудников допустим только для групповой видимости.');
+  const staffIds=v.memberIds.length ? new Set((await uptsPeople(event)).map(u=>u.id)) : new Set<number>();
+  if(v.memberIds.some(id=>!staffIds.has(id))) fail(400,'Выберите активных сотрудников УПТС.');
   return transact(event, a, async (tx) => {
     const old = await tx.uptsContract.findUnique({
       where: { clientKey: v.clientKey },
     });
     if (old) {
+      const oldProject = await visibleProject(tx,old.projectId,a);
       await managedContract(tx, a, old.id);
+      if(v.visibility && oldProject.scope!==v.visibility) fail(409,'Ключ операции уже использован с другой видимостью.');
+      if(v.visibility==='TEAM' && [...new Set(v.memberIds)].filter(id=>id!==a.id).sort((a,b)=>a-b).join()!==oldProject.members.map(m=>m.userId).sort((a,b)=>a-b).join()) fail(409,'Ключ операции уже использован с другим составом сотрудников.');
       if (
         old.number !== v.number ||
         old.name !== v.name ||
@@ -429,7 +441,8 @@ export async function createContract(event: H3Event, raw: unknown) {
           clientKey: randomUUID(),
           name: (v.number + " · " + v.name).slice(0, 200),
           ownerId: a.id,
-          scope: "PRIVATE",
+          scope: v.visibility || "UPTS_DEPARTMENT",
+          members: {create:[...new Set(v.memberIds)].filter(id=>id!==a.id).map(userId=>({userId,role:'MEMBER'}))},
           dueDate: dbDay(v.dueDate),
           upts: { create: { projectType: "OTHER" } },
         },
@@ -441,10 +454,11 @@ export async function createContract(event: H3Event, raw: unknown) {
         name: p.name,
         scope: p.scope,
         ownerId: a.id,
+        memberIds: v.memberIds,
         reason: "Рабочая область договора УПТС",
       });
     }
-    const c = await tx.uptsContract.create({
+    let c = await tx.uptsContract.create({
       data: {
         clientKey: v.clientKey,
         projectId,
@@ -456,6 +470,8 @@ export async function createContract(event: H3Event, raw: unknown) {
         dueDate: dbDay(v.dueDate),
       },
     });
+    c = await tx.uptsContract.update({where:{id:c.id},data:{color:uptsContractColor(c.id)}});
+    if(!v.projectId) await tx.workProject.update({where:{id:projectId},data:{color:c.color!}});
     await ensureContractDirectory(projectId, c.id);
     const taskIds = await addWorks(tx, event, a, c, titles);
     await audit(tx, event, a, "UptsContract", c.id, "CREATE", {

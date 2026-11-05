@@ -1,0 +1,7 @@
+/* Space modal surfaces: native dialogs, Nuxt/Reka dialogs and SweetAlert. */
+:root { --space-modal-shadow: 0 0 22px 3px rgb(59 130 246 / .32); }
+html.dark { --space-modal-shadow: 0 0 24px 3px rgb(96 165 250 / .36); }
+:is(dialog, [role="dialog"], [role="alertdialog"], .swal2-popup) {
+ box-shadow: var(--space-modal-shadow) !important;
+}
+@media print { :is(dialog,[role="dialog"],[role="alertdialog"],.swal2-popup){box-shadow:none!important} }

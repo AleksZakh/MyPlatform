@@ -100,7 +100,7 @@ test('UPTS contracts, typed library, templates, retries, permissions, audit and 
   const templateBody={clientKey:randomUUID(),name:'Проверка и оформление',contractType:'LAND',active:true,workIds:[w.id,land.items[0].workId]};
   const template=await ok(await request('/templates',2,'POST',templateBody));assert.deepEqual(template.items.map((i:any)=>i.workId),templateBody.workIds);
   assert.equal((await request('/templates',2,'POST',{...templateBody,clientKey:randomUUID(),name:'Смешанный',workIds:[w.id,oks.items[0].workId]})).status,400);
-  const create={clientKey:randomUUID(),number:'УПТС-1',name:'Участок автодороги',counterparty:'',projectId:null,contractType:'LAND',signedDate:null,dueDate:'2026-12-01',templateId:land.id,templateVersion:land.version,manualWorks:[]};
+  const create={clientKey:randomUUID(),number:'УПТС-1',name:'Участок автодороги',counterparty:'',projectId:null,visibility:'PRIVATE',contractType:'LAND',signedDate:null,dueDate:'2026-12-01',templateId:land.id,templateVersion:land.version,manualWorks:[]};
   assert.equal((await request('/contracts',2,'POST',{...create,templateId:oks.id})).status,400);assert.equal(await db.workProject.count(),0);
   const c=await ok(await request('/contracts',2,'POST',create));assert.equal((await ok(await request('/contracts',2,'POST',create))).id,c.id);
   assert.equal(await db.workProject.count(),1);assert.equal(await db.workTask.count({where:{uptsContractId:c.id}}),7);
@@ -120,10 +120,10 @@ test('UPTS contracts, typed library, templates, retries, permissions, audit and 
   assert.equal(savedWork.version,2);assert.equal(await db.workTask.count({where:{title:'Проверка комплекта',uptsContractId:c.id}}),1,'Existing tasks keep original titles');
   assert.equal((await request(`/contracts/${c.id}/works`,2,'POST',{...application,clientKey:randomUUID(),contractVersion:2})).status,409,'work rename invalidates template preview');
   const legacy=await db.workTask.create({data:{clientKey:randomUUID(),projectId:c.projectId,creatorId:2,title:'Старая задача',visibility:'PROJECT'}});
-  const other=await ok(await request('/contracts',2,'POST',{...create,clientKey:randomUUID(),number:'ИНОЕ-2',name:'Эксперимент',projectId:c.projectId,contractType:'OTHER',templateId:null,templateVersion:null,manualWorks:['Ручная работа']}));
+  const other=await ok(await request('/contracts',2,'POST',{...create,clientKey:randomUUID(),number:'ИНОЕ-2',name:'Эксперимент',projectId:c.projectId,visibility:undefined,contractType:'OTHER',templateId:null,templateVersion:null,manualWorks:['Ручная работа']}));
   const snap=await ok(await request('/upts?contractId='+c.id));assert.equal(snap.projects[0].upts.contracts.length,1);assert.equal(snap.tasks.length,9);assert(snap.tasks.every((t:any)=>t.uptsContractId===c.id));
   assert.equal((await ok(await request('/upts?q='+encodeURIComponent('ИНОЕ-2')))).tasks.length,1);
-  const empty=await ok(await request('/contracts',2,'POST',{...create,clientKey:randomUUID(),number:'ПУСТО-3',name:'Без работ',projectId:c.projectId,templateId:null,templateVersion:null}));
+  const empty=await ok(await request('/contracts',2,'POST',{...create,clientKey:randomUUID(),number:'ПУСТО-3',name:'Без работ',projectId:c.projectId,visibility:undefined,templateId:null,templateVersion:null}));
   assert.equal((await ok(await request('/upts?q='+encodeURIComponent('ПУСТО-3')))).projects[0].upts.contracts[0].id,empty.id,'Search includes contracts without tasks');
   const body={clientKey:randomUUID(),version:legacy.version,title:legacy.title,description:'',kind:'TASK',status:'TODO',priority:'NORMAL',visibility:'PROJECT',projectId:c.projectId,departmentId:null,assigneeId:null,participantIds:[],plannedDate:null,startDate:null,dueDate:null,blockedReason:'',uptsContractId:c.id};
   const linked=await ok(await request('/tasks/'+legacy.id,2,'PUT',body));assert.equal(linked.uptsContractId,c.id);

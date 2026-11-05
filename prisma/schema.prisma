@@ -1680,6 +1680,7 @@ model UptsProjectObject {
   @@map("upts_project_objects")
 }
 model UptsContract {
+  color String? @db.VarChar(7)
   contractType String? @db.VarChar(20)
   tasks WorkTask[]
   applications UptsWorkApplication[]

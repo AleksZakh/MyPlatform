@@ -204,7 +204,7 @@ html.dark .upts-topbar {
   margin-bottom: 11px;
 }
 .upts-metrics article {
-  padding: 16px 18px;
+  padding: 9px 12px;
   background: var(--work-panel);
   border: 1px solid var(--work-line);
   border-radius: 12px;
@@ -217,10 +217,11 @@ html.dark .upts-topbar {
 }
 .upts-metrics strong {
   display: block;
-  font-size: 31px;
+  font-size: 25px;
+  line-height: 1.15;
   font-weight: 700;
   letter-spacing: -1px;
-  margin: 4px 0;
+  margin: 2px 0;
 }
 .upts-metrics em {
   font-size: 16px;
@@ -486,7 +487,7 @@ html.dark .upts-topbar {
 }
 .upts-facts dd {
   font-size: 12px;
-  margin: 4px 0;
+  margin: 2px 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -790,7 +791,7 @@ html.dark .upts-topbar {
     gap: 4px;
   }
   .upts-metrics article {
-    padding: 13px;
+    padding: 8px 10px;
   }
   .upts-metrics article > span {
     font-size: 11px;
@@ -871,3 +872,7 @@ html.dark .upts-topbar {
     row-gap: 0;
   }
 }
+
+.upts-colored-row {background:color-mix(in srgb,var(--contract-color) 10%,var(--work-panel))}
+.upts-colored-row td:first-child {border-left:4px solid var(--contract-color)}
+.upts-contract-heading {border-left:5px solid var(--contract-color);padding:5px 10px;background:color-mix(in srgb,var(--contract-color) 12%,var(--work-panel));border-radius:5px}
