@@ -317,6 +317,9 @@ const selection = {
   templateVersion: id.nullable(),
   manualWorks: z.array(z.string().trim().min(1).max(250)).max(50),
 };
+const selectedWorksSchema=z.array(z.object({id,version:id}).strict()).max(50)
+  .refine(items=>new Set(items.map(w=>w.id)).size===items.length,'Работы не должны повторяться.').optional();
+type ResolvedWork={name:string;definitionId:number|undefined;responsibleRole:string|null;expectedResult:string;workKindKey:string|null;workKindKeys?:string[]};
 async function titlesFor(
   tx: DB,
   type: string | null,
@@ -326,21 +329,25 @@ async function titlesFor(
     manualWorks: string[];
     selectedWorks?: { id: number; version: number }[];
     workKindKey?:string|null;
+    workKindKeys?:string[];
   },
   allowManual = false,
-) {
+):Promise<ResolvedWork[]> {
   if(!validWorkKind(type,v.workKindKey))fail(400,"Вид работ не соответствует типу объекта.");
   const selected = v.selectedWorks || [];
   if (Number(!!v.templateId) + Number(!!v.manualWorks.length) + Number(!!selected.length) > 1)
     fail(400, "Выберите один способ добавления: библиотека, шаблон или ручной ввод.");
   if (selected.length) {
+    const matrix=v.workKindKeys ? await tx.uptsWorkTemplate.findMany({where:{active:true,contractType:type!,workKindKey:{in:v.workKindKeys}},include:includeItems}) : null;
     const rows = await tx.uptsWorkDefinition.findMany({where:{id:{in:selected.map(w=>w.id)}}});
     return selected.map(item=>{
       const work=rows.find(w=>w.id===item.id);
       if(!work || !work.active || work.contractType!==type)
         fail(400,'Работа недоступна или не соответствует типу объекта. Обновите библиотеку.');
       version(work.version,item.version);
-      return {name:work.name,definitionId:work.id,responsibleRole:work.responsibleRole,expectedResult:work.expectedResult,workKindKey:v.workKindKey || null};
+      const workKindKeys=v.workKindKeys?.filter(key=>matrix?.some(t=>t.workKindKey===key && t.items.some(i=>i.workId===work.id)));
+      if(workKindKeys && !workKindKeys.length)fail(400,'Работа не входит в выбранные виды работ. Обновите библиотеку.');
+      return {name:work.name,definitionId:work.id,responsibleRole:work.responsibleRole,expectedResult:work.expectedResult,workKindKey:workKindKeys?.[0] || v.workKindKey || null,...(workKindKeys?{workKindKeys}:{})};
     });
   }
   if (v.templateId) {
@@ -391,7 +398,7 @@ async function addWorks(
       data: {
         clientKey: randomUUID(),
         title: titles[i]!.name,
-        uptsWorkMeta: {...(workStages ? {stageNumber:workStages[i]} : {}),definitionId:titles[i]!.definitionId,workKindKey:titles[i]!.workKindKey,responsibleRole:titles[i]!.responsibleRole,expectedResult:titles[i]!.expectedResult},
+        uptsWorkMeta: {...(titles[i]!.workKindKeys?{workKindKeys:titles[i]!.workKindKeys}:{}),...(workStages ? {stageNumber:workStages[i]} : {}),definitionId:titles[i]!.definitionId,workKindKey:titles[i]!.workKindKey,responsibleRole:titles[i]!.responsibleRole,expectedResult:titles[i]!.expectedResult},
         projectId: c.projectId,
         uptsContractId: c.id,
         creatorId: a.id,
@@ -423,6 +430,7 @@ const contractInput = z
     dueDate: uptsDay,
     contractType: contractTypeSchema,
     objectDetails:objectDetailsSchema.optional(),
+    selectedWorks:selectedWorksSchema,
     ...selection,
   })
   .strict()
@@ -434,6 +442,8 @@ export async function createContract(event: H3Event, raw: unknown) {
   const a = await uptsActor(event),
     v = parse(contractInput, raw);
   checkObjectKind(v.contractType,v.objectDetails);
+  if(v.selectedWorks!==undefined && (v.templateId || v.manualWorks.length))fail(400,'Выберите один способ добавления работ.');
+  if(v.selectedWorks?.length && !v.objectDetails?.workKindKeys?.length)fail(400,'Выберите виды работ для объекта.');
   checkObjectSchedule(v.objectDetails,v.dueDate);
   await checkObjectPeople(event,v.objectDetails);
   if(v.projectId && v.visibility) fail(400,'Для выбранной видимости создайте отдельный объект.');
@@ -457,15 +467,16 @@ export async function createContract(event: H3Event, raw: unknown) {
         (v.objectDetails!==undefined && stableJson(old.objectDetails)!==stableJson(v.objectDetails))
       )
         fail(409, "Ключ операции уже использован.");
-      if(v.workStages){
+      if(v.workStages || v.selectedWorks!==undefined){
         const initial=await tx.auditLog.findFirst({where:{entityType:'UptsContract',entityId:old.id,action:'CREATE'},orderBy:{id:'asc'}});
-        const original=initial?.afterData as {workStages?:number[]}|null;
-        if(stableJson(original?.workStages || [])!==stableJson(v.workStages))fail(409,'Ключ операции уже использован с другим распределением по этапам.');
+        const original=initial?.afterData as {workStages?:number[];selectedWorks?:{id:number;version:number}[]}|null;
+        if(v.workStages && stableJson(original?.workStages || [])!==stableJson(v.workStages))fail(409,'Ключ операции уже использован с другим распределением по этапам.');
+        if(v.selectedWorks!==undefined && stableJson(original?.selectedWorks || [])!==stableJson(v.selectedWorks))fail(409,'Ключ операции уже использован с другим составом работ.');
       }
       await ensureContractDirectory(old.projectId, old.id);
       return old;
     }
-    const titles = await titlesFor(tx, v.contractType, v);
+    const titles = await titlesFor(tx, v.contractType, {...v,...(v.selectedWorks!==undefined?{workKindKeys:v.objectDetails?.workKindKeys || []}:{})});
     checkNewWorkStages(v.workStages,titles.length,v.objectDetails);
     if(v.objectDetails?.workKindKey && v.templateId && titles.some(w=>w.workKindKey!==v.objectDetails!.workKindKey)) fail(400,"Шаблон не соответствует выбранному виду работ.");
     let projectId = v.projectId;
@@ -525,6 +536,7 @@ export async function createContract(event: H3Event, raw: unknown) {
       templateId: v.templateId,
       templateVersion: v.templateVersion,
       taskIds,
+      selectedWorks:v.selectedWorks || [],
       workStages: v.workStages || [],
       works: titles.map(w=>w.name),
     });
@@ -534,8 +546,7 @@ export async function createContract(event: H3Event, raw: unknown) {
 // A stable key is persisted with the operation; retries cannot duplicate a whole set.
 const applyInput = z
   .object({ clientKey: z.string().uuid(), contractVersion: id, ...selection, workKindKey:z.string().max(40).nullable().optional(),
-    selectedWorks: z.array(z.object({id,version:id}).strict()).max(50)
-      .refine(items=>new Set(items.map(w=>w.id)).size===items.length,'Работы не должны повторяться.').optional(),
+    selectedWorks:selectedWorksSchema,
   })
   .strict();
 export async function applyContractWorks(

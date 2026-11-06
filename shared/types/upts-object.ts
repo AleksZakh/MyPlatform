@@ -5,6 +5,7 @@ export type UptsObjectDetails = {
   workStartDate?: string | null;
   stageCount?: number | null;
   road?: string;
+  address?: string;
   stage?: string;
   rightHolders?: string[];
   region?: string;
@@ -18,12 +19,14 @@ export type UptsObjectDetails = {
   curatorId?: number | null;
   engineerId?: number | null;
   workKindKey?: string | null;
+  workKindKeys?: string[];
   otherDescription?: string;
 };
 export type UptsWorkMeta = {
   stageNumber?: number;
   definitionId?: number;
   workKindKey?: string | null;
+  workKindKeys?: string[];
   responsibleRole?: 'CURATOR' | 'ENGINEER' | null;
   expectedResult?: string;
 };

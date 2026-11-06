@@ -151,5 +151,35 @@ test('UPTS object card, work kinds matrix, role/result snapshots and protected a
   assert((await db.workTask.findMany({where:{uptsContractId:c.id}})).every(t=>(t.uptsWorkMeta as any)?.stageNumber<=2));
   assert.equal(((await db.workTask.findUniqueOrThrow({where:{id:last.id}})).uptsWorkMeta as any).stageNumber,2);
   const wb=new ExcelJS.Workbook();await wb.xlsx.load(Buffer.from(await(await request('/export?contractId='+c.id)).arrayBuffer()) as any);assert.equal(wb.worksheets.length,6);assert(wb.getWorksheet('Объекты')!.getRow(2).values.includes('М-12'));assert(wb.getWorksheet('Участки и сооружения'));assert(wb.getWorksheet('Задачи')!.getRow(1).values.includes('Ответственная роль'));assert(wb.getWorksheet('Задачи')!.getRow(1).values.includes('Этап работ'));
+
+  // New-object composer: selected kinds form a candidate union, only enabled IDs are created.
+  const fresh=await ok(await request('/lib'));
+  const division=fresh.templates.find((t:any)=>t.workKindKey==='LAND_DIVISION');
+  const change=fresh.templates.find((t:any)=>t.workKindKey==='LAND_CHANGE');
+  const common=division.items.find((i:any)=>change.items.some((j:any)=>j.workId===i.workId)).work;
+  const exclusive=division.items.find((i:any)=>!change.items.some((j:any)=>j.workId===i.workId)).work;
+  const selected=[common,exclusive].map((w:any)=>({id:w.id,version:w.version}));
+  const compose={...body,clientKey:randomUUID(),number:'COMPOSER',templateId:null,templateVersion:null,selectedWorks:selected,workStages:[2,3],objectDetails:{...details,address:'Развязка у села Новое',workKindKeys:['LAND_DIVISION','LAND_CHANGE']}};
+  const created=await ok(await request('/contracts',2,'POST',compose));
+  const createdTasks=await db.workTask.findMany({where:{uptsContractId:created.id},orderBy:{id:'asc'}});
+  assert.equal(createdTasks.length,2,'Unchecked candidates must not create tasks');
+  assert.deepEqual((createdTasks[0]!.uptsWorkMeta as any).workKindKeys,['LAND_DIVISION','LAND_CHANGE']);
+  assert.deepEqual((createdTasks[1]!.uptsWorkMeta as any).workKindKeys,['LAND_DIVISION']);
+  assert.deepEqual(createdTasks.map(t=>(t.uptsWorkMeta as any).stageNumber),[2,3]);
+  assert.equal(created.objectDetails.address,compose.objectDetails.address);
+  const beforeRetry=await db.auditLog.count();assert.equal((await ok(await request('/contracts',2,'POST',compose))).id,created.id);assert.equal(await db.auditLog.count(),beforeRetry);
+  assert.equal((await request('/contracts',2,'POST',{...compose,selectedWorks:[selected[1],selected[0]]})).status,409);
+  const attempt=(patch:any)=>request('/contracts',2,'POST',{...compose,clientKey:randomUUID(),...patch});
+  assert.equal((await attempt({selectedWorks:[selected[0],selected[0]]})).status,400);
+  assert.equal((await attempt({selectedWorks:[{...selected[0],version:999},selected[1]]})).status,409);
+  assert.equal((await attempt({workStages:[1]})).status,400);
+  assert.equal((await attempt({objectDetails:{...compose.objectDetails,workKindKey:'LAND_CHANGE',workKindKeys:['LAND_CHANGE']}})).status,400,'Work must belong to a selected kind');
+  assert.equal((await attempt({objectDetails:{...compose.objectDetails,workKindKeys:['OKS_DIVISION']}})).status,400);
+  assert.equal((await attempt({objectDetails:{...compose.objectDetails,workKindKeys:[]}})).status,400);
+  assert.equal((await request('/contracts',4,'POST',{...compose,clientKey:randomUUID()})).status,403);
+  const empty=await ok(await attempt({selectedWorks:[],workStages:[]}));assert.equal(await db.workTask.count({where:{uptsContractId:empty.id}}),0);
+  const addressSearch=await ok(await request('/upts?q='+encodeURIComponent('Развязка у села Новое')));assert(addressSearch.projects.some((p:any)=>p.upts.contracts.some((c:any)=>c.id===created.id)));
+  const addressEdit=await ok(await request(`/projects/${created.projectId}/contracts/${created.id}`,2,'PUT',{clientKey:randomUUID(),counterparty:'',signedDate:null,dueDate:null,number:created.number,name:created.name,version:created.version,contractType:'LAND',objectDetails:{...created.objectDetails,address:'Новый адрес'}}));assert.equal(addressEdit.objectDetails.address,'Новый адрес');assert.deepEqual(addressEdit.objectDetails.workKindKeys,compose.objectDetails.workKindKeys);
+  const report=new ExcelJS.Workbook();await report.xlsx.load(Buffer.from(await(await request('/export?contractId='+created.id)).arrayBuffer()) as any);assert(report.getWorksheet('Объекты')!.getRow(2).values.includes('Новый адрес'));assert(report.getWorksheet('Объекты')!.getRow(2).values.includes('Раздел, Учет изменений'));
  }finally{server.closeAllConnections();server.close();await db.$disconnect();for(const f of generated)await rm(f,{force:true});}
 });

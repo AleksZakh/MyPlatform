@@ -96,3 +96,6 @@ export const workKindsFor = (type?:string|null) => UPTS_WORK_KINDS.filter(k=>k.o
 export const workKindName = (key?:string|null) => UPTS_WORK_KINDS.find(k=>k.key===key)?.name || '';
 export function validWorkKind(type:UptsContractType|string|null,key?:string|null){return !key || UPTS_WORK_KINDS.some(k=>k.key===key && k.objectType===type);}
 export const UPTS_WORK_ROLES = { CURATOR:'Куратор', ENGINEER:'Кадастровый инженер' } as const;
+
+export const workKindNames=(value?:{workKindKey?:string|null;workKindKeys?:string[]}|null)=>
+  (value?.workKindKeys ?? (value?.workKindKey?[value.workKindKey]:[])).map(workKindName).filter(Boolean).join(', ');

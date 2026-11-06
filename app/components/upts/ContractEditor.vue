@@ -3,11 +3,14 @@ import { reactive, ref, computed, onMounted, watch, toRaw, nextTick } from "vue"
 import { workUserName, type WorkTaskDTO, type WorkUser } from '~~/shared/types/work';
 import ObjectFields from './ObjectFields.vue';
 import WorkStagesTable from './WorkStagesTable.vue';
+import WorkSelectionTable from './WorkSelectionTable.vue';
+import {uptsWorkCandidates} from '~~/shared/utils/upts-work-selection';
 import { workKindsFor } from '~~/shared/utils/upts-work-kinds';
 import type { UptsObjectDetails, UptsTaskStageRow, UptsStageWork } from '~~/shared/types/upts-object';
 import Modal from "../work/Modal.vue";
 import type { UptsContractDTO, UptsProjectDTO } from "~~/shared/types/upts";
 import {
+  UPTS_CONTRACT_TYPES,
   type UptsLibrary,
   type UptsContractType,
 } from "~~/shared/types/upts-library";
@@ -82,42 +85,30 @@ const form = reactive({
   projectId: c?.projectId ?? null,
 
 });
-const templateId = ref<number | null>(null),
-  manual = ref("");
-const templates = computed(
-  () =>
-    library.value?.templates.filter(
-      (t) =>
-        t.contractType === form.contractType &&
-        t.active &&
-        t.workKindKey === details.value.workKindKey &&
-        t.items.every((i) => i.work.active),
-    ) || [],
-);
-const template = computed(() =>
-  templates.value.find((t) => t.id === templateId.value),
-);
+const manual=ref('');
+const selectedKinds=ref<string[]>(details.value.workKindKeys ?? (details.value.workKindKey?[details.value.workKindKey]:[]));
+const enabledWorks=ref<string[]>([]);
+const selectedKindKeys=computed(()=>kinds.value.filter(k=>selectedKinds.value.includes(k.key)).map(k=>k.key));
+const candidates=computed(()=>uptsWorkCandidates(library.value,form.contractType,selectedKindKeys.value));
 const manualNames=computed(()=>manual.value.split('\n').map(s=>s.trim()).filter(Boolean));
 const workRows=computed<UptsStageWork[]>(()=>c
  ? existingWorks.value.map(t=>({key:'task:'+t.id,name:t.title,...t.uptsWorkMeta,status:t.status}))
- : template.value ? template.value.items.map(i=>({key:'definition:'+i.work.id,...i.work}))
- : manualNames.value.map((name,i)=>({key:'manual:'+i+':'+name,name})));
+ : form.contractType==='OTHER' ? manualNames.value.map((name,i)=>({key:'manual:'+i+':'+name,name}))
+ : candidates.value.map(({work})=>({key:'definition:'+work.id,...work})));
+const activeRows=computed(()=>c?workRows.value:workRows.value.filter(w=>enabledWorks.value.includes(w.key)));
+watch(()=>workRows.value.map(w=>w.key),keys=>{
+ if(c)return;
+ enabledWorks.value=enabledWorks.value.filter(key=>keys.includes(key));
+ workStages.value=Object.fromEntries(Object.entries(workStages.value).filter(([key])=>keys.includes(key)));
+});
+watch(()=>form.contractType,()=>{selectedKinds.value=[];manual.value='';if(!c){enabledWorks.value=[];workStages.value={};}});
 let attempt:{source:string;key:string}|null=null;
-watch(
-  () => form.contractType,
-  () => {
-    details.value.workKindKey=null;
-    templateId.value = null;
-    manual.value = "";
-  },
-);
-watch(()=>details.value.workKindKey,()=>{templateId.value=templates.value[0]?.id ?? null;});
 async function load() {
   loading.value = true;
   libraryError.value = "";
   try {
     library.value = await $fetch<UptsLibrary>("/api/upts/library");
-    templateId.value = templates.value[0]?.id ?? null;
+
   } catch {
     libraryError.value = "Не удалось загрузить библиотеку работ.";
   } finally {
@@ -126,21 +117,23 @@ async function load() {
 }
 onMounted(() => {
   loadStaff();
-  if (c) loadStageWorks(); else load();
+  if (c) loadStageWorks();
+  load();
 });
 async function save() {
   validationError.value='';
-  if(worksLoading.value || worksError.value)return;
+  if(worksLoading.value || worksError.value || loading.value || libraryError.value)return;
   if(details.value.workStartDate && form.dueDate && details.value.workStartDate>form.dueDate){
     validationError.value='Дата окончания работ не может быть раньше даты начала.';return;
   }
   if(stageCount.value!=='' && (!Number.isInteger(stageCount.value) || stageCount.value<1 || stageCount.value>2147483647)){
     validationError.value='Количество этапов должно быть целым положительным числом.';return;
   }
-  const stageNumbers=workRows.value.map(w=>workStages.value[w.key] ?? 1);
+  const stageNumbers=activeRows.value.map(w=>workStages.value[w.key] ?? 1);
   if(stageNumbers.some(n=>typeof n!=='number' || !Number.isInteger(n) || n<1 || n>effectiveStageCount.value)){
     validationError.value='Укажите каждой работе этап в пределах количества этапов объекта.';activeTab.value='works';return;
   }
+  if(activeRows.value.length>50 && !c){validationError.value='За один раз можно включить не более 50 работ.';activeTab.value='works';return;}
   const fields = {
     clientKey: form.clientKey,
     version: form.version,
@@ -150,6 +143,8 @@ async function save() {
     counterparty: form.counterparty,
     contractType: form.contractType,
     objectDetails:{...details.value,
+      workKindKeys:selectedKindKeys.value,
+      workKindKey:selectedKindKeys.value[0] || null,
       workStartDate:details.value.workStartDate || null,
       stageCount:stageCount.value===''?null:stageCount.value,
       basisContractDate:details.value.basisContractDate || null,
@@ -160,7 +155,8 @@ async function save() {
     signedDate: form.signedDate || null,
     dueDate: form.dueDate || null,
   };
-  const source=JSON.stringify({fields,templateId:templateId.value,manual:manualNames.value,stageNumbers});
+  const chosenWorks=candidates.value.filter(({work})=>enabledWorks.value.includes('definition:'+work.id)).map(({work})=>({id:work.id,version:work.version}));
+  const source=JSON.stringify({fields,chosenWorks,manual:activeRows.value.map(w=>w.name),stageNumbers});
   if(!attempt || attempt.source!==source)attempt={source,key:crypto.randomUUID()};
   const result = await send<UptsContractDTO>(
     c
@@ -176,26 +172,63 @@ async function save() {
           projectId: null,
           visibility: 'UPTS_DEPARTMENT',
           memberIds: [],
-          templateId: templateId.value,
-          templateVersion: template.value?.version ?? null,
-          manualWorks: templateId.value
-            ? []
-            : manual.value
-                .split("\n")
-                .map((s) => s.trim())
-                .filter(Boolean),
+          templateId:null,
+          templateVersion:null,
+          ...(form.contractType==='OTHER'?{}:{selectedWorks:chosenWorks}),
+          manualWorks:form.contractType==='OTHER'?activeRows.value.map(w=>w.name):[],
         },
   );
   if (result) emit("saved", result);
 }
 </script>
 <template>
-  <Modal full-height wide :title="c ? 'Объект ' + (details.sourceCadastralNumber || c.number) : 'Новый объект'" @close="emit('close')">
+  <Modal full-height wide fixed-sections :title="c ? 'Объект ' + (details.sourceCadastralNumber || c.number) : 'Новый объект'" @close="emit('close')">
     <form class="work-form upts-object-form" @submit.prevent="save" @invalid.capture="revealInvalid">
-      <fieldset class="upts-object-general" :disabled="saving" aria-label="Общая информация по объекту">
+      <fieldset class="upts-static upts-object-general" :disabled="saving" aria-label="Общая информация по объекту">
         <legend>Общая информация по объекту</legend>
         <div class="upts-object-general-grid">
+          <label>Условный номер (название)<input v-model="form.number" required maxlength="100" /></label>
+          <label>Кадастровый номер<input v-model="details.sourceCadastralNumber" maxlength="100" /></label>
+          <label>Объект<input v-model="details.road" list="upts-object-roads" maxlength="500" placeholder="Автомобильная дорога" /><datalist id="upts-object-roads"><option v-for="road in roads" :key="road" :value="road" /></datalist></label>
+          <label>Местоположение (адрес)<input v-model="details.address" maxlength="500" /></label>
+          <label>Площадь, кв. м<input v-model="details.sourceArea" inputmode="decimal" maxlength="30" pattern="[0-9]+([.,][0-9]+)?" /></label>
+          <label>Тип<select v-model="form.contractType" required><option value="" disabled>Не выбрано</option><option v-for="(label,key) in UPTS_CONTRACT_TYPES" :key="key" :value="key">{{ label }}</option></select></label>
           <label>Номер договора<input v-model="details.basisContractNumber" maxlength="250" /></label>
+        </div>
+      </fieldset>
+      <div class="upts-form-tabs" role="tablist" aria-label="Карточка объекта">
+        <button v-for="(tab,i) in tabs" :id="'upts-tab-'+tab.key" :key="tab.key" type="button" role="tab" :aria-selected="activeTab===tab.key" :aria-controls="tab.key==='characteristics'?'upts-characteristics':'upts-object-works'" :tabindex="activeTab===tab.key?0:-1" @click="activeTab=tab.key" @keydown="tabKey($event,i)"><Icon :name="tab.icon" /><span>{{ tab.label }}</span></button>
+      </div>
+      <p v-if="validationError || error" class="work-error upts-save-error" role="alert">{{ validationError || error }}</p>
+      <fieldset class="upts-tab-content" :disabled="saving">
+        <div id="upts-characteristics" v-show="activeTab==='characteristics'" role="tabpanel" aria-labelledby="upts-tab-characteristics">
+          <ObjectFields v-model="details" :stages="stages" />
+        </div>
+        <div id="upts-object-works" v-show="activeTab==='works'" role="tabpanel" aria-labelledby="upts-tab-works" class="upts-works-fields">
+          <fieldset v-if="form.contractType!=='OTHER'" class="upts-work-kinds" :disabled="saving || loading || !!libraryError">
+            <legend>Виды работ</legend>
+            <div class="upts-kind-grid"><label v-for="kind in kinds" :key="kind.key" class="work-check"><input v-model="selectedKinds" type="checkbox" :value="kind.key" />{{ kind.name }}</label></div>
+          </fieldset>
+          <label v-else>Описание деятельности<textarea v-model="details.otherDescription" rows="2" maxlength="2000" /></label>
+          <p v-if="loading" role="status">Загружаем библиотеку…</p>
+          <p v-if="libraryError" class="work-error" role="alert">{{ libraryError }} <button type="button" @click="load">Повторить</button></p>
+          <template v-if="!c">
+            <label v-if="form.contractType==='OTHER'">Работы — одна строка на работу<textarea v-model="manual" rows="3" maxlength="12550" /></label>
+            <p v-if="!workRows.length && !loading && !libraryError" class="work-muted">{{ form.contractType==='OTHER' ? 'Введите названия работ, затем включите нужные строки.' : selectedKindKeys.length ? 'В библиотеке нет активных работ для выбранных видов.' : 'Выберите виды работ, чтобы сформировать список.' }}</p>
+            <WorkSelectionTable v-if="workRows.length" v-model="workStages" v-model:enabled="enabledWorks" :works="workRows" :stage-count="effectiveStageCount" :disabled="saving || loading || !!libraryError" />
+          </template>
+          <template v-else>
+            <p v-if="worksLoading" role="status">Загружаем работы объекта…</p>
+            <p v-if="worksError" class="work-error" role="alert">{{ worksError }} <button type="button" @click="loadStageWorks">Повторить</button></p>
+            <p v-if="!worksLoading && !worksError && !existingWorks.length" class="work-muted">Работ пока нет.</p>
+            <p class="work-muted">Существующие работы сохраняются. Добавление доступно кнопкой «+ Работа» в карточке объекта.</p>
+            <WorkStagesTable v-if="workRows.length" v-model="workStages" :works="workRows" :stage-count="effectiveStageCount" />
+          </template>
+        </div>
+      </fieldset>
+      <fieldset class="upts-static upts-object-execution" :disabled="saving" aria-label="Параметры выполнения работ">
+        <legend>Параметры выполнения работ</legend>
+        <div class="upts-object-execution-grid">
           <label>Дата начала работ<input v-model="details.workStartDate" type="date" min="1900-01-01" max="2200-12-31" /></label>
           <label>Дата окончания работ<input v-model="form.dueDate" type="date" :min="details.workStartDate || '1900-01-01'" max="2200-12-31" /></label>
           <label v-for="role in objectRoles" :key="role.key">{{ role.label }}<select v-model="details[role.key]" :disabled="staffLoading || !!staffError"><option :value="null">Не назначен</option><option v-if="details[role.key] && !staff.some(p=>p.id===details[role.key])" :value="details[role.key]">{{ retainedPerson(details[role.key]!) }} (сохранённое назначение)</option><option v-for="p in staff" :key="p.id" :value="p.id">{{ workUserName(p) }}</option></select></label>
@@ -204,44 +237,25 @@ async function save() {
         <p v-if="staffLoading" class="work-muted" role="status">Загружаем сотрудников УПТС…</p>
         <p v-if="staffError" class="work-error" role="alert">{{ staffError }} <button type="button" @click="loadStaff">Повторить</button></p>
       </fieldset>
-      <div class="upts-form-tabs" role="tablist" aria-label="Карточка объекта">
-        <button v-for="(tab,i) in tabs" :id="'upts-tab-'+tab.key" :key="tab.key" type="button" role="tab" :aria-selected="activeTab===tab.key" :aria-controls="tab.key==='characteristics'?'upts-characteristics':'upts-object-works'" :tabindex="activeTab===tab.key?0:-1" @click="activeTab=tab.key" @keydown="tabKey($event,i)"><Icon :name="tab.icon" /><span>{{ tab.label }}</span></button>
-      </div>
-      <p v-if="validationError || error" class="work-error" role="alert">{{ validationError || error }}</p>
-      <fieldset :disabled="saving">
-        <div id="upts-characteristics" v-show="activeTab==='characteristics'" role="tabpanel" aria-labelledby="upts-tab-characteristics">
-          <ObjectFields v-model="details" v-model:object-type="form.contractType" v-model:number="form.number" :roads="roads" :stages="stages" />
-        </div>
-        <div id="upts-object-works" v-show="activeTab==='works'" role="tabpanel" aria-labelledby="upts-tab-works" class="upts-works-fields">
-          <label v-if="form.contractType!=='OTHER'">Вид работ<select v-model="details.workKindKey"><option :value="null">Не выбран</option><option v-for="k in kinds" :key="k.key" :value="k.key">{{ k.name }}</option></select></label>
-          <label v-else>Описание деятельности<textarea v-model="details.otherDescription" rows="3" maxlength="2000" /></label>
-          <template v-if="!c">
-            <p v-if="loading" role="status">Загружаем библиотеку…</p>
-            <p v-if="libraryError" class="work-error" role="alert">{{ libraryError }} <button type="button" @click="load">Повторить</button></p>
-            <label v-if="form.contractType!=='OTHER'">Шаблон работ<select v-model="templateId"><option :value="null">Без начального набора</option><option v-for="t in templates" :key="t.id" :value="t.id">{{ t.name }}</option></select></label>
-
-            <label v-if="form.contractType==='OTHER'">Работы — одна строка на работу<textarea v-model="manual" rows="4" maxlength="12550" /></label>
-            <p v-if="form.contractType!=='OTHER' && !details.workKindKey" class="work-muted">Выберите вид работ, чтобы увидеть его шаблоны.</p>
-          </template>
-          <template v-else>
-            <p v-if="worksLoading" role="status">Загружаем работы объекта…</p>
-            <p v-if="worksError" class="work-error" role="alert">{{ worksError }} <button type="button" @click="loadStageWorks">Повторить</button></p>
-            <p v-if="!worksLoading && !worksError && !existingWorks.length" class="work-muted">Работ пока нет.</p>
-            <p class="work-muted">Изменение вида работ не заменяет существующие работы. Добавление доступно кнопкой «+ Работа» в карточке объекта.</p>
-          </template>
-          <WorkStagesTable v-if="workRows.length" v-model="workStages" :works="workRows" :stage-count="effectiveStageCount" />
-        </div>
-      </fieldset>
-      <div class="work-actions upts-object-form-actions"><button class="work-primary" :disabled="saving || loading || worksLoading || !!worksError || (!c && !!libraryError)">{{ saving?'Сохранение…':'Сохранить' }}</button><button type="button" @click="emit('close')">Отмена</button></div>
+      <div class="work-actions upts-object-form-actions"><button class="work-primary" :disabled="saving || loading || worksLoading || !!worksError || !!libraryError">{{ saving?'Сохранение…':'Сохранить' }}</button><button type="button" @click="emit('close')">Отмена</button></div>
     </form>
   </Modal>
 </template>
 <style scoped>
-.upts-object-form{min-height:100%;display:flex;flex-direction:column}.upts-object-form .upts-object-form-actions{margin-top:auto}
-.upts-object-form .upts-object-general{border:1px solid var(--work-line);border-radius:8px;padding:12px;margin:0 0 16px;min-width:0;background:var(--work-panel)}.upts-object-general legend{padding:0 6px;font-size:13px;font-weight:600;color:var(--work-text)}.upts-object-general-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.upts-object-general-grid label{min-width:0;font-size:12px;color:var(--work-muted)}.upts-object-general-grid :is(input,select){min-width:0;width:100%;color:var(--work-text)}.upts-object-general p{margin:8px 0 0}
-@media(max-width:600px){.upts-object-general-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:400px){.upts-object-general-grid{grid-template-columns:1fr}}
-.upts-form-tabs{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:4px;background:var(--space-bg,#f1f5f9);border-radius:8px;margin-bottom:12px}.upts-form-tabs button{display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 8px;min-width:0;font-size:16px;font-weight:400;background:transparent;color:var(--work-muted);border:1px solid var(--work-line);border-radius:6px;line-height:1.3}.upts-form-tabs button[aria-selected=true]{background:#ffedd5;color:#172338;border-color:#fed7aa;box-shadow:0 1px 3px #0000000d}.upts-form-tabs button .iconify{flex-shrink:0;font-size:20px}.upts-works-fields{display:grid;gap:12px}.upts-existing-works{list-style:none;margin:0;padding:0}.upts-existing-works li{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--work-line)}.upts-existing-works small{color:var(--work-muted)}.upts-object-form-actions{position:sticky;bottom:-20px;background:var(--work-panel);border-top:1px solid var(--work-line);padding:12px 0;margin-top:12px;z-index:1}
+.upts-object-form{height:100%;min-height:0;display:flex;flex-direction:column;gap:10px;overflow:hidden}
+.upts-object-form .upts-static{flex:0 1 auto;max-height:30%;overflow:auto;border:1px solid var(--work-line);border-radius:8px;padding:8px 12px;margin:0;min-height:0;background:var(--work-panel);gap:6px}
+.upts-static legend,.upts-work-kinds legend{padding:0 6px;font-size:12px;font-weight:600;color:var(--work-text)}
+.upts-object-general-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 12px}.upts-object-execution-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px 12px}
+.upts-static label{min-width:0;font-size:12px;color:var(--work-muted)}
+.upts-object-form :deep(input:not([type=checkbox])),.upts-object-form :deep(select){height:32px;padding:5px 8px;min-width:0;color:var(--work-text)}
+.upts-object-form :deep(textarea){padding:5px 8px;line-height:1.35}
+.upts-object-form :deep(.upts-selection-stage input),.upts-object-form :deep(.upts-selection-stage select),.upts-object-form :deep(.upts-stage-number input){height:21px;padding:0 5px;line-height:19px}
+.upts-object-form .upts-tab-content{flex:1 1 0;min-height:96px;overflow:auto;display:block;padding:2px 2px 8px;overscroll-behavior:contain}
+.upts-form-tabs{flex:none;display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:4px;background:var(--space-bg,#f1f5f9);border-radius:8px}
+.upts-form-tabs button{display:flex;align-items:center;justify-content:center;gap:8px;padding:8px;min-width:0;font-size:15px;font-weight:400;background:transparent;color:var(--work-muted);border:1px solid var(--work-line);border-radius:6px;line-height:1.3}
+.upts-form-tabs button[aria-selected=true]{background:#ffedd5;color:#172338;border-color:#fed7aa;box-shadow:0 1px 3px #0000000d}.upts-form-tabs button .iconify{flex-shrink:0;font-size:20px}
+.upts-works-fields{display:grid;gap:8px}.upts-object-form .upts-work-kinds{padding:6px 10px 10px;border:1px solid var(--work-line);border-radius:8px}.upts-kind-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 14px}.upts-kind-grid label{align-items:flex-start;font-size:12px;line-height:1.35}.upts-kind-grid input{margin-top:2px;flex-shrink:0}
+.upts-object-form-actions{flex:none;background:var(--work-panel);border-top:1px solid var(--work-line);padding:8px 0 0}.upts-object-form .upts-save-error{flex:none;max-height:70px;overflow:auto;margin:0!important;padding:6px 10px}
 :global(html.dark) .upts-form-tabs{background:var(--space-graphite-panel,#344757)}:global(html.dark) .upts-form-tabs button[aria-selected=true]{background:var(--space-graphite-selected,#36526c);color:#e9f2ff;border-color:#587aa6;box-shadow:inset 0 -2px 0 var(--space-graphite-accent,#93c5fd)}
-@media(max-width:520px){.upts-form-tabs{gap:6px}.upts-form-tabs button{font-size:13px;padding:9px 5px}.upts-object-form-actions{bottom:-16px}}
+@media(max-width:760px){.upts-object-general-grid,.upts-object-execution-grid,.upts-kind-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.upts-form-tabs{gap:6px}.upts-form-tabs button{font-size:13px;padding:7px 5px}}
 </style>

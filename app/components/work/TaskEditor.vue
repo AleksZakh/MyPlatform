@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue';
-import { UPTS_WORK_ROLES, workKindName } from '~~/shared/utils/upts-work-kinds';
+import { UPTS_WORK_ROLES, workKindNames } from '~~/shared/utils/upts-work-kinds';
 import TaskSurface from './TaskSurface.vue';import PersonPicker from './PersonPicker.vue';
 import { workTaskContext,workTaskColor,WORK_STATUSES,WORK_KINDS,WORK_PRIORITIES,workUserName,type WorkTaskDTO,type WorkProjectDTO,type WorkContext,type WorkUser } from '~~/shared/types/work';
 import { dateKey } from '~~/shared/utils/work-board';
@@ -55,7 +55,7 @@ defineExpose({useProject:(p:WorkProjectDTO)=>{relationship.value='PROJECT';form.
    <label v-if="!isUpts && objectOptions.length">Связанный участок<select v-model="form.uptsObjectId"><option :value="null">Общая задача проекта</option><option v-for="o in objectOptions" :key="o.id" :value="o.id">{{ o.object.name }}</option></select></label>
    <dl v-if="task?.uptsWorkMeta" class="upts-work-reference">
     <template v-if="task.uptsWorkMeta.stageNumber"><dt>Этап работ</dt><dd>{{ task.uptsWorkMeta.stageNumber }}</dd></template>
-    <template v-if="task.uptsWorkMeta.workKindKey"><dt>Вид работ</dt><dd>{{ workKindName(task.uptsWorkMeta.workKindKey) }}</dd></template>
+    <template v-if="task.uptsWorkMeta.workKindKey || task.uptsWorkMeta.workKindKeys?.length"><dt>Вид работ</dt><dd>{{ workKindNames(task.uptsWorkMeta) }}</dd></template>
     <dt>Ответственная роль</dt><dd>{{ task.uptsWorkMeta.responsibleRole ? UPTS_WORK_ROLES[task.uptsWorkMeta.responsibleRole] : 'Не указана' }}</dd>
     <dt>Ожидаемый результат</dt><dd>{{ task.uptsWorkMeta.expectedResult || 'Не указан' }}</dd>
    </dl>

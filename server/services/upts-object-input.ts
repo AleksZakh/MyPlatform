@@ -12,7 +12,7 @@ export const objectDetailsSchema = z.object({
   basisContractDate: uptsDay.optional(),
   workStartDate: uptsDay.optional(),
   stageCount: z.number().int().positive().max(2147483647).nullable().optional(),
-  road: text.optional(), stage: text.optional(),
+  road: text.optional(), address:text.optional(), stage: text.optional(),
   rightHolders: z.array(text.min(1)).max(30).optional(),
   region: text.optional(), dealType: text.optional(),
   sourceCadastralNumber: z.string().trim().max(100).optional(),
@@ -22,10 +22,11 @@ export const objectDetailsSchema = z.object({
   kuvdEntries: z.array(z.object({number:z.string().trim().max(100),date:uptsDay}).strict()).max(30).optional(),
   curatorId: person, engineerId: person,
   workKindKey: z.string().max(40).nullable().optional(),
+  workKindKeys:z.array(z.string().min(1).max(40)).max(18).refine(keys=>new Set(keys).size===keys.length).optional(),
   otherDescription: z.string().trim().max(2000).optional(),
 }).strict();
 export function checkObjectKind(type:string|null, details?:UptsObjectDetails){
-  if(!validWorkKind(type,details?.workKindKey)) fail(400,'Вид работ не соответствует типу объекта.');
+  if(!validWorkKind(type,details?.workKindKey) || details?.workKindKeys?.some(key=>!validWorkKind(type,key))) fail(400,'Вид работ не соответствует типу объекта.');
 }
 export function checkObjectSchedule(details:UptsObjectDetails|undefined, dueDate:string|null){
   if(details?.workStartDate && dueDate && details.workStartDate>dueDate)
