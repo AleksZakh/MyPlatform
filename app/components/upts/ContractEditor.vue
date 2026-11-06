@@ -30,7 +30,7 @@ if(!details.value.permittedUses?.length)details.value.permittedUses=[''];
 if(!details.value.kuvdEntries?.length)details.value.kuvdEntries=[{number:'',date:null}];
 const activeTab=ref<'characteristics'|'works'>('characteristics');
 const staff=ref<WorkUser[]>([]), staffLoading=ref(false), staffError=ref(''), validationError=ref('');
-const stageCount=ref<number|''>(details.value.stageCount ?? '');
+const stageCount=ref<number|''>(details.value.stageCount ?? 1);
 const objectRoles=[{key:'curatorId',label:'Куратор'},{key:'engineerId',label:'Кадастровый инженер'}] as const;
 function retainedPerson(id:number){
   const people=props.projects.flatMap(p=>[p.owner,...p.members.map(m=>m.user)]);
@@ -129,6 +129,9 @@ async function save() {
   if(stageCount.value!=='' && (!Number.isInteger(stageCount.value) || stageCount.value<1 || stageCount.value>2147483647)){
     validationError.value='Количество этапов должно быть целым положительным числом.';return;
   }
+  if(!c && !activeRows.value.length){
+    validationError.value='Нет включённых работ. Отметьте хотя бы одну работу флажком слева перед сохранением объекта.';activeTab.value='works';return;
+  }
   const stageNumbers=activeRows.value.map(w=>workStages.value[w.key] ?? 1);
   if(stageNumbers.some(n=>typeof n!=='number' || !Number.isInteger(n) || n<1 || n>effectiveStageCount.value)){
     validationError.value='Укажите каждой работе этап в пределах количества этапов объекта.';activeTab.value='works';return;
@@ -193,6 +196,7 @@ async function save() {
           <label>Местоположение (адрес)<input v-model="details.address" maxlength="500" /></label>
           <label>Площадь, кв. м<input v-model="details.sourceArea" inputmode="decimal" maxlength="30" pattern="[0-9]+([.,][0-9]+)?" /></label>
           <label>Тип<select v-model="form.contractType" required><option value="" disabled>Не выбрано</option><option v-for="(label,key) in UPTS_CONTRACT_TYPES" :key="key" :value="key">{{ label }}</option></select></label>
+          <label>Количество этапов<input v-model.number="stageCount" type="number" min="1" max="2147483647" step="1" inputmode="numeric" /></label>
           <label>Номер договора<input v-model="details.basisContractNumber" maxlength="250" /></label>
         </div>
       </fieldset>
@@ -232,7 +236,6 @@ async function save() {
           <label>Дата начала работ<input v-model="details.workStartDate" type="date" min="1900-01-01" max="2200-12-31" /></label>
           <label>Дата окончания работ<input v-model="form.dueDate" type="date" :min="details.workStartDate || '1900-01-01'" max="2200-12-31" /></label>
           <label v-for="role in objectRoles" :key="role.key">{{ role.label }}<select v-model="details[role.key]" :disabled="staffLoading || !!staffError"><option :value="null">Не назначен</option><option v-if="details[role.key] && !staff.some(p=>p.id===details[role.key])" :value="details[role.key]">{{ retainedPerson(details[role.key]!) }} (сохранённое назначение)</option><option v-for="p in staff" :key="p.id" :value="p.id">{{ workUserName(p) }}</option></select></label>
-          <label>Количество этапов<input v-model.number="stageCount" type="number" min="1" max="2147483647" step="1" inputmode="numeric" /></label>
         </div>
         <p v-if="staffLoading" class="work-muted" role="status">Загружаем сотрудников УПТС…</p>
         <p v-if="staffError" class="work-error" role="alert">{{ staffError }} <button type="button" @click="loadStaff">Повторить</button></p>
@@ -245,7 +248,7 @@ async function save() {
 .upts-object-form{height:100%;min-height:0;display:flex;flex-direction:column;gap:10px;overflow:hidden}
 .upts-object-form .upts-static{flex:0 1 auto;max-height:30%;overflow:auto;border:1px solid var(--work-line);border-radius:8px;padding:8px 12px;margin:0;min-height:0;background:var(--work-panel);gap:6px}
 .upts-static legend,.upts-work-kinds legend{padding:0 6px;font-size:12px;font-weight:600;color:var(--work-text)}
-.upts-object-general-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 12px}.upts-object-execution-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px 12px}
+.upts-object-general-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 12px}.upts-object-execution-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 12px}
 .upts-static label{min-width:0;font-size:12px;color:var(--work-muted)}
 .upts-object-form :deep(input:not([type=checkbox])),.upts-object-form :deep(select){height:32px;padding:5px 8px;min-width:0;color:var(--work-text)}
 .upts-object-form :deep(textarea){padding:5px 8px;line-height:1.35}
