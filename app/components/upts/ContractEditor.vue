@@ -69,7 +69,6 @@ function revealInvalid(event:Event){
 }
 const kinds = computed(()=>workKindsFor(form.contractType));
 const roads = computed(()=>[...new Set(props.projects.flatMap(p=>p.upts.contracts.map(c=>c.objectDetails?.road).filter((v):v is string=>!!v)))]);
-const stages = computed(()=>[...new Set(props.projects.flatMap(p=>p.upts.contracts.map(c=>c.objectDetails?.stage).filter((v):v is string=>!!v)))]);
 const library = ref<UptsLibrary | null>(null),
   loading = ref(false),
   libraryError = ref("");
@@ -193,11 +192,11 @@ async function save() {
           <label>Условный номер (название)<input v-model="form.number" required maxlength="100" /></label>
           <label>Кадастровый номер<input v-model="details.sourceCadastralNumber" maxlength="100" /></label>
           <label>Объект<input v-model="details.road" list="upts-object-roads" maxlength="500" placeholder="Автомобильная дорога" /><datalist id="upts-object-roads"><option v-for="road in roads" :key="road" :value="road" /></datalist></label>
-          <label>Местоположение (адрес)<input v-model="details.address" maxlength="500" /></label>
+          <label>Местоположение (область, район)<input v-model="details.address" maxlength="500" /></label>
           <label>Площадь, кв. м<input v-model="details.sourceArea" inputmode="decimal" maxlength="30" pattern="[0-9]+([.,][0-9]+)?" /></label>
           <label>Тип<select v-model="form.contractType" required><option value="" disabled>Не выбрано</option><option v-for="(label,key) in UPTS_CONTRACT_TYPES" :key="key" :value="key">{{ label }}</option></select></label>
-          <label>Количество этапов<input v-model.number="stageCount" type="number" min="1" max="2147483647" step="1" inputmode="numeric" /></label>
-          <label>Номер договора<input v-model="details.basisContractNumber" maxlength="250" /></label>
+          <div class="upts-contract-requisites"><label>Номер договора<input v-model="details.basisContractNumber" maxlength="250" /></label><label>от<input v-model="details.basisContractDate" type="date" aria-label="Дата договора" min="1900-01-01" max="2200-12-31" /></label></div>
+          <label>Номер заявки<input v-model="details.requestNumber" maxlength="100" /></label>
         </div>
       </fieldset>
       <div class="upts-form-tabs" role="tablist" aria-label="Карточка объекта">
@@ -206,9 +205,10 @@ async function save() {
       <p v-if="validationError || error" class="work-error upts-save-error" role="alert">{{ validationError || error }}</p>
       <fieldset class="upts-tab-content" :disabled="saving">
         <div id="upts-characteristics" v-show="activeTab==='characteristics'" role="tabpanel" aria-labelledby="upts-tab-characteristics">
-          <ObjectFields v-model="details" :stages="stages" />
+          <ObjectFields v-model="details" />
         </div>
         <div id="upts-object-works" v-show="activeTab==='works'" role="tabpanel" aria-labelledby="upts-tab-works" class="upts-works-fields">
+          <label class="upts-stage-count">Количество этапов<input v-model.number="stageCount" type="number" min="1" max="2147483647" step="1" inputmode="numeric" /></label>
           <fieldset v-if="form.contractType!=='OTHER'" class="upts-work-kinds" :disabled="saving || loading || !!libraryError">
             <legend>Виды работ</legend>
             <div class="upts-kind-grid"><label v-for="kind in kinds" :key="kind.key" class="work-check"><input v-model="selectedKinds" type="checkbox" :value="kind.key" />{{ kind.name }}</label></div>
@@ -250,6 +250,7 @@ async function save() {
 .upts-static legend{background:var(--upts-static-bg);border-radius:4px}
 .upts-static legend,.upts-work-kinds legend{padding:0 6px;font-size:12px;font-weight:600;color:var(--work-text)}
 .upts-object-general-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 12px}.upts-object-execution-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 12px}
+.upts-contract-requisites{display:grid;grid-template-columns:minmax(0,1fr) minmax(112px,1fr);gap:6px;min-width:0}.upts-stage-count{max-width:170px}
 .upts-static label{min-width:0;font-size:12px;color:var(--work-muted)}
 .upts-object-form :deep(input:not([type=checkbox])),.upts-object-form :deep(select){height:32px;padding:5px 8px;min-width:0;color:var(--work-text)}
 .upts-object-form :deep(textarea){padding:5px 8px;line-height:1.35}

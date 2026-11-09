@@ -10,6 +10,8 @@ const person = z.number().int().positive().max(2147483647).nullable().optional()
 export const objectDetailsSchema = z.object({
   basisContractNumber: z.string().trim().max(250).optional(),
   basisContractDate: uptsDay.optional(),
+  requestNumber:z.string().trim().max(100).optional(),
+  landCategory:text.optional(),
   workStartDate: uptsDay.optional(),
   stageCount: z.number().int().positive().max(2147483647).nullable().optional(),
   road: text.optional(), address:text.optional(), stage: text.optional(),

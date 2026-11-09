@@ -222,7 +222,7 @@ export async function uptsWorkbook(
       'Дата',
       'Срок',
       'Папка относительно хранилища проектов',
-      'Дорога', 'Этап', 'Вид работ', 'Правообладатели', 'Область', 'Тип сделки', 'Кадастровый номер исходного ЗУ', 'Площадь исходного ЗУ, кв. м', 'Вид права', 'ВРИ исходного ЗУ', 'Тип учёта', 'КУВД', 'Куратор (ID)', 'Кадастровый инженер (ID)', 'Описание деятельности', 'Номер договора', 'Дата договора', 'Дата начала работ', 'Количество этапов', 'Местоположение (адрес)',
+      'Дорога', 'Этап', 'Вид работ', 'Правообладатели', 'Область', 'Тип сделки', 'Кадастровый номер исходного ЗУ', 'Площадь исходного ЗУ, кв. м', 'Вид права', 'ВРИ исходного ЗУ', 'Тип учёта', 'КУВД', 'Куратор (ID)', 'Кадастровый инженер (ID)', 'Описание деятельности', 'Номер договора', 'Дата договора', 'Дата начала работ', 'Количество этапов', 'Местоположение (область, район)', 'Номер заявки', 'Категория земель',
     ],
     data.projects.flatMap((p) =>
       p.upts.contracts.map((c) => [
@@ -234,7 +234,7 @@ export async function uptsWorkbook(
         formatWorkDate(c.signedDate),
         formatWorkDate(c.dueDate),
         `${p.id}/contracts/${c.id}`,
-        c.objectDetails?.road || '', c.objectDetails?.stage || '', workKindNames(c.objectDetails), c.objectDetails?.rightHolders?.join('; ') || '', c.objectDetails?.region || '', c.objectDetails?.dealType || '', c.objectDetails?.sourceCadastralNumber || '', c.objectDetails?.sourceArea || '', c.objectDetails?.rightKind || '', c.objectDetails?.permittedUses?.join('; ') || '', c.objectDetails?.accountingType || '', c.objectDetails?.kuvdEntries?.map(e=>e.number+' '+formatWorkDate(e.date)).join('; ') || '', c.objectDetails?.curatorId || '', c.objectDetails?.engineerId || '', c.objectDetails?.otherDescription || '', c.objectDetails?.basisContractNumber || '', formatWorkDate(c.objectDetails?.basisContractDate), formatWorkDate(c.objectDetails?.workStartDate), c.objectDetails?.stageCount ?? '', c.objectDetails?.address || '', 
+        c.objectDetails?.road || '', c.objectDetails?.stage || '', workKindNames(c.objectDetails), c.objectDetails?.rightHolders?.join('; ') || '', c.objectDetails?.region || '', c.objectDetails?.dealType || '', c.objectDetails?.sourceCadastralNumber || '', c.objectDetails?.sourceArea || '', c.objectDetails?.rightKind || '', c.objectDetails?.permittedUses?.join('; ') || '', c.objectDetails?.accountingType || '', c.objectDetails?.kuvdEntries?.map(e=>e.number+' '+formatWorkDate(e.date)).join('; ') || '', c.objectDetails?.curatorId || '', c.objectDetails?.engineerId || '', c.objectDetails?.otherDescription || '', c.objectDetails?.basisContractNumber || '', formatWorkDate(c.objectDetails?.basisContractDate), formatWorkDate(c.objectDetails?.workStartDate), c.objectDetails?.stageCount ?? '', c.objectDetails?.address || '', c.objectDetails?.requestNumber || '', c.objectDetails?.landCategory || '', 
       ]),
     ),
   );

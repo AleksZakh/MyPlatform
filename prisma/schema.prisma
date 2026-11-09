@@ -1771,8 +1771,10 @@ model DiagnosticContractWork {
  sourceHash String? @db.VarChar(64)
  rawData Json?
  version Int @default(1)
- createdById Int
- updatedById Int
+ createdById Int?
+ updatedById Int?
+ importedById Int?
+ importedAt DateTime?
  createdAt DateTime @default(now())
  updatedAt DateTime @updatedAt
  deletedAt DateTime?

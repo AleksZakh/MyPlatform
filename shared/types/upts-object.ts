@@ -1,6 +1,8 @@
 /** Object card. Internal contract IDs/routes remain stable for existing links and files. */
 export type UptsObjectDetails = {
   basisContractNumber?: string;
+  requestNumber?: string;
+  landCategory?: string;
   basisContractDate?: string | null;
   workStartDate?: string | null;
   stageCount?: number | null;
