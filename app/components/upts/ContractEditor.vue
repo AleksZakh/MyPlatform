@@ -185,7 +185,7 @@ async function save() {
 }
 </script>
 <template>
-  <Modal full-height wide fixed-sections :title="c ? 'Объект ' + (details.sourceCadastralNumber || c.number) : 'Новый объект'" @close="emit('close')">
+  <Modal full-height wide fixed-sections icon="streamline-kameleon-color:map-pin" :title="c ? 'Редактирование объекта ' + (details.sourceCadastralNumber || c.number) : 'Новый объект'" @close="emit('close')">
     <form class="work-form upts-object-form" @submit.prevent="save" @invalid.capture="revealInvalid">
       <fieldset class="upts-static upts-object-general" :disabled="saving" aria-label="Общая информация по объекту">
         <legend>Общая информация по объекту</legend>
@@ -245,8 +245,9 @@ async function save() {
   </Modal>
 </template>
 <style scoped>
-.upts-object-form{height:100%;min-height:0;display:flex;flex-direction:column;gap:10px;overflow:hidden}
-.upts-object-form .upts-static{flex:0 1 auto;max-height:30%;overflow:auto;border:1px solid var(--work-line);border-radius:8px;padding:8px 12px;margin:0;min-height:0;background:var(--work-panel);gap:6px}
+.upts-object-form{--upts-static-bg:#edf2f7;height:100%;min-height:0;display:flex;flex-direction:column;gap:10px;overflow:hidden}
+.upts-object-form .upts-static{flex:0 1 auto;max-height:30%;overflow:auto;border:1px solid var(--work-line);border-radius:8px;padding:8px 12px;margin:0;min-height:0;background:var(--upts-static-bg);gap:6px}
+.upts-static legend{background:var(--upts-static-bg);border-radius:4px}
 .upts-static legend,.upts-work-kinds legend{padding:0 6px;font-size:12px;font-weight:600;color:var(--work-text)}
 .upts-object-general-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 12px}.upts-object-execution-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 12px}
 .upts-static label{min-width:0;font-size:12px;color:var(--work-muted)}
@@ -259,6 +260,7 @@ async function save() {
 .upts-form-tabs button[aria-selected=true]{background:#ffedd5;color:#172338;border-color:#fed7aa;box-shadow:0 1px 3px #0000000d}.upts-form-tabs button .iconify{flex-shrink:0;font-size:20px}
 .upts-works-fields{display:grid;gap:8px}.upts-object-form .upts-work-kinds{padding:6px 10px 10px;border:1px solid var(--work-line);border-radius:8px}.upts-kind-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 14px}.upts-kind-grid label{align-items:flex-start;font-size:12px;line-height:1.35}.upts-kind-grid input{margin-top:2px;flex-shrink:0}
 .upts-object-form-actions{flex:none;background:var(--work-panel);border-top:1px solid var(--work-line);padding:8px 0 0}.upts-object-form .upts-save-error{flex:none;max-height:70px;overflow:auto;margin:0!important;padding:6px 10px}
+:global(html.dark) .upts-object-form{--upts-static-bg:color-mix(in srgb,var(--work-panel) 86%,white)}
 :global(html.dark) .upts-form-tabs{background:var(--space-graphite-panel,#344757)}:global(html.dark) .upts-form-tabs button[aria-selected=true]{background:var(--space-graphite-selected,#36526c);color:#e9f2ff;border-color:#587aa6;box-shadow:inset 0 -2px 0 var(--space-graphite-accent,#93c5fd)}
 @media(max-width:760px){.upts-object-general-grid,.upts-object-execution-grid,.upts-kind-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.upts-form-tabs{gap:6px}.upts-form-tabs button{font-size:13px;padding:7px 5px}}
 </style>

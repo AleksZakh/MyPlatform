@@ -206,7 +206,7 @@ const {
           <div class="work-actions">
             <button v-if="canManage" @click="editProject(project)">
               Настройки доступа</button
-            ><button v-if="contract && canManage" @click="editContract(contract)">Карточка объекта</button><button v-if="contract && canManage" @click="contractWorks=true">Добавить работы</button><button @click="section = 'team'">Команда</button
+            ><button v-if="contract && canManage" @click="editContract(contract)">Редактировать объект</button><button v-if="contract && canManage" @click="contractWorks=true">Добавить работы</button><button @click="section = 'team'">Команда</button
             ><button @click="section = 'files'">Документы</button
             ><NuxtLink :to="`/projects?projectId=${project.id}`"
               >Открыть в Space ↗</NuxtLink
