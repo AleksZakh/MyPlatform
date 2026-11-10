@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import WorkName from '../upts/WorkName.vue';
 import { workTaskColor, workTaskContext } from '~~/shared/types/work';
 import { computed } from 'vue';
 import { compareWorkTasks } from '~~/shared/utils/work-order';
@@ -12,6 +13,6 @@ function style(t:WorkTaskDTO){const min=Date.parse(bounds.value.start),max=Date.
 <template><div class="work-timeline">
  <p class="work-muted">Календарный план: задачи расположены по дате начала, а если она не задана — по сроку завершения. Задачи без этих дат доступны на доске. Автоматический расчёт зависимостей появится позже.</p>
  <div class="work-timeline-head"><span>Задача / этап</span><div>{{ formatWorkDate(bounds.start) }} <span>{{ formatWorkDate(bounds.end) }}</span></div></div>
- <div v-for="t in scheduled" :key="t.id" class="work-timeline-row"><button type="button" @click="emit('open',t)">{{ t.kind==='MILESTONE'?'◆ ':'' }}{{ t.title }}<small>{{ formatWorkDate(t.startDate)||'—' }} → {{ formatWorkDate(t.dueDate)||'—' }}</small></button><div class="work-track"><button type="button" :style="style(t)" :aria-label="t.title" @click="emit('open',t)"></button></div></div>
+ <div v-for="t in scheduled" :key="t.id" class="work-timeline-row"><button type="button" @click="emit('open',t)">{{ t.kind==='MILESTONE'?'◆ ':'' }}<WorkName :meta="t.uptsWorkMeta" :emphasize="!!t.uptsContractId">{{ t.title }}</WorkName><small>{{ formatWorkDate(t.startDate)||'—' }} → {{ formatWorkDate(t.dueDate)||'—' }}</small></button><div class="work-track"><button type="button" :style="style(t)" :aria-label="t.title" @click="emit('open',t)"></button></div></div>
  <p v-if="!scheduled.length" class="work-empty">Укажите даты начала и завершения задач или этапов — здесь появится план.</p>
 </div></template>

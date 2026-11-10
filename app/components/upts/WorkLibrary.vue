@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import WorkName from './WorkName.vue';
 import { ref, reactive, computed, watch, onMounted } from "vue";
 import { workKindsFor, workKindName, UPTS_WORK_ROLES } from '~~/shared/utils/upts-work-kinds';
 import WorkSetPreview from './WorkSetPreview.vue';
@@ -196,7 +197,7 @@ async function save() {
           </thead>
           <tbody>
             <tr v-for="w in works" :key="w.id">
-              <td>{{ w.name }}</td>
+              <td><WorkName :meta="{workKindKeys:lib?.templates.filter(t=>t.active&&t.items.some(i=>i.workId===w.id)).map(t=>t.workKindKey).filter((k):k is string=>!!k)}" emphasize>{{ w.name }}</WorkName></td>
               <td>{{ w.responsibleRole ? UPTS_WORK_ROLES[w.responsibleRole] : "Не указана" }}</td><td>{{ w.expectedResult || "Не указан" }}</td>
               <td>{{ w.active ? "Действует" : "Архив" }}</td>
               <td>
@@ -216,7 +217,7 @@ async function save() {
         <article v-for="t in templates" :key="t.id">
           <div class="upts-section-head">
             <strong
-              >{{ t.name }} <small v-if="!t.active">· Архив</small></strong
+              ><WorkName :meta="{workKindKey:t.workKindKey}" emphasize>{{ t.name }}</WorkName> <small v-if="!t.active">· Архив</small></strong
             >
             <div v-if="lib.canManage" class="work-actions">
               <button @click="edit('template', t)">Изменить</button
@@ -224,7 +225,7 @@ async function save() {
             </div>
           </div>
           <p class="work-muted">Вид работ: {{ workKindName(t.workKindKey) || 'Не задан (прежний или пользовательский шаблон)' }}</p>
-          <WorkSetPreview :works="t.items.map(i=>i.work)" />
+          <WorkSetPreview :works="t.items.map(i=>i.work)" :work-kind-key="t.workKindKey" />
           <p v-if="t.items.some(i=>!i.work.active)" class="upts-danger">В шаблоне есть архивные работы; применение недоступно.</p>
         </article>
         <p v-if="!templates.length" class="work-empty">Шаблонов пока нет.</p>

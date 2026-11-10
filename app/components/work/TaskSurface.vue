@@ -8,9 +8,10 @@ const emit = defineEmits<{ close: [] }>();
   :style="color ? {'--task-color':color} : undefined"
   :ui="{ content: 'space-task-slideover w-full sm:max-w-2xl', header: 'space-task-header', title: 'space-task-title', description: 'space-task-subtitle', close: 'space-task-close', body: 'overflow-y-auto' }"
   @update:open="(open: boolean) => { if (!open) emit('close') }">
+  <template #title><slot name="title">{{ title }}</slot></template>
   <template #body><div class="work-root"><slot /></div></template>
  </USlideover>
- <Modal v-else :title="title" :subtitle="subtitle" @close="emit('close')"><slot /></Modal>
+ <Modal v-else :title="title" :subtitle="subtitle" @close="emit('close')"><template #title><slot name="title">{{ title }}</slot></template><slot /></Modal>
 </template>
 <style>
 .space-task-slideover{background:var(--space-panel,#fff)!important;color:var(--space-text,#172338)!important}

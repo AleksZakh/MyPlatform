@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import WorkName from './WorkName.vue';
 import { ref, computed, onMounted, watch } from 'vue';
 import { workKindsFor } from '~~/shared/utils/upts-work-kinds';
 import WorkStagesTable from './WorkStagesTable.vue';
@@ -26,7 +27,7 @@ const stageCount=computed(()=>props.contract.objectDetails?.stageCount ?? 1);
 const workStages=ref<Record<string,number|''>>({});
 const workRows=computed<UptsStageWork[]>(()=>mode.value==='manual'
  ? (manual.value.trim()?[{key:'manual',name:manual.value.trim()}]:[])
- : (mode.value==='template'?chosen.value?.items.map(i=>i.work) || []:selected.value).map(w=>({key:'definition:'+w.id,...w})));
+ : (mode.value==='template'?chosen.value?.items.map(i=>i.work) || []:selected.value).map(w=>({key:'definition:'+w.id,...w,workKindKey:mode.value==='template'?chosen.value?.workKindKey:workKindKey.value})));
 const stagesValid=computed(()=>workRows.value.every(w=>{const n=workStages.value[w.key] ?? 1;return typeof n==='number' && Number.isInteger(n) && n>=1 && n<=stageCount.value;}));
 let attempt: { source: string; key: string } | null = null;
 async function load() {
@@ -78,14 +79,14 @@ async function apply() {
           <div v-if="filteredWorks.length" class="upts-work-choices" role="group" aria-label="Работы из библиотеки">
             <label v-for="w in filteredWorks" :key="w.id" class="work-check">
               <input v-model="selectedIds" type="checkbox" :value="w.id" :disabled="selectedIds.length >= 50 && !selectedIds.includes(w.id)" />
-              {{ w.name }}
+              <WorkName :meta="{workKindKey}" emphasize>{{ w.name }}</WorkName>
             </label>
           </div>
           <p v-else class="work-muted">{{ works.length ? 'По вашему запросу ничего не найдено.' : 'Для этого типа объекта пока нет активных работ. Можно добавить свою работу или создать запись в библиотеке.' }}</p>
           <p class="work-muted">Можно выбрать одну или несколько работ своего типа объекта, независимо от шаблонов.</p>
           <div v-if="selected.length">
             <strong>Выбрано: {{ selected.length }}</strong>
-            <ul class="upts-work-selected"><li v-for="w in selected" :key="w.id">{{ w.name }} <button type="button" :aria-label="'Убрать из выбора: ' + w.name" @click="selectedIds = selectedIds.filter(id => id !== w.id)">×</button></li></ul>
+            <ul class="upts-work-selected"><li v-for="w in selected" :key="w.id"><WorkName :meta="{workKindKey}" emphasize>{{ w.name }}</WorkName> <button type="button" :aria-label="'Убрать из выбора: ' + w.name" @click="selectedIds = selectedIds.filter(id => id !== w.id)">×</button></li></ul>
 
           </div>
         </template>

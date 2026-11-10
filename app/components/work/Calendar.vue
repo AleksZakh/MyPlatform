@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import WorkName from '../upts/WorkName.vue';
 import { workTaskColor, workTaskContext } from '~~/shared/types/work';
 import { computed, ref } from 'vue';
 import type { WorkTaskDTO } from '~~/shared/types/work';
@@ -24,9 +25,9 @@ const weekdays=['Понедельник','Вторник','Среда','Четв
    <div v-for="day in weekdays" :key="day" class="work-calendar-weekday">{{ day }}</div>
    <section v-for="cell in days" :key="cell.day" class="work-calendar-day" :class="{'is-weekend':cell.weekend,'is-outside':cell.day.slice(0,7)!==month.slice(0,7),'is-today':cell.day===today}" :aria-label="formatWorkDate(cell.day)">
     <time :datetime="cell.day">{{ formatWorkDate(cell.day) }}</time>
-    <button v-for="task in cell.tasks" :key="task.id" class="work-calendar-task" :style="{'--project-color':workTaskColor(task)}" @click="emit('open',task)">{{ task.title }}<small>{{ workTaskContext(task) }} · {{ WORK_STATUSES[task.status as keyof typeof WORK_STATUSES] }}</small></button>
+    <button v-for="task in cell.tasks" :key="task.id" class="work-calendar-task" :style="{'--project-color':workTaskColor(task)}" @click="emit('open',task)"><WorkName :meta="task.uptsWorkMeta" :emphasize="!!task.uptsContractId">{{ task.title }}</WorkName><small>{{ workTaskContext(task) }} · {{ WORK_STATUSES[task.status as keyof typeof WORK_STATUSES] }}</small></button>
    </section>
   </div></div>
-  <h3 v-if="unscheduled.length">Без даты ({{ unscheduled.length }})</h3><div class="work-calendar-unscheduled"><button v-for="task in unscheduled" :key="task.id" class="work-calendar-task" :style="{'--project-color':workTaskColor(task)}" @click="emit('open',task)">{{ task.title }}<small>{{ workTaskContext(task) }}</small></button></div>
+  <h3 v-if="unscheduled.length">Без даты ({{ unscheduled.length }})</h3><div class="work-calendar-unscheduled"><button v-for="task in unscheduled" :key="task.id" class="work-calendar-task" :style="{'--project-color':workTaskColor(task)}" @click="emit('open',task)"><WorkName :meta="task.uptsWorkMeta" :emphasize="!!task.uptsContractId">{{ task.title }}</WorkName><small>{{ workTaskContext(task) }}</small></button></div>
  </section>
 </template>

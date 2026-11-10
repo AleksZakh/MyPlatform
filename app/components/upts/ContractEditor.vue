@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import WorkName from './WorkName.vue';
 import { reactive, ref, computed, onMounted, watch, toRaw, nextTick } from "vue";
 import { workUserName, type WorkTaskDTO, type WorkUser } from '~~/shared/types/work';
 import ObjectFields from './ObjectFields.vue';
@@ -96,7 +97,7 @@ const manualNames=computed(()=>manual.value.split('\n').map(s=>s.trim()).filter(
 const workRows=computed<UptsStageWork[]>(()=>c
  ? existingWorks.value.map(t=>({key:'task:'+t.id,name:t.title,...t.uptsWorkMeta,status:t.status}))
  : form.contractType==='OTHER' ? manualNames.value.map((name,i)=>({key:'manual:'+i+':'+name,name}))
- : candidates.value.map(({work})=>({key:'definition:'+work.id,...work})));
+ : candidates.value.map(({work,kindKeys})=>({key:'definition:'+work.id,...work,workKindKeys:kindKeys})));
 const activeRows=computed(()=>c?workRows.value:workRows.value.filter(w=>enabledWorks.value.includes(w.key)));
 watch(()=>workRows.value.map(w=>w.key),keys=>{
  if(c)return;
@@ -216,7 +217,7 @@ async function save() {
           <label class="upts-stage-count">Количество этапов<input v-model.number="stageCount" type="number" min="1" max="2147483647" step="1" inputmode="numeric" /></label>
           <fieldset v-if="form.contractType!=='OTHER'" class="upts-work-kinds" :disabled="saving || loading || !!libraryError">
             <legend>Виды работ</legend>
-            <div class="upts-kind-grid"><label v-for="kind in kinds" :key="kind.key" class="work-check"><input v-model="selectedKinds" type="checkbox" :value="kind.key" />{{ kind.name }}</label></div>
+            <div class="upts-kind-grid"><label v-for="kind in kinds" :key="kind.key" class="work-check"><input v-model="selectedKinds" type="checkbox" :value="kind.key" /><WorkName :meta="{workKindKey:kind.key}" emphasize>{{ kind.name }}</WorkName></label></div>
           </fieldset>
           <label v-else>Описание деятельности<textarea v-model="details.otherDescription" rows="2" maxlength="2000" /></label>
           <p v-if="loading" role="status">Загружаем библиотеку…</p>

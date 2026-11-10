@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import WorkName from '../upts/WorkName.vue';
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { UPTS_WORK_ROLES, workKindNames } from '~~/shared/utils/upts-work-kinds';
 import ProjectFiles from './ProjectFiles.vue';
@@ -51,6 +52,7 @@ onMounted(()=>{if(!isUpts.value)loadComments();});
 defineExpose({useProject:(p:WorkProjectDTO)=>{relationship.value='PROJECT';form.projectId=p.id;form.visibility='PROJECT';form.departmentId=null;form.participantIds=[];}});
 </script>
 <template><TaskSurface :slide="!!task && !modal" :title="form.title || (isUpts?'Новая работа':'Новая задача')" :subtitle="subtitle" :color="task?workTaskColor(task):undefined" @close="emit('close')">
+ <template #title><WorkName :meta="task?.uptsWorkMeta" :emphasize="isUpts">{{ form.title || (isUpts?'Новая работа':'Новая задача') }}</WorkName></template>
  <form class="work-form" @submit.prevent="save">
   <p v-if="error" class="work-error" role="alert">{{ error }}</p>
   <fieldset :disabled="saving||readOnly"><label>{{ isUpts ? 'Название работы' : 'Название задачи' }}<input v-model="form.title" required maxlength="250" autofocus /></label>
@@ -61,7 +63,7 @@ defineExpose({useProject:(p:WorkProjectDTO)=>{relationship.value='PROJECT';form.
    <label v-if="!isUpts && objectOptions.length">Связанный участок<select v-model="form.uptsObjectId"><option :value="null">Общая задача проекта</option><option v-for="o in objectOptions" :key="o.id" :value="o.id">{{ o.object.name }}</option></select></label>
    <dl v-if="task?.uptsWorkMeta" class="upts-work-reference">
     <template v-if="task.uptsWorkMeta.stageNumber"><dt>Этап работ</dt><dd>{{ task.uptsWorkMeta.stageNumber }}</dd></template>
-    <template v-if="task.uptsWorkMeta.workKindKey || task.uptsWorkMeta.workKindKeys?.length"><dt>Вид работ</dt><dd>{{ workKindNames(task.uptsWorkMeta) }}</dd></template>
+    <template v-if="task.uptsWorkMeta.workKindKey || task.uptsWorkMeta.workKindKeys?.length"><dt>Вид работ</dt><dd><WorkName :meta="task.uptsWorkMeta" emphasize>{{ workKindNames(task.uptsWorkMeta) }}</WorkName></dd></template>
     <dt>Ответственная роль</dt><dd>{{ task.uptsWorkMeta.responsibleRole ? UPTS_WORK_ROLES[task.uptsWorkMeta.responsibleRole] : 'Не указана' }}</dd>
     <dt>Ожидаемый результат</dt><dd>{{ task.uptsWorkMeta.expectedResult || 'Не указан' }}</dd>
    </dl>

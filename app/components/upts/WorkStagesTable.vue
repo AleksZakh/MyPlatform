@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import WorkName from './WorkName.vue';
 import {computed,ref,watch} from 'vue';
 import type {UptsStageWork} from '~~/shared/types/upts-object';
 import {UPTS_WORK_ROLES} from '~~/shared/utils/upts-work-kinds';
@@ -30,7 +31,7 @@ function bulkApply(){if(!valid(bulkStage.value))return;stages.value={...stages.v
         <thead><tr><th class="upts-stage-check"><input type="checkbox" aria-label="Выделить все работы" :checked="allSelected" :indeterminate="!!selected.length && !allSelected" @change="selected=allSelected?[]:works.map(w=>w.key)" /></th><th>Работа</th><th>Этап</th><th>Ответственная роль</th><th>Ожидаемый результат</th><th v-if="works.some(w=>w.status)">Состояние</th></tr></thead>
         <tbody><tr v-for="w in works" :key="w.key" :class="{'is-selected':selected.includes(w.key)}">
           <td><input v-model="selected" type="checkbox" :value="w.key" :aria-label="'Выделить: '+w.name" /></td>
-          <td>{{ w.name }}</td>
+          <td><WorkName :meta="w" emphasize>{{ w.name }}</WorkName></td>
           <td class="upts-stage-number"><input :value="stages[w.key] ?? 1" type="number" min="1" :max="stageCount" step="1" required :aria-label="'Этап работы: '+w.name" :aria-invalid="!valid(stages[w.key] ?? 1)" @input="setStage(w.key,($event.target as HTMLInputElement).value===''?'':Number(($event.target as HTMLInputElement).value))" /></td>
           <td>{{ w.responsibleRole ? UPTS_WORK_ROLES[w.responsibleRole] : 'Не указана' }}</td>
           <td>{{ w.expectedResult || 'Не указан' }}</td>

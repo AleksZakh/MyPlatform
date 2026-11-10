@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import WorkName from './WorkName.vue';
 import {computed,ref,watch,onMounted,onBeforeUnmount} from 'vue';
 import type {UptsStageWork} from '~~/shared/types/upts-object';
 import {UPTS_WORK_ROLES} from '~~/shared/utils/upts-work-kinds';
@@ -74,7 +75,7 @@ onBeforeUnmount(()=>{window.removeEventListener('pointerup',end);window.removeEv
         </tr></thead>
         <tbody><tr v-for="(w,index) in works" :key="w.key" :data-work-key="w.key" :class="{'is-selected':selected.includes(w.key),'is-disabled':!enabled.includes(w.key)}" :aria-selected="selected.includes(w.key)" tabindex="0" @pointerdown="begin($event,index)" @pointerenter="enter($event,index)" @keydown="keyboard($event,index)">
           <td><input type="checkbox" :checked="enabled.includes(w.key)" :disabled="disabled" :aria-label="'Включить: '+w.name" @change="setEnabled([w.key],($event.target as HTMLInputElement).checked)" /></td>
-          <td>{{ w.name }}</td>
+          <td><WorkName :meta="w" emphasize>{{ w.name }}</WorkName></td>
           <td class="upts-selection-stage"><input :value="stages[w.key] ?? 1" type="number" min="1" :max="stageCount" step="1" :required="enabled.includes(w.key)" :disabled="disabled || !enabled.includes(w.key)" :aria-label="'Этап работы: '+w.name" :aria-invalid="enabled.includes(w.key) && !valid(stages[w.key] ?? 1)" @input="setStage(w.key,$event)" /></td>
           <td>{{ w.responsibleRole ? UPTS_WORK_ROLES[w.responsibleRole] : 'Не указана' }}</td><td>{{ w.expectedResult || 'Не указан' }}</td>
         </tr></tbody>

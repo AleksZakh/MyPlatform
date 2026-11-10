@@ -7,7 +7,7 @@ onBeforeUnmount(()=>{dialog.value?.close();previous?.focus();});
 </script>
 <template>
  <Teleport to="body"><dialog ref="dialog" class="work-root work-dialog" :class="{'work-dialog-full-height':fullHeight,'work-dialog-wide':wide,'work-dialog-fixed-sections':fixedSections}" @close="emit('close')">
-  <header class="work-modal-head"><div><h2 :class="{'work-modal-title-with-icon':icon}"><Icon v-if="icon" :name="icon" aria-hidden="true" />{{ title }}</h2><p v-if="subtitle" class="work-muted">{{ subtitle }}</p></div><button type="button" class="work-icon-btn" aria-label="Закрыть" @click="emit('close')">×</button></header>
+  <header class="work-modal-head"><div><h2 :class="{'work-modal-title-with-icon':icon}"><Icon v-if="icon" :name="icon" aria-hidden="true" /><slot name="title">{{ title }}</slot></h2><p v-if="subtitle" class="work-muted">{{ subtitle }}</p></div><button type="button" class="work-icon-btn" aria-label="Закрыть" @click="emit('close')">×</button></header>
   <div class="work-modal-body"><slot /></div>
  </dialog></Teleport>
 </template>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import WorkName from '../upts/WorkName.vue';
 import { ref,computed } from 'vue';
 import type { WorkTaskDTO,WorkProjectDTO } from '~~/shared/types/work';
 import { WORK_STATUSES,workUserName } from '~~/shared/types/work';
@@ -42,7 +43,7 @@ async function archive(){archiveConfirm.value=false;await toggleArchive();}
    <ProjectFiles v-if="view==='files'&&project" :key="project.id" :project="project"/>
    <Members v-else-if="view==='members'&&project" :project="project" :user-id="context.userId" @changed="reload" @settings="editProject(project)"/>
    <Timeline v-else-if="view==='timeline'" :tasks="tasks" :today="today" @open="editTask"/>
-   <div v-else-if="view==='list'" class="work-table-wrap"><table><thead><tr><th>Задача</th><th>Проект</th><th>Исполнитель</th><th>Состояние</th><th>План</th><th>Срок</th></tr></thead><tbody><tr v-for="t in tasks" :key="t.id"><td><button @click="editTask(t)">{{ t.title }}</button></td><td>{{ t.project?.name||'Самостоятельная' }}</td><td>{{ workUserName(t.assignee) }}</td><td>{{ WORK_STATUSES[t.status as keyof typeof WORK_STATUSES] }}</td><td>{{ formatWorkDate(t.plannedDate)||'—' }}</td><td>{{ formatWorkDate(t.dueDate)||'—' }}</td></tr></tbody></table><p v-if="!tasks.length&&!loading" class="work-empty">Задач пока нет</p></div>
+   <div v-else-if="view==='list'" class="work-table-wrap"><table><thead><tr><th>Задача</th><th>Проект</th><th>Исполнитель</th><th>Состояние</th><th>План</th><th>Срок</th></tr></thead><tbody><tr v-for="t in tasks" :key="t.id"><td><button @click="editTask(t)"><WorkName :meta="t.uptsWorkMeta" :emphasize="!!t.uptsContractId">{{ t.title }}</WorkName></button></td><td>{{ t.project?.name||'Самостоятельная' }}</td><td>{{ workUserName(t.assignee) }}</td><td>{{ WORK_STATUSES[t.status as keyof typeof WORK_STATUSES] }}</td><td>{{ formatWorkDate(t.plannedDate)||'—' }}</td><td>{{ formatWorkDate(t.dueDate)||'—' }}</td></tr></tbody></table><p v-if="!tasks.length&&!loading" class="work-empty">Задач пока нет</p></div>
    <Calendar v-else-if="view==='time'" :tasks="tasks" :today="today" @open="editTask"/>
    <Board v-else :tasks="tasks" :mode="view==='status'?'status':'time'" :today="today" :busy="saving" @open="editTask" @move="move"/>
    <footer v-if="view!=='members'&&view!=='files'" class="work-list-footer"><span>Показано {{ tasks.length }} из {{ taskTotal }}</span><button v-if="tasks.length<taskTotal" :disabled="loading" @click="loadTasks(true)">Показать ещё</button><span v-if="tasks.length<taskTotal">Календарь, доска и план показывают только загруженные задачи. Для полного списка нажмите «Показать ещё».</span></footer>

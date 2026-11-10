@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import WorkName from './WorkName.vue';
 import { uptsContractColor } from '~~/shared/utils/upts-color';
 import { workTaskColor, workTaskContext } from '~~/shared/types/work';
 import { useUptsWorkspace } from '~/composables/useUptsWorkspace';
@@ -404,7 +405,7 @@ async function removeObject(){if(!deletingObject.value)return;deleteBusy.value=t
                   class="upts-attention-task"
                   @click="editTask(t)"
                 >
-                  <strong>{{ t.title }}</strong
+                  <strong><WorkName :meta="t.uptsWorkMeta" emphasize>{{ t.title }}</WorkName></strong
                   ><small>{{ workTaskContext(t) }}</small>
                   <p>{{ t.blockedReason || 'Истёк крайний срок' }}</p>
                   <span
@@ -425,7 +426,7 @@ async function removeObject(){if(!deletingObject.value)return;deleteBusy.value=t
                   @click="editTask(t)"
                 >
                   <time>{{ formatWorkDate(t.dueDate) }}</time
-                  ><span>{{ t.title }}</span>
+                  ><span><WorkName :meta="t.uptsWorkMeta" emphasize>{{ t.title }}</WorkName></span>
                 </button>
                 <p v-if="!nearest.length" class="work-empty">
                   Сроки ещё не назначены.
@@ -554,7 +555,7 @@ async function removeObject(){if(!deletingObject.value)return;deleteBusy.value=t
                 <tr v-for="t in tasks" :key="t.id" class="upts-colored-row" :style="{'--contract-color':workTaskColor(t)}">
                   <td>
                     <button class="upts-link" @click="editTask(t)">
-                      {{ t.title }}</button
+                      <WorkName :meta="t.uptsWorkMeta" emphasize>{{ t.title }}</WorkName></button
                     ><small>{{ workTaskContext(t) }}</small>
                   </td>
                   <td>

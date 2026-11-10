@@ -35,7 +35,7 @@ export type UptsWorkMeta = {
   responsibleRole?: 'CURATOR' | 'ENGINEER' | null;
   expectedResult?: string;
 };
-export type UptsStageWork = {
+export type UptsStageWork = Pick<UptsWorkMeta, 'workKindKey' | 'workKindKeys'> & {
   key: string;
   name: string;
   responsibleRole?: 'CURATOR' | 'ENGINEER' | null;
