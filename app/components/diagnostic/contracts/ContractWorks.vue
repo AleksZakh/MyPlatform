@@ -2,6 +2,7 @@
 import {ref,watch,onBeforeUnmount} from 'vue';
 import type {ContractWorkRecord} from '~~/shared/types/diagnostic-contract-works';
 const props=defineProps<{contractId:number|null}>();
+const emit=defineEmits<{count:[number]}>();
 const rows=ref<ContractWorkRecord[]>([]),busy=ref(false),error=ref('');
 const selected=ref<ContractWorkRecord|null>(null);
 let generation=0;
@@ -11,9 +12,10 @@ const state=(s:string)=>statusLabels[s]||s||'Не указан';
 async function load(){
  const current=++generation,id=props.contractId;
  rows.value=[];selected.value=null;error.value='';busy.value=false;
- if(!id)return;
+ 
+ if(!id){emit('count',0);return;}
  busy.value=true;
- try{const data=await $fetch<ContractWorkRecord[]>('/api/diagnostic/contracts/'+id+'/works');if(current===generation)rows.value=data;}
+ try{const data=await $fetch<ContractWorkRecord[]>('/api/diagnostic/contracts/'+id+'/works');if(current===generation){rows.value=data;emit('count',data.length);}}
  catch(e:any){if(current===generation)error.value=e?.data?.message||'Не удалось загрузить работы.';}
  finally{if(current===generation)busy.value=false;}
 }
@@ -24,7 +26,7 @@ onBeforeUnmount(()=>generation++);
  <section class="contract-works">
   <header class="contract-section-head"><h2>Перечень работ с договором</h2><button type="button" :disabled="busy||!contractId" @click="load">Обновить</button></header>
   <p class="cw-help">Двойной щелчок по строке или нажатие на название — просмотр работы.</p>
-  <div class="contract-detail-table" :aria-busy="busy">
+  <div class="contract-detail-table contract-compact-table cw-scroll" :aria-busy="busy">
    <table><thead><tr><th rowspan="2">Статус</th><th rowspan="2">№</th><th rowspan="2">Шифр</th><th rowspan="2">Работа</th><th colspan="4">План</th><th colspan="4">Факт</th><th rowspan="2">Примечания</th></tr><tr><template v-for="group in ['plan','fact']" :key="group"><th>Дата начала</th><th>Чел·ч</th><th>Дата окончания</th><th>Исполнитель</th></template></tr></thead>
     <tbody>
      <tr v-if="busy"><td colspan="13" role="status">Загрузка работ…</td></tr>
@@ -32,10 +34,10 @@ onBeforeUnmount(()=>generation++);
      <tr v-else-if="!rows.length"><td colspan="13">{{ contractId?'Работы к этому договору пока не добавлены.':'Сначала сохраните договор.' }}</td></tr>
      <template v-else><tr v-for="(row,index) in rows" :key="row.id" @dblclick="selected=row">
       <td><span :class="['cw-status',{'cw-done':row.status==='completed'}]">{{ state(row.status) }}</span></td><td>{{ index+1 }}</td><td>{{ row.code }}</td>
-      <td><button type="button" class="cw-name" @click="selected=row">{{ row.name }}</button></td>
+      <td><button type="button" class="cw-name contract-cell-ellipsis" :title="row.name" @click="selected=row">{{ row.name }}</button></td>
       <td>{{ date(row.planStart) }}</td><td>{{ row.planHours??'—' }}</td><td>{{ date(row.planFinish) }}</td><td>{{ row.planExecutor||'—' }}</td>
       <td>{{ date(row.factStart) }}</td><td>{{ row.factHours??'—' }}</td><td>{{ date(row.factFinish) }}</td><td>{{ row.factExecutor||'—' }}</td>
-      <td class="cw-note" :title="row.note">{{ row.note }}</td>
+      <td><span class="contract-cell-ellipsis cw-note" :title="row.note">{{ row.note }}</span></td>
      </tr></template>
     </tbody>
    </table>

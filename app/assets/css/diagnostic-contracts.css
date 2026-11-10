@@ -43,3 +43,51 @@ html.dark .diagnostic-contract-modal{--contract-bg:#293b4a;--contract-panel:#344
 .diagnostic-tab-pin.is-pinned .iconify{transform:rotate(-45deg)}
 .diagnostic-status-tabs .diagnostic-tab-pin.is-pinned{color:var(--diag-accent)}
 .diagnostic-status-tabs .diagnostic-tab-pin:hover{background:var(--diag-line)}
+
+/* ODIS contract detail: counts and compact, independently scrolling tables. */
+.contract-editor-tabs button{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;padding:8px 16px;line-height:1.25}
+.contract-tab-count{font-size:12px;font-weight:400;color:#24618c;line-height:1.2}
+html.dark .contract-tab-count{color:#a8d6f3}
+.contract-count-error{flex-shrink:0;margin:5px 8px;font-size:12px;color:#b42318}
+html.dark .contract-count-error{color:#ffb4ab}
+.contract-count-error button{text-decoration:underline;margin-left:8px}
+.contract-editor-panel--tables{display:flex;flex-direction:column;overflow:hidden;padding:8px 0 0}
+.contract-editor-panel--tables .contract-section-head{flex-shrink:0;margin:0 0 6px;gap:12px}
+.contract-editor-panel--tables .contract-section-head h2{font-size:16px;padding:0 0 6px}
+.contract-editor-panel--tables .contract-section-head button{font-size:13px;padding:4px 9px}
+.contract-compact-table{min-height:0;min-width:0;overflow:auto;overscroll-behavior:contain;border:1px solid var(--contract-line)}
+.contract-compact-table table{font-size:13px;border-collapse:separate;border-spacing:0}
+.contract-compact-table th,.contract-compact-table td{padding:3px 6px;line-height:18px;vertical-align:middle;border:0;border-right:1px solid var(--contract-line);border-bottom:1px solid var(--contract-line)}
+.contract-compact-table thead th{position:sticky;top:0;z-index:2;background:var(--contract-panel);height:25px;box-sizing:border-box}
+.contract-compact-table thead tr:nth-child(2) th{top:25px}
+.contract-compact-table tbody tr:hover{background:var(--contract-panel)}
+.contract-cell-ellipsis{display:block;max-width:360px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.contract-compact-table .cw-name,.cs-code{padding:0;text-align:left;text-decoration:underline;text-underline-offset:3px}
+.contract-works{display:flex;flex-direction:column;flex:1;min-height:0;min-width:0}
+.contract-works .cw-scroll{flex:1;min-height:0}
+.contract-works .cw-help{margin:0 0 5px;font-size:12px;flex-shrink:0}
+.contract-works .cw-status{padding:0 5px;font-size:11px;line-height:18px}
+.contract-works>small{padding-top:4px;flex-shrink:0}
+.contract-structures-workspace{display:grid;grid-template-rows:auto minmax(86px,.9fr) minmax(170px,1.1fr);gap:8px;flex:1;min-height:0;min-width:0}
+.contract-structures-workspace .contract-section-head{margin-bottom:0}
+.cs-list tbody tr{cursor:pointer}
+.cs-list tbody tr.is-selected{background:#d9ebf8;color:#193d5a;box-shadow:inset 3px 0 #2787b5}
+html.dark .cs-list tbody tr.is-selected{background:#244f70;color:#eff8ff;box-shadow:inset 3px 0 #76c9f1}
+.cs-road{max-width:480px}
+.cs-work-panel{display:flex;flex-direction:column;min-height:0;min-width:0;border-top:2px solid var(--contract-line);padding-top:5px}
+.cs-selected{flex-shrink:0;font-size:13px;line-height:18px;margin-bottom:5px;padding:5px 8px;background:var(--contract-panel)}
+.cs-selected p{margin:0}
+.cs-address{max-width:100%}
+.cs-work-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0;margin-bottom:5px}
+.cs-work-heading h3{font-size:14px;font-weight:600;margin:0}
+.cs-work-heading small{font-size:12px;font-weight:400}
+.cs-work-heading button{padding:3px 8px;border:1px solid var(--contract-line);border-radius:4px;font-size:12px}
+.cs-works{flex:1;min-height:0}
+.cs-hours{text-align:right;font-variant-numeric:tabular-nums}
+.cs-note{max-width:600px}
+.cs-detail{font-size:14px;line-height:1.5}
+.cs-detail h3{font-size:19px;font-weight:600}
+.cs-detail h4{font-weight:600;margin-top:16px}
+.cs-detail p{white-space:pre-wrap;overflow-wrap:anywhere}
+.diagnostic-contract-modal.cs-detail-modal{max-width:760px!important}
+@media(max-height:550px){.contract-editor-panel--tables{overflow:auto}.contract-structures-workspace{min-height:340px}.contract-works{min-height:200px}}

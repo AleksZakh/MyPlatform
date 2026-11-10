@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import {computed,reactive,ref,watch,onBeforeUnmount} from 'vue';
-import type {ContractStructureListItem} from '~~/shared/types/diagnostic-contract-structures';
+import type {ContractDetailCounts} from '~~/shared/types/diagnostic-contract-details';
 import CreatableNameSelect from '../../common/CreatableNameSelect.vue';
 import ContractWorks from './ContractWorks.vue';
+import ContractStructures from './ContractStructures.vue';
 import {contractDateTime} from '~~/shared/utils/diagnostic-contract-search';
 import type {ContractRecord,ContractInput,DiagnosticCatalog} from '~~/shared/types/diagnostic-contracts';
 import {contractStatus} from '~~/shared/utils/diagnostic-contracts';
@@ -10,26 +11,20 @@ const props=defineProps<{contract:ContractRecord|null;catalog:DiagnosticCatalog;
 const emit=defineEmits<{close:[];edit:[];save:[ContractRecord]}>();
 const tabs=['Карточка договора','Работы с договором','Перечень сооружений'];
 const tab=ref(0),error=ref(''),saving=ref(false),confirmClose=ref(false);
-const structures=ref<ContractStructureListItem[]>([]);
-const structuresLoading=ref(false),structuresError=ref('');
-let structuresRequest=0;
-async function loadStructures(){
- const request=++structuresRequest,contractId=props.contract?.id;
- structures.value=[];structuresError.value='';structuresLoading.value=false;
- if(!contractId)return;
- structuresLoading.value=true;
+const counts=reactive<{works:number|null;structures:number|null}>({works:null,structures:null});
+const countsError=ref('');
+let countsRequest=0;
+async function loadCounts(){
+ const request=++countsRequest,contractId=props.contract?.id;
+ counts.works=null;counts.structures=null;countsError.value='';
+ if(!contractId){counts.works=0;counts.structures=0;return;}
  try{
-  const rows=await $fetch<ContractStructureListItem[]>('/api/diagnostic/contracts/'+contractId+'/structures');
-  if(request===structuresRequest)structures.value=rows;
- }catch(e:any){
-  if(request===structuresRequest)structuresError.value=e?.data?.message||'Не удалось загрузить сооружения. Повторите попытку.';
- }finally{if(request===structuresRequest)structuresLoading.value=false;}
+  const data=await $fetch<ContractDetailCounts>('/api/diagnostic/contracts/'+contractId+'/summary');
+  if(request===countsRequest){counts.works=data.works;counts.structures=data.structures;}
+ }catch(e:any){if(request===countsRequest)countsError.value=e?.data?.message||'Не удалось загрузить количество работ и сооружений.';}
 }
-watch(()=>[tab.value,props.contract?.id] as const,()=>{
- if(tab.value===2)void loadStructures();
- else {structuresRequest++;structuresLoading.value=false;}
-});
-onBeforeUnmount(()=>{structuresRequest++;});
+watch(()=>props.contract?.id,()=>void loadCounts(),{immediate:true});
+onBeforeUnmount(()=>{countsRequest++;});
 
 type Draft=Omit<ContractInput,'counterpartyId'|'direction'> & {counterpartyId:number|null;direction:ContractInput['direction']|''};
 const c=props.contract;
@@ -86,8 +81,9 @@ const summaryColumns=[
 <template>
  <UModal :open="true" :title="contract?(readOnly?'Просмотр договора':'Редактирование договора'):'Новый договор'" :ui="{content:'diagnostic-contract-modal w-[96vw] sm:max-w-none h-[90dvh]',body:'contract-modal-body',footer:'contract-modal-footer'}" @update:open="value=>{if(!value)close()}">
   <template #body>
-   <div class="contract-editor-tabs" role="tablist" aria-label="Карточка договора"><button v-for="(label,i) in tabs" :id="`contract-editor-tab-${i}`" :key="label" role="tab" :aria-selected="tab===i" :tabindex="tab===i?0:-1" aria-controls="contract-editor-panel" @click="tab=i" @keydown.right.prevent="moveTab($event,i,1)" @keydown.left.prevent="moveTab($event,i,-1)">{{ label }}</button></div>
-   <div id="contract-editor-panel" class="contract-editor-panel" role="tabpanel" :aria-labelledby="`contract-editor-tab-${tab}`">
+   <div class="contract-editor-tabs" role="tablist" aria-label="Карточка договора"><button v-for="(label,i) in tabs" :id="`contract-editor-tab-${i}`" :key="label" role="tab" :aria-selected="tab===i" :tabindex="tab===i?0:-1" aria-controls="contract-editor-panel" @click="tab=i" @keydown.right.prevent="moveTab($event,i,1)" @keydown.left.prevent="moveTab($event,i,-1)"><span>{{ label }}</span><small v-if="i===1" class="contract-tab-count">Всего работ: {{ counts.works ?? (countsError ? '—' : '…') }}</small><small v-if="i===2" class="contract-tab-count">Всего сооружений: {{ counts.structures ?? (countsError ? '—' : '…') }}</small></button></div>
+   <p v-if="countsError" class="contract-count-error" role="alert">{{ countsError }} <button type="button" @click="loadCounts">Повторить</button></p>
+   <div id="contract-editor-panel" class="contract-editor-panel" :class="{'contract-editor-panel--tables':tab!==0}" role="tabpanel" :aria-labelledby="`contract-editor-tab-${tab}`">
     <form v-show="tab===0" id="diagnostic-contract-form" novalidate @submit.prevent="save">
      <h2>Реквизиты договора <small>· {{ statusLabel }}</small></h2>
      <p v-if="error" role="alert" class="contract-error">{{ error }}</p>
@@ -116,16 +112,8 @@ const summaryColumns=[
       <span><strong>Обновлено:</strong> {{ contract.editor }} · {{ contractDateTime(contract.updatedAt) }}</span>
      </div>
     </form>
-    <ContractWorks v-if="tab===1" :contract-id="contract?.id??null" />
-    <section v-if="tab===2"><header class="contract-section-head"><h2>Перечень сооружений</h2><div><button disabled title="Следующий этап">Добавить сооружения</button><button disabled title="Следующий этап">Добавить работы</button></div></header><div class="contract-detail-table"><table><thead><tr><th>#</th><th>Код ИССО</th><th>Сооружение</th><th>Название автодороги</th><th>Место, км</th><th>Доп. инф.</th><th>Название осн. препятствия</th><th>Район расположения</th></tr></thead><tbody>
-<tr v-if="structuresLoading"><td colspan="8" role="status"><span class="animate-pulse motion-reduce:animate-none">Загрузка сооружений…</span></td></tr>
-<tr v-else-if="structuresError"><td colspan="8" role="alert">{{ structuresError }} <button type="button" @click="loadStructures">Повторить загрузку</button></td></tr>
-<tr v-else-if="!contract"><td colspan="8">Сохраните договор, чтобы просмотреть связанные сооружения.</td></tr>
-<tr v-else-if="!structures.length"><td colspan="8">К этому договору пока не привязаны сооружения.</td></tr>
-<template v-else><tr v-for="(structure,index) in structures" :key="structure.id">
-<td>{{ index+1 }}</td><td>{{ structure.code }}</td><td>{{ structure.structureName }}</td><td>{{ structure.roadName }}</td><td>{{ structure.location }}</td><td>{{ structure.additionalId }}</td><td>{{ structure.obstacleName }}</td><td>{{ structure.district }}</td>
-</tr></template>
-</tbody></table></div></section>
+    <ContractWorks v-if="tab===1" :contract-id="contract?.id??null" @count="counts.works=$event" />
+    <ContractStructures v-if="tab===2" :contract-id="contract?.id??null" @count="counts.structures=$event" />
    </div>
   </template>
   <template #footer><div class="contract-footer-content"><div class="contract-secondary-actions"><button type="button" @click="auxiliary='documents'"><Icon name="lucide:folder-open" />Документы к договору</button><button type="button" @click="auxiliary='summary'"><Icon name="lucide:table-2" />Сводная таблица работ</button></div><small>{{ readOnly?'Режим просмотра':'Поля со звёздочкой обязательны. Остальные можно заполнить позже.' }}</small><div v-if="confirmClose" class="contract-discard" role="alert">Отменить несохранённые изменения?<button :disabled="saving" @click="emit('close')">Да, закрыть</button><button @click="confirmClose=false">Продолжить</button></div><div class="contract-footer-actions"><button v-if="contract&&readOnly&&canEdit" type="button" @click="emit('edit')"><Icon name="lucide:pencil" />Редактировать</button><button v-if="!readOnly" :disabled="saving||catalogBusy" class="contract-save" type="submit" form="diagnostic-contract-form">{{ saving?'Сохранение…':'Сохранить' }}</button><button @click="close">{{ readOnly?'Закрыть':'Отменить' }}</button></div></div></template>

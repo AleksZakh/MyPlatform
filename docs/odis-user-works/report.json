@@ -1,0 +1,388 @@
+{
+  "mode": "ANALYZE_ONLY",
+  "status": "ANALYZED",
+  "databaseUsed": false,
+  "historyIgnored": true,
+  "sourceRows": 10,
+  "contractRows": 5938,
+  "sourceHash": "48383c040cce8c7e8269059fe37c3e253280f181434bae4201fc9d3ae4ca1876",
+  "contractSourceHash": "f50d5c218d769d8ee42bca32444d930454037fb2027be47b44cfd9b0095fcfdb",
+  "byType": {
+    "dog_works": 2,
+    "build_works": 8
+  },
+  "byAction": {
+    "CANDIDATE_REQUIRES_REVIEW": 2,
+    "NEEDS_STRUCTURE_SOURCE": 8
+  },
+  "rows": [
+    {
+      "legacyId": 4,
+      "sourceHash": "ae14f9c561c05262c10d0d3e746d1f8511e2b4eafb7b7739063b99ca311545ae",
+      "source": {
+        "id": "4",
+        "user_fio": "Хохлова Т.В.",
+        "contragent": "ООО \"КСК №1\"",
+        "dog_number": "КСК1-28-Пр-12.20",
+        "date_dog": "2020-12-04",
+        "building": " ",
+        "work_name": "Договор",
+        "work_id": "105",
+        "work_type": "dog_works",
+        "work_plan_start": "2020-12-04",
+        "work_plan_finish": "",
+        "work_plan_length": "0.1",
+        "work_fact_start": "",
+        "work_fact_finish": " ",
+        "work_fact_length": "",
+        "work_note": "Договор подписан",
+        "work_status": "completed"
+      },
+      "kind": "dog_works",
+      "action": "CANDIDATE_REQUIRES_REVIEW",
+      "reason": "Прямой ссылки нет. Совпадение договора и шифра не доказывает, что это одна работа.",
+      "warnings": [
+        "Статус completed при неполном факте; не заполнять факт из плана."
+      ],
+      "candidates": [
+        {
+          "legacyContractWorkId": 2228,
+          "differences": [
+            {
+              "field": "work_plan_start",
+              "userValue": "2020-12-04",
+              "contractValue": "2020-11-24"
+            },
+            {
+              "field": "work_plan_finish",
+              "userValue": null,
+              "contractValue": "2020-12-04"
+            },
+            {
+              "field": "work_fact_start",
+              "userValue": null,
+              "contractValue": "2020-11-24"
+            },
+            {
+              "field": "work_fact_finish",
+              "userValue": null,
+              "contractValue": "2020-12-04"
+            },
+            {
+              "field": "work_fact_length",
+              "userValue": null,
+              "contractValue": "0.1"
+            }
+          ],
+          "importedContractWorkId": 293
+        }
+      ]
+    },
+    {
+      "legacyId": 907,
+      "sourceHash": "3d4da356888508b07d1328d190f13f6b875a1f9f0e6bb07a2f78835091eb5451",
+      "source": {
+        "id": "907",
+        "user_fio": "Морозов А.В.",
+        "contragent": "ГК \"Автодор\"",
+        "dog_number": "ДЭиБДД -2020-245",
+        "date_dog": "2020-02-28",
+        "building": "11400101",
+        "work_name": "АИС Чертежи",
+        "work_id": "312",
+        "work_type": "build_works",
+        "work_plan_start": "2021-02-17",
+        "work_plan_finish": "2021-02-17",
+        "work_plan_length": "3",
+        "work_fact_start": "2021-02-17",
+        "work_fact_finish": "2021-02-17",
+        "work_fact_length": "6",
+        "work_note": "Чертежи вычерчены в Автокад и прикреплены к книге ИССО",
+        "work_status": "completed"
+      },
+      "kind": "build_works",
+      "action": "NEEDS_STRUCTURE_SOURCE",
+      "reason": "Нужна сверка с исходной таблицей работ по сооружениям; новая работа автоматически не создаётся.",
+      "warnings": [],
+      "candidates": []
+    },
+    {
+      "legacyId": 958,
+      "sourceHash": "631648ed1be3308c1735b48cb0f258bbf80d622681855816bda8256e4623d787",
+      "source": {
+        "id": "958",
+        "user_fio": "Матохин Д.П.",
+        "contragent": "ООО \"КСК №1\"",
+        "dog_number": "КСК1-28-Пр-12.20",
+        "date_dog": "2020-12-04",
+        "building": "11501620",
+        "work_name": "АИС конструктив + проезжая часть + GPS",
+        "work_id": "305",
+        "work_type": "build_works",
+        "work_plan_start": "2021-02-16",
+        "work_plan_finish": "2021-02-16",
+        "work_plan_length": "1.5",
+        "work_fact_start": "2021-02-16",
+        "work_fact_finish": "2021-02-16",
+        "work_fact_length": "2.5",
+        "work_note": "Конструктив для РАСЧЁТОВ грузоподъёмности внесён",
+        "work_status": "completed"
+      },
+      "kind": "build_works",
+      "action": "NEEDS_STRUCTURE_SOURCE",
+      "reason": "Нужна сверка с исходной таблицей работ по сооружениям; новая работа автоматически не создаётся.",
+      "warnings": [],
+      "candidates": []
+    },
+    {
+      "legacyId": 11,
+      "sourceHash": "6006d8f776de4e34e112462276f772310e00903c642c9496a813ad8a81a76606",
+      "source": {
+        "id": "11",
+        "user_fio": "Вилков В.С.",
+        "contragent": "ООО \"КСК №1\"",
+        "dog_number": "КСК1-28-Пр-12.20",
+        "date_dog": "2020-12-04",
+        "building": " ",
+        "work_name": "Календарный план",
+        "work_id": "102",
+        "work_type": "dog_works",
+        "work_plan_start": "2020-12-01",
+        "work_plan_finish": "",
+        "work_plan_length": "1",
+        "work_fact_start": "",
+        "work_fact_finish": " ",
+        "work_fact_length": "",
+        "work_note": "КП составлен и согласован с заказчиком в рабочем порядке",
+        "work_status": "completed"
+      },
+      "kind": "dog_works",
+      "action": "CANDIDATE_REQUIRES_REVIEW",
+      "reason": "Прямой ссылки нет. Совпадение договора и шифра не доказывает, что это одна работа.",
+      "warnings": [
+        "Статус completed при неполном факте; не заполнять факт из плана."
+      ],
+      "candidates": [
+        {
+          "legacyContractWorkId": 2214,
+          "differences": [
+            {
+              "field": "work_plan_start",
+              "userValue": "2020-12-01",
+              "contractValue": "2020-08-28"
+            },
+            {
+              "field": "work_plan_finish",
+              "userValue": null,
+              "contractValue": "2020-09-21"
+            },
+            {
+              "field": "work_fact_start",
+              "userValue": null,
+              "contractValue": "2020-08-28"
+            },
+            {
+              "field": "work_fact_finish",
+              "userValue": null,
+              "contractValue": "2020-09-21"
+            },
+            {
+              "field": "work_fact_length",
+              "userValue": null,
+              "contractValue": "1"
+            },
+            {
+              "field": "user_fio / work_plan_exec",
+              "userValue": "вилков в.с.",
+              "contractValue": "мандрабура е.а."
+            },
+            {
+              "field": "user_fio / work_fact_exec",
+              "userValue": "вилков в.с.",
+              "contractValue": "мандрабура е.а."
+            }
+          ],
+          "importedContractWorkId": 280
+        }
+      ]
+    },
+    {
+      "legacyId": 12,
+      "sourceHash": "5682e51f6961ce2b9624cfe9c2641d6b1f1dbb056dd5e39387cef82af3d54cfa",
+      "source": {
+        "id": "12",
+        "user_fio": "Матохин Д.П.",
+        "contragent": "ООО \"КСК №1\"",
+        "dog_number": "КСК1-28-Пр-12.20",
+        "date_dog": "2020-12-04",
+        "building": "11501613",
+        "work_name": "АИС конструктив + проезжая часть + GPS",
+        "work_id": "305",
+        "work_type": "build_works",
+        "work_plan_start": "2020-12-08",
+        "work_plan_finish": "",
+        "work_plan_length": "1.5",
+        "work_fact_start": "",
+        "work_fact_finish": " ",
+        "work_fact_length": "",
+        "work_note": "Конструктив для РАСЧЁТОВ грузоподъёмности внесён",
+        "work_status": "completed"
+      },
+      "kind": "build_works",
+      "action": "NEEDS_STRUCTURE_SOURCE",
+      "reason": "Нужна сверка с исходной таблицей работ по сооружениям; новая работа автоматически не создаётся.",
+      "warnings": [
+        "Статус completed при неполном факте; не заполнять факт из плана."
+      ],
+      "candidates": []
+    },
+    {
+      "legacyId": 13,
+      "sourceHash": "376445b7b9bad90e67cc4769bc6bd040962181100a091239a8cd4f5da997ba3a",
+      "source": {
+        "id": "13",
+        "user_fio": "Матохин Д.П.",
+        "contragent": "ООО \"КСК №1\"",
+        "dog_number": "КСК1-28-Пр-12.20",
+        "date_dog": "2020-12-04",
+        "building": "11501613",
+        "work_name": "АИС стройподъёмы",
+        "work_id": "309",
+        "work_type": "build_works",
+        "work_plan_start": "2020-12-08",
+        "work_plan_finish": "",
+        "work_plan_length": "1.5",
+        "work_fact_start": "",
+        "work_fact_finish": " ",
+        "work_fact_length": "",
+        "work_note": "Форма строительные подъёмы по сооружению заполнена",
+        "work_status": "completed"
+      },
+      "kind": "build_works",
+      "action": "NEEDS_STRUCTURE_SOURCE",
+      "reason": "Нужна сверка с исходной таблицей работ по сооружениям; новая работа автоматически не создаётся.",
+      "warnings": [
+        "Статус completed при неполном факте; не заполнять факт из плана."
+      ],
+      "candidates": []
+    },
+    {
+      "legacyId": 14,
+      "sourceHash": "f9fcb7efbd12aed9e0665a4f3bba93224f96c8796eca0e4e67334c1e183fff14",
+      "source": {
+        "id": "14",
+        "user_fio": "Матохин Д.П.",
+        "contragent": "ООО \"КСК №1\"",
+        "dog_number": "КСК1-28-Пр-12.20",
+        "date_dog": "2020-12-04",
+        "building": "11501613",
+        "work_name": "АИС прочность бетона",
+        "work_id": "310",
+        "work_type": "build_works",
+        "work_plan_start": "2020-12-08",
+        "work_plan_finish": "",
+        "work_plan_length": "1.5",
+        "work_fact_start": "",
+        "work_fact_finish": " ",
+        "work_fact_length": "",
+        "work_note": "Форма прочность бетона по сооружению заполнена",
+        "work_status": "completed"
+      },
+      "kind": "build_works",
+      "action": "NEEDS_STRUCTURE_SOURCE",
+      "reason": "Нужна сверка с исходной таблицей работ по сооружениям; новая работа автоматически не создаётся.",
+      "warnings": [
+        "Статус completed при неполном факте; не заполнять факт из плана."
+      ],
+      "candidates": []
+    },
+    {
+      "legacyId": 15,
+      "sourceHash": "b4cc0bfa338cefcc0aab8ffb7c27f07c9ac6f0c41ed5c2e1f4efb735329b1faa",
+      "source": {
+        "id": "15",
+        "user_fio": "Матохин Д.П.",
+        "contragent": "ООО \"КСК №1\"",
+        "dog_number": "КСК1-28-Пр-12.20",
+        "date_dog": "2020-12-04",
+        "building": "11501613",
+        "work_name": "АИС Фото",
+        "work_id": "311",
+        "work_type": "build_works",
+        "work_plan_start": "2020-12-08",
+        "work_plan_finish": "",
+        "work_plan_length": "2",
+        "work_fact_start": "",
+        "work_fact_finish": " ",
+        "work_fact_length": "",
+        "work_note": "Фотографии общих видов внесены",
+        "work_status": "completed"
+      },
+      "kind": "build_works",
+      "action": "NEEDS_STRUCTURE_SOURCE",
+      "reason": "Нужна сверка с исходной таблицей работ по сооружениям; новая работа автоматически не создаётся.",
+      "warnings": [
+        "Статус completed при неполном факте; не заполнять факт из плана."
+      ],
+      "candidates": []
+    },
+    {
+      "legacyId": 1616,
+      "sourceHash": "ba1fc0fed5cf40d1cd04d9bddd3e77a5593b74476349f4bca4b951d1cfabc44a",
+      "source": {
+        "id": "1616",
+        "user_fio": "Комов С.Н.",
+        "contragent": "ГК \"Автодор\"",
+        "dog_number": "ДЭиБДД -2020-245",
+        "date_dog": "2020-02-28",
+        "building": "11200340",
+        "work_name": "АИС Фото",
+        "work_id": "311",
+        "work_type": "build_works",
+        "work_plan_start": "2021-04-05",
+        "work_plan_finish": "2021-04-09",
+        "work_plan_length": "2",
+        "work_fact_start": "2021-04-08",
+        "work_fact_finish": "2021-04-08",
+        "work_fact_length": "3",
+        "work_note": "Фотографии общих видов внесены",
+        "work_status": "completed"
+      },
+      "kind": "build_works",
+      "action": "NEEDS_STRUCTURE_SOURCE",
+      "reason": "Нужна сверка с исходной таблицей работ по сооружениям; новая работа автоматически не создаётся.",
+      "warnings": [],
+      "candidates": []
+    },
+    {
+      "legacyId": 17,
+      "sourceHash": "0e6e7ad8f85da1e9a8cfc0f4076c37b9ff8931ce13304fe4884cac91003d6316",
+      "source": {
+        "id": "17",
+        "user_fio": "Матохин Д.П.",
+        "contragent": "ООО \"КСК №1\"",
+        "dog_number": "КСК1-28-Пр-12.20",
+        "date_dog": "2020-12-04",
+        "building": "11501613",
+        "work_name": "АИС Видео",
+        "work_id": "315",
+        "work_type": "build_works",
+        "work_plan_start": "2020-12-09",
+        "work_plan_finish": "",
+        "work_plan_length": "3",
+        "work_fact_start": "",
+        "work_fact_finish": " ",
+        "work_fact_length": "",
+        "work_note": "В АИС  прикреплён смонтированный видеоролик",
+        "work_status": "completed"
+      },
+      "kind": "build_works",
+      "action": "NEEDS_STRUCTURE_SOURCE",
+      "reason": "Нужна сверка с исходной таблицей работ по сооружениям; новая работа автоматически не создаётся.",
+      "warnings": [
+        "Статус completed при неполном факте; не заполнять факт из плана."
+      ],
+      "candidates": []
+    }
+  ]
+}
