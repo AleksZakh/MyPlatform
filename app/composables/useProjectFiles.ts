@@ -36,7 +36,8 @@ export function useProjectFiles(projectId: number, contractId?:number, defaultSc
           const xhr = new XMLHttpRequest(); request = xhr;
           xhr.open('POST', base); xhr.timeout = 15 * 60_000;
           xhr.setRequestHeader('content-type', 'application/octet-stream'); xhr.setRequestHeader('x-space-work', '1');
-          if(taskId){xhr.setRequestHeader('x-file-task',String(taskId));xhr.setRequestHeader('x-document-type',encodeURIComponent(item.documentType));}
+          if(taskId)xhr.setRequestHeader('x-file-task',String(taskId));
+          if(contractId)xhr.setRequestHeader('x-document-type',encodeURIComponent(item.documentType));
           if(contractId)xhr.setRequestHeader('x-file-contract',String(contractId));
           xhr.setRequestHeader('x-file-key', item.key); xhr.setRequestHeader('x-file-name', encodeURIComponent(item.file.name));
           xhr.setRequestHeader('x-file-size', String(item.file.size)); xhr.setRequestHeader('x-file-scope', selectedScope);

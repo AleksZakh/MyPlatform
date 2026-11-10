@@ -16,6 +16,7 @@ import {
 } from "~~/shared/types/upts-library";
 import { dateKey } from "~~/shared/utils/work-board";
 const props = defineProps<{
+  returnToOverview?:boolean;
   tasks?: WorkTaskDTO[];
   projectId?: number | null;
   projects: UptsProjectDTO[];
@@ -245,7 +246,7 @@ async function save() {
         <p v-if="staffLoading" class="work-muted" role="status">Загружаем сотрудников УПТС…</p>
         <p v-if="staffError" class="work-error" role="alert">{{ staffError }} <button type="button" @click="loadStaff">Повторить</button></p>
       </fieldset>
-      <div class="work-actions upts-object-form-actions"><button class="work-primary" :disabled="saving || defaultsLoading || loading || worksLoading || !!worksError || !!libraryError">{{ saving?'Сохранение…':'Сохранить' }}</button><button type="button" @click="emit('close')">Отмена</button></div>
+      <div class="work-actions upts-object-form-actions"><button class="work-primary" :disabled="saving || defaultsLoading || loading || worksLoading || !!worksError || !!libraryError">{{ saving?'Сохранение…':'Сохранить' }}</button><button type="button" @click="emit('close')">{{ returnToOverview ? 'Назад к карточке' : 'Отмена' }}</button></div>
     </form>
   </Modal>
 </template>

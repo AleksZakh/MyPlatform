@@ -1,11 +1,21 @@
 import path from 'node:path';
-import { mkdir, lstat, realpath, open, unlink } from 'node:fs/promises';
+import { mkdir, lstat, realpath, open, unlink, rename } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { randomUUID, createHash } from 'node:crypto';
 import { createError, type H3Event } from 'h3';
 
 export const projectFilesRoot = path.resolve(process.env.WORK_PROJECT_FILES_ROOT || path.join(process.env.LAB_FILES_ROOT || '/var/www/uploads-storage/files', '..', 'projects'));
 const uuid = /^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/;
+export function documentFolderName(type:string, savedAt:Date){
+  let name=type.normalize('NFC').replace(/[\\/<>:"|?*\x00-\x1f\x7f]/g,'_').replace(/\s+/g,' ').replace(/^[. ]+|[. ]+$/g,'') || 'Документ';
+  while(Buffer.byteLength(name,'utf8')>180)name=Array.from(name).slice(0,-1).join('');
+  const date=new Intl.DateTimeFormat('ru-RU',{timeZone:'Europe/Moscow',day:'2-digit',month:'2-digit',year:'numeric'}).format(savedAt);
+  return name+' — '+date;
+}
+function safeFolder(name:string){
+  if(!name || name==='.' || name==='..' || /[\\/\x00-\x1f\x7f]/.test(name) || Buffer.byteLength(name,'utf8')>240)throw new Error('Invalid document folder');
+  return name;
+}
 export function taskFileLimit(){return 300*1024*1024;}
 export function projectFileLimit() {
   const limit = Number(process.env.WORK_PROJECT_FILE_MAX_BYTES || 104857600);
@@ -46,9 +56,9 @@ function parts(projectId: number, ownerId: number, scope: string, contractId?:nu
   if (scope === 'PRIVATE') return [...prefix, 'private', idSegment(ownerId)];
   throw new Error('Invalid file scope');
 }
-export async function receiveProjectFile(event: H3Event, projectId: number, ownerId: number, scope: string, expected: number, contractId?:number|null, limit=projectFileLimit()) {
+export async function receiveProjectFile(event: H3Event, projectId: number, ownerId: number, scope: string, expected: number, contractId?:number|null, limit=projectFileLimit(), documentType?:string|null) {
   const dir = await directory(parts(projectId, ownerId, scope, contractId), true);
-  const storageKey = randomUUID(), destination = path.join(dir, storageKey);
+  const storageKey = randomUUID(); let destination = path.join(dir, storageKey);
   const file = await open(destination, 'wx', 0o640);
   const hash = createHash('sha256'); let bytes = 0;
   const timer = setTimeout(() => event.node.req.destroy(new Error('Upload timed out')), 15 * 60_000);
@@ -63,14 +73,22 @@ export async function receiveProjectFile(event: H3Event, projectId: number, owne
     }
     if (bytes !== expected) throw createError({ statusCode: 400, message: 'Файл передан не полностью.' });
     await file.sync();
-    return { storageKey, size: bytes, sha256: hash.digest('hex') };
+    const createdAt=new Date();
+    const storageFolder=contractId&&documentType?documentFolderName(documentType,createdAt):null;
+    if(storageFolder){
+      const target=await directory([...parts(projectId,ownerId,scope,contractId),safeFolder(storageFolder)],true);
+      await file.close();
+      const next=path.join(target,storageKey);await rename(destination,next);destination=next;
+    }
+    return { storageKey, storageFolder, createdAt, size: bytes, sha256: hash.digest('hex') };
   } catch (error) {
-    await file.close(); await unlink(destination).catch(() => {}); throw error;
+    await file.close().catch(()=>{}); await unlink(destination).catch(() => {}); throw error;
   } finally { clearTimeout(timer); await file.close().catch(() => {}); }
 }
-export async function openProjectFile(file: { contractId?:number|null; projectId: number; ownerId: number; scope: string; storageKey: string; size: number }) {
+export async function openProjectFile(file: { contractId?:number|null; projectId: number; ownerId: number; scope: string; storageKey: string; storageFolder?:string|null; size: number }) {
   if (!uuid.test(file.storageKey)) throw new Error('Invalid file key');
-  const dir = await directory(parts(file.projectId, file.ownerId, file.scope, file.contractId), false);
+  const base=parts(file.projectId, file.ownerId, file.scope, file.contractId);
+  const dir = await directory(file.storageFolder?[...base,safeFolder(file.storageFolder)]:base, false);
   const handle = await open(path.join(dir, file.storageKey), constants.O_RDONLY | constants.O_NOFOLLOW);
   const stat = await handle.stat();
   if (!stat.isFile() || stat.size !== file.size) { await handle.close(); throw new Error('Missing or damaged project file'); }

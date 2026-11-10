@@ -103,6 +103,10 @@ const {
   statusClass,
 } = useUptsWorkspace();
 const overviewId=ref<number|null>(null),deletingObject=ref<UptsContractDTO|null>(null),deleteError=ref(''),deleteBusy=ref(false);
+const returnOverviewId=ref<number|null>(null);
+function editFromOverview(object:UptsContractDTO){returnOverviewId.value=object.id;overviewId.value=null;editContract(object);}
+function closeContractEditor(){contractEditor.value=false;if(returnOverviewId.value){overviewId.value=returnOverviewId.value;returnOverviewId.value=null;}}
+async function saveContractAndReturn(object:UptsContractDTO){const id=returnOverviewId.value;returnOverviewId.value=null;await contractSaved(object);if(id)overviewId.value=id;}
 async function removeObject(){if(!deletingObject.value)return;deleteBusy.value=true;deleteError.value='';try{await $fetch(`/api/upts/contracts/${deletingObject.value.id}`,{method:'DELETE',headers:{'x-space-work':'1'},body:{version:deletingObject.value.version}});deletingObject.value=null;overviewId.value=null;await load();}catch(e:any){deleteError.value=e.data?.message||'Не удалось удалить объект.';}finally{deleteBusy.value=false;}}
 </script>
 <template>
@@ -801,9 +805,9 @@ async function removeObject(){if(!deletingObject.value)return;deleteBusy.value=t
         load();
       "
     />
-    <ObjectOverview v-if="overviewId" :contract-id="overviewId" @close="overviewId=null" @changed="load" @work="overviewId=null;editTask($event)" @edit="overviewId=null;editContract($event)" @files="(p,id)=>{overviewId=null;showFiles(p,id)}" />
+    <ObjectOverview v-if="overviewId" :contract-id="overviewId" @close="overviewId=null" @changed="load" @work="overviewId=null;editTask($event)" @edit="editFromOverview" @files="(p,id)=>{overviewId=null;showFiles(p,id)}" />
     <Modal v-if="deletingObject" title="Удаление объекта" @close="!deleteBusy&&(deletingObject=null)"><p>Удалить объект «{{ deletingObject.number }}» вместе с его работами и документами из действующего реестра? Данные останутся в базе для восстановления администратором.</p><p v-if="deleteError" class="work-error" role="alert">{{ deleteError }}</p><div class="work-actions"><button :disabled="deleteBusy" @click="removeObject">Удалить объект</button><button :disabled="deleteBusy" @click="deletingObject=null">Отмена</button></div></Modal>
-    <ContractEditor v-if="contractEditor" :tasks="data.tasks" :project-id="project?.id" :projects="data.projects" :contract="editingContract" @close="contractEditor=false" @saved="contractSaved" />
+    <ContractEditor v-if="contractEditor" :tasks="data.tasks" :project-id="project?.id" :projects="data.projects" :contract="editingContract" :return-to-overview="!!returnOverviewId" @close="closeContractEditor" @saved="saveContractAndReturn" />
     <ContractWorks v-if="contractWorks && contract" :contract="contract" @close="contractWorks=false" @saved="contractWorks=false; load()" />
     <TemplateEditor
       v-if="templateEditor && project"

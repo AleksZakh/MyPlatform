@@ -2,7 +2,7 @@ import type { WorkUser } from './work';
 export type ProjectFileScope = 'SHARED' | 'PRIVATE';
 export interface ProjectFileDTO {
   id: string; projectId: number; ownerId: number; scope: ProjectFileScope; name: string;
-  taskId?:number|null;documentType?:string|null;
+  documentFolder?:string|null;taskId?:number|null;documentType?:string|null;
   size: number; version: number; createdAt: string; deletedAt: string | null; canManage: boolean;
   owner: WorkUser;
 }

@@ -1332,6 +1332,7 @@ model LibraryVideoSettings {
 
 // Files are stored outside public/ and releases; PRIVATE never inherits manager access.
 model WorkProjectFile {
+  storageFolder String? @db.VarChar(180)
   task WorkTask? @relation(fields:[taskId],references:[id],onDelete:Restrict)
   taskId Int?
   documentType String? @db.VarChar(100)

@@ -30,7 +30,7 @@ function canManage(file: WorkProjectFile, p: ProjectPolicy, a: Actor) {
 }
 function dto(f: WorkProjectFile, p: ProjectPolicy, a: Actor) {
   return { id: f.id, projectId: f.projectId, ownerId: f.ownerId, scope: f.scope, name: f.name, size: f.size,
-    taskId:f.taskId,documentType:f.documentType,version: f.version, createdAt: f.createdAt, deletedAt: f.deletedAt, canManage: canManage(f, p, a) };
+    documentFolder:f.storageFolder,taskId:f.taskId,documentType:f.documentType,version: f.version, createdAt: f.createdAt, deletedAt: f.deletedAt, canManage: canManage(f, p, a) };
 }
 const visibleFileWhere = (projectId: number, a: Actor) => ({ projectId, OR: [{ scope: 'SHARED' }, { scope: 'PRIVATE', ownerId: a.id }] });
 async function contractFolder(event:H3Event,projectId:number,upload=false) {
@@ -71,7 +71,7 @@ export async function uploadProjectFile(event: H3Event, projectId: number) {
   const contractId=await contractFolder(event,projectId,true);
   const task=await taskFolder(event,projectId,contractId,a,true);
   let documentType:string|null=null;
-  if(task){try{documentType=decodeURIComponent(getHeader(event,'x-document-type')||'');}catch{fail(400,'Неверный тип документа.');}documentType=parse(z.string().trim().min(1).max(100),documentType);if(v.scope!=='SHARED'||!task.canUpload)fail(403,'Нет права прикреплять документы к этой работе.');}
+  if(contractId && (task || getHeader(event,'x-document-type'))){try{documentType=decodeURIComponent(getHeader(event,'x-document-type')||'');}catch{fail(400,'Неверный тип документа.');}documentType=parse(z.string().trim().min(1).max(100),documentType);if(task && (v.scope!=='SHARED'||!task.canUpload))fail(403,'Нет права прикреплять документы к этой работе.');}
   if (!writable(p, a, v.scope)) fail(403, 'Нет права добавлять файлы в эту область проекта.');
   if (v.size > (task?taskFileLimit():projectFileLimit())) fail(413, 'Файл превышает установленный лимит.');
   const length = getHeader(event, 'content-length');
@@ -82,7 +82,7 @@ export async function uploadProjectFile(event: H3Event, projectId: number) {
     return dto(old, p, a);
   }
   // Stream to disk before acquiring any database transaction or module lock.
-  const stored = await receiveProjectFile(event, projectId, a.id, v.scope, v.size, contractId,task?taskFileLimit():projectFileLimit());
+  const stored = await receiveProjectFile(event, projectId, a.id, v.scope, v.size, contractId,task?taskFileLimit():projectFileLimit(),documentType);
   // If DB commit outcome is uncertain, retain these bytes. Never delete a possibly committed file.
   return prisma.$transaction(async tx => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(20261019)`;
