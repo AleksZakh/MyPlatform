@@ -29,6 +29,8 @@ if(!details.value.rightHolders?.length)details.value.rightHolders=[''];
 if(!details.value.permittedUses?.length)details.value.permittedUses=[''];
 if(!details.value.kuvdEntries?.length)details.value.kuvdEntries=[{number:'',date:null}];
 const activeTab=ref<'characteristics'|'works'>('characteristics');
+const defaultsWarning=ref(''),defaultsLoading=ref(!c);
+async function loadDefaults(){if(c)return;defaultsLoading.value=true;try{const d=await $fetch<{curatorId:number;engineerId:number|null;warning:string}>('/api/upts/defaults');if(details.value.curatorId==null)details.value.curatorId=d.curatorId;if(details.value.engineerId==null)details.value.engineerId=d.engineerId;defaultsWarning.value=d.warning;}catch{defaultsWarning.value='Не удалось загрузить назначения по умолчанию. Выберите куратора и кадастрового инженера вручную.';}finally{defaultsLoading.value=false;}}
 const staff=ref<WorkUser[]>([]), staffLoading=ref(false), staffError=ref(''), validationError=ref('');
 const stageCount=ref<number|''>(details.value.stageCount ?? 1);
 const objectRoles=[{key:'curatorId',label:'Куратор'},{key:'engineerId',label:'Кадастровый инженер'}] as const;
@@ -115,12 +117,14 @@ async function load() {
   }
 }
 onMounted(() => {
-  loadStaff();
+  loadStaff();loadDefaults();
   if (c) loadStageWorks();
   load();
 });
 async function save() {
   validationError.value='';
+  if(defaultsLoading.value)return;
+  if(!c && !details.value.engineerId){validationError.value='Выберите кадастрового инженера: ему будут назначены все работы объекта.';return;}
   if(worksLoading.value || worksError.value || loading.value || libraryError.value)return;
   if(details.value.workStartDate && form.dueDate && details.value.workStartDate>form.dueDate){
     validationError.value='Дата окончания работ не может быть раньше даты начала.';return;
@@ -232,15 +236,16 @@ async function save() {
       </fieldset>
       <fieldset class="upts-static upts-object-execution" :disabled="saving" aria-label="Параметры выполнения работ">
         <legend>Параметры выполнения работ</legend>
+        <p v-if="defaultsWarning" class="work-muted" role="status">{{ defaultsWarning }}</p>
         <div class="upts-object-execution-grid">
           <label>Дата начала работ<input v-model="details.workStartDate" type="date" min="1900-01-01" max="2200-12-31" /></label>
           <label>Дата окончания работ<input v-model="form.dueDate" type="date" :min="details.workStartDate || '1900-01-01'" max="2200-12-31" /></label>
-          <label v-for="role in objectRoles" :key="role.key">{{ role.label }}<select v-model="details[role.key]" :disabled="staffLoading || !!staffError"><option :value="null">Не назначен</option><option v-if="details[role.key] && !staff.some(p=>p.id===details[role.key])" :value="details[role.key]">{{ retainedPerson(details[role.key]!) }} (сохранённое назначение)</option><option v-for="p in staff" :key="p.id" :value="p.id">{{ workUserName(p) }}</option></select></label>
+          <label v-for="role in objectRoles" :key="role.key">{{ role.label }}<select v-model="details[role.key]" :disabled="defaultsLoading || staffLoading || !!staffError"><option :value="null">Не назначен</option><option v-if="details[role.key] && !staff.some(p=>p.id===details[role.key])" :value="details[role.key]">{{ retainedPerson(details[role.key]!) }} (сохранённое назначение)</option><option v-for="p in staff" :key="p.id" :value="p.id">{{ workUserName(p) }}</option></select></label>
         </div>
         <p v-if="staffLoading" class="work-muted" role="status">Загружаем сотрудников УПТС…</p>
         <p v-if="staffError" class="work-error" role="alert">{{ staffError }} <button type="button" @click="loadStaff">Повторить</button></p>
       </fieldset>
-      <div class="work-actions upts-object-form-actions"><button class="work-primary" :disabled="saving || loading || worksLoading || !!worksError || !!libraryError">{{ saving?'Сохранение…':'Сохранить' }}</button><button type="button" @click="emit('close')">Отмена</button></div>
+      <div class="work-actions upts-object-form-actions"><button class="work-primary" :disabled="saving || defaultsLoading || loading || worksLoading || !!worksError || !!libraryError">{{ saving?'Сохранение…':'Сохранить' }}</button><button type="button" @click="emit('close')">Отмена</button></div>
     </form>
   </Modal>
 </template>

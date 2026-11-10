@@ -31,6 +31,7 @@ import ProjectFiles from '../work/ProjectFiles.vue';
 import Members from '../work/Members.vue';
 import Modal from '../work/Modal.vue';
 import ObjectEditor from './ObjectEditor.vue';
+import ObjectOverview from './ObjectOverview.vue';
 import ObjectCard from './ObjectCard.vue';
 import ContractEditor from './ContractEditor.vue';
 import TemplateEditor from './TemplateEditor.vue';
@@ -101,6 +102,8 @@ const {
   projectStats,
   statusClass,
 } = useUptsWorkspace();
+const overviewId=ref<number|null>(null),deletingObject=ref<UptsContractDTO|null>(null),deleteError=ref(''),deleteBusy=ref(false);
+async function removeObject(){if(!deletingObject.value)return;deleteBusy.value=true;deleteError.value='';try{await $fetch(`/api/upts/contracts/${deletingObject.value.id}`,{method:'DELETE',headers:{'x-space-work':'1'},body:{version:deletingObject.value.version}});deletingObject.value=null;overviewId.value=null;await load();}catch(e:any){deleteError.value=e.data?.message||'Не удалось удалить объект.';}finally{deleteBusy.value=false;}}
 </script>
 <template>
   <section class="work-root upts-root">
@@ -267,7 +270,7 @@ const {
           <div class="upts-dashboard">
             <div class="upts-dashboard-main">
               <section v-if="contract" class="upts-object-summary">
-                <ObjectCard :object="contract" :owner="contract.project.owner" :count="contractStats(contract).total" :can-manage="canManage" @open="canManage ? editContract(contract) : section='tasks'" @edit="editContract(contract)" @works="section='tasks'" @add="contractWorks=true" @files="showFiles(contract.project,contract.id)" />
+                <ObjectCard :object="contract" @view="overviewId=contract.id" @remove="deletingObject=contract" :owner="contract.project.owner" :count="contractStats(contract).total" :can-manage="canManage" @open="canManage ? editContract(contract) : section='tasks'" @edit="editContract(contract)" @works="section='tasks'" @add="contractWorks=true" @files="showFiles(contract.project,contract.id)" />
               </section>
               <section v-else-if="project" class="upts-panel">
                 <div class="upts-panel-head">
@@ -309,7 +312,7 @@ const {
               </section>
               <section v-else class="upts-panel">
                 <div class="upts-panel-head"><h2>Реестр объектов</h2><button @click="section='contracts'">Все объекты →</button></div>
-                <div v-if="contractRows.length" class="upts-object-cards"><ObjectCard v-for="c in contractRows.slice(0,6)" :key="c.id" :object="c" :owner="c.project.owner" :count="contractStats(c).total" :can-manage="c.project.canManage && !c.project.archivedAt" @open="openContract(c)" @edit="editContract(c)" @works="openContract(c); section='tasks'" @add="openContract(c); contractWorks=true" @files="showFiles(c.project,c.id)" /></div>
+                <div v-if="contractRows.length" class="upts-object-cards"><ObjectCard v-for="c in contractRows.slice(0,6)" :key="c.id" :object="c" @view="overviewId=c.id" @remove="deletingObject=c" :owner="c.project.owner" :count="contractStats(c).total" :can-manage="c.project.canManage && !c.project.archivedAt" @open="openContract(c)" @edit="editContract(c)" @works="openContract(c); section='tasks'" @add="openContract(c); contractWorks=true" @files="showFiles(c.project,c.id)" /></div>
                 <p v-else class="work-empty">Объектов в выбранном срезе нет. Создайте объект кнопкой «+ Объект».</p>
                 <p class="work-muted">Показатели объектов рассчитаны только по привязанным задачам. Старые задачи без привязки доступны во вкладке «Задачи» при выборе всех объектов.</p>
               </section>
@@ -708,7 +711,7 @@ const {
         </section>
         <section v-else-if="section === 'contracts'" class="upts-panel">
           <div class="upts-section-head"><h2>Объекты</h2><button class="work-primary" @click="editContract()">+ Объект</button></div>
-          <div v-if="contractRows.length" class="upts-object-cards"><ObjectCard v-for="c in contractRows" :key="c.id" :object="c" :owner="c.project.owner" :count="contractStats(c).total" :can-manage="c.project.canManage && !c.project.archivedAt" @open="openContract(c)" @edit="editContract(c)" @works="openContract(c); section='tasks'" @add="openContract(c); contractWorks=true" @files="showFiles(c.project,c.id)" /></div><p v-else class="work-empty">Объектов пока нет.</p>
+          <div v-if="contractRows.length" class="upts-object-cards"><ObjectCard v-for="c in contractRows" :key="c.id" :object="c" @view="overviewId=c.id" @remove="deletingObject=c" :owner="c.project.owner" :count="contractStats(c).total" :can-manage="c.project.canManage && !c.project.archivedAt" @open="openContract(c)" @edit="editContract(c)" @works="openContract(c); section='tasks'" @add="openContract(c); contractWorks=true" @files="showFiles(c.project,c.id)" /></div><p v-else class="work-empty">Объектов пока нет.</p>
         </section>
         <section v-else-if="section === 'files' && project" class="upts-panel">
           <div class="upts-section-head">
@@ -798,6 +801,8 @@ const {
         load();
       "
     />
+    <ObjectOverview v-if="overviewId" :contract-id="overviewId" @close="overviewId=null" @changed="load" @work="overviewId=null;editTask($event)" @edit="overviewId=null;editContract($event)" @files="(p,id)=>{overviewId=null;showFiles(p,id)}" />
+    <Modal v-if="deletingObject" title="Удаление объекта" @close="!deleteBusy&&(deletingObject=null)"><p>Удалить объект «{{ deletingObject.number }}» вместе с его работами и документами из действующего реестра? Данные останутся в базе для восстановления администратором.</p><p v-if="deleteError" class="work-error" role="alert">{{ deleteError }}</p><div class="work-actions"><button :disabled="deleteBusy" @click="removeObject">Удалить объект</button><button :disabled="deleteBusy" @click="deletingObject=null">Отмена</button></div></Modal>
     <ContractEditor v-if="contractEditor" :tasks="data.tasks" :project-id="project?.id" :projects="data.projects" :contract="editingContract" @close="contractEditor=false" @saved="contractSaved" />
     <ContractWorks v-if="contractWorks && contract" :contract="contract" @close="contractWorks=false" @saved="contractWorks=false; load()" />
     <TemplateEditor

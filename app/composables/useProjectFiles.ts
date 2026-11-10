@@ -1,14 +1,15 @@
 import type { ProjectFileDTO, ProjectFileList, ProjectFileScope } from '~~/shared/types/project-files';
 
-export function useProjectFiles(projectId: number, contractId?:number, defaultScope:ProjectFileScope='PRIVATE') {
+export function useProjectFiles(projectId: number, contractId?:number, defaultScope:ProjectFileScope='PRIVATE',taskId?:number) {
+  const documentType=ref('Выписка из ЕГРН');
   const scope = ref<ProjectFileScope>(defaultScope), trash = ref(false), data = ref<ProjectFileList | null>(null);
   const error = ref(''), loading = ref(false), busy = ref(false), selected = ref<ProjectFileDTO | null>(null);
-  const queue = ref<{ key: string; file: File; progress: number; state: string }[]>([]);
+  const queue = ref<{ key: string; file: File; progress: number; state: string;documentType:string }[]>([]);
   const base = `/api/work/projects/${projectId}/files`;
   let request: XMLHttpRequest | null = null, active = true, generation = 0;
   async function load(page = 1) {
     const serial = ++generation; loading.value = true; error.value = ''; data.value = null;
-    try { const result = await $fetch<ProjectFileList>(base, { query: { contractId, scope: scope.value, trash: trash.value ? '1' : '0', page } }); if (active && serial === generation) data.value = result; }
+    try { const result = await $fetch<ProjectFileList>(base, { query: { taskId,contractId, scope: scope.value, trash: trash.value ? '1' : '0', page } }); if (active && serial === generation) data.value = result; }
     catch (e: any) { if (active && serial === generation) error.value = e.data?.message || 'Не удалось загрузить файлы.'; }
     finally { if (active && serial === generation) loading.value = false; }
   }
@@ -19,7 +20,7 @@ export function useProjectFiles(projectId: number, contractId?:number, defaultSc
       if (!file.size || file.size > data.value.maxBytes || file.name.length > 240 || /[\/\\\x00-\x1f\x7f]/.test(file.name)) {
         error.value = 'Некоторые файлы не добавлены: проверьте размер и длину имени (до 240 символов).'; continue;
       }
-      queue.value.push({ key: crypto.randomUUID(), file, progress: 0, state: 'Ожидает' });
+      queue.value.push({ key: crypto.randomUUID(), file, progress: 0, state: 'Ожидает',documentType:documentType.value });
     }
   }
   async function upload() {
@@ -35,6 +36,7 @@ export function useProjectFiles(projectId: number, contractId?:number, defaultSc
           const xhr = new XMLHttpRequest(); request = xhr;
           xhr.open('POST', base); xhr.timeout = 15 * 60_000;
           xhr.setRequestHeader('content-type', 'application/octet-stream'); xhr.setRequestHeader('x-space-work', '1');
+          if(taskId){xhr.setRequestHeader('x-file-task',String(taskId));xhr.setRequestHeader('x-document-type',encodeURIComponent(item.documentType));}
           if(contractId)xhr.setRequestHeader('x-file-contract',String(contractId));
           xhr.setRequestHeader('x-file-key', item.key); xhr.setRequestHeader('x-file-name', encodeURIComponent(item.file.name));
           xhr.setRequestHeader('x-file-size', String(item.file.size)); xhr.setRequestHeader('x-file-scope', selectedScope);
@@ -63,5 +65,5 @@ export function useProjectFiles(projectId: number, contractId?:number, defaultSc
   watch([scope, trash], () => { selected.value = null; queue.value = []; load(); });
   onMounted(() => load());
   onBeforeUnmount(() => { active = false; generation++; request?.abort(); });
-  return { scope, trash, data, error, loading, busy, selected, queue, base, load, choose, upload, changeState, cancel: () => request?.abort() };
+  return { documentType,scope, trash, data, error, loading, busy, selected, queue, base, load, choose, upload, changeState, cancel: () => request?.abort() };
 }

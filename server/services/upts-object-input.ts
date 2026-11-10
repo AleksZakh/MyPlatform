@@ -3,6 +3,7 @@ import type { H3Event } from 'h3';
 import type { UptsObjectDetails } from '../../shared/types/upts-object';
 import { validWorkKind } from '../../shared/utils/upts-work-kinds';
 import { uptsDay } from './upts-input';
+import { uptsActor } from './upts-access';
 import { uptsPeople } from './upts-people';
 import { fail } from './work/service';
 const text = z.string().trim().max(500);
@@ -37,7 +38,8 @@ export function checkObjectSchedule(details:UptsObjectDetails|undefined, dueDate
 // Roles in the card are business responsibilities. Access remains controlled by the object's team.
 // Unchanged references are retained if a member later leaves UPTS; new assignments require current membership.
 export async function checkObjectPeople(event:H3Event, next?:UptsObjectDetails, old?:UptsObjectDetails){
-  const ids = (['curatorId','engineerId'] as const).map(k=>next?.[k]!==old?.[k]?next?.[k]:null).filter((id):id is number=>!!id);
+  const actor=await uptsActor(event);
+  const ids = (['curatorId','engineerId'] as const).map(k=>k==='curatorId'&&next?.[k]===actor.id?null:next?.[k]!==old?.[k]?next?.[k]:null).filter((id):id is number=>!!id);
   if(!ids.length)return;
   const staff=new Set((await uptsPeople(event)).map(p=>p.id));
   if(ids.some(id=>!staff.has(id)))fail(400,'Выберите активных сотрудников УПТС для ролей объекта.');

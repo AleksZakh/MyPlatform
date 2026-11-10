@@ -1,3 +1,4 @@
+import {addObjectMember,queueUptsNotice} from './upts-workflow';
 import {workStagesSchema,checkNewWorkStages} from './upts-work-stages';
 import type {UptsObjectDetails} from '../../shared/types/upts-object';
 import { objectDetailsSchema, checkObjectKind, checkObjectPeople, checkObjectSchedule } from './upts-object-input';
@@ -378,7 +379,7 @@ async function titlesFor(
 }
 async function managedContract(tx: DB, a: Actor, contractId: number) {
   const c = await tx.uptsContract.findUnique({ where: { id: contractId } });
-  if (!c) fail(404, "Объект не найден.");
+  if (!c || c.deletedAt) fail(404, "Объект не найден.");
   const p = await visibleProject(tx, c.projectId, a);
   if (!managesProject(p, a) || p.archivedAt)
     fail(403, "Изменения доступны руководителю активного проекта объекта.");
@@ -388,10 +389,13 @@ async function addWorks(
   tx: DB,
   event: H3Event,
   a: Actor,
-  c: { id: number; projectId: number },
+  c: { id: number; projectId: number;number:string;objectDetails:unknown },
   titles: Awaited<ReturnType<typeof titlesFor>>,
   workStages?: number[],
 ) {
+  const details=c.objectDetails as UptsObjectDetails|null;
+  const assigneeId=details?.engineerId || null;
+  if(assigneeId){const p=await visibleProject(tx,c.projectId,a);await addObjectMember(tx,p,assigneeId);}
   const taskIds: number[] = [];
   for (let i = 0; i < titles.length; i++) {
     const task = await tx.workTask.create({
@@ -402,6 +406,7 @@ async function addWorks(
         projectId: c.projectId,
         uptsContractId: c.id,
         creatorId: a.id,
+        assigneeId,
         visibility: "PROJECT",
       },
     });
@@ -411,8 +416,10 @@ async function addWorks(
       projectId: c.projectId,
       uptsContractId: c.id,
       status: task.status,
+      assigneeId:task.assigneeId,
       uptsWorkMeta:task.uptsWorkMeta,
     });
+    await queueUptsNotice(tx,`created:${task.id}`,a.id,assigneeId,task.id,`Вам назначена работа «${task.title}» по объекту «${c.number}». Распределите работы между кадастровыми инженерами.`);
     taskIds.push(task.id);
   }
   return taskIds;
@@ -456,10 +463,11 @@ export async function createContract(event: H3Event, raw: unknown) {
       where: { clientKey: v.clientKey },
     });
     if (old) {
+      if(old.deletedAt)fail(409,'Объект удалён. Создайте новую карточку.');
       const oldProject = await visibleProject(tx,old.projectId,a);
       await managedContract(tx, a, old.id);
       if(v.visibility && oldProject.scope!==v.visibility) fail(409,'Ключ операции уже использован с другой видимостью.');
-      if(v.visibility==='TEAM' && [...new Set(v.memberIds)].filter(id=>id!==a.id).sort((a,b)=>a-b).join()!==oldProject.members.map(m=>m.userId).sort((a,b)=>a-b).join()) fail(409,'Ключ операции уже использован с другим составом сотрудников.');
+      if(v.visibility==='TEAM' && [...new Set(v.memberIds)].filter(id=>id!==a.id).sort((a,b)=>a-b).join()!==oldProject.members.filter(m=>m.userId!==(old.objectDetails as UptsObjectDetails|null)?.engineerId || v.memberIds.includes(m.userId)).map(m=>m.userId).sort((a,b)=>a-b).join()) fail(409,'Ключ операции уже использован с другим составом сотрудников.');
       if (
         old.number !== v.number ||
         old.name !== v.name ||

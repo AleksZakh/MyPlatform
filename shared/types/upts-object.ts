@@ -25,6 +25,9 @@ export type UptsObjectDetails = {
   otherDescription?: string;
 };
 export type UptsWorkMeta = {
+  resultText?:string;
+  startedAt?:string;
+  completedAt?:string;
   stageNumber?: number;
   definitionId?: number;
   workKindKey?: string | null;

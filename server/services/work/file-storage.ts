@@ -6,6 +6,7 @@ import { createError, type H3Event } from 'h3';
 
 export const projectFilesRoot = path.resolve(process.env.WORK_PROJECT_FILES_ROOT || path.join(process.env.LAB_FILES_ROOT || '/var/www/uploads-storage/files', '..', 'projects'));
 const uuid = /^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/;
+export function taskFileLimit(){return 300*1024*1024;}
 export function projectFileLimit() {
   const limit = Number(process.env.WORK_PROJECT_FILE_MAX_BYTES || 104857600);
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1073741824) throw new Error('WORK_PROJECT_FILE_MAX_BYTES must be 1..1073741824');
@@ -45,7 +46,7 @@ function parts(projectId: number, ownerId: number, scope: string, contractId?:nu
   if (scope === 'PRIVATE') return [...prefix, 'private', idSegment(ownerId)];
   throw new Error('Invalid file scope');
 }
-export async function receiveProjectFile(event: H3Event, projectId: number, ownerId: number, scope: string, expected: number, contractId?:number|null) {
+export async function receiveProjectFile(event: H3Event, projectId: number, ownerId: number, scope: string, expected: number, contractId?:number|null, limit=projectFileLimit()) {
   const dir = await directory(parts(projectId, ownerId, scope, contractId), true);
   const storageKey = randomUUID(), destination = path.join(dir, storageKey);
   const file = await open(destination, 'wx', 0o640);
@@ -55,7 +56,7 @@ export async function receiveProjectFile(event: H3Event, projectId: number, owne
   try {
     for await (const chunk of event.node.req) {
       const buffer = Buffer.from(chunk); bytes += buffer.length;
-      if (bytes > expected || bytes > projectFileLimit()) throw createError({ statusCode: 413, message: 'Превышен размер файла.' });
+      if (bytes > expected || bytes > limit) throw createError({ statusCode: 413, message: 'Превышен размер файла.' });
       hash.update(buffer);
       let offset = 0;
       while (offset < buffer.length) offset += (await file.write(buffer, offset, buffer.length - offset)).bytesWritten;

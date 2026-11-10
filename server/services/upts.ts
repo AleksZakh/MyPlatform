@@ -111,7 +111,7 @@ export async function snapshot(event: H3Event) {
           upts: {
             include: {
               objects: { include: { object: true }, orderBy: { id: 'asc' } },
-              contracts: { orderBy: { id: 'asc' } },
+              contracts: { where:{deletedAt:null}, orderBy: { id: 'asc' } },
             },
           },
         },
@@ -297,7 +297,7 @@ export async function saveContract(
         : await tx.uptsContract.findUnique({
             where: { clientKey: v.clientKey },
           });
-      if (contractId && !old) fail(404, 'Объект не найден.');
+      if (contractId && (!old || old.deletedAt)) fail(404, 'Объект не найден.');
       if (old && old.projectId !== projectId)
         fail(409, 'Ключ операции уже использован.');
       if (!contractId && old) {

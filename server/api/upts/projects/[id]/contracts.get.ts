@@ -6,5 +6,5 @@ import { prisma } from '../../../../utils/prisma';
 export default defineEventHandler(async event=>{
  const a=await workActor(event),projectId=positiveId(getRouterParam(event,'id'));
  await visibleProject(prisma,projectId,a);
- return prisma.uptsContract.findMany({where:{projectId},orderBy:{id:'asc'}});
+ return prisma.uptsContract.findMany({where:{projectId,deletedAt:null},orderBy:{id:'asc'}});
 });

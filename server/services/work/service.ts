@@ -172,10 +172,12 @@ export async function saveTask(event:H3Event,raw:unknown,id?:number){const a=awa
  const objectId=v.uptsObjectId===undefined?(old?.projectId===v.projectId?old?.uptsObjectId??null:null):v.uptsObjectId;
  if(objectId&&(!project||!await tx.uptsProjectObject.findFirst({where:{id:objectId,projectId:project.id}})))fail(400,'Объект не принадлежит проекту задачи.');
  const contractId=v.uptsContractId===undefined?(old?.projectId===v.projectId?old?.uptsContractId??null:null):v.uptsContractId;
- if(contractId&&(!project||!await tx.uptsContract.findFirst({where:{id:contractId,projectId:project.id}})))fail(400,'Договор не принадлежит проекту задачи.');
+ if(contractId&&(!project||!await tx.uptsContract.findFirst({where:{id:contractId,projectId:project.id,deletedAt:null}})))fail(400,'Договор не принадлежит проекту задачи.');
+ if(!old&&contractId&&project&&!v.assigneeId){const c=await tx.uptsContract.findUniqueOrThrow({where:{id:contractId}});const engineer=(c.objectDetails as {engineerId?:number}|null)?.engineerId;if(engineer){await activeUsers(tx,[engineer]);const {addObjectMember}=await import('../upts-workflow');await addObjectMember(tx,project,engineer);v.assigneeId=engineer;}}
  const data={...(old && old.uptsContractId!==contractId ? {uptsWorkMeta:Prisma.DbNull}:{}),uptsContractId:contractId,uptsObjectId:objectId,title:v.title,description:v.description,kind:v.kind,status:v.status,priority:v.priority,visibility:v.visibility,
  projectId:v.projectId,departmentId:v.departmentId,assigneeId:v.assigneeId,plannedDate:dbDay(v.plannedDate),startDate:dbDay(v.startDate),dueDate:dbDay(v.dueDate),blockedReason:v.blockedReason};
  const saved=id?await tx.workTask.update({where:{id},data:{...data,version:{increment:1}}}):await tx.workTask.create({data:{...data,clientKey:v.clientKey,creatorId:a.id}});
+ if(!old&&contractId&&saved.assigneeId){const {queueUptsNotice}=await import('../upts-workflow');await queueUptsNotice(tx,`created:${saved.id}`,a.id,saved.assigneeId,saved.id,`Вам назначена работа «${saved.title}» по объекту УПТС.`);}
  await tx.workTaskParticipant.deleteMany({where:{taskId:saved.id}});
  if(v.participantIds.length)await tx.workTaskParticipant.createMany({data:v.participantIds.map(userId=>({taskId:saved.id,userId}))});
  const t=await tx.workTask.findUniqueOrThrow({where:{id:saved.id},include:taskInclude});return {id:t.id,value:taskDTO(t,a)};

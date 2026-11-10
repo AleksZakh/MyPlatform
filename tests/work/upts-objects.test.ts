@@ -109,7 +109,7 @@ test('UPTS object card, work kinds matrix, role/result snapshots and protected a
   assert.equal((await request('/contracts',2,'POST',{...body,workStages:body.workStages.map(()=>1)})).status,409);
   const tasks=await db.workTask.findMany({where:{uptsContractId:c.id},orderBy:{id:'asc'}});assert.equal(tasks.length,10);
   assert.deepEqual(tasks[2]!.uptsWorkMeta,{stageNumber:2,definitionId:template.items[2].workId,workKindKey:'LAND_DIVISION',responsibleRole:'ENGINEER',expectedResult:'схема на КПТ'});
-  assert(tasks.every(t=>t.assigneeId===null),'No automatic assignments or completion logic in this UI phase');
+  assert(tasks.every(t=>t.assigneeId===3),'Every new work is assigned to the object engineer');
   const snapshot=await ok(await request('/upts?q='+encodeURIComponent('М-12')));assert.equal(snapshot.projects[0].upts.contracts[0].id,c.id);assert.equal(snapshot.tasks.length,10);assert.equal(snapshot.tasks[2].uptsWorkMeta.expectedResult,'схема на КПТ');
   assert.equal((await request('/upts',4)).status,403);
   const stageRows=await ok(await request('/stage-works/'+c.id));assert.equal(stageRows.tasks.length,10);assert.equal(stageRows.tasks[2].uptsWorkMeta.stageNumber,2);

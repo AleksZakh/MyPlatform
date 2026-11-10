@@ -712,6 +712,8 @@ enum AccessAction {
 }
 
 model User {
+  uptsNotificationsAuthored UptsNotification[] @relation("UptsNotificationActor")
+  uptsNotificationsReceived UptsNotification[] @relation("UptsNotificationRecipient")
   diagnosticContracts DiagnosticContract[] @relation("DiagnosticSupervisor")
   permissionDenials UserPermissionDeny[]
   deletedAt DateTime?
@@ -1176,6 +1178,8 @@ model WorkProjectMember {
   @@map("work_project_members")
 }
 model WorkTask {
+  resultFiles WorkProjectFile[]
+  notifications UptsNotification[]
   uptsWorkMeta Json?
   uptsContractId Int?
   uptsContract UptsContract? @relation(fields: [uptsContractId], references: [id], onDelete: Restrict)
@@ -1328,6 +1332,10 @@ model LibraryVideoSettings {
 
 // Files are stored outside public/ and releases; PRIVATE never inherits manager access.
 model WorkProjectFile {
+  task WorkTask? @relation(fields:[taskId],references:[id],onDelete:Restrict)
+  taskId Int?
+  documentType String? @db.VarChar(100)
+  @@index([taskId, deletedAt])
   contractId Int?
   @@index([contractId])
   contract UptsContract? @relation(fields: [contractId], references: [id], onDelete: Restrict)
@@ -1681,6 +1689,7 @@ model UptsProjectObject {
   @@map("upts_project_objects")
 }
 model UptsContract {
+  deletedAt DateTime?
   objectDetails Json @default("{}")
   color String? @db.VarChar(7)
   contractType String? @db.VarChar(20)
@@ -1745,6 +1754,27 @@ model UptsWorkApplication {
   fingerprint String @db.Text
   count Int
   @@map("upts_work_applications")
+}
+
+model UptsNotification {
+  actor User @relation("UptsNotificationActor",fields:[actorId],references:[id],onDelete:Restrict)
+  recipient User @relation("UptsNotificationRecipient",fields:[recipientId],references:[id],onDelete:Restrict)
+  task WorkTask @relation(fields:[taskId],references:[id],onDelete:Restrict)
+ id String @id @db.Uuid
+ eventKey String @unique @db.VarChar(180)
+ actorId Int
+ recipientId Int
+ taskId Int
+ body String @db.VarChar(3000)
+ chatSentAt DateTime?
+ emailSentAt DateTime?
+ attempts Int @default(0)
+ nextAttemptAt DateTime @default(now())
+ lockedUntil DateTime?
+ lastError String? @db.VarChar(500)
+ createdAt DateTime @default(now())
+ @@index([nextAttemptAt])
+ @@map("upts_notifications")
 }
 
 model DiagnosticContractWork {
