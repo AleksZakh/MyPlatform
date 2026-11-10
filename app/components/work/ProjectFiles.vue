@@ -36,10 +36,11 @@ watch(() => props.project.version, () => { if (!busy.value) load(); });
     <p v-if="project.archivedAt" class="work-muted">Проект в архиве: файлы доступны только для чтения.</p>
     <p v-if="error" class="work-error" role="alert">{{ error }}</p>
     <p v-if="loading" role="status">Загружаем список файлов…</p>
-    <div v-if="canUpload && !trash" class="project-file-drop" :class="{ dragging }" @dragover.prevent="dragging = !busy" @dragleave.prevent="dragging = false" @drop.prevent="dropped">
-      <div class="project-file-upload-controls"><label v-if="contractId">Тип документа<select v-model="documentType" :disabled="busy"><option>Выписка из ЕГРН</option><option>Чертёж</option><option>Отчёт</option><option>Межевой план</option><option>Технический план</option><option>КУВД</option><option>Иное</option></select></label>
-      <input ref="picker" type="file" multiple hidden :disabled="busy" aria-label="Выберите файлы" @change="chosen">
-      <button type="button" :disabled="busy" @click="picker?.click()"><Icon name="lucide:folder-open" /> Выбрать файлы</button></div>
+    <div v-if="data && !trash && (canUpload || taskId)" class="project-file-drop" :class="{ dragging }" @dragover.prevent="dragging = !busy && !!canUpload" @dragleave.prevent="dragging = false" @drop.prevent="dropped">
+      <div class="project-file-upload-controls"><label v-if="contractId">Тип документа<select v-model="documentType" :disabled="busy || !canUpload"><option>Выписка из ЕГРН</option><option>Чертёж</option><option>Отчёт</option><option>Межевой план</option><option>Технический план</option><option>КУВД</option><option>Иное</option></select></label>
+      <input ref="picker" type="file" multiple hidden :disabled="busy || !canUpload" aria-label="Выберите файлы" @change="chosen">
+      <button type="button" :disabled="busy || !canUpload" @click="picker?.click()"><Icon name="lucide:folder-open" /> Выбрать файлы</button></div>
+      <p v-if="taskId && !canUpload" class="work-muted" role="status">Только просмотр. Документы прикрепляют руководитель, куратор объекта, кадастровый инженер или назначенный исполнитель. Для наблюдателей и архивных объектов загрузка недоступна.</p>
       <p class="work-muted project-file-hint">Перетащите файлы сюда · до {{ size(data!.maxBytes) }} на файл.</p>
       <div v-if="queue.length" class="project-file-queue" aria-live="polite">
         <div v-for="item in queue" :key="item.key"><span class="queued-file"><Icon :name="fileIcon(item.file.name)" /><strong>{{ item.file.name }}</strong><small class="project-file-format">{{ fileFormat(item.file.name) }}</small></span><small>{{ item.state }}{{ item.state === 'Загрузка' ? ` · ${item.progress}%` : '' }}</small><progress v-if="item.state === 'Загрузка'" :value="item.progress" max="100" :aria-label="item.file.name"/></div>

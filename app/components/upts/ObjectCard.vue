@@ -3,10 +3,11 @@ import { computed } from 'vue';
 import type { UptsContractDTO } from '~~/shared/types/upts';
 import type { WorkUser } from '~~/shared/types/work';
 import { workUserName } from '~~/shared/types/work';
-import { formatWorkDate } from '~~/shared/utils/work-board';
+import { formatWorkDate,portalToday } from '~~/shared/utils/work-board';
 const props=defineProps<{object:UptsContractDTO;owner?:WorkUser;count?:number;canManage?:boolean}>();
 const emit=defineEmits<{open:[];works:[];add:[];files:[];edit:[];view:[];remove:[]}>();
 const title=computed(()=>props.object.objectDetails?.sourceCadastralNumber || props.object.number || props.object.name);
+const creationDate=computed(()=>props.object.createdAt?formatWorkDate(portalToday(new Date(props.object.createdAt))):'Дата не указана');
 const initials=computed(()=>workUserName(props.owner).split(/\s+/).filter(Boolean).slice(0,2).map(s=>s[0]).join(''));
 const contractText=computed(()=>{
   const d=props.object.objectDetails;
@@ -20,6 +21,7 @@ const contractText=computed(()=>{
         <button class="upts-object-card-title" type="button" @click="emit('view')">{{ title }}</button>
         <button class="upts-object-card-count" type="button" :aria-label="'Работы объекта: '+(count || 0)" @click="emit('works')">{{ count || 0 }}</button>
       </header>
+      <p class="upts-object-card-period" title="Период работ">с {{ formatWorkDate(object.objectDetails?.workStartDate) || '—' }} по {{ formatWorkDate(object.dueDate) || '—' }}</p>
       <div class="upts-object-card-content">
         <dl><div><dt>Объект</dt><dd>{{ object.objectDetails?.road || 'Не указан' }}</dd></div><div><dt>Этап</dt><dd>{{ object.objectDetails?.stage || 'Не указан' }}</dd></div><div><dt>Договор</dt><dd>{{ contractText }}</dd></div></dl>
         <div class="upts-object-card-tools">
@@ -28,7 +30,7 @@ const contractText=computed(()=>{
           <button v-if="canManage" class="upts-object-card-delete" type="button" aria-label="Удалить объект" title="Удалить объект" @click.stop="emit('remove')"><Icon name="lucide:trash-2" /></button>
         </div>
       </div>
-      <footer><button v-if="canManage" class="upts-object-card-add" type="button" @click="emit('add')">+ Работа</button><button v-else class="upts-object-card-add" type="button" @click="emit('works')">Работы</button><time v-if="object.dueDate">{{ formatWorkDate(object.dueDate) }}</time><span v-if="owner" class="upts-object-card-person" :title="workUserName(owner)" :aria-label="workUserName(owner)">{{ initials }}</span></footer>
+      <footer><button v-if="canManage" class="upts-object-card-add" type="button" @click="emit('add')">+ Работа</button><button v-else class="upts-object-card-add" type="button" @click="emit('works')">Работы</button><time :datetime="object.createdAt || undefined" title="Дата создания объекта">{{ creationDate }}</time><span v-if="owner" class="upts-object-card-person" :title="workUserName(owner)" :aria-label="workUserName(owner)">{{ initials }}</span></footer>
     </div>
   </article>
 </template>
@@ -37,6 +39,7 @@ const contractText=computed(()=>{
 .upts-object-card:hover{transform:translateY(-2px);box-shadow:0 4px 10px #80808066}
 .upts-object-card-body{height:100%;box-sizing:border-box;color:var(--work-text);border-radius:inherit;background:inherit;padding:10px;display:flex;flex-direction:column}
 .upts-object-card header{display:flex;align-items:start;gap:6px}.upts-object-card button{border:0;background:transparent;padding:0;color:inherit;border-radius:4px}.upts-object-card .upts-object-card-title{font-size:14px;line-height:1.4;text-align:left;flex:1;min-width:0;font-weight:600;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}.upts-object-card .upts-object-card-count{font-size:11px;line-height:18px;min-width:20px;padding:0 4px;border-radius:12px;background:var(--work-line);color:var(--work-text)}
+.upts-object-card-period{font-size:11px;line-height:1.3;margin:5px 0 0;font-weight:600}
 .upts-object-card-content{display:flex;gap:6px;margin-top:7px;flex:1;min-height:0}.upts-object-card dl{flex:1;min-width:0;margin:0;overflow:hidden}.upts-object-card dl>div+div{margin-top:5px}.upts-object-card dt{font-size:11px;opacity:.75;line-height:1.3}.upts-object-card dd{font-size:12px;line-height:1.4;margin:1px 0 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.upts-object-card-tools{display:flex;flex-direction:column;gap:9px;padding-bottom:5px}.upts-object-card-tools button{width:22px;height:22px;font-size:16px}.upts-object-card-tools .upts-object-card-delete{margin-top:auto;color:var(--space-danger,#b91c1c)}.upts-object-card footer{border-top:1px solid var(--work-line);margin-top:9px;padding-top:6px;display:flex;align-items:center;gap:7px;font-size:11px}.upts-object-card .upts-object-card-add{margin-right:auto;font-size:12px}.upts-object-card-person{border-radius:50%;width:23px;height:23px;display:grid;place-items:center;background:var(--work-line);color:var(--work-text);font-size:9px}.upts-object-card button:hover{color:var(--work-accent)}.upts-object-card:focus-visible{outline:2px solid var(--work-accent);outline-offset:2px}
 :global(html.dark .upts-object-card){background:slategray;box-shadow:none}:global(html.dark .upts-object-card-body){color:#fff}:global(html.dark .upts-object-card:hover){box-shadow:var(--space-modal-shadow,0 0 24px 3px rgb(96 165 250 / .36))}
 @media(prefers-reduced-motion:reduce){.upts-object-card{transition:none}}

@@ -103,6 +103,8 @@ const {
   statusClass,
 } = useUptsWorkspace();
 const overviewId=ref<number|null>(null),deletingObject=ref<UptsContractDTO|null>(null),deleteError=ref(''),deleteBusy=ref(false);
+const overviewRef=ref<InstanceType<typeof ObjectOverview>|null>(null);
+async function saveWorkAndRefresh(){await taskSaved();await overviewRef.value?.refresh();}
 const returnOverviewId=ref<number|null>(null);
 function editFromOverview(object:UptsContractDTO){returnOverviewId.value=object.id;overviewId.value=null;editContract(object);}
 function closeContractEditor(){contractEditor.value=false;if(returnOverviewId.value){overviewId.value=returnOverviewId.value;returnOverviewId.value=null;}}
@@ -785,6 +787,7 @@ async function removeObject(){if(!deletingObject.value)return;deleteBusy.value=t
     />
     <TaskEditor
       ref="taskEditorRef"
+      :modal="!!overviewId"
       v-if="taskEditor && context"
       :task="editingTask"
       :projects="data.projects"
@@ -792,7 +795,7 @@ async function removeObject(){if(!deletingObject.value)return;deleteBusy.value=t
       :context="context"
       :upts-contract-id="selectedContractId"
       @close="taskEditor = false"
-      @saved="taskSaved"
+      @saved="saveWorkAndRefresh"
       @create-project="editProject()"
     />
     <ObjectEditor
@@ -805,7 +808,7 @@ async function removeObject(){if(!deletingObject.value)return;deleteBusy.value=t
         load();
       "
     />
-    <ObjectOverview v-if="overviewId" :contract-id="overviewId" @close="overviewId=null" @changed="load" @work="overviewId=null;editTask($event)" @edit="editFromOverview" @files="(p,id)=>{overviewId=null;showFiles(p,id)}" />
+    <ObjectOverview ref="overviewRef" v-if="overviewId" :contract-id="overviewId" @close="overviewId=null" @changed="load" @work="editTask($event)" @edit="editFromOverview" @files="(p,id)=>{overviewId=null;showFiles(p,id)}" />
     <Modal v-if="deletingObject" title="Удаление объекта" @close="!deleteBusy&&(deletingObject=null)"><p>Удалить объект «{{ deletingObject.number }}» вместе с его работами и документами из действующего реестра? Данные останутся в базе для восстановления администратором.</p><p v-if="deleteError" class="work-error" role="alert">{{ deleteError }}</p><div class="work-actions"><button :disabled="deleteBusy" @click="removeObject">Удалить объект</button><button :disabled="deleteBusy" @click="deletingObject=null">Отмена</button></div></Modal>
     <ContractEditor v-if="contractEditor" :tasks="data.tasks" :project-id="project?.id" :projects="data.projects" :contract="editingContract" :return-to-overview="!!returnOverviewId" @close="closeContractEditor" @saved="saveContractAndReturn" />
     <ContractWorks v-if="contractWorks && contract" :contract="contract" @close="contractWorks=false" @saved="contractWorks=false; load()" />

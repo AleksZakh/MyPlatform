@@ -129,7 +129,9 @@ export async function tasks(event:H3Event){const a=await workActor(event),q=getQ
  const rows=found.sort((a,b)=>rank.get(a.id)!-rank.get(b.id)!);
  return {items:rows.map(t=>taskDTO(t,a)),total,page};}
 export async function getTask(event:H3Event,id:number){const a=await workActor(event);const t=await visibleTask(prisma,id,a);
- return {...taskDTO(t,a),clientKey:t.clientKey};}
+ const result={...taskDTO(t,a),clientKey:t.clientKey};
+ if(t.uptsContractId){const {uptsWorkAccess}=await import('../upts-workflow');const access=await uptsWorkAccess(prisma,t,a);return {...result,canEdit:access.canEditWork,canEditDetails:access.canEditWork,canAssignUpts:access.canAssign};}
+ return result;}
 export async function saveTask(event:H3Event,raw:unknown,id?:number){const a=await workActor(event),v=parse(taskInput,raw);
  const needsShared=!v.projectId&&(v.visibility!=='PRIVATE'||(v.assigneeId!==null&&v.assigneeId!==a.id));
  const grant=needsShared?await hasWorkGrant(event,'UPDATE'):false;

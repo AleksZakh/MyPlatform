@@ -1690,6 +1690,7 @@ model UptsProjectObject {
   @@map("upts_project_objects")
 }
 model UptsContract {
+  createdAt DateTime? @default(now())
   deletedAt DateTime?
   objectDetails Json @default("{}")
   color String? @db.VarChar(7)

@@ -20,6 +20,7 @@ function choose(index:number,shift=false){if(busy.value||!data.value?.canAssign)
 function begin(e:PointerEvent,i:number){if(e.button!==0||(e.target as HTMLElement).closest('input,button,select'))return;choose(i,e.shiftKey);drag.value=e.shiftKey?anchor.value:i;e.preventDefault();}
 function enter(e:PointerEvent,i:number){if(drag.value===null)return;if(!(e.buttons&1)){drag.value=null;return;}anchor.value=drag.value;choose(i,true);}
 async function assign(){if(!assignee.value||!selected.value.length)return;busy.value=true;error.value='';try{await $fetch(`/api/upts/contracts/${props.contractId}/assign`,{method:'POST',headers:{'x-space-work':'1'},body:{assigneeId:assignee.value,tasks:rows.value.filter(t=>selected.value.includes(t.id)).map(t=>({id:t.id,version:t.version}))}});await load();emit('changed');}catch(e:any){error.value=e.data?.message||'Не удалось назначить исполнителя. Обновите карточку.';}finally{busy.value=false;}}
+defineExpose({refresh:load});
 function endDrag(){drag.value=null;}
 onMounted(()=>{load();window.addEventListener('pointerup',endDrag);window.addEventListener('blur',endDrag);});
 onBeforeUnmount(()=>{window.removeEventListener('pointerup',endDrag);window.removeEventListener('blur',endDrag);});
@@ -41,13 +42,15 @@ onBeforeUnmount(()=>{window.removeEventListener('pointerup',endDrag);window.remo
 <style scoped>
 .object-overview-layout{display:flex;flex-direction:column;gap:8px;height:100%;min-height:0}
 .object-overview-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px 12px;padding:8px;background:color-mix(in srgb,var(--work-line) 18%,var(--work-panel));border:1px solid var(--work-line);border-radius:7px;flex-shrink:0;max-height:35vh;overflow:auto}
-.object-overview-fields>div{display:flex;align-items:baseline;gap:6px;min-width:0;font-size:12px}
+.object-overview-fields>div{display:flex;align-items:baseline;gap:6px;min-width:0;font-size:13px}
 .object-overview-fields small{color:var(--work-muted);flex:0 1 105px;font-size:11px;line-height:1.3}
-.object-overview-fields p{margin:0;flex:1;min-width:0;padding:3px 5px;border-bottom:1px solid var(--work-line);overflow-wrap:anywhere;line-height:1.3}
+.object-overview-fields p{font-size:13px;font-weight:600;color:var(--work-text);margin:0;flex:1;min-width:0;padding:3px 5px;border-bottom:1px solid var(--work-line);overflow-wrap:anywhere;line-height:1.3}
 .object-overview-actions{margin:0}.object-overview-actions button{padding:4px 9px;font-size:12px}
 .object-overview-stats{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px;font-weight:600}
 .object-overview-layout .work-toolbar{gap:8px;margin:0;flex-shrink:0;align-items:center}.object-overview-layout .work-toolbar label{display:flex;align-items:center;gap:8px}.object-overview-layout .work-toolbar select{width:260px;max-width:45vw;padding:4px 8px;min-height:28px}.object-overview-layout>.work-muted{margin:0;font-size:11px}
 .object-overview-table{flex:1;min-height:130px;overflow:auto}.object-work-table{min-width:1150px;width:100%}.object-work-table thead th{position:sticky;top:0;background:var(--work-panel);z-index:1}.object-work-table :is(th,td){padding:5px 8px;font-size:12px}.object-work-table tr{user-select:none}.object-work-table tr.selected{background:color-mix(in srgb,var(--work-accent) 18%,var(--work-panel))}.object-work-table td button{border:0;padding:0;background:transparent;color:var(--work-accent)}
 .object-delivery{flex-shrink:0;max-height:100px;overflow:auto;font-size:11px}.object-delivery p{margin:4px 0}
+:global(html.dark .object-overview-fields){background:color-mix(in srgb,var(--work-panel) 93%,white 7%)}
+:global(html.dark .object-overview-fields p){color:#f8fafc}
 @media(max-width:1000px){.object-overview-fields{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:700px){.object-overview-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:480px){.object-overview-fields{grid-template-columns:1fr}}
 </style>

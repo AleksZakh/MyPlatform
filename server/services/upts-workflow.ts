@@ -7,7 +7,7 @@ import {writeAuditEvent} from '../utils/auditLog';
 import {uptsActor} from './upts-access';
 import {uptsPeople} from './upts-people';
 import {visibleProject,fail,version,userSelect,projectDTO} from './work/service';
-import {managesProject,taskRights,type Actor} from './work/policy';
+import {managesProject,taskRights,projectRole,type Actor} from './work/policy';
 import {parse} from './work/input';
 import type {UptsObjectDetails,UptsWorkMeta} from '../../shared/types/upts-object';
 type DB=Prisma.TransactionClient;
@@ -17,7 +17,15 @@ export async function objectAccess(db:DB,contractId:number,a:Actor){
  const c=await db.uptsContract.findFirst({where:{id:contractId,deletedAt:null}});if(!c)fail(404,'Объект не найден.');
  const p=await visibleProject(db,c.projectId,a);
  const details=c.objectDetails as UptsObjectDetails|null;
- return {c,p,canAssign:!p.archivedAt && (managesProject(p,a)||details?.engineerId===a.id)};
+ const readOnly=['OBSERVER','CURATOR'].includes(projectRole(p,a)||'');
+ return {c,p,canAssign:!p.archivedAt && !readOnly && (managesProject(p,a)||details?.engineerId===a.id||details?.curatorId===a.id)};
+}
+export async function uptsWorkAccess(db:DB,t:{uptsContractId:number|null;creatorId:number;assigneeId:number|null},a:Actor){
+ if(!t.uptsContractId)fail(404,'Работа не связана с объектом.');
+ const access=await objectAccess(db,t.uptsContractId,a),{p,canAssign}=access;
+ const readOnly=['OBSERVER','CURATOR'].includes(projectRole(p,a)||'');
+ const canEditWork=!p.archivedAt&&!readOnly&&(canAssign||taskRights({...t,project:p},a).canEdit||t.assigneeId===a.id);
+ return {...access,canEditWork};
 }
 export async function addObjectMember(db:DB,p:Awaited<ReturnType<typeof visibleProject>>,userId:number){
  if(p.ownerId===userId)return;
@@ -63,10 +71,10 @@ export async function saveUptsWork(event:H3Event,taskId:number,raw:unknown){
  const staff=await uptsPeople(event);
  return prisma.$transaction(async tx=>{await tx.$executeRaw`SELECT pg_advisory_xact_lock(20261019)`;
  const t=await tx.workTask.findFirst({where:{id:taskId,deletedAt:null}});if(!t?.uptsContractId)fail(404,'Работа не найдена.');
- const {c,p,canAssign}=await objectAccess(tx,t.uptsContractId,a);const rights=taskRights({...t,project:p},a);
- if(p.archivedAt||(!rights.canEdit&&!canAssign))fail(403,'Нет права изменять работу.');version(t.version,v.version);
+ const {c,p,canAssign,canEditWork}=await uptsWorkAccess(tx,t,a);
+ if(!canEditWork)fail(403,'Нет права изменять работу.');version(t.version,v.version);
  if(t.assigneeId!==v.assigneeId){if(!canAssign)fail(403,'Исполнителей распределяет руководитель работ объекта.');if(v.assigneeId){if(!staff.some(p=>p.id===v.assigneeId))fail(400,'Исполнитель недоступен.');await addObjectMember(tx,p,v.assigneeId);}}
- if(t.title!==v.title&&!rights.canEditDetails&&!canAssign)fail(403,'Нет права менять название.');
+ if(t.title!==v.title&&!canEditWork)fail(403,'Нет права менять название.');
  const before=meta(t.uptsWorkMeta),files=await tx.workProjectFile.count({where:{taskId:t.id,deletedAt:null,scope:'SHARED'}});
  const hasResult=!!v.resultText || files>0;
  const completing=hasResult && !before.completedAt;

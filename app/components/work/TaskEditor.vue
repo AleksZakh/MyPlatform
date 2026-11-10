@@ -5,7 +5,7 @@ import ProjectFiles from './ProjectFiles.vue';
 import TaskSurface from './TaskSurface.vue';import PersonPicker from './PersonPicker.vue';
 import { workTaskContext,workTaskColor,WORK_STATUSES,WORK_KINDS,WORK_PRIORITIES,workUserName,type WorkTaskDTO,type WorkProjectDTO,type WorkContext,type WorkUser } from '~~/shared/types/work';
 import { dateKey } from '~~/shared/utils/work-board';
-const props=defineProps<{task:WorkTaskDTO|null;projects:WorkProjectDTO[];project?:WorkProjectDTO|null;context:WorkContext;uptsContractId?:number|null}>();
+const props=defineProps<{modal?:boolean;task:WorkTaskDTO|null;projects:WorkProjectDTO[];project?:WorkProjectDTO|null;context:WorkContext;uptsContractId?:number|null}>();
 const contractOptions=ref<{id:number;number:string;name:string;objectDetails?:{engineerId?:number|null}}[]>([]);
 const objectOptions=ref<{id:number;object:{name:string}}[]>([]);
 const emit=defineEmits<{close:[];saved:[];createProject:[]}>();const {error,saving,send}=useWorkApi();
@@ -21,7 +21,7 @@ const isUpts=computed(()=>!!form.uptsContractId || !!(selectedProject.value as a
 const selectedContract=computed(()=>contractOptions.value.find(c=>c.id===form.uptsContractId));
 const subtitle=computed(()=>selectedContract.value ? `${selectedContract.value.number} · ${selectedContract.value.name}` : task ? workTaskContext(task) : selectedProject.value?.name);
 watch(selectedContract,c=>{if(!task&&c?.objectDetails?.engineerId)form.assigneeId=c.objectDetails.engineerId;});
-const canAssignUpts=computed(()=>!!selectedProject.value?.canManage || selectedContract.value?.objectDetails?.engineerId===own);
+const canAssignUpts=computed(()=>task?.uptsContractId ? !!task.canAssignUpts : !!selectedProject.value?.canManage || selectedContract.value?.objectDetails?.engineerId===own);
 const staff=ref<WorkUser[]>([]),staffError=ref(''),staffLoading=ref(false);
 async function loadStaff(){staffLoading.value=true;staffError.value='';try{staff.value=await $fetch<WorkUser[]>('/api/upts/people');}catch{staffError.value='Не удалось загрузить полный состав УПТС. Проверьте соединение с AD и повторите.';}finally{staffLoading.value=false;}}
 watch(isUpts,yes=>{if(yes)loadStaff();},{immediate:true});
@@ -50,7 +50,7 @@ async function postComment(){const r=await send('/api/work/tasks/'+task!.id+'/co
 onMounted(()=>{if(!isUpts.value)loadComments();});
 defineExpose({useProject:(p:WorkProjectDTO)=>{relationship.value='PROJECT';form.projectId=p.id;form.visibility='PROJECT';form.departmentId=null;form.participantIds=[];}});
 </script>
-<template><TaskSurface :slide="!!task" :title="form.title || (isUpts?'Новая работа':'Новая задача')" :subtitle="subtitle" :color="task?workTaskColor(task):undefined" @close="emit('close')">
+<template><TaskSurface :slide="!!task && !modal" :title="form.title || (isUpts?'Новая работа':'Новая задача')" :subtitle="subtitle" :color="task?workTaskColor(task):undefined" @close="emit('close')">
  <form class="work-form" @submit.prevent="save">
   <p v-if="error" class="work-error" role="alert">{{ error }}</p>
   <fieldset :disabled="saving||readOnly"><label>{{ isUpts ? 'Название работы' : 'Название задачи' }}<input v-model="form.title" required maxlength="250" autofocus /></label>
