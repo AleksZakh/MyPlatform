@@ -71,6 +71,7 @@ const {
   editingProject,
   taskEditor,
   editingTask,
+  taskProject,
   objectEditor,
   editingObject,
   contractEditor,
@@ -790,9 +791,10 @@ async function removeObject(){if(!deletingObject.value)return;deleteBusy.value=t
       ref="taskEditorRef"
       :modal="!!overviewId"
       v-if="taskEditor && context"
+      :key="editingTask?.id || 'new'"
       :task="editingTask"
       :projects="data.projects"
-      :project="project"
+      :project="taskProject || project"
       :context="context"
       :upts-contract-id="selectedContractId"
       @close="taskEditor = false"

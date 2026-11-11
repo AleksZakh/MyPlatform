@@ -8,25 +8,34 @@ import {writeAuditEvent} from '../utils/auditLog';
 import {uptsActor} from './upts-access';
 import {uptsPeople} from './upts-people';
 import {visibleProject,fail,version,userSelect,projectDTO} from './work/service';
-import {managesProject,taskRights,projectRole,type Actor} from './work/policy';
+import {managesProject,taskRights,projectRole,type Actor,type ProjectPolicy} from './work/policy';
 import {parse} from './work/input';
 import type {UptsObjectDetails,UptsWorkMeta} from '../../shared/types/upts-object';
 type DB=Prisma.TransactionClient;
 const id=z.number().int().positive();
+function canManageObject(p:ProjectPolicy,details:UptsObjectDetails|null,a:Actor){
+ // Explicit read-only project roles and archives retain their restrictions.
+ return !p.archivedAt && !['OBSERVER','CURATOR'].includes(projectRole(p,a)||'') &&
+  (managesProject(p,a) || a.isSystemAdmin===true || details?.engineerId===a.id || details?.curatorId===a.id);
+}
+export function uptsTaskCapabilities(p:ProjectPolicy,details:UptsObjectDetails|null,t:{creatorId:number;assigneeId:number|null},a:Actor){
+ const rights=taskRights({...t,project:p},a),canAssign=canManageObject(p,details,a);
+ const readOnly=!!p.archivedAt || ['OBSERVER','CURATOR'].includes(projectRole(p,a)||'');
+ const canEditWork=!readOnly && (canAssign || rights.canEdit || t.assigneeId===a.id);
+ return {...rights,canEdit:canEditWork,canEditDetails:canEditWork,canAssignUpts:canAssign,canDelete:!readOnly&&(canAssign||rights.canDelete)};
+}
 const meta=(v:unknown)=>(v || {}) as UptsWorkMeta;
 export async function objectAccess(db:DB,contractId:number,a:Actor){
  const c=await db.uptsContract.findFirst({where:{id:contractId,deletedAt:null}});if(!c)fail(404,'Объект не найден.');
  const p=await visibleProject(db,c.projectId,a);
  const details=c.objectDetails as UptsObjectDetails|null;
- const readOnly=['OBSERVER','CURATOR'].includes(projectRole(p,a)||'');
- return {c,p,canAssign:!p.archivedAt && !readOnly && (managesProject(p,a)||details?.engineerId===a.id||details?.curatorId===a.id)};
+ return {c,p,canAssign:canManageObject(p,details,a)};
 }
 export async function uptsWorkAccess(db:DB,t:{uptsContractId:number|null;creatorId:number;assigneeId:number|null},a:Actor){
  if(!t.uptsContractId)fail(404,'Работа не связана с объектом.');
- const access=await objectAccess(db,t.uptsContractId,a),{p,canAssign}=access;
- const readOnly=['OBSERVER','CURATOR'].includes(projectRole(p,a)||'');
- const canEditWork=!p.archivedAt&&!readOnly&&(canAssign||taskRights({...t,project:p},a).canEdit||t.assigneeId===a.id);
- return {...access,canEditWork};
+ const access=await objectAccess(db,t.uptsContractId,a);
+ const rights=uptsTaskCapabilities(access.p,access.c.objectDetails as UptsObjectDetails|null,t,a);
+ return {...access,...rights,canEditWork:rights.canEdit};
 }
 export async function addObjectMember(db:DB,p:Awaited<ReturnType<typeof visibleProject>>,userId:number){
  if(p.ownerId===userId)return;
@@ -53,7 +62,7 @@ export async function objectOverview(event:H3Event,contractId:number){
  tasks.sort((x,y)=>(meta(x.uptsWorkMeta).stageNumber||1)-(meta(y.uptsWorkMeta).stageNumber||1)||x.id-y.id);
  const counts=await prisma.workProjectFile.groupBy({by:['taskId'],where:{contractId:c.id,deletedAt:null,scope:'SHARED'},_count:{_all:true}});
  const notifications=canAssign?await prisma.uptsNotification.findMany({where:{taskId:{in:tasks.map(t=>t.id)}},select:{taskId:true,emailSentAt:true,chatSentAt:true,lastError:true},orderBy:{createdAt:'desc'},take:100}):[];
- return {object:c,project:projectDTO(p,a),canAssign,tasks:tasks.map(t=>({...t,...taskRights({...t,project:p},a),fileCount:counts.find(f=>f.taskId===t.id)?._count._all||0})),notifications};
+ return {object:c,project:projectDTO(p,a),canAssign,tasks:tasks.map(t=>({...t,...uptsTaskCapabilities(p,c.objectDetails as UptsObjectDetails|null,t,a),fileCount:counts.find(f=>f.taskId===t.id)?._count._all||0})),notifications};
 }
 export async function assignObjectWorks(event:H3Event,contractId:number,raw:unknown){
  const a=await uptsActor(event),v=parse(z.object({assigneeId:id,tasks:z.array(z.object({id,version:id}).strict()).min(1).max(5000).refine(v=>new Set(v.map(t=>t.id)).size===v.length)}).strict(),raw);

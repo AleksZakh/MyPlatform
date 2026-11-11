@@ -128,6 +128,7 @@ export function useUptsWorkspace() {
     editingProject = ref<WorkProjectDTO | null>(null),
     taskEditor = ref(false),
     editingTask = ref<WorkTaskDTO | null>(null),
+    taskProject = ref<WorkProjectDTO | null>(null),
     objectEditor = ref(false),
     editingObject = ref<UptsObjectLink | null>(null),
     contractEditor = ref(false),
@@ -223,14 +224,21 @@ export function useUptsWorkspace() {
       section.value = 'overview';
     }
   }
+  let taskRequest=0;
   async function editTask(t?: WorkTaskDTO) {
+    const request=++taskRequest;
+    error.value='';
     try {
-      editingTask.value = t
-        ? await $fetch<WorkTaskDTO>('/api/work/tasks/' + t.id)
-        : null;
+      const detail=t ? await $fetch<WorkTaskDTO>('/api/work/tasks/' + t.id) : null;
+      const parent=detail?.projectId
+        ? data.value.projects.find(p=>p.id===detail.projectId) || await $fetch<WorkProjectDTO>('/api/work/projects/'+detail.projectId)
+        : project.value;
+      if(request!==taskRequest)return;
+      taskProject.value=parent;
+      editingTask.value=detail;
       taskEditor.value = true;
     } catch (e: any) {
-      error.value = e.data?.message || 'Не удалось открыть задачу.';
+      if(request===taskRequest)error.value = e.data?.message || 'Не удалось открыть задачу.';
     }
   }
   async function taskSaved() {
@@ -393,6 +401,7 @@ export function useUptsWorkspace() {
     editingProject,
     taskEditor,
     editingTask,
+    taskProject,
     objectEditor,
     editingObject,
     contractEditor,

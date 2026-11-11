@@ -130,7 +130,7 @@ export async function tasks(event:H3Event){const a=await workActor(event),q=getQ
  return {items:rows.map(t=>taskDTO(t,a)),total,page};}
 export async function getTask(event:H3Event,id:number){const a=await workActor(event);const t=await visibleTask(prisma,id,a);
  const result={...taskDTO(t,a),clientKey:t.clientKey};
- if(t.uptsContractId){const {uptsWorkAccess}=await import('../upts-workflow');const access=await uptsWorkAccess(prisma,t,a);return {...result,canEdit:access.canEditWork,canEditDetails:access.canEditWork,canAssignUpts:access.canAssign};}
+ if(t.uptsContractId){const {uptsWorkAccess}=await import('../upts-workflow');const access=await uptsWorkAccess(prisma,t,a);return {...result,canEdit:access.canEditWork,canEditDetails:access.canEditWork,canAssignUpts:access.canAssign,canDelete:access.canDelete};}
  return result;}
 export async function saveTask(event:H3Event,raw:unknown,id?:number){const a=await workActor(event),v=parse(taskInput,raw);
  const needsShared=!v.projectId&&(v.visibility!=='PRIVATE'||(v.assigneeId!==null&&v.assigneeId!==a.id));
@@ -188,7 +188,9 @@ export async function moveTask(event:H3Event,id:number,raw:unknown){const a=awai
  return mutation(event,a,'WorkTask','UPDATE',async tx=>{const old=await visibleTask(tx,id,a);if(!taskRights(old,a).canEdit)fail(403,'Недостаточно прав.');version(old.version,v.version);
  const t=await tx.workTask.update({where:{id},data:{...(v.status!==undefined?{status:v.status}:{}),...(v.plannedDate!==undefined?{plannedDate:dbDay(v.plannedDate)}:{}),version:{increment:1}},include:taskInclude});return {id,value:taskDTO(t,a)};});}
 export async function deleteTask(event:H3Event,id:number,raw:unknown){const a=await workActor(event),v=parse(versionInput,raw);
- return mutation(event,a,'WorkTask','DELETE',async tx=>{const old=await visibleTask(tx,id,a);if(!taskRights(old,a).canDelete)fail(403,'Недостаточно прав.');version(old.version,v.version);
+ return mutation(event,a,'WorkTask','DELETE',async tx=>{const old=await visibleTask(tx,id,a);
+ const canDelete=old.uptsContractId?(await (await import('../upts-workflow')).uptsWorkAccess(tx,old,a)).canDelete:taskRights(old,a).canDelete;
+ if(!canDelete)fail(403,'Недостаточно прав.');version(old.version,v.version);
  await tx.workTask.update({where:{id},data:{deletedAt:new Date(),version:{increment:1}}});return {id,value:{ok:true}};});}
 export async function comments(event:H3Event,id:number){const a=await workActor(event);await visibleTask(prisma,id,a);const q=getQuery(event);const after=q.after?positiveId(q.after):0;
  return prisma.workTaskComment.findMany({where:{taskId:id,id:{gt:after}},include:{author:{select:userSelect}},orderBy:{id:'asc'},take:100});}

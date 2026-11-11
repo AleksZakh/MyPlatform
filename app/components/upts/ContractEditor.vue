@@ -191,7 +191,7 @@ async function save() {
 }
 </script>
 <template>
-  <Modal full-height wide fixed-sections icon="streamline-kameleon-color:map-pin" :title="c ? 'Редактирование объекта ' + (details.sourceCadastralNumber || c.number) : 'Новый объект'" @close="emit('close')">
+  <Modal :content-height="Math.min(860, 570 + Math.max(2,workRows.length)*35)" full-height compact-height wide fixed-sections grey-header icon="streamline-kameleon-color:map-pin" :title="c ? 'Редактирование объекта ' + (details.sourceCadastralNumber || c.number) : 'Новый объект'" @close="emit('close')">
     <form class="work-form upts-object-form" @submit.prevent="save" @invalid.capture="revealInvalid">
       <fieldset class="upts-static upts-object-general" :disabled="saving" aria-label="Общая информация по объекту">
         <legend>Общая информация по объекту</legend>
@@ -202,9 +202,9 @@ async function save() {
           <label>Местоположение (область, район)<input v-model="details.address" maxlength="500" /></label>
           <label>Площадь, кв. м<input v-model="details.sourceArea" inputmode="decimal" maxlength="30" pattern="[0-9]+([.,][0-9]+)?" /></label>
           <label>Тип<select v-model="form.contractType" required><option value="" disabled>Не выбрано</option><option v-for="(label,key) in UPTS_CONTRACT_TYPES" :key="key" :value="key">{{ label }}</option></select></label>
-          <div class="upts-contract-requisites"><label>Номер договора<input v-model="details.basisContractNumber" maxlength="250" /></label><label>от<input v-model="details.basisContractDate" type="date" aria-label="Дата договора" min="1900-01-01" max="2200-12-31" /></label></div>
-          <label>Номер заявки<input v-model="details.requestNumber" maxlength="100" /></label>
           <label v-if="form.contractType!=='OTHER'">Вид работ<select v-model="selectedKind" :disabled="saving || loading || !!libraryError"><option value="">Выберите вид работ</option><option v-if="c && selectedKinds.length>1" value="__legacy__">Ранее выбрано несколько видов (сохранено)</option><option v-for="kind in kinds" :key="kind.key" :value="kind.key">{{ kind.name }}</option></select></label>
+          <label>Номер заявки<input v-model="details.requestNumber" maxlength="100" /></label>
+          <div class="upts-contract-requisites"><label>Номер договора<input v-model="details.basisContractNumber" maxlength="250" /></label><label>От<input v-model="details.basisContractDate" type="date" aria-label="Дата договора" min="1900-01-01" max="2200-12-31" /></label></div>
         </div>
       </fieldset>
       <div class="upts-form-tabs" role="tablist" aria-label="Карточка объекта">
@@ -251,22 +251,23 @@ async function save() {
 </template>
 <style scoped>
 .upts-object-form{--upts-static-bg:#edf2f7;height:100%;min-height:0;display:flex;flex-direction:column;gap:10px;overflow:hidden}
-.upts-object-form .upts-static{flex:0 1 auto;max-height:30%;overflow:auto;border:1px solid var(--work-line);border-radius:8px;padding:8px 12px;margin:0;min-height:0;background:var(--upts-static-bg);gap:6px}
+.upts-object-form .upts-static{flex:0 1 auto;overflow:auto;border:1px solid var(--work-line);border-radius:8px;padding:8px 12px;margin:0;min-height:0;background:var(--upts-static-bg);gap:6px}
 .upts-static legend{background:var(--upts-static-bg);border-radius:4px}
 .upts-static legend,.upts-work-kinds legend{padding:0 6px;font-size:12px;font-weight:600;color:var(--work-text)}
 .upts-object-general-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 12px}.upts-object-execution-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 12px}
-.upts-contract-requisites{display:grid;grid-template-columns:minmax(0,1fr) minmax(112px,1fr);gap:6px;min-width:0}.upts-stage-count{max-width:170px}
+.upts-contract-requisites{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;min-width:0}.upts-stage-count{max-width:170px}
 .upts-static label{min-width:0;font-size:12px;color:var(--work-muted)}
-.upts-object-form :deep(input:not([type=checkbox])),.upts-object-form :deep(select){height:32px;padding:5px 8px;min-width:0;color:var(--work-text)}
+.upts-object-form :deep(input:not([type=checkbox])),.upts-object-form :deep(select){box-sizing:border-box;height:32px;padding:5px 8px;min-width:0;color:var(--work-text)}
 .upts-object-form :deep(textarea){padding:5px 8px;line-height:1.35}
-.upts-object-form :deep(.upts-selection-stage input),.upts-object-form :deep(.upts-selection-stage select),.upts-object-form :deep(.upts-stage-number input){height:21px;padding:0 5px;line-height:19px}
-.upts-object-form .upts-tab-content{flex:1 1 0;min-height:96px;overflow:auto;display:block;padding:2px 2px 8px;overscroll-behavior:contain}
+.upts-object-form :deep(.upts-selection-table .upts-selection-stage input),.upts-object-form :deep(.upts-selection-table .upts-selection-stage select),.upts-object-form :deep(.upts-stage-table .upts-stage-number input){height:32px;padding:5px 8px;line-height:20px}
+.upts-object-form .upts-tab-content{flex:1 1 0;min-height:60px;overflow:auto;display:block;padding:2px 2px 8px;overscroll-behavior:contain}
 .upts-form-tabs{flex:none;display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:4px;background:var(--space-bg,#f1f5f9);border-radius:8px}
 .upts-form-tabs button{display:flex;align-items:center;justify-content:center;gap:8px;padding:8px;min-width:0;font-size:15px;font-weight:400;background:transparent;color:var(--work-muted);border:1px solid var(--work-line);border-radius:6px;line-height:1.3}
 .upts-form-tabs button[aria-selected=true]{background:#ffedd5;color:#172338;border-color:#fed7aa;box-shadow:0 1px 3px #0000000d}.upts-form-tabs button .iconify{flex-shrink:0;font-size:20px}
 .upts-works-fields{display:grid;gap:8px}.upts-object-form .upts-work-kinds{padding:6px 10px 10px;border:1px solid var(--work-line);border-radius:8px}.upts-kind-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 14px}.upts-kind-grid label{align-items:flex-start;font-size:12px;line-height:1.35}.upts-kind-grid input{margin-top:2px;flex-shrink:0}
-.upts-object-form-actions{flex:none;background:var(--work-panel);border-top:1px solid var(--work-line);padding:8px 0 0}.upts-object-form .upts-save-error{flex:none;max-height:70px;overflow:auto;margin:0!important;padding:6px 10px}
-:global(html.dark) .upts-object-form{--upts-static-bg:color-mix(in srgb,var(--work-panel) 86%,white)}
-:global(html.dark) .upts-form-tabs{background:var(--space-graphite-panel,#344757)}:global(html.dark) .upts-form-tabs button[aria-selected=true]{background:var(--space-graphite-selected,#36526c);color:#e9f2ff;border-color:#587aa6;box-shadow:inset 0 -2px 0 var(--space-graphite-accent,#93c5fd)}
+.upts-object-form-actions{flex:none;background:#e8e8ea;border-top:1px solid var(--work-line);padding:10px 20px;margin:0 -20px -14px}.upts-object-form .upts-save-error{flex:none;max-height:70px;overflow:auto;margin:0!important;padding:6px 10px}
+:global(html.dark .upts-object-form){--upts-static-bg:color-mix(in srgb,var(--work-panel) 86%,white)}
+:global(html.dark .upts-form-tabs){background:var(--space-graphite-panel,#344757)}:global(html.dark .upts-form-tabs button[aria-selected=true]){background:var(--space-graphite-selected,#36526c);color:#e9f2ff;border-color:#587aa6;box-shadow:inset 0 -2px 0 var(--space-graphite-accent,#93c5fd)}
+:global(html.dark .upts-object-form-actions){background:#465765}
 @media(max-width:760px){.upts-object-general-grid,.upts-object-execution-grid,.upts-kind-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.upts-form-tabs{gap:6px}.upts-form-tabs button{font-size:13px;padding:7px 5px}}
 </style>

@@ -85,7 +85,7 @@ test('UPTS assignments, 300 MiB documents, ordered completion, outbox retry and 
  try{
   const dep=await db.department.create({data:{key:'upts',name:'УПТС'}});
   await db.user.createMany({data:[2,3,4,6,7,8,9].map(id=>({id,login:'workflow-'+id,fullName:id===3?'Гацаева Алёна Сергеевна':'Сотрудник '+id,email:`person${id}@example.invalid`,status:'ACTIVE',authType:'EXTERNAL',departmentId:[2,3,7,8,9].includes(id)?dep.id:null}))});
-  const routes=[['/storage','admin/files/index.get','get'],['/storage-content','admin/files/content.get','get'],['/task-view/:id','work/tasks/[id].get','get'],['/defaults','upts/defaults.get','get'],['/contracts','upts/contracts/index.post','post'],['/upts','upts/index.get','get'],['/overview/:contractId','upts/contracts/[contractId]/overview.get','get'],['/assign/:contractId','upts/contracts/[contractId]/assign.post','post'],['/task/:taskId','upts/tasks/[taskId].put','put'],['/contracts/:contractId','upts/contracts/[contractId]/index.delete','delete'],['/files/:id','work/projects/[id]/files/index.post','post'],['/files/:id','work/projects/[id]/files/index.get','get'],['/files/:id/:fileId','work/projects/[id]/files/[fileId].get','get'],['/files/:id/:fileId','work/projects/[id]/files/[fileId].patch','patch']];
+  const routes=[['/storage','admin/files/index.get','get'],['/storage-content','admin/files/content.get','get'],['/task-view/:id','work/tasks/[id].get','get'],['/task-delete/:id','work/tasks/[id].delete','delete'],['/defaults','upts/defaults.get','get'],['/contracts','upts/contracts/index.post','post'],['/upts','upts/index.get','get'],['/overview/:contractId','upts/contracts/[contractId]/overview.get','get'],['/assign/:contractId','upts/contracts/[contractId]/assign.post','post'],['/task/:taskId','upts/tasks/[taskId].put','put'],['/contracts/:contractId','upts/contracts/[contractId]/index.delete','delete'],['/files/:id','work/projects/[id]/files/index.post','post'],['/files/:id','work/projects/[id]/files/index.get','get'],['/files/:id/:fileId','work/projects/[id]/files/[fileId].get','get'],['/files/:id/:fileId','work/projects/[id]/files/[fileId].patch','patch']];
   for(const [path,file,method]of routes)(router as any)[method!](path,await handler('server/api/'+file+'.ts'));
   const worker=resolve('tests/work/.upts-worker-entry.ts');generated.push(worker);await writeFile(worker,"export {deliverUptsNotifications as default} from '../../server/services/upts-notifications';");const deliver=await handler(worker);
   app.use(router);server.listen(0,'127.0.0.1');await once(server,'listening');const base='http://127.0.0.1:'+(server.address() as any).port;
@@ -97,15 +97,31 @@ test('UPTS assignments, 300 MiB documents, ordered completion, outbox retry and 
   assert((await lstat(resolve(storageRoot,'upts',object.storageFolder))).isDirectory(),'object folder exists at creation');
   assert(object.createdAt,'new objects have a persistent creation timestamp');
   const roleObject=await ok(await request('/contracts',2,'POST',{...input,clientKey:randomUUID(),number:'ROLES',objectDetails:{...input.objectDetails,curatorId:8}}));
+  await db.workProjectMember.create({data:{projectId:roleObject.projectId,userId:6,role:'MEMBER'}}); // Admin still needs object visibility.
   const roleTask=await db.workTask.findFirstOrThrow({where:{uptsContractId:roleObject.id}});
   await db.workTask.update({where:{id:roleTask.id},data:{assigneeId:7}}); // Legacy assignee without project membership.
   const listFiles=(user:number)=>request(`/files/${roleObject.projectId}?contractId=${roleObject.id}&taskId=${roleTask.id}&scope=SHARED`,user);
-  for(const user of [2,3,7,8]){assert.equal((await ok(await listFiles(user))).canUpload,true);assert.equal((await ok(await request('/task-view/'+roleTask.id,user))).canEdit,true);}
+  for(const user of [2,3,6,7,8]){
+   assert.equal((await ok(await listFiles(user))).canUpload,true);
+   const detail=await ok(await request('/task-view/'+roleTask.id,user));
+   const summary=(await ok(await request('/overview/'+roleObject.id,user))).tasks.find((t:any)=>t.id===roleTask.id);
+   for(const key of ['canEdit','canEditDetails','canAssignUpts','canDelete'])assert.equal(summary[key],detail[key],`user ${user}: ${key}`);
+   assert.equal(detail.canEdit,true);assert.equal(detail.canAssignUpts,user!==7);assert.equal(detail.canDelete,user!==7);
+  }
+  assert.equal((await request('/task-delete/'+roleTask.id,7,'DELETE',{version:roleTask.version})).status,403);
+  const disposable=await db.workTask.create({data:{clientKey:randomUUID(),title:'Для проверки удаления',projectId:roleObject.projectId,uptsContractId:roleObject.id,creatorId:2,visibility:'PROJECT'}});
+  await ok(await request('/task-delete/'+disposable.id,3,'DELETE',{version:disposable.version}));
+  assert((await db.workTask.findUniqueOrThrow({where:{id:disposable.id}})).deletedAt);
   assert.equal((await ok(await listFiles(9))).canUpload,false);assert.equal((await ok(await request('/task-view/'+roleTask.id,9))).canEdit,false);
   const roleUpload=(user:number)=>fetch(base+'/files/'+roleObject.projectId,{method:'POST',headers:{'x-test-user':String(user),'x-space-work':'1','content-type':'application/octet-stream','x-file-contract':String(roleObject.id),'x-file-task':String(roleTask.id),'x-document-type':encodeURIComponent('Чертёж'),'x-file-key':randomUUID(),'x-file-name':'scheme.pdf','x-file-size':'3','x-file-scope':'SHARED'},body:'pdf'});
   assert.equal((await ok(await roleUpload(8))).canManage,true);assert.equal((await ok(await roleUpload(7))).canManage,true);assert.equal((await roleUpload(9)).status,403);
   await db.workProjectMember.create({data:{projectId:roleObject.projectId,userId:8,role:'OBSERVER'}});
   assert.equal((await ok(await listFiles(8))).canUpload,false);assert.equal((await roleUpload(8)).status,403);
+  const observerTask=await ok(await request('/task-view/'+roleTask.id,8));assert.equal(observerTask.canAssignUpts,false);assert.equal(observerTask.canDelete,false);
+  assert.equal((await request('/task-delete/'+roleTask.id,8,'DELETE',{version:roleTask.version})).status,403);
+  await db.workProject.update({where:{id:roleObject.projectId},data:{archivedAt:new Date()}});
+  assert.equal((await ok(await listFiles(6))).canUpload,false);assert.equal((await ok(await request('/task-view/'+roleTask.id,6))).canDelete,false);
+  await db.workProject.update({where:{id:roleObject.projectId},data:{archivedAt:null}});
   let overview=await ok(await request('/overview/'+object.id,3));assert.equal(overview.canAssign,true);assert.deepEqual(overview.tasks.map((t:any)=>t.title),['Вторая','Первая','Третья']);assert(overview.tasks.every((t:any)=>t.assigneeId===3));
   assert.equal((await request('/overview/'+object.id,4)).status,403);
   const tasks=overview.tasks,first=tasks[0],second=tasks[1],third=tasks[2];
