@@ -16,7 +16,7 @@ async function load() {
     now.value = Date.now(); until.value = now.value+60000;
   } catch (e: any) {
     if (controller.signal.aborted) return;
-    error.value = e.data?.message || 'Не удалось рассчитать объём подразделений.';
+    error.value = e.data?.message || 'Не удалось рассчитать объём групп Space.';
     now.value = Date.now(); until.value = now.value+Math.min(60,Math.max(1,Number(e.data?.data?.retryAfter)||10))*1000;
   } finally { loading.value = false; }
 }
@@ -24,7 +24,7 @@ onBeforeUnmount(() => { clearInterval(timer); controller.abort(); });
 </script>
 <template>
   <article class="department-usage">
-    <div class="usage-head"><div><h2>Объём по подразделениям</h2><p>Общие документы и файлы проектов, включая корзину и личные файлы.</p></div><button :disabled="loading||remaining>0" @click="load">{{ loading?'Измеряем…':'Рассчитать по отделам' }}</button></div>
+    <div class="usage-head"><div><h2>Объём по группам Space</h2><p>Общие документы и файлы проектов, включая корзину и личные файлы.</p></div><button :disabled="loading||remaining>0" @click="load">{{ loading?'Измеряем…':'Рассчитать по группам' }}</button></div>
     <p v-if="remaining&&!loading" role="status">Повторный расчёт через {{ remaining }} с.</p>
     <p v-if="loading" role="status">Обходим каталоги. На больших хранилищах результат может быть частичным.</p>
     <p v-if="error" role="alert">{{ error }}</p>

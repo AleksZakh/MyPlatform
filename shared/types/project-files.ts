@@ -9,3 +9,5 @@ export interface ProjectFileDTO {
 export interface ProjectFileList {
   items: ProjectFileDTO[]; total: number; page: number; maxBytes: number; canUpload: boolean;
 }
+
+export type UptsFileWorkState={id:number;previousVersion:number;version:number;status:import('./work').WorkTaskDTO['status'];resultCheck:ReturnType<typeof import('../utils/upts-work-results').evaluateWorkResult>};

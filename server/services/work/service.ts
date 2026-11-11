@@ -130,7 +130,7 @@ export async function tasks(event:H3Event){const a=await workActor(event),q=getQ
  return {items:rows.map(t=>taskDTO(t,a)),total,page};}
 export async function getTask(event:H3Event,id:number){const a=await workActor(event);const t=await visibleTask(prisma,id,a);
  const result={...taskDTO(t,a),clientKey:t.clientKey};
- if(t.uptsContractId){const {uptsWorkAccess}=await import('../upts-workflow');const access=await uptsWorkAccess(prisma,t,a);return {...result,canEdit:access.canEditWork,canEditDetails:access.canEditWork,canAssignUpts:access.canAssign,canDelete:access.canDelete};}
+ if(t.uptsContractId){const {uptsWorkAccess,checkWorkResult}=await import('../upts-workflow');const access=await uptsWorkAccess(prisma,t,a);return {...result,canEdit:access.canEditWork,canEditDetails:access.canEditWork,canAssignUpts:access.canAssign,canDelete:access.canDelete,resultCheck:await checkWorkResult(prisma,t.id,(t.uptsWorkMeta||{}) as any)};}
  return result;}
 export async function saveTask(event:H3Event,raw:unknown,id?:number){const a=await workActor(event),v=parse(taskInput,raw);
  const needsShared=!v.projectId&&(v.visibility!=='PRIVATE'||(v.assigneeId!==null&&v.assigneeId!==a.id));
@@ -140,6 +140,7 @@ export async function saveTask(event:H3Event,raw:unknown,id?:number){const a=awa
  return mutation(event,a,'WorkTask',id?'UPDATE':'CREATE',async tx=>{
  const old=id?await visibleTask(tx,id,a):await tx.workTask.findUnique({where:{clientKey:v.clientKey},include:taskInclude});
  if(!id&&old){if(old.creatorId!==a.id||old.deletedAt||!(await tx.workTask.findFirst({where:{id:old.id,...taskWhere(a)}})))fail(409,'Ключ операции уже использован.');return {id:old.id,value:taskDTO(old,a),changed:false};}
+ if(old?.uptsContractId)fail(400,'Изменяйте работу через карточку УПТС. Статус определяется результатом.');
  if(old){if(!taskRights(old,a).canEditDetails)fail(403,'Недостаточно прав для изменения задачи.');version(old.version,v.version);}
  const project=v.projectId?await visibleProject(tx,v.projectId,a):null;
  if(old?.projectId!==v.projectId&&old?.project&&!managesProject(old.project,a))fail(403,'Переносить задачи из проекта может руководитель.');
@@ -185,7 +186,7 @@ export async function saveTask(event:H3Event,raw:unknown,id?:number){const a=awa
  const t=await tx.workTask.findUniqueOrThrow({where:{id:saved.id},include:taskInclude});return {id:t.id,value:taskDTO(t,a)};
  });}
 export async function moveTask(event:H3Event,id:number,raw:unknown){const a=await workActor(event),v=parse(taskMove,raw);
- return mutation(event,a,'WorkTask','UPDATE',async tx=>{const old=await visibleTask(tx,id,a);if(!taskRights(old,a).canEdit)fail(403,'Недостаточно прав.');version(old.version,v.version);
+ return mutation(event,a,'WorkTask','UPDATE',async tx=>{const old=await visibleTask(tx,id,a);if(old.uptsContractId&&v.status!==undefined&&v.status!==old.status)fail(400,'Статус работы УПТС изменяется автоматически по результату.');if(!taskRights(old,a).canEdit)fail(403,'Недостаточно прав.');version(old.version,v.version);
  const t=await tx.workTask.update({where:{id},data:{...(v.status!==undefined?{status:v.status}:{}),...(v.plannedDate!==undefined?{plannedDate:dbDay(v.plannedDate)}:{}),version:{increment:1}},include:taskInclude});return {id,value:taskDTO(t,a)};});}
 export async function deleteTask(event:H3Event,id:number,raw:unknown){const a=await workActor(event),v=parse(versionInput,raw);
  return mutation(event,a,'WorkTask','DELETE',async tx=>{const old=await visibleTask(tx,id,a);

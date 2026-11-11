@@ -10,15 +10,15 @@ export default defineEventHandler(async event => {
   await diskAdmin(event);
   const a = await workActor(event), q = getQuery(event), page = q.page ? positiveId(q.page) : 1;
   const department = (await storageDepartments()).find(d => d.key === q.department);
-  if (!department) throw createError({ statusCode: 400, message: 'Неизвестное подразделение' });
-  const belongs = department.key === 'upts' ? { upts: { isNot: null } } : { upts: { is: null }, departmentId: { in: department.departmentIds } };
+  if (!department) throw createError({ statusCode: 400, message: 'Неизвестная группа Space' });
+  const belongs = department.key === 'upts' ? { upts: { isNot: null } } : { upts: { is: null }, groupId: { in: department.groupIds || [] } };
   if (!q.projectId) {
     const where = { ...projectWhere(a), ...belongs };
     const [rows, total] = await Promise.all([
       prisma.workProject.findMany({ where, select: { id: true, name: true, archivedAt: true }, orderBy: { id: 'desc' }, skip: (page - 1) * 100, take: 100 }),
       prisma.workProject.count({ where }),
     ]);
-    return { title: 'Проекты подразделения', items: rows.map(p => ({ kind: 'project', id: p.id, name: p.name + (p.archivedAt ? ' · архив' : '') })), total, page };
+    return { title: 'Проекты группы', items: rows.map(p => ({ kind: 'project', id: p.id, name: p.name + (p.archivedAt ? ' · архив' : '') })), total, page };
   }
   const id = positiveId(q.projectId);
   const project = await visibleProject(prisma, id, a);

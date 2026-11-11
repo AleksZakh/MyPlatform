@@ -1,3 +1,4 @@
+import {evaluateWorkResult} from '../../shared/utils/upts-work-results';
 import {uptsDay} from './upts-input';
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
@@ -76,6 +77,31 @@ export async function assignObjectWorks(event:H3Event,contractId:number,raw:unkn
  for(const t of tasks){if(t.assigneeId===v.assigneeId)continue;const after=await tx.workTask.update({where:{id:t.id},data:{assigneeId:v.assigneeId,version:{increment:1}}});await audit(tx,event,a,'WorkTask',t.id,'ASSIGN',after);await queueUptsNotice(tx,`assign:${t.id}:${after.version}`,a.id,v.assigneeId,t.id,`Вам назначена работа «${t.title}» по объекту «${c.number}». Статус: ${t.status==='IN_PROGRESS'?'выполняется':'запланировано'}.`);}
  return {updated:tasks.length};},{timeout:15000});
 }
+export async function checkWorkResult(db:DB,taskId:number,details:UptsWorkMeta){
+ const files=await db.workProjectFile.findMany({where:{taskId,deletedAt:null,scope:'SHARED'},select:{documentType:true}});
+ return evaluateWorkResult(details,files.map(f=>f.documentType));
+}
+export async function completeUptsWork(tx:DB,event:H3Event,a:Actor,t:Prisma.WorkTaskGetPayload<{}>,staff:{id:number}[]){
+ if(!t.uptsContractId||t.deletedAt||t.status==='CANCELLED')return t;
+ const before=meta(t.uptsWorkMeta);
+ if(before.completedAt||t.status==='DONE'||!(await checkWorkResult(tx,t.id,before)).complete)return t;
+ const {c,p,canEditWork}=await uptsWorkAccess(tx,t,a);if(!canEditWork)fail(403,'Нет права завершить работу.');
+ const now=new Date().toISOString();
+ const after=await tx.workTask.update({where:{id:t.id},data:{status:'DONE',version:{increment:1},uptsWorkMeta:{...before,completedAt:now}}});
+ await audit(tx,event,a,'WorkTask',t.id,'COMPLETE',after);
+ const ordered=await tx.workTask.findMany({where:{uptsContractId:c.id,deletedAt:null},orderBy:{id:'asc'}});
+ ordered.sort((x,y)=>(meta(x.uptsWorkMeta).stageNumber||1)-(meta(y.uptsWorkMeta).stageNumber||1)||x.id-y.id);
+ const next=ordered.slice(ordered.findIndex(x=>x.id===t.id)+1).find(x=>!['DONE','CANCELLED'].includes(x.status));
+ if(next&&next.status==='TODO'){
+  let assigneeId=next.assigneeId;
+  if(!assigneeId){const fallback=(c.objectDetails as UptsObjectDetails)?.engineerId;if(fallback&&staff.some(p=>p.id===fallback)){await addObjectMember(tx,p,fallback);assigneeId=fallback;}}
+  const nm=meta(next.uptsWorkMeta);
+  const started=await tx.workTask.update({where:{id:next.id},data:{assigneeId,status:'IN_PROGRESS',version:{increment:1},uptsWorkMeta:{...nm,startedAt:nm.startedAt||now}}});
+  await audit(tx,event,a,'WorkTask',next.id,'START',started);
+  await queueUptsNotice(tx,`start:${t.id}:${next.id}`,a.id,assigneeId,next.id,`Предыдущая работа «${t.title}» по объекту «${c.number}» выполнена. Ваша работа «${next.title}» перешла в статус «Выполняется». Приступите к выполнению.`);
+ }
+ return after;
+}
 export async function saveUptsWork(event:H3Event,taskId:number,raw:unknown){
  const a=await uptsActor(event),v=parse(z.object({version:id,title:z.string().trim().min(1).max(250),assigneeId:id.nullable(),status:z.enum(['TODO','IN_PROGRESS','REVIEW','DONE']),resultText:z.string().trim().max(5000),kuvdEntries:z.array(z.object({number:z.string().trim().min(1).max(100),date:uptsDay.refine(v=>!!v,'Укажите дату КУВД')}).strict()).max(30).optional()}).strict(),raw);
  const staff=await uptsPeople(event);
@@ -85,25 +111,14 @@ export async function saveUptsWork(event:H3Event,taskId:number,raw:unknown){
  if(!canEditWork)fail(403,'Нет права изменять работу.');version(t.version,v.version);
  if(t.assigneeId!==v.assigneeId){if(!canAssign)fail(403,'Исполнителей распределяет руководитель работ объекта.');if(v.assigneeId){if(!staff.some(p=>p.id===v.assigneeId))fail(400,'Исполнитель недоступен.');await addObjectMember(tx,p,v.assigneeId);}}
  if(t.title!==v.title&&!canEditWork)fail(403,'Нет права менять название.');
- const before=meta(t.uptsWorkMeta),files=await tx.workProjectFile.count({where:{taskId:t.id,deletedAt:null,scope:'SHARED',OR:[{documentType:null},{documentType:{not:'Приостановка/отказ Росреестра'}}]}});
- const entries=v.kuvdEntries??before.kuvdEntries??[];
- const hasResult=!!v.resultText || files>0 || entries.length>0;
- const completing=hasResult && !before.completedAt;
- const status=hasResult?'DONE':v.status;
- if(status==='DONE'&&!hasResult)fail(400,'Введите результат работы или прикрепите итоговый документ.');
- const now=new Date().toISOString();
- const after=await tx.workTask.update({where:{id:t.id},data:{title:v.title,assigneeId:v.assigneeId,status,version:{increment:1},uptsWorkMeta:{...before,resultText:v.resultText,kuvdEntries:entries,...(status==='IN_PROGRESS'&&!before.startedAt?{startedAt:now}:{}),...(completing?{completedAt:now}: {})}}});
- await audit(tx,event,a,'WorkTask',t.id,'UPDATE',after);
- if(completing){
- const ordered=await tx.workTask.findMany({where:{uptsContractId:c.id,deletedAt:null},orderBy:{id:'asc'}});ordered.sort((x,y)=>(meta(x.uptsWorkMeta).stageNumber||1)-(meta(y.uptsWorkMeta).stageNumber||1)||x.id-y.id);
- const next=ordered.slice(ordered.findIndex(x=>x.id===t.id)+1).find(x=>!['DONE','CANCELLED'].includes(x.status));
- if(next && next.status==='TODO'){
- let assigneeId=next.assigneeId;
- if(!assigneeId){const fallback=(c.objectDetails as UptsObjectDetails)?.engineerId;if(fallback&&staff.some(p=>p.id===fallback)){await addObjectMember(tx,p,fallback);assigneeId=fallback;}}
- const nm=meta(next.uptsWorkMeta);const started=await tx.workTask.update({where:{id:next.id},data:{assigneeId,status:'IN_PROGRESS',version:{increment:1},uptsWorkMeta:{...nm,startedAt:nm.startedAt||now}}});await audit(tx,event,a,'WorkTask',next.id,'START',started);
- await queueUptsNotice(tx,`start:${t.id}:${next.id}`,a.id,assigneeId,next.id,`Предыдущая работа «${t.title}» по объекту «${c.number}» выполнена. Ваша работа «${next.title}» перешла в статус «Выполняется». Приступите к выполнению.`);
- }
- }
+ const before=meta(t.uptsWorkMeta),entries=v.kuvdEntries??before.kuvdEntries??[];
+ const nextMeta={...before,resultText:v.resultText,kuvdEntries:entries};
+ const result=await checkWorkResult(tx,t.id,nextMeta);
+ if(v.status==='DONE'&&!result.complete&&!before.completedAt)fail(400,'Результат работы не достигнут: '+result.checks.filter(r=>!r.done).map(r=>r.label).join('; '));
+ // User input never starts/completes/reopens a work. Saved results drive the transition.
+ const saved=await tx.workTask.update({where:{id:t.id},data:{title:v.title,assigneeId:v.assigneeId,version:{increment:1},uptsWorkMeta:nextMeta}});
+ await audit(tx,event,a,'WorkTask',t.id,'UPDATE',saved);
+ const after=await completeUptsWork(tx,event,a,saved,staff);
  if(t.assigneeId!==v.assigneeId)await queueUptsNotice(tx,`assign:${t.id}:${after.version}`,a.id,v.assigneeId,t.id,`Вам назначена работа «${t.title}» по объекту «${c.number}».`);
  return after;},{timeout:15000});
 }

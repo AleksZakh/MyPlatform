@@ -8,14 +8,16 @@ export interface FileReference {
 }
 interface SamplingContext { id: number; deletedAt?: Date | null; testLocation: { name: string; testObject: { name: string } } }
 export async function fileReferences(db: Prisma.TransactionClient = prisma, paths?: string[]): Promise<FileReference[]> {
+  if(paths && !paths.length)return [];
+  const managedOnly=!!paths?.length&&paths.every(p=>/^upts\/Объект [^/]+\//.test(p));
   const values = paths?.flatMap(p => [p, '/files/' + p])
   const filter = (field: string) => ({ where: values ? { [field]: { in: values } } : {} })
   const [sampling, receipts, protocols, legacy, attachments, projectFiles] = await Promise.all([
-    db.samplingTest.findMany({ ...filter('samplingDocumentPath'), include: { testLocation: { include: { testObject: true } } } }),
-    db.receiptMaterial.findMany({ ...filter('qualityDocumentPath'), include: { samplingTest: { include: { testLocation: { include: { testObject: true } } } } } }),
-    db.testProtocol.findMany({ ...filter('protocolDocumentPath'), include: { samplingTest: { include: { testLocation: { include: { testObject: true } } } } } }),
-    db.aEng.findMany({ where: values ? { OR: ['sDocPath','qualDocPath','testDocPath','protocolDocPath'].map(field => ({ [field]: { in: values } })) } : {} }),
-    db.fileAttachment.findMany({ ...filter('path'), include: { samplingTest: { include: { testLocation: { include: { testObject: true } } } } } }),
+    managedOnly ? [] : db.samplingTest.findMany({ ...filter('samplingDocumentPath'), include: { testLocation: { include: { testObject: true } } } }),
+    managedOnly ? [] : db.receiptMaterial.findMany({ ...filter('qualityDocumentPath'), include: { samplingTest: { include: { testLocation: { include: { testObject: true } } } } } }),
+    managedOnly ? [] : db.testProtocol.findMany({ ...filter('protocolDocumentPath'), include: { samplingTest: { include: { testLocation: { include: { testObject: true } } } } } }),
+    managedOnly ? [] : db.aEng.findMany({ where: values ? { OR: ['sDocPath','qualDocPath','testDocPath','protocolDocPath'].map(field => ({ [field]: { in: values } })) } : {} }),
+    managedOnly ? [] : db.fileAttachment.findMany({ ...filter('path'), include: { samplingTest: { include: { testLocation: { include: { testObject: true } } } } } }),
     db.workProjectFile.findMany({where:{scope:'SHARED',storagePath:values?{in:values}:{not:null}},include:{contract:true}}),
   ])
   const result: FileReference[] = []

@@ -1,5 +1,5 @@
 export interface DepartmentStorage {
-  key: string; name: string; path: string; departmentIds: number[]; active: boolean;
+  key: string; name: string; path: string; departmentIds: number[]; groupIds?: number[]; active: boolean;
 }
 export interface StorageUsageRow {
   key: string; name: string; bytes: number; logicalBytes: number; files: number; percent: number | null;

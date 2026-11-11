@@ -3,39 +3,33 @@ import { prisma } from '../../utils/prisma';
 import { checkedStoragePath } from './paths';
 import type { DepartmentStorage } from '../../../shared/types/department-storage';
 
-const normalize = (s: string) => s.normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase();
-export function departmentCatalog(departments: { id: number; key: string; name: string; isActive: boolean }[]): DepartmentStorage[] {
-  const result: DepartmentStorage[] = [
-    { key: 'lab', name: 'Лабораторный контроль', path: 'lab', departmentIds: [], active: true },
-    { key: 'diagnostic', name: 'Диагностика', path: 'diagnostic', departmentIds: [], active: true },
-    { key: 'upts', name: 'УПТС', path: 'upts', departmentIds: [], active: true },
-  ];
-  for (const d of departments) {
-    const key = normalize(d.key), name = normalize(d.name);
-    const builtin = ['lab', 'labcontrol'].includes(key) || name === 'лабораторный контроль' ? 'lab'
-      : ['diagnostic', 'diagnostics'].includes(key) || name === 'диагностика' ? 'diagnostic'
-      : key === 'upts' || ['уптс', 'управление подготовки территории строительства'].includes(name) ? 'upts' : null;
-    if (builtin) result.find(r => r.key === builtin)!.departmentIds.push(d.id);
-    else result.push({ key: 'department-' + d.id, name: d.name, path: 'departments/' + d.id, departmentIds: [d.id], active: d.isActive });
-  }
-  return result;
+// The API names remain compatible with older clients. Catalog ownership is SpaceGroup only.
+const normalize=(s:string)=>s.normalize('NFKC').trim().replace(/\s+/g,' ').toLowerCase();
+export function groupCatalog(groups:{id:number;name:string;isActive:boolean;storagePath?:string|null}[]):DepartmentStorage[]{
+ const occupied=new Set(groups.flatMap(g=>g.storagePath?[g.storagePath]:[]));
+ return [...groups].sort((a,b)=>a.id-b.id).map(g=>{
+  const name=normalize(g.name);
+  const legacy=['лаборанты','лабораторный контроль','лаборатория'].includes(name)?'lab':['диагносты','диагностика','одис'].includes(name)?'diagnostic':['уптс','upts','управление подготовки территории строительства'].includes(name)?'upts':null;
+  const path=g.storagePath || (legacy&&!occupied.has(legacy)?legacy:'groups/'+g.id);occupied.add(path);
+  return {key:['lab','diagnostic','upts'].includes(path)?path:'group-'+g.id,name:g.name,path,groupIds:[g.id],departmentIds:[],active:g.isActive};
+ });
 }
-export async function storageDepartments() {
-  return departmentCatalog(await prisma.department.findMany({ select: { id: true, key: true, name: true, isActive: true }, orderBy: { name: 'asc' } }));
+export async function storageDepartments(){return groupCatalog(await prisma.spaceGroup.findMany({select:{id:true,name:true,isActive:true,storagePath:true},orderBy:{id:'asc'}}));}
+export async function directoryExists(relative:string):Promise<boolean>{
+ try{return (await lstat(await checkedStoragePath(relative))).isDirectory();}
+ catch(e:any){if(e.code==='ENOENT')return false;throw e;}
 }
-export async function directoryExists(relative: string): Promise<boolean> {
-  try { return (await lstat(await checkedStoragePath(relative))).isDirectory(); }
-  catch (e: any) { if (e.code === 'ENOENT') return false; throw e; }
-}
-/** No arbitrary root from the browser, no rename/migration, no symlink traversal. */
-export async function ensureDepartmentDirectory(relative: string) {
-  const catalog = await storageDepartments();
-  if (!catalog.some(d => d.path === relative)) throw new Error('Неизвестный каталог подразделения');
-  let current = '';
-  for (const part of relative.split('/')) {
-    current = [current, part].filter(Boolean).join('/');
-    const target = await checkedStoragePath(current, true);
-    try { await mkdir(target, { mode: 0o750 }); } catch (e: any) { if (e.code !== 'EEXIST') throw e; }
-    if (!await directoryExists(current)) throw new Error('Ожидался каталог подразделения');
-  }
+/** Stable group binding; existing department folders are never moved or deleted. */
+export async function ensureDepartmentDirectory(relative:string){
+ const entry=(await storageDepartments()).find(d=>d.path===relative);
+ if(!entry?.active||!entry.groupIds?.length)throw new Error('Неизвестная или неактивная группа Space');
+ await prisma.spaceGroup.updateMany({where:{id:{in:entry.groupIds},storagePath:null},data:{storagePath:relative}});
+ let prefix='';
+ for(const part of relative.split('/')){
+  // Resolve every component again to reject symlinks.
+  prefix=[prefix,part].filter(Boolean).join('/');
+  const target=await checkedStoragePath(prefix,true);
+  try{await mkdir(target,{mode:0o750});}catch(e:any){if(e.code!=='EEXIST')throw e;}
+  if(!await directoryExists(prefix))throw new Error('Ожидался каталог группы Space');
+ }
 }

@@ -799,6 +799,7 @@ async function removeObject(){if(!deletingObject.value)return;deleteBusy.value=t
       :upts-contract-id="selectedContractId"
       @close="taskEditor = false"
       @saved="saveWorkAndRefresh"
+      @changed="load();overviewRef?.refresh()"
       @create-project="editProject()"
     />
     <ObjectEditor

@@ -1,6 +1,7 @@
 import {ensureObjectStorage} from '../upts-storage';
 import {uptsDay} from '../upts-input';
-import {uptsWorkAccess} from '../upts-workflow';
+import {uptsPeople} from '../upts-people';
+import {uptsWorkAccess,completeUptsWork,checkWorkResult} from '../upts-workflow';
 import {taskFileLimit} from './file-storage';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
@@ -91,6 +92,7 @@ export async function uploadProjectFile(event: H3Event, projectId: number) {
     if (old.taskId !== (task?.id||null) || old.documentType !== documentType || old.contractId !== contractId || old.projectId !== projectId || old.ownerId !== a.id || old.scope !== v.scope || old.size !== v.size || old.name !== v.name || old.deletedAt) fail(409, 'Ключ загрузки уже использован.');
     return dto(old, p, a);
   }
+  const staff=task?await uptsPeople(event):[];
   // Stream to disk before acquiring any database transaction or module lock.
   const folder=contractId&&v.scope==='SHARED'?await ensureObjectStorage(prisma,await prisma.uptsContract.findUniqueOrThrow({where:{id:contractId}})):null;
   const stored = await receiveProjectFile(event, projectId, a.id, v.scope, v.size, contractId,task?taskFileLimit():projectFileLimit(),documentType,folder,v.name);
@@ -107,11 +109,18 @@ export async function uploadProjectFile(event: H3Event, projectId: number) {
     if (duplicate) fail(409, 'Загрузка с таким ключом уже завершена. Обновите список файлов.');
     const file = await tx.workProjectFile.create({ data: { id: randomUUID(), clientKey: v.clientKey, projectId, contractId,taskId:task?.id||null,documentType,documentDate:documentDate?new Date(documentDate+'T00:00:00Z'):null,documentComment, ownerId: a.id, scope: v.scope, name: v.name, ...stored } });
     await writeAuditEvent({ event, db: tx, actorUserId: a.id, category: 'DATA', result: 'SUCCESS', resourceKey: 'projects.shared', entityType: 'WorkProjectFile', entityId: projectId, action: 'CREATE', afterData: { fileId: file.id, scope: file.scope, size: file.size, taskId:file.taskId, documentType:file.documentType }, note: 'Файл проекта добавлен' });
-    return dto(file, current, a,tx);
+    let workState;
+    if(task&&file.scope==='SHARED'){
+      const previous=await tx.workTask.findUniqueOrThrow({where:{id:task.id}});
+      const after=await completeUptsWork(tx,event,a,previous,staff);
+      workState={id:after.id,previousVersion:previous.version,version:after.version,status:after.status,resultCheck:await checkWorkResult(tx,after.id,(after.uptsWorkMeta||{}) as any)};
+    }
+    return {...await dto(file,current,a,tx),workState};
   }, { maxWait: 5000, timeout: 15000 });
 }
 export async function projectFileState(event: H3Event, projectId: number, rawId: unknown, raw: unknown) {
   const a = await workActor(event), id = parse(z.string().uuid(), rawId), v = parse(stateInput, raw);
+  const staff=!v.deleted&&a.uptsMember?await uptsPeople(event):[];
   return prisma.$transaction(async tx => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(20261019)`;
     const p = await visibleProject(tx, projectId, a);
@@ -123,7 +132,13 @@ export async function projectFileState(event: H3Event, projectId: number, rawId:
     if (!!f.deletedAt === v.deleted) return dto(f, p, a,tx);
     const updated = await tx.workProjectFile.update({ where: { id }, data: { deletedAt: v.deleted ? new Date() : null, version: { increment: 1 } } });
     await writeAuditEvent({ event, db: tx, actorUserId: a.id, category: 'DATA', result: 'SUCCESS', resourceKey: 'projects.shared', entityType: 'WorkProjectFile', entityId: projectId, action: v.deleted ? 'DELETE' : 'RESTORE', afterData: { fileId: id, scope: f.scope, deleted: v.deleted }, note: v.deleted ? 'Файл проекта перемещён в корзину' : 'Файл проекта восстановлен' });
-    return dto(updated, p, a,tx);
+    let workState;
+    if(updated.taskId&&updated.scope==='SHARED'){
+      const previous=await tx.workTask.findFirst({where:{id:updated.taskId,deletedAt:null}});
+      if(previous){const after=!v.deleted?await completeUptsWork(tx,event,a,previous,staff):previous;
+        workState={id:after.id,previousVersion:previous.version,version:after.version,status:after.status,resultCheck:await checkWorkResult(tx,after.id,(after.uptsWorkMeta||{}) as any)};}
+    }
+    return {...await dto(updated,p,a,tx),workState};
   }, { maxWait: 5000, timeout: 15000 });
 }
 export async function downloadProjectFile(event: H3Event, projectId: number, rawId: unknown) {

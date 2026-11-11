@@ -1,10 +1,13 @@
 <script setup lang="ts">
+import {UPTS_DOCUMENT_TYPES} from '~~/shared/utils/upts-work-results';
+import type {UptsFileWorkState} from '~~/shared/types/project-files';
 import { useProjectFiles } from '~/composables/useProjectFiles';
 import type { WorkProjectDTO } from '~~/shared/types/work';
 import { workUserName } from '~~/shared/types/work';
 const props = defineProps<{ project: WorkProjectDTO; contractId?:number; defaultScope?:'SHARED'|'PRIVATE';taskId?:number }>();
-const emit=defineEmits<{pending:[value:boolean]}>();
-const { documentType,documentDate,documentComment,scope, trash, data, error, loading, busy, selected, queue, base, load, choose, upload, changeState, cancel } = useProjectFiles(props.project.id,props.contractId,props.defaultScope,props.taskId);
+const emit=defineEmits<{pending:[value:boolean];workState:[value:UptsFileWorkState]}>();
+const { workState,documentType,documentDate,documentComment,scope, trash, data, error, loading, busy, selected, queue, base, load, choose, upload, changeState, cancel } = useProjectFiles(props.project.id,props.contractId,props.defaultScope,props.taskId);
+watch(workState,value=>{if(value)emit('workState',value)});
 const picker = ref<HTMLInputElement | null>(null), dragging = ref(false);
 const groups=computed(()=>{
   const groups=new Map<string,NonNullable<typeof data.value>['items']>();
@@ -38,7 +41,7 @@ watch(() => props.project.version, () => { if (!busy.value) load(); });
     <p v-if="error" class="work-error" role="alert">{{ error }}</p>
     <p v-if="loading" role="status">Загружаем список файлов…</p>
     <div v-if="data && !trash && (canUpload || taskId)" class="project-file-drop" :class="{ dragging }" @dragover.prevent="dragging = !busy && !!canUpload" @dragleave.prevent="dragging = false" @drop.prevent="dropped">
-      <div class="project-file-upload-controls"><label v-if="contractId">Тип документа<select v-model="documentType" :disabled="busy || !canUpload"><option>Выписка из ЕГРН</option><option>Чертёж</option><option>Схема</option><option>Приостановка/отказ Росреестра</option><option>Отчёт</option><option>Межевой план</option><option>Технический план</option><option>КУВД</option><option>Иное</option></select></label>
+      <div class="project-file-upload-controls"><label v-if="contractId">Тип документа<select v-model="documentType" :disabled="busy || !canUpload"><option v-for="type in UPTS_DOCUMENT_TYPES" :key="type">{{ type }}</option></select></label>
       <input ref="picker" type="file" multiple hidden :disabled="busy || !canUpload" aria-label="Выберите файлы" @change="chosen">
       <button type="button" :disabled="busy || !canUpload" @click="picker?.click()"><Icon name="lucide:folder-open" /> Выбрать файлы</button><label v-if="contractId" class="project-document-date">Дата документа<input v-model="documentDate" type="date" min="1900-01-01" max="2200-12-31" :disabled="busy || !canUpload" /></label></div>
       <label v-if="contractId">Комментарии<textarea v-model="documentComment" rows="2" maxlength="500" :disabled="busy || !canUpload" placeholder="Общий комментарий для загружаемых файлов" /></label>

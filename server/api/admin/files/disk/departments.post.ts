@@ -17,14 +17,14 @@ export default defineEventHandler(async event => {
   running = true; next = Date.now() + 60000;
   try {
     const departments = await storageDepartments();
-    const projects = await prisma.workProject.findMany({ select: { id: true, departmentId: true, upts: { select: { projectId: true } } } });
-    const projectOwners = new Map(projects.map(p => [p.id, p.upts ? 'upts' : departments.find(d => p.departmentId && d.departmentIds.includes(p.departmentId))?.key || 'projects']));
+    const projects = await prisma.workProject.findMany({ select: { id: true, groupId: true, upts: { select: { projectId: true } } } });
+    const projectOwners = new Map(projects.map(p => [p.id, p.upts ? 'upts' : departments.find(d => p.groupId && d.groupIds?.includes(p.groupId))?.key || 'projects']));
     const report = await measureDepartmentStorage({ storage: storageRoot, projects: projectFilesRoot, departments, projectOwners });
     await writeAuditEvent({ event, actorUserId: actor.id, category: 'ADMIN', action: 'STORAGE_USAGE_SCAN', result: 'SUCCESS', resourceKey: 'system.file-storage',
-      entityType: 'DiskInspection', note: 'Измерен объём файлов подразделений', afterData: { status: report.status, totalBytes: report.totalBytes } });
+      entityType: 'DiskInspection', note: 'Измерен объём файлов групп Space', afterData: { status: report.status, totalBytes: report.totalBytes } });
     return report;
   } catch {
     next = Date.now() + 10000;
-    throw createError({ statusCode: 503, statusMessage: 'Service Unavailable', message: 'Не удалось измерить хранилища подразделений. Проверьте доступ к базе данных и каталогам хранилища.', data: { retryAfter: 10 } });
+    throw createError({ statusCode: 503, statusMessage: 'Service Unavailable', message: 'Не удалось измерить хранилища групп Space. Проверьте доступ к базе данных и каталогам хранилища.', data: { retryAfter: 10 } });
   } finally { running = false; }
 });

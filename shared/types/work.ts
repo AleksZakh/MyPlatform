@@ -14,6 +14,7 @@ export type WorkProjectDTO = {
  members: { userId: number; role: string; user: WorkUser }[];
 };
 export type WorkTaskDTO = {
+  resultCheck?:ReturnType<typeof import('../utils/upts-work-results').evaluateWorkResult>;
  canAssignUpts?:boolean;
  uptsObjectId?: number | null;
  uptsWorkMeta?: import("./upts-object").UptsWorkMeta | null;

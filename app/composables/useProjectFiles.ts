@@ -1,6 +1,7 @@
-import type { ProjectFileDTO, ProjectFileList, ProjectFileScope } from '~~/shared/types/project-files';
+import type { ProjectFileDTO, ProjectFileList, ProjectFileScope, UptsFileWorkState } from '~~/shared/types/project-files';
 
 export function useProjectFiles(projectId: number, contractId?:number, defaultScope:ProjectFileScope='PRIVATE',taskId?:number) {
+  const workState=ref<UptsFileWorkState|null>(null);
   const documentType=ref('Выписка из ЕГРН'),documentDate=ref(''),documentComment=ref('');
   const scope = ref<ProjectFileScope>(defaultScope), trash = ref(false), data = ref<ProjectFileList | null>(null);
   const error = ref(''), loading = ref(false), busy = ref(false), selected = ref<ProjectFileDTO | null>(null);
@@ -44,7 +45,7 @@ export function useProjectFiles(projectId: number, contractId?:number, defaultSc
           xhr.setRequestHeader('x-file-size', String(item.file.size)); xhr.setRequestHeader('x-file-scope', selectedScope);
           xhr.upload.onprogress = e => { if (e.lengthComputable) item.progress = Math.round(e.loaded / e.total * 100); };
           xhr.onload = () => {
-            if (xhr.status >= 200 && xhr.status < 300) { item.state = 'Загружен'; item.progress = 100; resolve(); }
+            if (xhr.status >= 200 && xhr.status < 300) { try{const response=JSON.parse(xhr.responseText);if(response.workState)workState.value=response.workState;}catch{} item.state = 'Загружен'; item.progress = 100; resolve(); }
             else { let message = xhr.status === 413 ? 'Файл превышает лимит сервера загрузки.' : 'Не удалось сохранить файл.';
               try { message = JSON.parse(xhr.responseText).message || message; } catch {} reject(new Error(message)); }
           };
@@ -60,12 +61,12 @@ export function useProjectFiles(projectId: number, contractId?:number, defaultSc
   async function changeState() {
     const f = selected.value; if (!f || busy.value) return;
     busy.value = true; error.value = '';
-    try { await $fetch(base + '/' + f.id, { method: 'PATCH', headers: { 'x-space-work': '1' }, body: { version: f.version, deleted: !f.deletedAt } }); selected.value = null; await load(); }
+    try { const response=await $fetch<{workState?:UptsFileWorkState}>(base + '/' + f.id, { method: 'PATCH', headers: { 'x-space-work': '1' }, body: { version: f.version, deleted: !f.deletedAt } }); if(response.workState)workState.value=response.workState; selected.value = null; await load(); }
     catch (e: any) { error.value = e.data?.message || 'Не удалось изменить файл.'; }
     finally { busy.value = false; }
   }
   watch([scope, trash], () => { selected.value = null; queue.value = []; load(); });
   onMounted(() => load());
   onBeforeUnmount(() => { active = false; generation++; request?.abort(); });
-  return { documentType,documentDate,documentComment,scope, trash, data, error, loading, busy, selected, queue, base, load, choose, upload, changeState, cancel: () => request?.abort() };
+  return { workState,documentType,documentDate,documentComment,scope, trash, data, error, loading, busy, selected, queue, base, load, choose, upload, changeState, cancel: () => request?.abort() };
 }

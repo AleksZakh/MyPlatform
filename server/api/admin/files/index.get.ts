@@ -9,7 +9,7 @@ export default defineEventHandler(async event => {
   await diskAdmin(event)
   const query = getQuery(event), mode = String(query.mode || 'folders')
   const departments = await storageDepartments()
-  const refs = await fileReferences()
+  const refs = mode === 'documents' ? await fileReferences() : []
   const byPath = new Map<string, typeof refs>()
   for (const ref of refs) {
     try { const key = normalizeStoragePath(ref.path); byPath.set(key, [...(byPath.get(key) || []), ref]) } catch {}
@@ -31,19 +31,33 @@ export default defineEventHandler(async event => {
     const relative = normalizeStoragePath(String(query.path || ''), true)
     if (departments.some(d => d.path === relative) && !await directoryExists(relative)) return { items: [], total: 0, departments, initialized: false }
     const dir = await checkedStoragePath(relative)
-    const entries = await readdir(dir, { withFileTypes: true })
-    const items = await Promise.all(entries.filter(e => !e.name.startsWith('.') && !e.isSymbolicLink()).map(async entry => {
-      const p = [relative, entry.name].filter(Boolean).join('/')
-      return entry.isDirectory() ? { name: entry.name, path: p, folder: true, references: [], state: 'present', size: null, modified: null } : fileItem(p)
-    }))
-    if (!relative) {
-      for (const department of departments) {
-        const existing = items.find(i => i.path === department.path && i.folder)
-        if (existing) existing.name = department.name
-        else if (department.active || await directoryExists(department.path)) items.push({ name: department.name, path: department.path, folder: true, references: [], state: 'present', size: null, modified: null })
+    const entries = (await readdir(dir, { withFileTypes: true })).filter(e=>!e.name.startsWith('.')&&!e.isSymbolicLink()&&(e.isDirectory()||e.isFile()))
+    const candidates=entries.map(e=>({name:e.name,path:[relative,e.name].filter(Boolean).join('/'),folder:e.isDirectory()}))
+    if(!relative){
+      const legacy=candidates.find(i=>i.path==='departments'&&i.folder);if(legacy)legacy.name='Ранее созданные каталоги отделов';
+      for(const group of departments){
+        const existing=candidates.find(i=>i.path===group.path&&i.folder)
+        if(existing)existing.name=group.name
+        else if(group.active||await directoryExists(group.path))candidates.push({name:group.name,path:group.path,folder:true})
       }
+      const container=candidates.findIndex(i=>i.path==='groups'&&i.folder)
+      if(container>=0&&departments.some(g=>g.path.startsWith('groups/')))candidates.splice(container,1)
     }
-    items.sort((a,b) => Number(b.folder) - Number(a.folder) || a.name.localeCompare(b.name, 'ru'))
-    return { items, total: items.length, page: 1, pageSize: items.length, departments, initialized: true }
+    candidates.sort((a,b)=>Number(b.folder)-Number(a.folder)||a.name.localeCompare(b.name,'ru'))
+    const page=Math.max(1,Math.min(100000,Math.floor(Number(query.page)||1))),pageSize=100
+    const slice=candidates.slice((page-1)*pageSize,page*pageSize)
+    const paths=slice.filter(i=>!i.folder).map(i=>i.path)
+    // A folder navigation must never scan the document tables for the whole portal.
+    if(paths.length)for(const ref of await fileReferences(undefined,paths)){
+      const key=normalizeStoragePath(ref.path);byPath.set(key,[...(byPath.get(key)||[]),ref])
+    }
+    const items=new Array(slice.length);let index=0
+    await Promise.all(Array.from({length:Math.min(8,slice.length)},async()=>{
+      for(;;){const i=index++;if(i>=slice.length)return;const entry=slice[i]!
+        items[i]=entry.folder?{...entry,references:[],state:'present',size:null,modified:null}:await fileItem(entry.path)
+      }
+    }))
+    return {items,total:candidates.length,page,pageSize,departments,initialized:true}
+
   } catch { throw createError({ statusCode: 400, message: 'Каталог недоступен или путь недопустим.' }) }
 })

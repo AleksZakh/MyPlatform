@@ -881,6 +881,7 @@ model DomainGroup {
 
 
 model SpaceGroup {
+  storagePath String? @unique @db.VarChar(240)
   registrationRequests RegistrationRequestGroup[]
   ownedProjects WorkProject[]
   id Int @id @default(autoincrement())

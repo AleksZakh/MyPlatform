@@ -85,13 +85,14 @@ test('UPTS assignments, 300 MiB documents, ordered completion, outbox retry and 
  try{
   const dep=await db.department.create({data:{key:'upts',name:'УПТС'}});
   await db.user.createMany({data:[2,3,4,6,7,8,9].map(id=>({id,login:'workflow-'+id,fullName:id===3?'Гацаева Алёна Сергеевна':'Сотрудник '+id,email:`person${id}@example.invalid`,status:'ACTIVE',authType:'EXTERNAL',departmentId:[2,3,7,8,9].includes(id)?dep.id:null}))});
-  const routes=[['/storage','admin/files/index.get','get'],['/storage-content','admin/files/content.get','get'],['/task-view/:id','work/tasks/[id].get','get'],['/task-delete/:id','work/tasks/[id].delete','delete'],['/defaults','upts/defaults.get','get'],['/contracts','upts/contracts/index.post','post'],['/upts','upts/index.get','get'],['/overview/:contractId','upts/contracts/[contractId]/overview.get','get'],['/assign/:contractId','upts/contracts/[contractId]/assign.post','post'],['/task/:taskId','upts/tasks/[taskId].put','put'],['/contracts/:contractId','upts/contracts/[contractId]/index.delete','delete'],['/files/:id','work/projects/[id]/files/index.post','post'],['/files/:id','work/projects/[id]/files/index.get','get'],['/files/:id/:fileId','work/projects/[id]/files/[fileId].get','get'],['/files/:id/:fileId','work/projects/[id]/files/[fileId].patch','patch']];
+  const routes=[['/storage','admin/files/index.get','get'],['/storage-content','admin/files/content.get','get'],['/task-view/:id','work/tasks/[id].get','get'],['/task-delete/:id','work/tasks/[id].delete','delete'],['/task-move/:id','work/tasks/[id].patch','patch'],['/defaults','upts/defaults.get','get'],['/contracts','upts/contracts/index.post','post'],['/upts','upts/index.get','get'],['/overview/:contractId','upts/contracts/[contractId]/overview.get','get'],['/assign/:contractId','upts/contracts/[contractId]/assign.post','post'],['/task/:taskId','upts/tasks/[taskId].put','put'],['/contracts/:contractId','upts/contracts/[contractId]/index.delete','delete'],['/files/:id','work/projects/[id]/files/index.post','post'],['/files/:id','work/projects/[id]/files/index.get','get'],['/files/:id/:fileId','work/projects/[id]/files/[fileId].get','get'],['/files/:id/:fileId','work/projects/[id]/files/[fileId].patch','patch']];
   for(const [path,file,method]of routes)(router as any)[method!](path,await handler('server/api/'+file+'.ts'));
   const worker=resolve('tests/work/.upts-worker-entry.ts');generated.push(worker);await writeFile(worker,"export {deliverUptsNotifications as default} from '../../server/services/upts-notifications';");const deliver=await handler(worker);
   app.use(router);server.listen(0,'127.0.0.1');await once(server,'listening');const base='http://127.0.0.1:'+(server.address() as any).port;
   const request=(path:string,user=2,method='GET',body?:unknown)=>fetch(base+path,{method,headers:{'x-test-user':String(user),'x-space-work':'1','content-type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});
   async function ok(r:Response){const body=await r.text();assert.equal(r.status,200,body);return JSON.parse(body);}
   assert.deepEqual(await ok(await request('/defaults')),{curatorId:2,engineerId:3,warning:''});
+  await db.spaceGroup.create({data:{name:'УПТС'}});
   const input={clientKey:randomUUID(),number:'TEST',name:'Проверка процесса',counterparty:'',signedDate:null,dueDate:null,contractType:'OTHER',templateId:null,templateVersion:null,objectDetails:{curatorId:2,engineerId:3,stageCount:2,otherDescription:'Тест'},manualWorks:['Первая','Вторая','Третья'],workStages:[2,1,2]};
   const object=await ok(await request('/contracts',2,'POST',input));
   assert((await lstat(resolve(storageRoot,'upts',object.storageFolder))).isDirectory(),'object folder exists at creation');
@@ -125,6 +126,7 @@ test('UPTS assignments, 300 MiB documents, ordered completion, outbox retry and 
   let overview=await ok(await request('/overview/'+object.id,3));assert.equal(overview.canAssign,true);assert.deepEqual(overview.tasks.map((t:any)=>t.title),['Вторая','Первая','Третья']);assert(overview.tasks.every((t:any)=>t.assigneeId===3));
   assert.equal((await request('/overview/'+object.id,4)).status,403);
   const tasks=overview.tasks,first=tasks[0],second=tasks[1],third=tasks[2];
+  await db.workTask.update({where:{id:second.id},data:{uptsWorkMeta:{...second.uptsWorkMeta,expectedResult:'схема на КПТ'}}});
   const batch={assigneeId:7,tasks:[first,second].map(t=>({id:t.id,version:t.version}))};
   assert.equal((await request('/assign/'+object.id,8,'POST',batch)).status,403);
   assert.equal((await request('/assign/'+object.id,3,'POST',{...batch,assigneeId:4})).status,400);
@@ -146,7 +148,7 @@ test('UPTS assignments, 300 MiB documents, ordered completion, outbox retry and 
   assert.equal((await fetch(base+'/files/'+object.projectId,{method:'POST',headers:headers(1,third.id),body:'x'})).status,403);
   const size=300*1024*1024,chunk=Buffer.alloc(1024*1024,31),hash=createHash('sha256');
   const stream=Readable.from((async function*(){for(let i=0;i<300;i++){hash.update(chunk);yield chunk;}})());
-  const file=await ok(await fetch(base+'/files/'+object.projectId,{method:'POST',headers:headers(size),body:stream,duplex:'half'} as any));assert.equal(file.size,size);assert.equal(file.taskId,second.id);assert.equal(file.documentType,'Чертёж');
+  const file=await ok(await fetch(base+'/files/'+object.projectId,{method:'POST',headers:headers(size),body:stream,duplex:'half'} as any));assert.equal(file.size,size);assert.equal(file.taskId,second.id);assert.equal(file.documentType,'Чертёж');assert.equal(file.workState.status,'DONE');assert.equal(file.workState.previousVersion,started.version);assert.equal((await db.workTask.findUniqueOrThrow({where:{id:third.id}})).status,'IN_PROGRESS');
   const stored=await db.workProjectFile.findUniqueOrThrow({where:{id:file.id}});assert.equal(stored.sha256,hash.digest('hex'));
   assert.equal(stored.storageFolder,documentFolderName('Чертёж',stored.createdAt));assert.equal(file.documentFolder,stored.storageFolder);
   assert((await lstat(resolve(storageRoot,stored.storagePath!))).isFile());assert(stored.storagePath!.includes('/Чертёж/'));
@@ -172,12 +174,32 @@ test('UPTS assignments, 300 MiB documents, ordered completion, outbox retry and 
   const files=await ok(await request(`/files/${object.projectId}?contractId=${object.id}&scope=SHARED`));assert.equal(files.total,2,'documents from a work are listed in object documents');
   const taskFiles=await ok(await request(`/files/${object.projectId}?contractId=${object.id}&taskId=${second.id}&scope=SHARED`));assert.equal(taskFiles.maxBytes,size);assert.equal(taskFiles.total,2);
   const downloaded=await request(`/files/${object.projectId}/${file.id}`,7);assert.equal(downloaded.status,200);let received=0;const checksum=createHash('sha256');for await(const bytes of downloaded.body as any){received+=bytes.length;checksum.update(bytes);}assert.equal(received,size);assert.equal(checksum.digest('hex'),stored.sha256);
-  await ok(await request('/task/'+second.id,7,'PUT',save(started,'')));assert.equal((await db.workTask.findUniqueOrThrow({where:{id:third.id}})).status,'IN_PROGRESS','file-only result starts next work');
+  assert.equal((await request('/task/'+second.id,7,'PUT',save(started,''))).status,409,'old version is not accepted after automatic completion');
+  await ok(await request('/task/'+second.id,7,'PUT',save(await db.workTask.findUniqueOrThrow({where:{id:second.id}}),'')));assert.equal((await db.workTask.findUniqueOrThrow({where:{id:third.id}})).status,'IN_PROGRESS','file-only result starts next work');
   const refusalTask=await db.workTask.findFirstOrThrow({where:{uptsContractId:roleObject.id,id:{not:roleTask.id}}});
   await ok(await fetch(base+'/files/'+roleObject.projectId,{method:'POST',headers:{...headers(3),'x-test-user':'3','x-file-contract':String(roleObject.id),'x-file-task':String(refusalTask.id),'x-document-type':encodeURIComponent('Приостановка/отказ Росреестра')},body:'zip'}));
   const pending=await ok(await request('/task/'+refusalTask.id,3,'PUT',save(refusalTask,'')));assert.equal(pending.status,'TODO','refusal alone does not complete work');
   assert.equal((await request('/task/'+refusalTask.id,3,'PUT',{...save(pending,''),kuvdEntries:[{number:'КУВД-1',date:'2026-02-30'}]})).status,400);
   const kuvd=await ok(await request('/task/'+refusalTask.id,3,'PUT',{...save(pending,''),kuvdEntries:[{number:'КУВД-1',date:'2026-11-10'},{number:'КУВД-2',date:'2026-11-11'}]}));assert.equal(kuvd.uptsWorkMeta.kuvdEntries.length,2);
+
+  const rulesObject=await ok(await request('/contracts',2,'POST',{...input,clientKey:randomUUID(),number:'CONDITIONS',workStages:[1,1,1]}));
+  const ruleTasks=await db.workTask.findMany({where:{uptsContractId:rulesObject.id},orderBy:{id:'asc'}}),r1=ruleTasks[0]!,r2=ruleTasks[1]!,r3=ruleTasks[2]!;
+  await db.workTask.update({where:{id:r1.id},data:{uptsWorkMeta:{expectedResult:'№ КУВД + выписка'}}});
+  await db.workTask.update({where:{id:r2.id},data:{uptsWorkMeta:{expectedResult:'схема на КПТ'}}});
+  const latest=(id:number)=>db.workTask.findUniqueOrThrow({where:{id}});
+  let draft=await ok(await request('/task/'+r1.id,3,'PUT',save(await latest(r1.id),'Примечание не заменяет КУВД')));assert.equal(draft.status,'TODO');
+  assert.equal((await request('/task-move/'+r1.id,3,'PATCH',{version:draft.version,status:'DONE'})).status,400);
+  const resultHeaders=(id:number,type:string)=>({...headers(3),'x-test-user':'3','x-file-contract':String(rulesObject.id),'x-file-task':String(id),'x-document-type':encodeURIComponent(type)});
+  const uploadResult=(h:any)=>fetch(base+'/files/'+rulesObject.projectId,{method:'POST',headers:h,body:'pdf'});
+  await ok(await uploadResult(resultHeaders(r1.id,'Отчёт')));assert.equal((await latest(r1.id)).status,'TODO');
+  await ok(await uploadResult(resultHeaders(r1.id,'Выписка из ЕГРН')));assert.equal((await latest(r1.id)).status,'TODO','extract without KUVd is incomplete');
+  draft=await ok(await request('/task/'+r1.id,3,'PUT',{...save(await latest(r1.id),''),kuvdEntries:[{number:'КУВД-123',date:'2026-11-12'}]}));assert.equal(draft.status,'DONE');assert.equal((await latest(r2.id)).status,'IN_PROGRESS');
+  const schemeHeaders=resultHeaders(r2.id,'Схема'),scheme=await ok(await uploadResult(schemeHeaders));assert.equal(scheme.workState.status,'DONE');assert.equal((await latest(r3.id)).status,'IN_PROGRESS');
+  assert.equal((await ok(await uploadResult(schemeHeaders))).id,scheme.id);
+  assert.equal(await db.uptsNotification.count({where:{eventKey:`start:${r2.id}:${r3.id}`}}),1);
+  await ok(await request(`/files/${rulesObject.projectId}/${scheme.id}`,3,'PATCH',{version:scheme.version,deleted:true}));assert.equal((await latest(r2.id)).status,'DONE','removing a document does not restart the chain');
+  const resultView=await ok(await request('/task-view/'+r1.id,3));assert.equal(resultView.resultCheck.complete,true);
+
   await Promise.all([deliver(),deliver()]);const chatCount=await db.chatMessage.count();assert(chatCount>0);assert.equal(deliveries.length,0);assert(await db.uptsNotification.count({where:{chatSentAt:{not:null},emailSentAt:null,lastError:{not:null}}}));
   failMail=false;await db.uptsNotification.updateMany({data:{nextAttemptAt:new Date(0)}});await Promise.all([deliver(),deliver()]);assert.equal(await db.chatMessage.count(),chatCount,'retry must not duplicate chat');assert(deliveries.length>0);assert.equal(new Set(deliveries.map(m=>m.messageId)).size,deliveries.length,'competing workers do not duplicate email');assert(deliveries.every(m=>m.text.includes('/departments/upts?contractId=')));const mails=deliveries.length;await deliver();assert.equal(deliveries.length,mails,'delivered email is not re-sent');
   assert.equal((await request('/contracts/'+object.id,3,'DELETE',{version:object.version})).status,403);
