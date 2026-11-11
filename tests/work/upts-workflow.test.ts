@@ -1,10 +1,12 @@
+import {migrateUptsStorage} from '../../server/services/upts-storage-migration';
+import {storageRoot} from '../../server/services/storage/paths';
 import test from 'node:test';
 import {documentFolderName,openProjectFile} from '../../server/services/work/file-storage';
 import {Readable} from 'node:stream';
 import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { readFile, writeFile, rm, lstat, rename } from 'node:fs/promises';
+import { readFile, writeFile, rm, lstat, rename, mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createServer } from 'node:http';
@@ -19,7 +21,7 @@ const url = process.env.WORK_TEST_DATABASE_URL || '';
 if (!url || !new URL(url).pathname.endsWith('_work_test'))
   throw new Error('Use a disposable *_work_test database');
 const storage = process.env.WORK_PROJECT_FILES_ROOT || '';
-if (!storage.includes('space-project-files-test-'))
+if (!storage.includes('space-project-files-test-') || !storageRoot.includes('space-upts-common-test-'))
   throw new Error('Use disposable space-project-files-test- storage');
 const db = new PrismaClient({ datasources: { db: { url } } });
 const deliveries:any[]=[];let failMail=true;
@@ -83,7 +85,7 @@ test('UPTS assignments, 300 MiB documents, ordered completion, outbox retry and 
  try{
   const dep=await db.department.create({data:{key:'upts',name:'УПТС'}});
   await db.user.createMany({data:[2,3,4,6,7,8,9].map(id=>({id,login:'workflow-'+id,fullName:id===3?'Гацаева Алёна Сергеевна':'Сотрудник '+id,email:`person${id}@example.invalid`,status:'ACTIVE',authType:'EXTERNAL',departmentId:[2,3,7,8,9].includes(id)?dep.id:null}))});
-  const routes=[['/task-view/:id','work/tasks/[id].get','get'],['/defaults','upts/defaults.get','get'],['/contracts','upts/contracts/index.post','post'],['/upts','upts/index.get','get'],['/overview/:contractId','upts/contracts/[contractId]/overview.get','get'],['/assign/:contractId','upts/contracts/[contractId]/assign.post','post'],['/task/:taskId','upts/tasks/[taskId].put','put'],['/contracts/:contractId','upts/contracts/[contractId]/index.delete','delete'],['/files/:id','work/projects/[id]/files/index.post','post'],['/files/:id','work/projects/[id]/files/index.get','get'],['/files/:id/:fileId','work/projects/[id]/files/[fileId].get','get'],['/files/:id/:fileId','work/projects/[id]/files/[fileId].patch','patch']];
+  const routes=[['/storage','admin/files/index.get','get'],['/storage-content','admin/files/content.get','get'],['/task-view/:id','work/tasks/[id].get','get'],['/defaults','upts/defaults.get','get'],['/contracts','upts/contracts/index.post','post'],['/upts','upts/index.get','get'],['/overview/:contractId','upts/contracts/[contractId]/overview.get','get'],['/assign/:contractId','upts/contracts/[contractId]/assign.post','post'],['/task/:taskId','upts/tasks/[taskId].put','put'],['/contracts/:contractId','upts/contracts/[contractId]/index.delete','delete'],['/files/:id','work/projects/[id]/files/index.post','post'],['/files/:id','work/projects/[id]/files/index.get','get'],['/files/:id/:fileId','work/projects/[id]/files/[fileId].get','get'],['/files/:id/:fileId','work/projects/[id]/files/[fileId].patch','patch']];
   for(const [path,file,method]of routes)(router as any)[method!](path,await handler('server/api/'+file+'.ts'));
   const worker=resolve('tests/work/.upts-worker-entry.ts');generated.push(worker);await writeFile(worker,"export {deliverUptsNotifications as default} from '../../server/services/upts-notifications';");const deliver=await handler(worker);
   app.use(router);server.listen(0,'127.0.0.1');await once(server,'listening');const base='http://127.0.0.1:'+(server.address() as any).port;
@@ -92,6 +94,7 @@ test('UPTS assignments, 300 MiB documents, ordered completion, outbox retry and 
   assert.deepEqual(await ok(await request('/defaults')),{curatorId:2,engineerId:3,warning:''});
   const input={clientKey:randomUUID(),number:'TEST',name:'Проверка процесса',counterparty:'',signedDate:null,dueDate:null,contractType:'OTHER',templateId:null,templateVersion:null,objectDetails:{curatorId:2,engineerId:3,stageCount:2,otherDescription:'Тест'},manualWorks:['Первая','Вторая','Третья'],workStages:[2,1,2]};
   const object=await ok(await request('/contracts',2,'POST',input));
+  assert((await lstat(resolve(storageRoot,'upts',object.storageFolder))).isDirectory(),'object folder exists at creation');
   assert(object.createdAt,'new objects have a persistent creation timestamp');
   const roleObject=await ok(await request('/contracts',2,'POST',{...input,clientKey:randomUUID(),number:'ROLES',objectDetails:{...input.objectDetails,curatorId:8}}));
   const roleTask=await db.workTask.findFirstOrThrow({where:{uptsContractId:roleObject.id}});
@@ -130,19 +133,35 @@ test('UPTS assignments, 300 MiB documents, ordered completion, outbox retry and 
   const file=await ok(await fetch(base+'/files/'+object.projectId,{method:'POST',headers:headers(size),body:stream,duplex:'half'} as any));assert.equal(file.size,size);assert.equal(file.taskId,second.id);assert.equal(file.documentType,'Чертёж');
   const stored=await db.workProjectFile.findUniqueOrThrow({where:{id:file.id}});assert.equal(stored.sha256,hash.digest('hex'));
   assert.equal(stored.storageFolder,documentFolderName('Чертёж',stored.createdAt));assert.equal(file.documentFolder,stored.storageFolder);
-  assert((await lstat(resolve(storage,String(object.projectId),'contracts',String(object.id),'shared',stored.storageFolder!,stored.storageKey))).isFile());
-  await assert.rejects(()=>openProjectFile({...stored,storageFolder:'../..'}));
-  assert.equal(documentFolderName('Выписка из ЕГРН',new Date('2026-11-09T21:30:00Z')),'Выписка из ЕГРН — 10.11.2026');
+  assert((await lstat(resolve(storageRoot,stored.storagePath!))).isFile());assert(stored.storagePath!.includes('/Чертёж/'));
+  const folders=await ok(await request('/storage?path=upts',6));assert(folders.items.some((x:any)=>x.name===object.storageFolder));
+  assert.equal((await request('/storage?path=upts',7)).status,403);
+  const adminFiles=await ok(await request('/storage?mode=documents&q='+encodeURIComponent('Чертёж.bin'),6));assert(adminFiles.items.some((x:any)=>x.references.some((r:any)=>r.fileId===file.id)));
+  await assert.rejects(()=>openProjectFile({...stored,storagePath:'upts/../../etc/passwd'}));
+  assert.equal(documentFolderName('Выписка из ЕГРН',new Date('2026-11-09T21:30:00Z')),'Выписка из ЕГРН');
   assert(!/[\\/]/.test(documentFolderName('../../x/y',new Date())));
   assert(Buffer.byteLength(documentFolderName('Я'.repeat(200),new Date()))<241);
-  const legacy=await ok(await fetch(base+'/files/'+object.projectId,{method:'POST',headers:headers(5),body:'hello'}));
+  const metaHeaders={...headers(5),'x-document-date':'2026-11-09','x-document-comment':encodeURIComponent('Общий комментарий к чертежам')};
+  const legacy=await ok(await fetch(base+'/files/'+object.projectId,{method:'POST',headers:metaHeaders,body:'hello'}));assert.equal(legacy.documentComment,'Общий комментарий к чертежам');assert(legacy.documentDate.startsWith('2026-11-09'));assert.equal(legacy.storagePath.split('/').slice(0,-1).join('/'),stored.storagePath!.split('/').slice(0,-1).join('/'),'different document dates share one folder');
+  assert.equal((await ok(await fetch(base+'/files/'+object.projectId,{method:'POST',headers:metaHeaders,body:'hello'}))).id,legacy.id);
+  assert.equal((await fetch(base+'/files/'+object.projectId,{method:'POST',headers:{...metaHeaders,'x-document-comment':'changed'},body:'hello'})).status,409);
   const oldFile=await db.workProjectFile.findUniqueOrThrow({where:{id:legacy.id}});const parent=resolve(storage,String(object.projectId),'contracts',String(object.id),'shared');
-  await rename(resolve(parent,oldFile.storageFolder!,oldFile.storageKey),resolve(parent,oldFile.storageKey));await db.workProjectFile.update({where:{id:legacy.id},data:{storageFolder:null}});
+  await mkdir(parent,{recursive:true});await rename(resolve(storageRoot,oldFile.storagePath!),resolve(parent,oldFile.storageKey));await db.workProjectFile.update({where:{id:legacy.id},data:{storageFolder:null,storagePath:null}});
   assert.equal(await (await request(`/files/${object.projectId}/${legacy.id}`,7)).text(),'hello','legacy files without subfolders still download');
+  const plan=await migrateUptsStorage(db,false);assert.equal(plan.planned,1);assert.equal((await db.workProjectFile.findUniqueOrThrow({where:{id:legacy.id}})).storagePath,null);
+  const migrated=await migrateUptsStorage(db,true);assert.equal(migrated.failed,0);assert.equal(migrated.migrated,1);assert((await lstat(resolve(parent,oldFile.storageKey))).isFile(),'original retained');
+  const repeat=await migrateUptsStorage(db,true);assert.equal(repeat.migrated,0);assert.equal(repeat.failed,0);
+  assert.equal(await (await request(`/files/${object.projectId}/${legacy.id}`,7)).text(),'hello','migration preserves existing download URLs');
+  const migratedFile=await db.workProjectFile.findUniqueOrThrow({where:{id:legacy.id}});assert.equal(await (await request('/storage-content?path='+encodeURIComponent(migratedFile.storagePath!),6)).text(),'hello');
   const files=await ok(await request(`/files/${object.projectId}?contractId=${object.id}&scope=SHARED`));assert.equal(files.total,2,'documents from a work are listed in object documents');
   const taskFiles=await ok(await request(`/files/${object.projectId}?contractId=${object.id}&taskId=${second.id}&scope=SHARED`));assert.equal(taskFiles.maxBytes,size);assert.equal(taskFiles.total,2);
   const downloaded=await request(`/files/${object.projectId}/${file.id}`,7);assert.equal(downloaded.status,200);let received=0;const checksum=createHash('sha256');for await(const bytes of downloaded.body as any){received+=bytes.length;checksum.update(bytes);}assert.equal(received,size);assert.equal(checksum.digest('hex'),stored.sha256);
   await ok(await request('/task/'+second.id,7,'PUT',save(started,'')));assert.equal((await db.workTask.findUniqueOrThrow({where:{id:third.id}})).status,'IN_PROGRESS','file-only result starts next work');
+  const refusalTask=await db.workTask.findFirstOrThrow({where:{uptsContractId:roleObject.id,id:{not:roleTask.id}}});
+  await ok(await fetch(base+'/files/'+roleObject.projectId,{method:'POST',headers:{...headers(3),'x-test-user':'3','x-file-contract':String(roleObject.id),'x-file-task':String(refusalTask.id),'x-document-type':encodeURIComponent('Приостановка/отказ Росреестра')},body:'zip'}));
+  const pending=await ok(await request('/task/'+refusalTask.id,3,'PUT',save(refusalTask,'')));assert.equal(pending.status,'TODO','refusal alone does not complete work');
+  assert.equal((await request('/task/'+refusalTask.id,3,'PUT',{...save(pending,''),kuvdEntries:[{number:'КУВД-1',date:'2026-02-30'}]})).status,400);
+  const kuvd=await ok(await request('/task/'+refusalTask.id,3,'PUT',{...save(pending,''),kuvdEntries:[{number:'КУВД-1',date:'2026-11-10'},{number:'КУВД-2',date:'2026-11-11'}]}));assert.equal(kuvd.uptsWorkMeta.kuvdEntries.length,2);
   await Promise.all([deliver(),deliver()]);const chatCount=await db.chatMessage.count();assert(chatCount>0);assert.equal(deliveries.length,0);assert(await db.uptsNotification.count({where:{chatSentAt:{not:null},emailSentAt:null,lastError:{not:null}}}));
   failMail=false;await db.uptsNotification.updateMany({data:{nextAttemptAt:new Date(0)}});await Promise.all([deliver(),deliver()]);assert.equal(await db.chatMessage.count(),chatCount,'retry must not duplicate chat');assert(deliveries.length>0);assert.equal(new Set(deliveries.map(m=>m.messageId)).size,deliveries.length,'competing workers do not duplicate email');assert(deliveries.every(m=>m.text.includes('/departments/upts?contractId=')));const mails=deliveries.length;await deliver();assert.equal(deliveries.length,mails,'delivered email is not re-sent');
   assert.equal((await request('/contracts/'+object.id,3,'DELETE',{version:object.version})).status,403);
@@ -152,5 +171,5 @@ test('UPTS assignments, 300 MiB documents, ordered completion, outbox retry and 
   assert.equal((await request(`/files/${object.projectId}/${file.id}`,7)).status,404);
   assert.equal((await request(`/files/${object.projectId}/${file.id}`,2,'PATCH',{version:file.version+1,deleted:false})).status,409);
   const snapshot=await ok(await request('/upts'));assert(snapshot.projects.every((p:any)=>p.upts.contracts.every((c:any)=>c.id!==object.id)));
- }finally{server.closeAllConnections();server.close();await db.$disconnect();for(const f of generated)await rm(f,{force:true});await rm(storage,{recursive:true,force:true});}
+ }finally{server.closeAllConnections();server.close();await db.$disconnect();for(const f of generated)await rm(f,{force:true});await rm(storage,{recursive:true,force:true});await rm(storageRoot,{recursive:true,force:true});}
 });

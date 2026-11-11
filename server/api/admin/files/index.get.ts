@@ -19,7 +19,7 @@ export default defineEventHandler(async event => {
     try { const entry = await lstat(await checkedStoragePath(relative)); if (!entry.isFile()) throw new Error(); size = entry.size; modified = entry.mtime.toISOString(); state = 'present' }
     catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') state = 'unavailable' }
     const references = byPath.get(relative) || []
-    return { name: relative.split('/').at(-1)!, path: relative, folder: false, size, modified, state, references, url: storageUrl(relative) }
+    return { name: references.find(r=>r.model==='workProjectFile')?.number || relative.split('/').at(-1)!, path: relative, folder: false, size, modified, state, references, url: storageUrl(relative) }
   }
   if (mode === 'documents') {
     const q = String(query.q || '').toLocaleLowerCase('ru'), type = String(query.type || '')

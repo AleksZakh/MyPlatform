@@ -1332,6 +1332,9 @@ model LibraryVideoSettings {
 
 // Files are stored outside public/ and releases; PRIVATE never inherits manager access.
 model WorkProjectFile {
+  storagePath String? @unique @db.VarChar(1000)
+  documentDate DateTime? @db.Date
+  documentComment String @default("") @db.VarChar(500)
   storageFolder String? @db.VarChar(180)
   task WorkTask? @relation(fields:[taskId],references:[id],onDelete:Restrict)
   taskId Int?
@@ -1690,6 +1693,7 @@ model UptsProjectObject {
   @@map("upts_project_objects")
 }
 model UptsContract {
+  storageFolder String? @unique @db.VarChar(240)
   createdAt DateTime? @default(now())
   deletedAt DateTime?
   objectDetails Json @default("{}")

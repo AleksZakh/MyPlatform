@@ -1,3 +1,5 @@
+import {ensureObjectStorage} from '../upts-storage';
+import {uptsDay} from '../upts-input';
 import {uptsWorkAccess} from '../upts-workflow';
 import {taskFileLimit} from './file-storage';
 import { randomUUID } from 'node:crypto';
@@ -35,7 +37,7 @@ async function canManage(file: WorkProjectFile, p: ProjectPolicy, a: Actor,db:Pr
 }
 async function dto(f: WorkProjectFile, p: ProjectPolicy, a: Actor,db:Prisma.TransactionClient=prisma) {
   return { id: f.id, projectId: f.projectId, ownerId: f.ownerId, scope: f.scope, name: f.name, size: f.size,
-    documentFolder:f.storageFolder,taskId:f.taskId,documentType:f.documentType,version: f.version, createdAt: f.createdAt, deletedAt: f.deletedAt, canManage: await canManage(f, p, a,db) };
+    storagePath:f.storagePath,documentDate:f.documentDate,documentComment:f.documentComment,documentFolder:f.storageFolder,taskId:f.taskId,documentType:f.documentType,version: f.version, createdAt: f.createdAt, deletedAt: f.deletedAt, canManage: await canManage(f, p, a,db) };
 }
 const visibleFileWhere = (projectId: number, a: Actor) => ({ projectId, OR: [{ scope: 'SHARED' }, { scope: 'PRIVATE', ownerId: a.id }] });
 async function contractFolder(event:H3Event,projectId:number,upload=false) {
@@ -56,7 +58,7 @@ export async function projectFiles(event: H3Event, projectId: number) {
   const a = await workActor(event), p = await visibleProject(prisma, projectId, a);
   const contractId=await contractFolder(event,projectId);
   const task=await taskFolder(event,projectId,contractId,a);
-  if(contractId)await ensureContractDirectory(projectId,contractId);
+  if(contractId)await ensureObjectStorage(prisma,await prisma.uptsContract.findUniqueOrThrow({where:{id:contractId}}));
   const query = getQuery(event), scope = parse(scopeInput, query.scope || 'SHARED');
   const page = query.page ? positiveId(query.page) : 1;
   await ensureProjectDirectory(projectId); // Existing projects get directories on first use.
@@ -77,17 +79,21 @@ export async function uploadProjectFile(event: H3Event, projectId: number) {
   const task=await taskFolder(event,projectId,contractId,a,true);
   let documentType:string|null=null;
   if(contractId && (task || getHeader(event,'x-document-type'))){try{documentType=decodeURIComponent(getHeader(event,'x-document-type')||'');}catch{fail(400,'Неверный тип документа.');}documentType=parse(z.string().trim().min(1).max(100),documentType);if(task && (v.scope!=='SHARED'||!task.canUpload))fail(403,'Нет права прикреплять документы к этой работе.');}
+  const documentDate=parse(uptsDay,getHeader(event,'x-document-date')||null);
+  let documentComment='';try{documentComment=decodeURIComponent(getHeader(event,'x-document-comment')||'');}catch{fail(400,'Неверный комментарий.');}documentComment=parse(z.string().trim().max(500),documentComment);
   if (!task && !writable(p, a, v.scope)) fail(403, 'Нет права добавлять файлы в эту область проекта.');
   if (v.size > (task?taskFileLimit():projectFileLimit())) fail(413, 'Файл превышает установленный лимит.');
   const length = getHeader(event, 'content-length');
   if (length !== undefined && Number(length) !== v.size) fail(400, 'Размер запроса не совпадает с размером файла.');
   const old = await prisma.workProjectFile.findUnique({ where: { clientKey: v.clientKey } });
   if (old) {
+    if ((old.documentDate?.toISOString().slice(0,10)||null)!==documentDate || old.documentComment!==documentComment)fail(409,'Ключ загрузки уже использован с другими реквизитами.');
     if (old.taskId !== (task?.id||null) || old.documentType !== documentType || old.contractId !== contractId || old.projectId !== projectId || old.ownerId !== a.id || old.scope !== v.scope || old.size !== v.size || old.name !== v.name || old.deletedAt) fail(409, 'Ключ загрузки уже использован.');
     return dto(old, p, a);
   }
   // Stream to disk before acquiring any database transaction or module lock.
-  const stored = await receiveProjectFile(event, projectId, a.id, v.scope, v.size, contractId,task?taskFileLimit():projectFileLimit(),documentType);
+  const folder=contractId&&v.scope==='SHARED'?await ensureObjectStorage(prisma,await prisma.uptsContract.findUniqueOrThrow({where:{id:contractId}})):null;
+  const stored = await receiveProjectFile(event, projectId, a.id, v.scope, v.size, contractId,task?taskFileLimit():projectFileLimit(),documentType,folder,v.name);
   // If DB commit outcome is uncertain, retain these bytes. Never delete a possibly committed file.
   return prisma.$transaction(async tx => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(20261019)`;
@@ -99,7 +105,7 @@ export async function uploadProjectFile(event: H3Event, projectId: number) {
     if (user?.status !== 'ACTIVE') fail(403, 'Учётная запись неактивна.');
     const duplicate = await tx.workProjectFile.findUnique({ where: { clientKey: v.clientKey } });
     if (duplicate) fail(409, 'Загрузка с таким ключом уже завершена. Обновите список файлов.');
-    const file = await tx.workProjectFile.create({ data: { id: randomUUID(), clientKey: v.clientKey, projectId, contractId,taskId:task?.id||null,documentType, ownerId: a.id, scope: v.scope, name: v.name, ...stored } });
+    const file = await tx.workProjectFile.create({ data: { id: randomUUID(), clientKey: v.clientKey, projectId, contractId,taskId:task?.id||null,documentType,documentDate:documentDate?new Date(documentDate+'T00:00:00Z'):null,documentComment, ownerId: a.id, scope: v.scope, name: v.name, ...stored } });
     await writeAuditEvent({ event, db: tx, actorUserId: a.id, category: 'DATA', result: 'SUCCESS', resourceKey: 'projects.shared', entityType: 'WorkProjectFile', entityId: projectId, action: 'CREATE', afterData: { fileId: file.id, scope: file.scope, size: file.size, taskId:file.taskId, documentType:file.documentType }, note: 'Файл проекта добавлен' });
     return dto(file, current, a,tx);
   }, { maxWait: 5000, timeout: 15000 });

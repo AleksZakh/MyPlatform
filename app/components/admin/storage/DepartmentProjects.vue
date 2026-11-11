@@ -23,7 +23,7 @@ onBeforeUnmount(() => { token++; controller.abort(); });
 </script>
 <template>
   <section class="department-projects">
-    <button type="button" :aria-expanded="expanded" @click="expanded=!expanded; expanded && load()"><Icon name="lucide:folders"/> Проекты и договоры подразделения</button>
+    <button type="button" :aria-expanded="expanded" @click="expanded=!expanded; expanded && load()"><Icon name="lucide:folders"/> Проекты и объекты подразделения</button>
     <template v-if="expanded">
       <p>Показаны проекты, доступные вам, их общие документы и ваши личные файлы. Расположение документов на сервере сохраняется.</p>
       <div class="project-bar"><button v-if="projectId" @click="back">← Назад</button><strong>{{ title }}</strong><button :disabled="loading" @click="load">Обновить</button></div>

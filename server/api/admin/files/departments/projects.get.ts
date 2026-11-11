@@ -32,8 +32,8 @@ export default defineEventHandler(async event => {
     prisma.workProjectFile.count({ where }),
     contractId || page !== 1 ? [] : prisma.uptsContract.findMany({ where: { projectId: id }, select: { id: true, number: true, name: true }, orderBy: { id: 'asc' } }),
   ]);
-  return { title: contract ? 'Договор ' + contract.number : project.name, page, total,
-    items: [ ...contracts.map(c => ({ kind: 'contract', id: c.id, name: `Договор ${c.number} · ${c.name}` })),
+  return { title: contract ? 'Объект ' + contract.number : project.name, page, total,
+    items: [ ...contracts.map(c => ({ kind: 'contract', id: c.id, name: `Объект ${c.number} · ${c.name}` })),
       ...files.map(f => ({ kind: 'file', id: f.id, name: f.name, size: f.size, private: f.scope === 'PRIVATE', url: `/api/work/projects/${id}/files/${f.id}` })) ],
   };
 });

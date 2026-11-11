@@ -40,3 +40,9 @@ export async function checkedStoragePath(relative: string, missingLeaf = false):
   return current
 }
 export function labPath(parts: string[]) { return ['lab', ...parts.map(value => storageSegment(value).slice(0, 50))].join('/') }
+
+/** Managed object folders must not be detached from their database records. */
+export function assertUnmanagedStoragePath(relative:string){
+ const p=normalizeStoragePath(relative,true);
+ if(/^upts\/Объект [^/]+(?:\/|$)/.test(p))throw new Error('Документы объекта УПТС изменяются через карточку объекта или работы.');
+}

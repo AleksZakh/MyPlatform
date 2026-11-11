@@ -25,6 +25,7 @@ export type UptsObjectDetails = {
   otherDescription?: string;
 };
 export type UptsWorkMeta = {
+  kuvdEntries?:{number:string;date:string|null}[];
   resultText?:string;
   startedAt?:string;
   completedAt?:string;

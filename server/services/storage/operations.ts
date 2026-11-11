@@ -5,7 +5,7 @@ import path from 'node:path'
 import { prisma } from '../../utils/prisma'
 import { auditDataChange, computeAuditDelta } from '../../utils/auditLog'
 import type { H3Event } from 'h3'
-import { checkedStoragePath, normalizeStoragePath, storageJournalRoot, storageRoot } from './paths'
+import { assertUnmanagedStoragePath, checkedStoragePath, normalizeStoragePath, storageJournalRoot, storageRoot } from './paths'
 import { changeReference, fileReferences, type FileReference } from './references'
 
 type Change = { source: string | null; target: string | null; refs: FileReference[] }
@@ -50,6 +50,7 @@ export async function recoverStorageOperations() {
 }
 export async function executeChanges(event: H3Event | null, kind: string, changes: Change[], bytes?: Buffer,
   attach?: { samplingId: number; name: string; field?: 'samplingDocumentPath' | 'qualityDocumentPath' | 'protocolDocumentPath'; entityId?: number }) {
+  for(const c of changes){if(c.source)assertUnmanagedStoragePath(c.source);if(c.target)assertUnmanagedStoragePath(c.target);if(c.refs.some(r=>r.model==='workProjectFile'))throw new Error('Измените документ через карточку УПТС.');}
   const id = randomUUID(), dir = path.join(await journalDirectory(), id)
   await mkdir(dir, { mode: 0o700 })
   const manifest: Manifest = { id, kind, changes, createdAt: new Date().toISOString(), createdTargets: [] }

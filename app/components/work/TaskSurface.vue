@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import Modal from './Modal.vue';
-defineProps<{ title: string; subtitle?: string; slide: boolean; color?: string }>();
+defineProps<{ title: string; subtitle?: string; slide: boolean; workCard?:boolean; color?: string }>();
 const emit = defineEmits<{ close: [] }>();
 </script>
 <template>
@@ -11,7 +11,7 @@ const emit = defineEmits<{ close: [] }>();
   <template #title><slot name="title">{{ title }}</slot></template>
   <template #body><div class="work-root"><slot /></div></template>
  </USlideover>
- <Modal v-else :title="title" :subtitle="subtitle" @close="emit('close')"><template #title><slot name="title">{{ title }}</slot></template><slot /></Modal>
+ <Modal v-else :work-card="workCard" :full-height="workCard" :fixed-sections="workCard" :title="title" :subtitle="subtitle" @close="emit('close')"><template #title><slot name="title">{{ title }}</slot></template><slot /></Modal>
 </template>
 <style>
 .space-task-slideover{background:var(--space-panel,#fff)!important;color:var(--space-text,#172338)!important}

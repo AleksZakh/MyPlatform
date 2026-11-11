@@ -90,6 +90,7 @@ const form = reactive({
 });
 const manual=ref('');
 const selectedKinds=ref<string[]>(details.value.workKindKeys ?? (details.value.workKindKey?[details.value.workKindKey]:[]));
+const selectedKind=computed({get:()=>selectedKinds.value.length===1?selectedKinds.value[0]:selectedKinds.value.length>1?'__legacy__':'',set:(key:string)=>{selectedKinds.value=key&&key!=='__legacy__'?[key]:key==='__legacy__'?selectedKinds.value:[];}});
 const enabledWorks=ref<string[]>([]);
 const selectedKindKeys=computed(()=>kinds.value.filter(k=>selectedKinds.value.includes(k.key)).map(k=>k.key));
 const candidates=computed(()=>uptsWorkCandidates(library.value,form.contractType,selectedKindKeys.value));
@@ -203,6 +204,7 @@ async function save() {
           <label>Тип<select v-model="form.contractType" required><option value="" disabled>Не выбрано</option><option v-for="(label,key) in UPTS_CONTRACT_TYPES" :key="key" :value="key">{{ label }}</option></select></label>
           <div class="upts-contract-requisites"><label>Номер договора<input v-model="details.basisContractNumber" maxlength="250" /></label><label>от<input v-model="details.basisContractDate" type="date" aria-label="Дата договора" min="1900-01-01" max="2200-12-31" /></label></div>
           <label>Номер заявки<input v-model="details.requestNumber" maxlength="100" /></label>
+          <label v-if="form.contractType!=='OTHER'">Вид работ<select v-model="selectedKind" :disabled="saving || loading || !!libraryError"><option value="">Выберите вид работ</option><option v-if="c && selectedKinds.length>1" value="__legacy__">Ранее выбрано несколько видов (сохранено)</option><option v-for="kind in kinds" :key="kind.key" :value="kind.key">{{ kind.name }}</option></select></label>
         </div>
       </fieldset>
       <div class="upts-form-tabs" role="tablist" aria-label="Карточка объекта">
@@ -215,16 +217,12 @@ async function save() {
         </div>
         <div id="upts-object-works" v-show="activeTab==='works'" role="tabpanel" aria-labelledby="upts-tab-works" class="upts-works-fields">
           <label class="upts-stage-count">Количество этапов<input v-model.number="stageCount" type="number" min="1" max="2147483647" step="1" inputmode="numeric" /></label>
-          <fieldset v-if="form.contractType!=='OTHER'" class="upts-work-kinds" :disabled="saving || loading || !!libraryError">
-            <legend>Виды работ</legend>
-            <div class="upts-kind-grid"><label v-for="kind in kinds" :key="kind.key" class="work-check"><input v-model="selectedKinds" type="checkbox" :value="kind.key" /><WorkName :meta="{workKindKey:kind.key}" emphasize>{{ kind.name }}</WorkName></label></div>
-          </fieldset>
-          <label v-else>Описание деятельности<textarea v-model="details.otherDescription" rows="2" maxlength="2000" /></label>
+          <label v-if="form.contractType==='OTHER'">Описание деятельности<textarea v-model="details.otherDescription" rows="2" maxlength="2000" /></label>
           <p v-if="loading" role="status">Загружаем библиотеку…</p>
           <p v-if="libraryError" class="work-error" role="alert">{{ libraryError }} <button type="button" @click="load">Повторить</button></p>
           <template v-if="!c">
             <label v-if="form.contractType==='OTHER'">Работы — одна строка на работу<textarea v-model="manual" rows="3" maxlength="12550" /></label>
-            <p v-if="!workRows.length && !loading && !libraryError" class="work-muted">{{ form.contractType==='OTHER' ? 'Введите названия работ, затем включите нужные строки.' : selectedKindKeys.length ? 'В библиотеке нет активных работ для выбранных видов.' : 'Выберите виды работ, чтобы сформировать список.' }}</p>
+            <p v-if="!workRows.length && !loading && !libraryError" class="work-muted">{{ form.contractType==='OTHER' ? 'Введите названия работ, затем включите нужные строки.' : selectedKindKeys.length ? 'В библиотеке нет активных работ для выбранного вида.' : 'Выберите вид работ в общей информации, чтобы сформировать список.' }}</p>
             <WorkSelectionTable v-if="workRows.length" v-model="workStages" v-model:enabled="enabledWorks" :works="workRows" :stage-count="effectiveStageCount" :disabled="saving || loading || !!libraryError" />
           </template>
           <template v-else>

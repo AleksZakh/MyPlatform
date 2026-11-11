@@ -42,6 +42,7 @@ test('Admin catalogs: built-ins, future departments, explicit initialization, re
   assert.equal((await upload('lab')).status,409);assert.equal((await upload('../outside')).status,409);
   await symlink(temp,path.join(root,'diagnostic/escape'));assert.equal((await upload('diagnostic/escape')).status,409);
   assert.equal((await get('/files?path=../')).status,400);
+  await mkdir(path.join(root,'upts','Объект Проверка [1]'));const markersBefore=markers.size;assert.equal((await upload('upts/Объект Проверка [1]')).status,409);assert.equal(markers.size,markersBefore);assert.deepEqual(await readdir(path.join(root,'upts','Объект Проверка [1]')),[]);
   assert.ok(markers.size>0);
  }finally{server.closeAllConnections();server.close();for(const p of generated)await rm(p,{force:true});await rm(temp,{recursive:true,force:true});delete (globalThis as any).__storageDb;}
 });

@@ -4,7 +4,7 @@ import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { requireAdmin } from '../../../utils/require-admin'
 import { prisma } from '../../../utils/prisma'
-import { checkedStoragePath, normalizeStoragePath, storageSegment } from '../../../services/storage/paths'
+import { assertUnmanagedStoragePath, checkedStoragePath, normalizeStoragePath, storageSegment } from '../../../services/storage/paths'
 import { fileReferences } from '../../../services/storage/references'
 import { executeChanges, recoverStorageOperations, withStorageLock } from '../../../services/storage/operations'
 export default defineEventHandler(async event => {
@@ -17,7 +17,7 @@ export default defineEventHandler(async event => {
     if (body.action === 'mkdir') {
       const parent = normalizeStoragePath(String(body.directory || ''), true), name = storageSegment(String(body.name || ''))
       if (!body.name?.trim() || name !== body.name.trim()) throw new Error('Используйте имя без пробелов, разделителей и специальных символов')
-      const target = [parent, name].filter(Boolean).join('/')
+      const target = [parent, name].filter(Boolean).join('/');assertUnmanagedStoragePath(target)
       const disk = await checkedStoragePath(target, true)
       await mkdir(disk)
       try { await prisma.auditLog.create({ data: { action: 'CREATE', actorEmail: admin.login, category: 'DATA', result: 'SUCCESS', resourceKey: 'system.file-storage', note: 'Создание каталога', afterData: { path: target } } }) }

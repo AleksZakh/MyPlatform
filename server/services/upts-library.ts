@@ -1,3 +1,4 @@
+import {ensureObjectStorage} from './upts-storage';
 import {addObjectMember,queueUptsNotice} from './upts-workflow';
 import {workStagesSchema,checkNewWorkStages} from './upts-work-stages';
 import type {UptsObjectDetails} from '../../shared/types/upts-object';
@@ -481,7 +482,7 @@ export async function createContract(event: H3Event, raw: unknown) {
         if(v.workStages && stableJson(original?.workStages || [])!==stableJson(v.workStages))fail(409,'Ключ операции уже использован с другим распределением по этапам.');
         if(v.selectedWorks!==undefined && stableJson(original?.selectedWorks || [])!==stableJson(v.selectedWorks))fail(409,'Ключ операции уже использован с другим составом работ.');
       }
-      await ensureContractDirectory(old.projectId, old.id);
+      await ensureObjectStorage(tx,old);
       return old;
     }
     const titles = await titlesFor(tx, v.contractType, {...v,...(v.selectedWorks!==undefined?{workKindKeys:v.objectDetails?.workKindKeys || []}:{})});
@@ -537,7 +538,7 @@ export async function createContract(event: H3Event, raw: unknown) {
     });
     c = await tx.uptsContract.update({where:{id:c.id},data:{color:uptsContractColor(c.id)}});
     if(!v.projectId) await tx.workProject.update({where:{id:projectId},data:{color:c.color!}});
-    await ensureContractDirectory(projectId, c.id);
+    c={...c,storageFolder:await ensureObjectStorage(tx,c)};
     const taskIds = await addWorks(tx, event, a, c, titles, v.workStages);
     await audit(tx, event, a, "UptsContract", c.id, "CREATE", {
       ...c,

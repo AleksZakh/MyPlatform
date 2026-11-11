@@ -1,10 +1,10 @@
 import type { ProjectFileDTO, ProjectFileList, ProjectFileScope } from '~~/shared/types/project-files';
 
 export function useProjectFiles(projectId: number, contractId?:number, defaultScope:ProjectFileScope='PRIVATE',taskId?:number) {
-  const documentType=ref('Выписка из ЕГРН');
+  const documentType=ref('Выписка из ЕГРН'),documentDate=ref(''),documentComment=ref('');
   const scope = ref<ProjectFileScope>(defaultScope), trash = ref(false), data = ref<ProjectFileList | null>(null);
   const error = ref(''), loading = ref(false), busy = ref(false), selected = ref<ProjectFileDTO | null>(null);
-  const queue = ref<{ key: string; file: File; progress: number; state: string;documentType:string }[]>([]);
+  const queue = ref<{ key: string; file: File; progress: number; state: string;documentType:string;metadata?:{date:string;comment:string} }[]>([]);
   const base = `/api/work/projects/${projectId}/files`;
   let request: XMLHttpRequest | null = null, active = true, generation = 0;
   async function load(page = 1) {
@@ -31,13 +31,14 @@ export function useProjectFiles(projectId: number, contractId?:number, defaultSc
       for (const item of queue.value) {
         if (!active) break;
         if (item.state === 'Загружен') continue;
+        item.metadata ||= {date:documentDate.value,comment:documentComment.value.trim()};
         item.state = 'Загрузка'; item.progress = 0;
         await new Promise<void>((resolve, reject) => {
           const xhr = new XMLHttpRequest(); request = xhr;
           xhr.open('POST', base); xhr.timeout = 15 * 60_000;
           xhr.setRequestHeader('content-type', 'application/octet-stream'); xhr.setRequestHeader('x-space-work', '1');
           if(taskId)xhr.setRequestHeader('x-file-task',String(taskId));
-          if(contractId)xhr.setRequestHeader('x-document-type',encodeURIComponent(item.documentType));
+          if(contractId){xhr.setRequestHeader('x-document-type',encodeURIComponent(item.documentType));xhr.setRequestHeader('x-document-date',item.metadata!.date);xhr.setRequestHeader('x-document-comment',encodeURIComponent(item.metadata!.comment));}
           if(contractId)xhr.setRequestHeader('x-file-contract',String(contractId));
           xhr.setRequestHeader('x-file-key', item.key); xhr.setRequestHeader('x-file-name', encodeURIComponent(item.file.name));
           xhr.setRequestHeader('x-file-size', String(item.file.size)); xhr.setRequestHeader('x-file-scope', selectedScope);
@@ -66,5 +67,5 @@ export function useProjectFiles(projectId: number, contractId?:number, defaultSc
   watch([scope, trash], () => { selected.value = null; queue.value = []; load(); });
   onMounted(() => load());
   onBeforeUnmount(() => { active = false; generation++; request?.abort(); });
-  return { documentType,scope, trash, data, error, loading, busy, selected, queue, base, load, choose, upload, changeState, cancel: () => request?.abort() };
+  return { documentType,documentDate,documentComment,scope, trash, data, error, loading, busy, selected, queue, base, load, choose, upload, changeState, cancel: () => request?.abort() };
 }
