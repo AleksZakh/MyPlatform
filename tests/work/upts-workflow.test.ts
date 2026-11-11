@@ -1,4 +1,4 @@
-import {migrateUptsStorage} from '../../server/services/upts-storage-migration';
+import {migrateUptsStorage,migratePendingUptsStorage} from '../../server/services/upts-storage-migration';
 import {storageRoot} from '../../server/services/storage/paths';
 import test from 'node:test';
 import {documentFolderName,openProjectFile} from '../../server/services/work/file-storage';
@@ -167,8 +167,8 @@ test('UPTS assignments, 300 MiB documents, ordered completion, outbox retry and 
   await mkdir(parent,{recursive:true});await rename(resolve(storageRoot,oldFile.storagePath!),resolve(parent,oldFile.storageKey));await db.workProjectFile.update({where:{id:legacy.id},data:{storageFolder:null,storagePath:null}});
   assert.equal(await (await request(`/files/${object.projectId}/${legacy.id}`,7)).text(),'hello','legacy files without subfolders still download');
   const plan=await migrateUptsStorage(db,false);assert.equal(plan.planned,1);assert.equal((await db.workProjectFile.findUniqueOrThrow({where:{id:legacy.id}})).storagePath,null);
-  const migrated=await migrateUptsStorage(db,true);assert.equal(migrated.failed,0);assert.equal(migrated.migrated,1);assert((await lstat(resolve(parent,oldFile.storageKey))).isFile(),'original retained');
-  const repeat=await migrateUptsStorage(db,true);assert.equal(repeat.migrated,0);assert.equal(repeat.failed,0);
+  const migrated=await migratePendingUptsStorage(db);assert.equal(migrated.verified,0);assert.equal(migrated.failed,0);assert.equal(migrated.migrated,1);assert((await lstat(resolve(parent,oldFile.storageKey))).isFile(),'original retained');
+  const repeat=await migratePendingUptsStorage(db);assert.equal(repeat.objects,0);assert.equal(repeat.migrated,0);assert.equal(repeat.failed,0);
   assert.equal(await (await request(`/files/${object.projectId}/${legacy.id}`,7)).text(),'hello','migration preserves existing download URLs');
   const migratedFile=await db.workProjectFile.findUniqueOrThrow({where:{id:legacy.id}});assert.equal(await (await request('/storage-content?path='+encodeURIComponent(migratedFile.storagePath!),6)).text(),'hello');
   const files=await ok(await request(`/files/${object.projectId}?contractId=${object.id}&scope=SHARED`));assert.equal(files.total,2,'documents from a work are listed in object documents');

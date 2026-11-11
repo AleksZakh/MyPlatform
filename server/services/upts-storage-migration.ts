@@ -11,13 +11,16 @@ async function digest(relative:string){
  try{const st=await file.stat();if(!st.isFile())throw new Error('Not a regular file');const hash=createHash('sha256');for await(const chunk of file.createReadStream({autoClose:false}))hash.update(chunk);return {size:st.size,sha256:hash.digest('hex')};}finally{await file.close();}
 }
 /** Copy + SHA-256 verify + DB switch. Originals remain untouched; retries reuse verified copies. */
-export async function migrateUptsStorage(db:PrismaClient,apply=false,report:(row:unknown)=>void=()=>{}){
+export async function migrateUptsStorage(db:PrismaClient,apply=false,report:(row:unknown)=>void=()=>{}, options:{fileIds?:string[]}={}){
  const result={objects:0,planned:0,migrated:0,verified:0,failed:0};
- const objects=await db.uptsContract.findMany({orderBy:{id:'asc'}});
+ const selected=options.fileIds;
+ if(selected && !selected.length)return result;
+ const contracts=selected?await db.workProjectFile.findMany({where:{id:{in:selected},contractId:{not:null},scope:'SHARED'},select:{contractId:true}}):null;
+ const objects=await db.uptsContract.findMany({where:contracts?{id:{in:contracts.map(f=>f.contractId!)}}:undefined,orderBy:{id:'asc'}});
  for(const c of objects){
   const folder=c.storageFolder||objectFolderName(c.id,c.number||c.name);result.objects++;
   if(apply){try{await ensureObjectStorage(db,c);}catch(e){result.failed++;report({objectId:c.id,error:String(e)});continue;}}
-  const files=await db.workProjectFile.findMany({where:{contractId:c.id,scope:'SHARED'},orderBy:{createdAt:'asc'}});
+  const files=await db.workProjectFile.findMany({where:{contractId:c.id,scope:'SHARED',...(selected?{id:{in:selected}}:{})},orderBy:{createdAt:'asc'}});
   for(const f of files){
    const target=f.storagePath||uptsStoragePath(folder,f.documentType||'Иное',f.storageKey,f.name);
    if(!apply){result.planned+=Number(!f.storagePath);report({fileId:f.id,objectId:c.id,name:f.name,target,action:f.storagePath?'verify':'copy'});continue;}
@@ -51,4 +54,12 @@ export async function migrateUptsStorage(db:PrismaClient,apply=false,report:(row
   }
  }
  return result;
+}
+
+/** Bounded background pass: never hash already migrated files or expose private files. */
+export async function migratePendingUptsStorage(db:PrismaClient,afterId:string|null=null,report:(row:unknown)=>void=()=>{}){
+ const pending=await db.workProjectFile.findMany({where:{contractId:{not:null},scope:'SHARED',storagePath:null,...(afterId?{id:{gt:afterId}}:{})},orderBy:{id:'asc'},take:5,select:{id:true}});
+ const result=await migrateUptsStorage(db,true,report,{fileIds:pending.map(f=>f.id)});
+ // Advance past failures so a damaged/missing file cannot starve later documents.
+ return {...result,cursor:pending.at(-1)?.id??null,hasMore:pending.length===5};
 }
