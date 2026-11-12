@@ -191,7 +191,7 @@ async function save() {
 }
 </script>
 <template>
-  <Modal :content-height="Math.min(940, 650 + Math.max(2,workRows.length)*35)" full-height compact-height wide fixed-sections grey-header icon="streamline-kameleon-color:map-pin" :title="c ? 'Редактирование объекта ' + (details.sourceCadastralNumber || c.number) : 'Новый объект'" @close="emit('close')">
+  <Modal :content-height="900" full-height compact-height wide fixed-sections grey-header icon="streamline-kameleon-color:map-pin" :title="c ? 'Редактирование объекта ' + (details.sourceCadastralNumber || c.number) : 'Новый объект'" @close="emit('close')">
     <form class="work-form upts-object-form" @submit.prevent="save" @invalid.capture="revealInvalid">
       <fieldset class="upts-static upts-object-general" :disabled="saving" aria-label="Общая информация по объекту">
         <legend>Общая информация по объекту</legend>
