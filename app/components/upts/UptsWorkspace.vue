@@ -165,10 +165,18 @@ async function removeObject(){if(!deletingObject.value)return;deleteBusy.value=t
     </header>
     <main class="upts-main">
       <header class="upts-heading">
-        <div class="upts-heading-row"><h1>Учёт земельно-кадастровых работ</h1><button @click="eventJournal=true"><Icon name="lucide:list" /> Журнал событий</button></div>
+        <div class="upts-heading-row"><h1>Учёт земельно-кадастровых работ</h1>
+        <div v-if="!loading && !error && context && section!=='library'" class="upts-header-metrics" aria-label="Статистика по фильтру">
+          <article title="Количество объектов в текущей выборке"><span>Объектов</span><strong>{{ contractRows.length }}</strong></article>
+          <article :title="summary.unassigned+' задач без исполнителя'"><span>Открытых задач</span><strong>{{ summary.active }}</strong></article>
+          <article class="upts-metric-danger" title="По сроку задачи"><span>Просрочено</span><strong>{{ summary.overdue }}</strong></article>
+          <article title="Указано препятствие"><span>Требуют внимания</span><strong>{{ summary.blocked }}</strong></article>
+          <article title="Выполнено задач / всего задач"><span>Выполнено</span><strong>{{ summary.done }}<small> / {{ summary.total }}</small></strong></article>
+        </div>
+        <button class="upts-events-button" @click="eventJournal=true"><Icon name="lucide:list" /> Журнал событий</button></div>
         <p class="upts-department-name">Управление подготовки территории строительства</p>
       </header>
-      <div v-if="section!=='library'" class="upts-filters">
+      <div v-if="section!=='library'" class="upts-filters"><div class="upts-filter-heading"><strong>Фильтр</strong><button type="button" :disabled="!(selectedContractId || selectedId || employeeId || search || documentType || archived)" title="Очистить все параметры фильтра" @click="clearFilters"><Icon name="lucide:filter-x" /> Очистить</button></div>
         <label>Объект<select v-model="selectedContractId"><option :value="null">Все доступные объекты</option><option v-for="c in allContracts" :key="c.id" :value="c.id">{{ c.number }} · {{ c.name }}</option></select></label>
         <label>Документы<select v-model="documentType"><option value="">Все документы</option><option v-for="t in documentTypes" :key="t" :value="t">{{ t }}</option></select></label>
         <label v-if="section==='projects'">Проект Space<select v-model="selectedId"><option :value="null">Все проекты</option><option v-for="p in data.projects" :key="p.id" :value="p.id">{{ p.name }}</option></select></label>
@@ -187,11 +195,6 @@ async function removeObject(){if(!deletingObject.value)return;deleteBusy.value=t
             placeholder="Объект, работа или сотрудник" /></label
         ><button :disabled="loading" aria-label="Обновить данные" @click="load">
           <Icon name="lucide:refresh-cw" /></button
-        ><button
-          v-if="selectedId || employeeId || search"
-          @click="clearFilters"
-        >
-          Сбросить</button
         ><label class="work-check"
           ><input v-model="archived" type="checkbox" />Архив</label
         >
@@ -230,36 +233,6 @@ async function removeObject(){if(!deletingObject.value)return;deleteBusy.value=t
               >Открыть в Space ↗</NuxtLink
             >
           </div>
-        </div>
-        <div v-if="section!=='library'" class="upts-metrics">
-          <article>
-            <span>Объектов в срезе</span><strong>{{ contractRows.length }}</strong
-            ><small>{{
-              contract ? 'Выбранный объект' : 'Доступные вам объекты УПТС'
-            }}</small>
-          </article>
-          <article>
-            <span>Открытых задач</span><strong>{{ summary.active }}</strong
-            ><small>{{ summary.unassigned }} без исполнителя</small>
-          </article>
-          <article class="upts-metric-danger">
-            <span>Просрочено</span><strong>{{ summary.overdue }}</strong
-            ><small>По крайнему сроку задачи</small>
-          </article>
-          <article>
-            <span>Требуют внимания</span><strong>{{ summary.blocked }}</strong
-            ><small>Указано препятствие</small>
-          </article>
-          <article>
-            <span>Выполнено задач</span
-            ><strong
-              >{{ summary.done }}<em> / {{ summary.total }}</em></strong
-            ><progress
-              :value="summary.done"
-              :max="summary.total || 1"
-              aria-label="Доля выполненных задач"
-            />
-          </article>
         </div>
         <nav
           v-if="project && section!=='library'"
@@ -889,4 +862,5 @@ async function removeObject(){if(!deletingObject.value)return;deleteBusy.value=t
 <style src="~/assets/css/work.css"></style>
 <style src="~/assets/css/upts.css"></style>
 
-<style scoped>.upts-heading-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.upts-heading-row button{display:flex;gap:6px;align-items:center}.upts-object-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),250px));gap:12px;align-items:start;margin-top:12px}.upts-object-summary{min-width:0}</style>
+<style scoped>.upts-heading-row{display:grid;grid-template-columns:minmax(220px,1fr) auto minmax(165px,1fr);align-items:center;gap:12px}.upts-heading-row h1{font-size:20px}.upts-heading-row button{display:flex;gap:6px;align-items:center}.upts-events-button{justify-self:end}.upts-header-metrics{display:flex;gap:10px;align-items:center;justify-content:center;background:transparent}.upts-header-metrics article{padding:0 7px;text-align:center;border:0;border-right:1px solid var(--work-line);box-shadow:none;background:transparent}.upts-header-metrics article:last-child{border:0}.upts-header-metrics span{display:block;font-size:10px;line-height:1.15;color:var(--work-muted);white-space:nowrap}.upts-header-metrics strong{display:block;font-size:20px;line-height:1.2;font-weight:700}.upts-header-metrics small{font-size:12px;font-weight:500;color:var(--work-muted)}.upts-filter-heading{flex-basis:100%;display:flex;align-items:center;justify-content:space-between;gap:10px}.upts-filter-heading strong{font-size:13px}.upts-filter-heading button{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:4px 8px}.upts-filters{padding-top:7px;gap:6px}
+@media(max-width:1200px){.upts-heading-row{grid-template-columns:minmax(0,1fr) auto}.upts-header-metrics{grid-column:1/-1;grid-row:2}.upts-events-button{grid-column:2;grid-row:1}}@media(max-width:600px){.upts-heading-row h1{font-size:17px}.upts-header-metrics{gap:2px;flex-wrap:wrap}.upts-header-metrics article{padding:0 4px}.upts-header-metrics span{font-size:9px}.upts-header-metrics strong{font-size:17px}.upts-events-button{font-size:11px}}.upts-object-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),250px));gap:12px;align-items:start;margin-top:12px}.upts-object-summary{min-width:0}</style>

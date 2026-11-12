@@ -163,6 +163,14 @@ test('UPTS assignments, 300 MiB documents, ordered completion, outbox retry and 
   const legacy=await ok(await fetch(base+'/files/'+object.projectId,{method:'POST',headers:metaHeaders,body:'hello'}));assert.equal(legacy.documentComment,'Общий комментарий к чертежам');assert(legacy.documentDate.startsWith('2026-11-09'));assert.equal(legacy.storagePath.split('/').slice(0,-1).join('/'),stored.storagePath!.split('/').slice(0,-1).join('/'),'different document dates share one folder');
   assert.equal((await ok(await fetch(base+'/files/'+object.projectId,{method:'POST',headers:metaHeaders,body:'hello'}))).id,legacy.id);
   assert.equal((await fetch(base+'/files/'+object.projectId,{method:'POST',headers:{...metaHeaders,'x-document-comment':'changed'},body:'hello'})).status,409);
+  const groupedOverview=await ok(await request('/overview/'+object.id,3));
+  assert.deepEqual(groupedOverview.tasks.find((t:any)=>t.id===second.id).documentGroups,[{type:'Чертёж',count:2}]);
+  assert.equal(groupedOverview.tasks.find((t:any)=>t.id===second.id).fileCount,2);
+  const hidden=await db.workProjectFile.create({data:{id:randomUUID(),clientKey:randomUUID(),contractId:object.id,taskId:second.id,projectId:object.projectId,ownerId:7,scope:'PRIVATE',name:'private.pdf',size:7,sha256:'a'.repeat(64),storageKey:randomUUID(),documentType:'Межевой план'}});
+  const privateView=await ok(await request('/overview/'+object.id,3));assert.equal(privateView.tasks.find((t:any)=>t.id===second.id).fileCount,2);
+  await db.workProjectFile.update({where:{id:hidden.id},data:{scope:'SHARED',deletedAt:new Date()}});
+  const trashView=await ok(await request('/overview/'+object.id,3));assert.deepEqual(trashView.tasks.find((t:any)=>t.id===second.id).documentGroups,[{type:'Чертёж',count:2}]);
+  await db.workProjectFile.delete({where:{id:hidden.id}});
   const oldFile=await db.workProjectFile.findUniqueOrThrow({where:{id:legacy.id}});const parent=resolve(storage,String(object.projectId),'contracts',String(object.id),'shared');
   await mkdir(parent,{recursive:true});await rename(resolve(storageRoot,oldFile.storagePath!),resolve(parent,oldFile.storageKey));await db.workProjectFile.update({where:{id:legacy.id},data:{storageFolder:null,storagePath:null}});
   assert.equal(await (await request(`/files/${object.projectId}/${legacy.id}`,7)).text(),'hello','legacy files without subfolders still download');

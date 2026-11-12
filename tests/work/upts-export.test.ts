@@ -97,10 +97,11 @@ test('UPTS document filters, ZIP relative links, integrity, access and audit',as
   const input={number:'A-1',name:'Объект 1',counterparty:'',signedDate:null,dueDate:null,contractType:'OTHER',templateId:null,templateVersion:null,objectDetails:{road:'М-1',curatorId:2,engineerId:3,stageCount:1,otherDescription:'Тест'},manualWorks:['Работа'],workStages:[1]};
   const c1=await ok(await request('/contracts',2,'POST',{...input,clientKey:randomUUID()}));
   const c2=await ok(await request('/contracts',2,'POST',{...input,number:'B-2',name:'Объект 2',clientKey:randomUUID(),objectDetails:{...input.objectDetails,road:'М-4'}}));
-  async function upload(c:any,type:string,name:string,scope='SHARED'){
-   return ok(await fetch(base+'/files/'+c.projectId,{method:'POST',headers:{'x-test-user':'2','x-space-work':'1','content-type':'application/octet-stream','x-file-contract':String(c.id),'x-document-type':encodeURIComponent(type),'x-file-key':randomUUID(),'x-file-name':encodeURIComponent(name),'x-file-size':'7','x-file-scope':scope},body:'drawing'}));
+  async function upload(c:any,type:string,name:string,scope='SHARED',content:Buffer=Buffer.from('drawing')){
+   return ok(await fetch(base+'/files/'+c.projectId,{method:'POST',headers:{'x-test-user':'2','x-space-work':'1','content-type':'application/octet-stream','x-file-contract':String(c.id),'x-document-type':encodeURIComponent(type),'x-file-key':randomUUID(),'x-file-name':encodeURIComponent(name),'x-file-size':String(content.length),'x-file-scope':scope},body:content as any}));
   }
-  const f1=await upload(c1,'Схема','схема №1.pdf'),f2=await upload(c1,'Чертёж','чертёж.pdf');await upload(c2,'Межевой план','план.pdf');await upload(c1,'Секрет','private.pdf','PRIVATE');
+  const originalBook=new ExcelJS.Workbook();originalBook.addWorksheet('Данные').addRow(['Проверка вложения',123]);const originalXlsx=Buffer.from(await originalBook.xlsx.writeBuffer());
+  const f1=await upload(c1,'Схема','схема №1.pdf'),f2=await upload(c1,'Чертёж','300. Строительный контроль [структура] #100% v.2.xlsx','SHARED',originalXlsx);await upload(c2,'Межевой план','план.pdf');await upload(c1,'Секрет','private.pdf','PRIVATE');
   const snap=await ok(await request('/upts?documentType='+encodeURIComponent('Схема')));assert.deepEqual(snap.projects.flatMap((p:any)=>p.upts.contracts.map((c:any)=>c.id)),[c1.id]);assert(snap.tasks.every((t:any)=>t.uptsContractId===c1.id));
   const preview=await ok(await request('/preview?q='+encodeURIComponent('М-1')));assert.equal(preview.documents,2);assert.deepEqual(preview.types.map((t:any)=>t.name).sort(),['Схема','Чертёж']);
   const typed=await ok(await request('/preview?documentType='+encodeURIComponent('Межевой план')));assert.equal(typed.documents,1);assert.equal(typed.objects,1);
@@ -112,15 +113,23 @@ test('UPTS document filters, ZIP relative links, integrity, access and audit',as
   assert.equal((await ok(await request('/exports?q='+encodeURIComponent('М-1'),2,'POST',options))).id,j.id,'retry is idempotent');
   assert.equal((await request('/exports/'+j.id,7)).status,404);
   await ok(await request('/exports/'+j.id+'/confirm',2,'POST',{}));await Promise.all([tick(),tick()]);const ready=await ok(await request('/exports/'+j.id));assert.equal(ready.status,'READY',ready.error);
-  const download=await request('/exports/'+j.id+'/download');assert.equal(download.status,200);const zip=await unzipper.Open.buffer(Buffer.from(await download.arrayBuffer()));assert.equal(zip.files.length,3);
-  const registry=zip.files.find(f=>f.path==='Реестр.xlsx')!;assert(registry);const book=new ExcelJS.Workbook();await book.xlsx.load(await registry.buffer());const sheet=book.worksheets[0]!;assert.equal(sheet.rowCount,3);
-  for(let i=2;i<=3;i++){const cell=sheet.getRow(i).getCell(4).value as {text:string;hyperlink:string};assert(cell.hyperlink);const target=decodeURIComponent(cell.hyperlink.replace(/^\.\//,''));const file=zip.files.find(f=>f.path===target);assert(file,'relative hyperlink resolves inside ZIP');assert.equal((await file!.buffer()).toString(),'drawing');assert(target.startsWith('Документы/Объект A-1 ['));}
+  const download=await request('/exports/'+j.id+'/download');assert.equal(download.status,200);const zip=await unzipper.Open.buffer(Buffer.from(await download.arrayBuffer()));assert.equal(zip.files.length,4);
+  const registry=zip.files.find(f=>f.path.endsWith('/Реестр.xlsx'))!;assert(registry);const book=new ExcelJS.Workbook();await book.xlsx.load(await registry.buffer());const sheet=book.worksheets[0]!;assert.equal(sheet.rowCount,3);
+  const root=registry.path.slice(0,-'Реестр.xlsx'.length);assert.match(root,/^UPTS-\d{8}-[a-f0-9]{6}\/$/);assert(zip.files.every(f=>f.path.startsWith(root)));assert(book.getWorksheet('Как открыть'));assert(zip.files.some(f=>f.path===root+'Прочитайте.txt'));
+  for(let i=2;i<=3;i++){
+   const cell=sheet.getRow(i).getCell(4).value as {text:string;hyperlink:string};assert(cell.hyperlink);const target=cell.hyperlink;
+   assert(target.startsWith('Документы/Объект-'));assert(!/[\[\]#%]/.test(target));assert(target.length<120);assert(!target.startsWith('/'));
+   const file=zip.files.find(f=>f.path===root+target);assert(file,'relative hyperlink resolves from registry folder');
+   const movedRoot='/tmp/Другая папка/'+root;assert.equal(resolve(movedRoot,target),resolve('/tmp/Другая папка',file!.path),'moving the enclosing folder preserves links');
+   if(cell.text.endsWith('.xlsx')){assert.equal(cell.text,'300. Строительный контроль [структура] #100% v.2.xlsx');assert.deepEqual(await file!.buffer(),originalXlsx);const linked=new ExcelJS.Workbook();await linked.xlsx.load(await file!.buffer());assert.equal(linked.worksheets[0]!.getRow(1).getCell(2).value,123);}
+   else assert.equal((await file!.buffer()).toString(),'drawing');
+  }
   const journal=await ok(await request('/events'));assert(journal.items.some((r:any)=>r.action==='EXPORT_DOWNLOAD'));assert(journal.items.every((r:any)=>!r.note?.includes('private.pdf')));
   assert.equal((await request('/events',4)).status,403);assert.equal(await db.auditLog.count({where:{resourceKey:'upts.exports',action:'EXPORT_DOWNLOAD'}}),1);
   const registryOnly=await ok(await request('/exports?documentType='+encodeURIComponent('Межевой план'),2,'POST',{registry:true,types:[],requestId:randomUUID()}));
   await ok(await request('/exports/'+registryOnly.id+'/confirm',2,'POST',{}));await tick();
-  const registryZip=await unzipper.Open.buffer(Buffer.from(await (await request('/exports/'+registryOnly.id+'/download')).arrayBuffer()));assert.deepEqual(registryZip.files.map(f=>f.path),['Реестр.xlsx']);
-  const registryBook=new ExcelJS.Workbook();await registryBook.xlsx.load(await registryZip.files[0]!.buffer());assert.equal(registryBook.worksheets[0]!.rowCount,2);assert.equal(typeof registryBook.worksheets[0]!.getRow(2).getCell(4).value,'string');
+  const registryZip=await unzipper.Open.buffer(Buffer.from(await (await request('/exports/'+registryOnly.id+'/download')).arrayBuffer()));assert.equal(registryZip.files.length,2);assert(registryZip.files.every(f=>!f.path.includes('/Документы/')));
+  const registryBook=new ExcelJS.Workbook();await registryBook.xlsx.load(await registryZip.files.find(f=>f.path.endsWith('/Реестр.xlsx'))!.buffer());assert.equal(registryBook.worksheets[0]!.rowCount,2);assert.equal(typeof registryBook.worksheets[0]!.getRow(2).getCell(4).value,'string');
   // Revoking object access invalidates existing exports as well as future previews.
   await db.workProject.update({where:{id:c1.projectId},data:{ownerId:7,scope:'PRIVATE'}});await db.workProjectMember.deleteMany({where:{projectId:c1.projectId,userId:2}});
   assert.equal((await request('/exports/'+j.id+'/download')).status,403);assert.equal((await ok(await request('/events'))).items.some((r:any)=>r.entityType==='UptsContract'&&r.entityId===c1.id),false);

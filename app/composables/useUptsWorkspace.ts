@@ -352,6 +352,7 @@ export function useUptsWorkspace() {
     employeeId.value = null;
     search.value = '';
     documentType.value='';
+    archived.value=false;
   }
   function initials(u: WorkUser) {
     return workUserName(u)

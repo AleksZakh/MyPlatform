@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {evaluateWorkResult} from '~~/shared/utils/upts-work-results';
+import {evaluateWorkResult,workResultInstructions} from '~~/shared/utils/upts-work-results';
 import type {UptsFileWorkState} from '~~/shared/types/project-files';
 import WorkName from '../upts/WorkName.vue';
 import { ref, reactive, computed, onMounted, watch } from 'vue';
@@ -93,7 +93,8 @@ defineExpose({useProject:(p:WorkProjectDTO)=>{relationship.value='PROJECT';form.
   <template v-if="task?.uptsContractId">
    <fieldset v-if="needsKuvd" :disabled="saving || readOnly" class="upts-kuvd"><legend>КУВД</legend><div v-for="(entry,i) in kuvdEntries" :key="i" class="upts-kuvd-row"><label>№ КУВД<input v-model="entry.number" maxlength="100" required /></label><label>Дата КУВД<input v-model="entry.date" type="date" min="1900-01-01" max="2200-12-31" required /></label><button type="button" :aria-label="'Удалить запись КУВД '+(i+1)" @click="kuvdEntries.splice(i,1)">×</button></div><button type="button" @click="kuvdEntries.push({number:'',date:null})">+ Добавить КУВД</button></fieldset>
    <div class="upts-result-check" aria-live="polite"><strong>Условия завершения</strong><div v-for="check in resultCheck.checks" :key="check.key"><Icon :name="check.done?'lucide:circle-check':'lucide:circle'" /> {{ check.label }} — {{ check.done?'сохранено':'ожидается' }}</div></div>
-   <label>{{ resultCheck.checks.find(c=>c.field==='resultText')?.label || 'Результат работы / примечание' }}<textarea v-model="resultText" :disabled="saving || (readOnly&&!canProgress)" rows="3" maxlength="5000" placeholder="Например: № КУВД, реквизиты выписки или описание результата" /></label>
+   <label>{{ resultCheck.checks.find(c=>c.field==='resultText')?.label || 'Результат работы / примечание' }}<textarea class="upts-result-text" v-model="resultText" :disabled="saving || (readOnly&&!canProgress)" rows="1" maxlength="5000" placeholder="Результат работы или примечание" /></label>
+   <p class="upts-result-help">{{ workResultInstructions(task?.uptsWorkMeta?.expectedResult) }}</p>
   </template>
  </div>
  <section v-if="task?.uptsContractId" class="upts-task-files" aria-label="Документы работы">
@@ -116,7 +117,7 @@ defineExpose({useProject:(p:WorkProjectDTO)=>{relationship.value='PROJECT';form.
  </section>
 </TaskSurface></template>
 
-<style scoped>.upts-result-check{font-size:12px;display:grid;gap:4px;padding:7px 10px;background:var(--work-bg);border:1px solid var(--work-line);border-radius:6px}.upts-auto-state{margin:0;font-size:13px}.upts-work-reference{padding:12px;border:1px solid var(--work-line);border-radius:8px;margin:0}.upts-work-reference dt{font-size:12px;color:var(--work-muted);margin-top:5px}.upts-work-reference dd{margin:3px 0;overflow-wrap:anywhere}
+<style scoped>.upts-result-text{box-sizing:border-box;height:32px;min-height:32px;max-height:32px;line-height:20px;padding:5px 8px!important;overflow:auto;resize:none}.upts-result-help{margin:0;font-size:12px;line-height:1.45;color:var(--work-muted)}.upts-result-check{font-size:12px;display:grid;gap:4px;padding:7px 10px;background:var(--work-bg);border:1px solid var(--work-line);border-radius:6px}.upts-auto-state{margin:0;font-size:13px}.upts-work-reference{padding:12px;border:1px solid var(--work-line);border-radius:8px;margin:0}.upts-work-reference dt{font-size:12px;color:var(--work-muted);margin-top:5px}.upts-work-reference dd{margin:3px 0;overflow-wrap:anywhere}
 .work-form:not(.upts-task-form)>.task-editor-main,.work-form:not(.upts-task-form)>.task-editor-footer{display:contents}
 .upts-task-form{height:100%;min-height:0;display:flex;flex-direction:column;gap:0}.upts-task-main{flex:0 0 auto;min-height:0;padding:12px 22px;display:flex;flex-direction:column;gap:8px}.upts-task-main fieldset{gap:8px}.upts-task-files{flex:1 1 0;min-height:100px;overflow:auto;overscroll-behavior:contain;border-top:1px solid var(--work-line);padding:10px 22px}.upts-task-files :deep(.project-file-table),.upts-task-files :deep(.project-file-queue){max-height:none;overflow:visible}.upts-task-files :deep(.project-file-table){overflow-x:auto}.upts-task-files>.work-muted{font-size:11px;margin:8px 0}.upts-task-main textarea{resize:none}.upts-task-footer{flex:0 0 auto;padding:12px 22px;background:#e8e8ea;border-top:1px solid var(--work-line);display:grid;gap:10px}.upts-task-main .upts-work-reference{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.upts-task-person{grid-template-columns: minmax(160px, .8fr) minmax(200px,1.2fr);align-items:end}.upts-task-person :deep(small),.upts-task-person :deep(p){grid-column:1/-1}.upts-task-form :deep(input:not([type=checkbox]):not([type=file])),.upts-task-form :deep(select){box-sizing:border-box;height:32px;min-height:32px;padding:5px 8px}.upts-task-main .upts-kuvd{max-height:150px;overflow:auto}.upts-kuvd-row{display:grid;grid-template-columns:1fr 160px auto;gap:10px;align-items:end}.upts-kuvd>button{justify-self:start}.upts-task-footer .work-two{max-width:640px}
 :global(html.dark .upts-task-footer){background:#465765}

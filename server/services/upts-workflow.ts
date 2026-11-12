@@ -61,10 +61,13 @@ export async function objectOverview(event:H3Event,contractId:number){
  const a=await uptsActor(event),{c,p,canAssign}=await objectAccess(prisma,contractId,a);
  const tasks=await prisma.workTask.findMany({where:{uptsContractId:c.id,deletedAt:null},orderBy:{id:'asc'},include:{assignee:{select:userSelect}}});
  tasks.sort((x,y)=>(meta(x.uptsWorkMeta).stageNumber||1)-(meta(y.uptsWorkMeta).stageNumber||1)||x.id-y.id);
- const counts=await prisma.workProjectFile.groupBy({by:['taskId'],where:{contractId:c.id,deletedAt:null,scope:'SHARED'},_count:{_all:true}});
+ const counts=await prisma.workProjectFile.groupBy({by:['taskId','documentType'],where:{contractId:c.id,deletedAt:null,scope:'SHARED'},_count:{_all:true}});
+ const documentGroups=new Map<number,{type:string;count:number}[]>();
+ for(const f of counts){if(!f.taskId)continue;const groups=documentGroups.get(f.taskId)||[],type=f.documentType||'Иное',existing=groups.find(g=>g.type===type);if(existing)existing.count+=f._count._all;else groups.push({type,count:f._count._all});documentGroups.set(f.taskId,groups);}
+ for(const groups of documentGroups.values())groups.sort((a,b)=>a.type.localeCompare(b.type,'ru'));
  const notifications=canAssign?await prisma.uptsNotification.findMany({where:{taskId:{in:tasks.map(t=>t.id)}},select:{taskId:true,emailSentAt:true,chatSentAt:true,lastError:true},orderBy:{createdAt:'desc'},take:100}):[];
  await writeAuditEvent({event,actorUserId:a.id,category:'DATA',result:'SUCCESS',resourceKey:'upts.objects',entityType:'UptsContract',entityId:c.id,action:'VIEW',note:'УПТС: просмотр карточки объекта'});
- return {object:c,project:projectDTO(p,a),canAssign,tasks:tasks.map(t=>({...t,...uptsTaskCapabilities(p,c.objectDetails as UptsObjectDetails|null,t,a),fileCount:counts.find(f=>f.taskId===t.id)?._count._all||0})),notifications};
+ return {object:c,project:projectDTO(p,a),canAssign,tasks:tasks.map(t=>({...t,...uptsTaskCapabilities(p,c.objectDetails as UptsObjectDetails|null,t,a),fileCount:counts.filter(f=>f.taskId===t.id).reduce((n,f)=>n+f._count._all,0),documentGroups:documentGroups.get(t.id)||[]})),notifications};
 }
 export async function assignObjectWorks(event:H3Event,contractId:number,raw:unknown){
  const a=await uptsActor(event),v=parse(z.object({assigneeId:id,tasks:z.array(z.object({id,version:id}).strict()).min(1).max(5000).refine(v=>new Set(v.map(t=>t.id)).size===v.length)}).strict(),raw);

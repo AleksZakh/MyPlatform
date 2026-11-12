@@ -25,3 +25,13 @@ export function evaluateWorkResult(meta:UptsWorkMeta,documentTypes:(string|null)
  const checks=requirements.map(r=>({...r,done:!!((r.field==='resultText'&&meta.resultText?.trim())||(r.field==='kuvdEntries'&&meta.kuvdEntries?.some(e=>e.number.trim()&&e.date))||r.documents?.some(type=>documentTypes.includes(type)))}));
  return {complete:checks.every(r=>r.done),checks};
 }
+export function workResultInstructions(expected=''){
+ const actions=workResultRequirements(expected).map(r=>{
+  const documents=r.documents?.map(t=>'«'+t+'»').join(' или ');
+  if(r.field==='kuvdEntries')return 'укажите номер и дату КУВД';
+  if(r.field==='resultText'&&documents)return 'внесите результат в текстовое поле или прикрепите документ типа '+documents;
+  if(documents)return 'прикрепите документ типа '+documents;
+  return r.key==='order'?'укажите номер распоряжения':'заполните поле «'+r.label+'»';
+ });
+ return 'Для автоматического завершения работы и перехода в статус «Выполнена» '+actions.join(' и ')+'. Текстовые данные сохраните кнопкой «Сохранить»; документы учитываются после успешной загрузки.';
+}

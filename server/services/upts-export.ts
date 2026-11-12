@@ -1,4 +1,5 @@
 import path from 'node:path';
+import {exportFolder,exportDocumentPath,EXPORT_OPEN_INSTRUCTIONS} from './upts-export-layout';
 import {createHash} from 'node:crypto';
 import {mkdir,readFile,rm,stat,statfs,rename,open,lstat,realpath,readdir} from 'node:fs/promises';
 import {createWriteStream,createReadStream} from 'node:fs';
@@ -25,7 +26,6 @@ type Job=UptsExportView&{ownerId:number;files:ExportFile[];contractIds:number[]}
 function fail(code:number,message:string):never{throw createError({statusCode:code,message});}
 function directory(id:string){if(!/^[a-f0-9]{64}$/.test(id))fail(404,'Выгрузка не найдена.');return path.join(ROOT,id);}
 async function root(){await ensureExportRoot();await mkdir(ROOT,{recursive:true,mode:0o700});if((await lstat(ROOT)).isSymbolicLink()||await realpath(ROOT)!==path.join(await realpath(EXPORT_ROOT),'upts'))throw Error('Unsafe export root');}
-function safe(s:string){return s.normalize('NFC').replace(/[\\/:*?"<>|#%\x00-\x1f]/g,'_').replace(/^[. ]+|[. ]+$/g,'').slice(0,90)||'Без названия';}
 function view(j:Job):UptsExportView{const {ownerId,files,contractIds,...v}=j;return v;}
 async function save(j:Job){await writeJson(path.join(directory(j.id),'job.json'),j);}
 async function read(id:string):Promise<Job>{try{return JSON.parse(await readFile(path.join(directory(id),'job.json'),'utf8'))}catch{return fail(404,'Выгрузка не найдена.')}}
@@ -60,8 +60,9 @@ export async function prepareUptsExport(event:H3Event,raw:unknown){
   if(rows.length>LIMIT)fail(422,`Более ${LIMIT} документов. Уточните фильтры или сократите список типов.`);
   if(!rows.length)fail(422,'В выборке нет документов.');
   if(v.types.some(t=>!rows.some(f=>(f.documentType||'Иное')===t)))fail(409,'Состав документов изменился. Обновите настройки выгрузки.');
-  const files:ExportFile[]=rows.map(f=>{const c=byId.get(f.contractId!)!;return {id:f.id,contractId:c.id,name:f.name,type:f.documentType||'Иное',size:f.size,sha256:f.sha256,object:c.name,number:c.number,cadastral:c.objectDetails?.sourceCadastralNumber||'',createdAt:f.createdAt.toISOString(),documentDate:f.documentDate?.toISOString()||null,comment:f.documentComment||'',entry:`Документы/Объект ${safe(c.number||c.name)} [${c.id}]/${safe(f.documentType||'Иное')}/${f.id}_${safe(path.basename(f.name,path.extname(f.name)))}${path.extname(f.name).slice(0,20).replace(/[^.a-zA-Z0-9]/g,'_')}`};});
+  const files:ExportFile[]=rows.map(f=>{const c=byId.get(f.contractId!)!;return {id:f.id,contractId:c.id,name:f.name,type:f.documentType||'Иное',size:f.size,sha256:f.sha256,object:c.name,number:c.number,cadastral:c.objectDetails?.sourceCadastralNumber||'',createdAt:f.createdAt.toISOString(),documentDate:f.documentDate?.toISOString()||null,comment:f.documentComment||'',entry:''};});
   files.sort((a,b)=>a.contractId-b.contractId||a.type.localeCompare(b.type,'ru')||a.createdAt.localeCompare(b.createdAt)||a.id.localeCompare(b.id));
+  files.forEach((f,i)=>{f.entry=exportDocumentPath(f,i)});
   const now=new Date(),j:Job={id,ownerId:a.id,status:'PREPARED',createdAt:now.toISOString(),expiresAt:new Date(+now+86400000).toISOString(),objects:new Set(files.map(f=>f.contractId)).size,documents:files.length,bytes:v.types.length?files.reduce((n,f)=>n+f.size,0):0,processed:0,registry:v.registry,types:[...new Set(v.types)],files,contractIds:[...new Set(files.map(f=>f.contractId))]};
   await mkdir(directory(id),{recursive:true,mode:0o700});await save(j);await audit(event,a.id,id,'EXPORT_PREPARE',`УПТС: подготовлена выгрузка, объектов ${j.objects}, документов ${j.documents}`);return view(j);
  }finally{await release();}
@@ -83,7 +84,10 @@ export async function confirmUptsExport(event:H3Event,id:string){
 export async function cancelUptsExport(event:H3Event,id:string){const j=await authorized(event,id);await writeJson(path.join(directory(id),'cancel'),true);await audit(event,j.ownerId,id,'EXPORT_CANCEL','УПТС: отменена выгрузка');return {ok:true};}
 function date(s:string|null,time=false){return s?new Intl.DateTimeFormat('ru-RU',{timeZone:'Europe/Moscow',day:'2-digit',month:'2-digit',year:'numeric',...(time?{hour:'2-digit',minute:'2-digit',second:'2-digit'}:{})}).format(new Date(s)):'';}
 export async function buildUptsArchive(j:Job){
- const dir=directory(j.id);j.status='RUNNING';j.processed=0;j.error=undefined;await save(j);
+ const dir=directory(j.id),folder=exportFolder(j.createdAt,j.id);
+ // Recalculate paths for queued jobs prepared by an earlier release too.
+ j.files.forEach((f,i)=>{f.entry=exportDocumentPath(f,i)});
+ j.status='RUNNING';j.processed=0;j.error=undefined;await save(j);
  const disk=await statfs(ROOT),largest=Math.max(0,...j.files.map(f=>f.size));if(disk.bavail*disk.bsize<j.bytes+largest+64*1024*1024)throw Error('Недостаточно свободного места для выгрузки.');
  const output=createWriteStream(path.join(dir,'archive.partial'),{mode:0o600});const zip=archiver('zip',{store:true,forceZip64:true});const done=finished(output);void done.catch(()=>{});let zipError:Error|null=null;
  zip.on('error',(e:Error)=>{zipError=e;output.destroy(e)});zip.on('warning',(e:Error)=>{zipError=e;output.destroy(e);zip.abort()});output.on('error',e=>{zipError=e;zip.abort()});zip.pipe(output);
@@ -95,16 +99,18 @@ export async function buildUptsArchive(j:Job){
    if(j.types.length){
     const source=await openProjectFile(current),tmp=path.join(dir,'document.tmp');let copy;
     try{copy=await open(tmp,'w',0o600);const hash=createHash('sha256');let size=0;for await(const chunk of source.createReadStream({autoClose:false})){await check();const b=Buffer.from(chunk);hash.update(b);size+=b.length;let at=0;while(at<b.length)at+=(await copy.write(b,at,b.length-at)).bytesWritten;}await copy.sync();if(size!==f.size||hash.digest('hex')!==f.sha256)throw Error(`Не пройдена проверка целостности: ${f.name}`);}finally{await source.close();await copy?.close();}
-    const entry=once(zip,'entry'),stream=createReadStream(tmp);stream.on('error',e=>zip.emit('error',e));zip.append(stream,{name:f.entry});try{await Promise.race([entry,done.then(()=>{throw Error('Архив закрыт до завершения записи.');})]);}finally{stream.destroy();}await rm(tmp,{force:true});
+    const entry=once(zip,'entry'),stream=createReadStream(tmp);stream.on('error',e=>zip.emit('error',e));zip.append(stream,{name:folder+'/'+f.entry});try{await Promise.race([entry,done.then(()=>{throw Error('Архив закрыт до завершения записи.');})]);}finally{stream.destroy();}await rm(tmp,{force:true});
    }
    j.processed++;await save(j);
   }
   if(j.registry){
    const book=new ExcelJS.Workbook();book.creator='Space УПТС';const sheet=book.addWorksheet('Реестр',{views:[{state:'frozen',ySplit:1}]});
    sheet.columns=[{header:'Объект',key:'object',width:28},{header:'Кадастровый номер',key:'cadastral',width:24},{header:'Тип документа',key:'type',width:28},{header:'Документ',key:'name',width:50},{header:'Дата документа',key:'date',width:18},{header:'Загружен (МСК)',key:'created',width:24},{header:'Размер, байт',key:'size',width:18},{header:'Комментарии',key:'comment',width:45},{header:'Файл в архиве',key:'path',width:70}];
-   let group='';for(const f of j.files){const row=sheet.addRow({object:f.number||f.object,cadastral:f.cadastral,type:f.type,name:j.types.length?{text:f.name,hyperlink:'./'+f.entry.split('/').map(encodeURIComponent).join('/')}:f.name,date:date(f.documentDate),created:date(f.createdAt,true),size:f.size,comment:f.comment,path:j.types.length?f.entry:'Не включён: выгружен только реестр'});if(j.types.length)row.getCell('name').font={color:{argb:'FF0563C1'},underline:true};if(group!==`${f.contractId}:${f.type}`){row.getCell('object').font={bold:true};row.getCell('type').font={bold:true};group=`${f.contractId}:${f.type}`;}row.alignment={vertical:'top',wrapText:true};}
-   sheet.getRow(1).font={bold:true};sheet.autoFilter={from:'A1',to:'I1'};const entry=once(zip,'entry');zip.append(Buffer.from(await book.xlsx.writeBuffer()),{name:'Реестр.xlsx'});await Promise.race([entry,done.then(()=>{throw Error('Архив закрыт до завершения записи.');})]);
+   let group='';for(const f of j.files){const row=sheet.addRow({object:f.number||f.object,cadastral:f.cadastral,type:f.type,name:j.types.length?{text:f.name,hyperlink:f.entry}:f.name,date:date(f.documentDate),created:date(f.createdAt,true),size:f.size,comment:f.comment,path:j.types.length?f.entry:'Не включён: выгружен только реестр'});if(j.types.length)row.getCell('name').font={color:{argb:'FF0563C1'},underline:true};if(group!==`${f.contractId}:${f.type}`){row.getCell('object').font={bold:true};row.getCell('type').font={bold:true};group=`${f.contractId}:${f.type}`;}row.alignment={vertical:'top',wrapText:true};}
+   sheet.getRow(1).font={bold:true};sheet.autoFilter={from:'A1',to:'I1'};const help=book.addWorksheet('Как открыть');help.getColumn(1).width=110;for(const line of EXPORT_OPEN_INSTRUCTIONS){const row=help.addRow([line]);row.alignment={wrapText:true,vertical:'top'};row.height=32;}help.getRow(1).font={bold:true,size:14};
+   const entry=once(zip,'entry');zip.append(Buffer.from(await book.xlsx.writeBuffer()),{name:folder+'/Реестр.xlsx'});await Promise.race([entry,done.then(()=>{throw Error('Архив закрыт до завершения записи.');})]);
   }
+  const helpEntry=once(zip,'entry');zip.append(Buffer.from('\ufeff'+EXPORT_OPEN_INSTRUCTIONS.join('\r\n'),'utf8'),{name:folder+'/Прочитайте.txt'});await Promise.race([helpEntry,done.then(()=>{throw Error('Архив закрыт до завершения записи.');})]);
   await check();await zip.finalize();await done;await rename(path.join(dir,'archive.partial'),path.join(dir,'archive.zip'));j.archiveBytes=(await stat(path.join(dir,'archive.zip'))).size;j.status='READY';await save(j);await audit(undefined,j.ownerId,j.id,'EXPORT_READY','УПТС: ZIP-архив подготовлен');
  }catch(e){zip.abort();output.destroy();await done.catch(()=>{});throw e;}finally{await rm(path.join(dir,'document.tmp'),{force:true});}
 }
