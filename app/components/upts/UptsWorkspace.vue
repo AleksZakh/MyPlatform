@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import WorkName from './WorkName.vue';
+import DocumentExport from './DocumentExport.vue';
+import EventJournal from './EventJournal.vue';
 import { uptsContractColor } from '~~/shared/utils/upts-color';
 import { workTaskColor, workTaskContext } from '~~/shared/types/work';
 import { useUptsWorkspace } from '~/composables/useUptsWorkspace';
@@ -38,11 +40,11 @@ import ContractEditor from './ContractEditor.vue';
 import TemplateEditor from './TemplateEditor.vue';
 import WorkLibrary from './WorkLibrary.vue';
 import ContractWorks from './ContractWorks.vue';
-import { ref } from 'vue';
+import { ref,computed } from 'vue';
 import { UPTS_CONTRACT_TYPES } from '~~/shared/types/upts-library';
 const contractWorks = ref(false);
 const {
-  selectedContractId, allContracts, contract, openContract, contractStats, contractSaved,
+  documentType, selectedContractId, allContracts, contract, openContract, contractStats, contractSaved,
   context,
   data,
   loading,
@@ -104,6 +106,9 @@ const {
   projectStats,
   statusClass,
 } = useUptsWorkspace();
+const documentExport=ref(false),eventJournal=ref(false);
+const documentTypes=computed(()=>[...new Set(allContracts.value.flatMap(c=>c.documentTypes||[]))].sort((a,b)=>a.localeCompare(b,'ru')));
+const exportFilters=computed(()=>({projectId:selectedId.value||undefined,contractId:selectedContractId.value||undefined,employeeId:employeeId.value||undefined,q:search.value,documentType:documentType.value,archived:archived.value?'1':'0'}));
 const overviewId=ref<number|null>(null),deletingObject=ref<UptsContractDTO|null>(null),deleteError=ref(''),deleteBusy=ref(false);
 const overviewRef=ref<InstanceType<typeof ObjectOverview>|null>(null);
 async function saveWorkAndRefresh(){await taskSaved();await overviewRef.value?.refresh();}
@@ -152,6 +157,7 @@ async function removeObject(){if(!deletingObject.value)return;deleteBusy.value=t
             exporting ? 'Формируем…' : 'Excel'
           }}
         </button>
+        <button :disabled="loading || !!error" title="Экспорт документов УПТС" aria-label="Экспорт документов УПТС" @click="documentExport=true"><Icon name="streamline-freehand-color:database-hand" size="24" /><Icon name="material-symbols:line-end-arrow-notch" /><Icon name="vscode-icons:file-type-excel2" size="24" /></button>
         <button v-if="context" class="work-primary" @click="editContract()">
           + Объект
         </button>
@@ -159,11 +165,12 @@ async function removeObject(){if(!deletingObject.value)return;deleteBusy.value=t
     </header>
     <main class="upts-main">
       <header class="upts-heading">
-        <h1>Учёт земельно-кадастровых работ</h1>
+        <div class="upts-heading-row"><h1>Учёт земельно-кадастровых работ</h1><button @click="eventJournal=true"><Icon name="lucide:list" /> Журнал событий</button></div>
         <p class="upts-department-name">Управление подготовки территории строительства</p>
       </header>
       <div v-if="section!=='library'" class="upts-filters">
         <label>Объект<select v-model="selectedContractId"><option :value="null">Все доступные объекты</option><option v-for="c in allContracts" :key="c.id" :value="c.id">{{ c.number }} · {{ c.name }}</option></select></label>
+        <label>Документы<select v-model="documentType"><option value="">Все документы</option><option v-for="t in documentTypes" :key="t" :value="t">{{ t }}</option></select></label>
         <label v-if="section==='projects'">Проект Space<select v-model="selectedId"><option :value="null">Все проекты</option><option v-for="p in data.projects" :key="p.id" :value="p.id">{{ p.name }}</option></select></label>
         <label
           >Исполнитель<select v-model="employeeId">
@@ -875,9 +882,11 @@ async function removeObject(){if(!deletingObject.value)return;deleteBusy.value=t
         </button>
       </div></Modal
     >
+    <DocumentExport v-if="documentExport" :filters="exportFilters" @close="documentExport=false" />
+    <EventJournal v-if="eventJournal" @close="eventJournal=false" />
   </section>
 </template>
 <style src="~/assets/css/work.css"></style>
 <style src="~/assets/css/upts.css"></style>
 
-<style scoped>.upts-object-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),250px));gap:12px;align-items:start;margin-top:12px}.upts-object-summary{min-width:0}</style>
+<style scoped>.upts-heading-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.upts-heading-row button{display:flex;gap:6px;align-items:center}.upts-object-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),250px));gap:12px;align-items:start;margin-top:12px}.upts-object-summary{min-width:0}</style>

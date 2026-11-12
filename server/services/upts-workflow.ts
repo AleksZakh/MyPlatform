@@ -49,7 +49,7 @@ export async function queueUptsNotice(db:DB,eventKey:string,actorId:number,recip
  if(!recipientId)return;
  await db.uptsNotification.upsert({where:{eventKey},create:{id:randomUUID(),eventKey,actorId,recipientId,taskId,body:body.slice(0,3000)},update:{}});
 }
-async function audit(db:DB,event:H3Event,a:Actor,entityType:string,entityId:number,action:string,afterData:any){await writeAuditEvent({event,db,actorUserId:a.id,category:'DATA',result:'SUCCESS',resourceKey:'projects.shared',entityType,entityId,action,afterData:JSON.parse(JSON.stringify(afterData)),note:'УПТС: '+action});}
+async function audit(db:DB,event:H3Event,a:Actor,entityType:string,entityId:number,action:string,afterData:any){await writeAuditEvent({event,db,actorUserId:a.id,category:'DATA',result:'SUCCESS',resourceKey:'upts.objects',entityType,entityId,action,afterData:JSON.parse(JSON.stringify(afterData)),note:'УПТС: '+action});}
 export async function objectDefaults(event:H3Event){
  const a=await uptsActor(event),people=await uptsPeople(event);
  const configured=Number(process.env.UPTS_DEFAULT_ENGINEER_ID || 0);
@@ -63,6 +63,7 @@ export async function objectOverview(event:H3Event,contractId:number){
  tasks.sort((x,y)=>(meta(x.uptsWorkMeta).stageNumber||1)-(meta(y.uptsWorkMeta).stageNumber||1)||x.id-y.id);
  const counts=await prisma.workProjectFile.groupBy({by:['taskId'],where:{contractId:c.id,deletedAt:null,scope:'SHARED'},_count:{_all:true}});
  const notifications=canAssign?await prisma.uptsNotification.findMany({where:{taskId:{in:tasks.map(t=>t.id)}},select:{taskId:true,emailSentAt:true,chatSentAt:true,lastError:true},orderBy:{createdAt:'desc'},take:100}):[];
+ await writeAuditEvent({event,actorUserId:a.id,category:'DATA',result:'SUCCESS',resourceKey:'upts.objects',entityType:'UptsContract',entityId:c.id,action:'VIEW',note:'УПТС: просмотр карточки объекта'});
  return {object:c,project:projectDTO(p,a),canAssign,tasks:tasks.map(t=>({...t,...uptsTaskCapabilities(p,c.objectDetails as UptsObjectDetails|null,t,a),fileCount:counts.find(f=>f.taskId===t.id)?._count._all||0})),notifications};
 }
 export async function assignObjectWorks(event:H3Event,contractId:number,raw:unknown){

@@ -27,6 +27,6 @@ export async function saveTaskStages(tx:Prisma.TransactionClient,event:H3Event,a
     if(!change || number===(meta?.stageNumber ?? 1))continue;
     const after={...(meta || {}),stageNumber:number};
     await tx.workTask.update({where:{id:task.id},data:{uptsWorkMeta:after,version:{increment:1}}});
-    await writeAuditEvent({event,db:tx,actorUserId:actor.id,category:'DATA',result:'SUCCESS',resourceKey:'projects.shared',entityType:'WorkTask',entityId:task.id,action:'UPDATE',changes:computeAuditDelta({uptsWorkMeta:meta},{uptsWorkMeta:after}),afterData:{uptsWorkMeta:after},note:'УПТС: изменение этапа работы'});
+    await writeAuditEvent({event,db:tx,actorUserId:actor.id,category:'DATA',result:'SUCCESS',resourceKey:'upts.objects',entityType:'WorkTask',entityId:task.id,action:'UPDATE',changes:computeAuditDelta({uptsWorkMeta:meta},{uptsWorkMeta:after}),afterData:{uptsWorkMeta:after},note:'УПТС: изменение этапа работы'});
   }
 }

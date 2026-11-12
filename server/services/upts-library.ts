@@ -72,7 +72,7 @@ async function audit(
     actorUserId: a.id,
     category: "DATA",
     result: "SUCCESS",
-    resourceKey: "projects.shared",
+    resourceKey: "upts.objects",
     entityType,
     entityId,
     action,

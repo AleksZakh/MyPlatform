@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
     actorUserId: actor.id,
     category: 'DATA',
     result: 'SUCCESS',
-    resourceKey: 'projects.shared',
+    resourceKey: 'upts.exports',
     entityType: 'UptsReport',
     action: 'EXPORT',
     note: `Отчёт УПТС: ${data.projects.length} проектов, ${data.tasks.length} задач`,

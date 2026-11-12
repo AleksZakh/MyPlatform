@@ -204,7 +204,7 @@
 
 
       <div v-if="filters.category==='DATA'" class="mb-3 flex flex-wrap gap-2" aria-label="Раздел данных">
-        <button v-for="item in [{key:'',label:'Все разделы'},{key:'diagnostic',label:'Диагностика'},{key:'lab',label:'Лабораторный контроль'},{key:'library',label:'Библиотека'},{key:'projects',label:'Проекты'},{key:'chat',label:'Чат'}]" :key="item.key" class="rounded-lg border px-3 py-1" :aria-pressed="filters.module===item.key" :class="filters.module===item.key?'audit-primary audit-on-primary':''" @click="filters.module=item.key;pagination.page=1;loadAuditLog()">{{item.label}}</button>
+        <button v-for="item in [{key:'',label:'Все разделы'},{key:'diagnostic',label:'Диагностика'},{key:'lab',label:'Лабораторный контроль'},{key:'library',label:'Библиотека'},{key:'projects',label:'Проекты'},{key:'upts',label:'УПТС'},{key:'chat',label:'Чат'}]" :key="item.key" class="rounded-lg border px-3 py-1" :aria-pressed="filters.module===item.key" :class="filters.module===item.key?'audit-primary audit-on-primary':''" @click="filters.module=item.key;pagination.page=1;loadAuditLog()">{{item.label}}</button>
       </div>
       <div class="audit-log-scroll" role="region" aria-label="События журнала" tabindex="0" :aria-busy="loading">
       <!-- =====================================================
@@ -1310,7 +1310,8 @@ const entityLabel =
     const labels:
       Record<string, string> = {
 
-        UptsContract: 'Договор УПТС',
+        UptsContract: 'Объект УПТС',
+        UptsExport: 'Выгрузка документов УПТС',
         UptsWorkDefinition: 'Работа библиотеки УПТС',
         UptsWorkTemplate: 'Шаблон работ УПТС',
         WorkTask: 'Задача',
@@ -1367,6 +1368,9 @@ const resourceLabel =
     const labels:
       Record<string, string> = {
 
+        'upts.objects': 'УПТС — объекты и работы',
+        'upts.documents': 'УПТС — документы',
+        'upts.exports': 'УПТС — выгрузки',
         'diagnostic.contracts': 'Диагностика — договоры',
         'lab.sampling-tests':
           'Лабораторный контроль',

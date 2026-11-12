@@ -1,6 +1,7 @@
 
 import type {Prisma} from '@prisma/client';
 export const auditModules:Record<string,Prisma.AuditLogWhereInput>={
+ upts:{OR:[{resourceKey:{startsWith:'upts.'}},{entityType:{startsWith:'Upts'}},{note:{startsWith:'УПТС:'}}]},
  diagnostic:{OR:[{resourceKey:{startsWith:'diagnostic.'}},{entityType:{startsWith:'Diagnostic'}}]},
  lab:{OR:[{resourceKey:{startsWith:'lab.'}},{entityType:{in:['SamplingTest','ReceiptMaterial','TestProtocol','TestObject','TestLocation','Manufacturer','Material']}}]},
  library:{OR:[{resourceKey:{startsWith:'library.'}},{entityType:{startsWith:'Library'}}]},

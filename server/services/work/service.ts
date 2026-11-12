@@ -36,7 +36,8 @@ export async function mutation<T>(event:H3Event,actor:Actor,entity:string,action
   // One short module lock makes membership revocation and task writes atomic across workers.
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(20261019)`;
   const r=await fn(tx);
-  if(r.changed!==false)await writeAuditEvent({event,db:tx,actorUserId:actor.id,category:'DATA',result:'SUCCESS',resourceKey:'projects.shared',entityType:entity,entityId:r.id,action,afterData:auditSnapshot(r.value),note:'Задачи и проекты: '+action});
+  const upts=entity.startsWith('Upts') || (entity==='WorkProject' && !!await tx.uptsProject.findUnique({where:{projectId:r.id},select:{projectId:true}})) || (entity==='WorkTask' && !!(await tx.workTask.findUnique({where:{id:r.id},select:{uptsContractId:true}}))?.uptsContractId);
+  if(r.changed!==false)await writeAuditEvent({event,db:tx,actorUserId:actor.id,category:'DATA',result:'SUCCESS',resourceKey:upts?'upts.objects':'projects.shared',entityType:entity,entityId:r.id,action,afterData:auditSnapshot(r.value),note:(upts?'УПТС: ':'Задачи и проекты: ')+action});
   return r.value;
  },{maxWait:5000,timeout:15000});
 }
@@ -130,7 +131,7 @@ export async function tasks(event:H3Event){const a=await workActor(event),q=getQ
  return {items:rows.map(t=>taskDTO(t,a)),total,page};}
 export async function getTask(event:H3Event,id:number){const a=await workActor(event);const t=await visibleTask(prisma,id,a);
  const result={...taskDTO(t,a),clientKey:t.clientKey};
- if(t.uptsContractId){const {uptsWorkAccess,checkWorkResult}=await import('../upts-workflow');const access=await uptsWorkAccess(prisma,t,a);return {...result,canEdit:access.canEditWork,canEditDetails:access.canEditWork,canAssignUpts:access.canAssign,canDelete:access.canDelete,resultCheck:await checkWorkResult(prisma,t.id,(t.uptsWorkMeta||{}) as any)};}
+ if(t.uptsContractId){await writeAuditEvent({event,actorUserId:a.id,category:'DATA',result:'SUCCESS',resourceKey:'upts.objects',entityType:'WorkTask',entityId:t.id,action:'VIEW',note:'УПТС: просмотр карточки работы'});const {uptsWorkAccess,checkWorkResult}=await import('../upts-workflow');const access=await uptsWorkAccess(prisma,t,a);return {...result,canEdit:access.canEditWork,canEditDetails:access.canEditWork,canAssignUpts:access.canAssign,canDelete:access.canDelete,resultCheck:await checkWorkResult(prisma,t.id,(t.uptsWorkMeta||{}) as any)};}
  return result;}
 export async function saveTask(event:H3Event,raw:unknown,id?:number){const a=await workActor(event),v=parse(taskInput,raw);
  const needsShared=!v.projectId&&(v.visibility!=='PRIVATE'||(v.assigneeId!==null&&v.assigneeId!==a.id));

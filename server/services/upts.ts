@@ -134,9 +134,12 @@ export async function snapshot(event: H3Event) {
         },
         orderBy: [{ dueDate: 'asc' }, { id: 'asc' }],
       });
+      const documents=await tx.workProjectFile.groupBy({by:['contractId','documentType'],where:{contractId:{in:projects.flatMap(p=>p.upts!.contracts.map(c=>c.id))},scope:'SHARED',deletedAt:null}});
+      const documentTypes=new Map<number,string[]>();
+      for(const d of documents){if(d.contractId){const list=documentTypes.get(d.contractId)||[];const type=d.documentType||'Иное';if(!list.includes(type))list.push(type);documentTypes.set(d.contractId,list);}}
       const byId = new Map(projects.map((p) => [p.id, p]));
       return {
-        projects: projects.map((p) => ({ ...projectDTO(p, a), upts: p.upts })),
+        projects: projects.map((p) => ({ ...projectDTO(p, a), upts: {...p.upts,contracts:p.upts!.contracts.map(c=>({...c,documentTypes:documentTypes.get(c.id)||[]}))} })),
         tasks: tasks.map((t) => {
           const p = byId.get(t.projectId!)!;
           return {
@@ -155,6 +158,7 @@ export async function snapshot(event: H3Event) {
     contractId,
     employeeId,
     q: String(q.q || '').slice(0, 200),
+    documentType:String(q.documentType||'').slice(0,100),
   });
 }
 export async function objectCatalog(event: H3Event) {

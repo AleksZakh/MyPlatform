@@ -36,6 +36,7 @@ export function useUptsWorkspace() {
   const selectedId = ref<number | null>(Number(route.query.projectId) || null),
     employeeId = ref<number | null>(null),
     search = ref(''),
+    documentType = ref(''),
     archived = ref(false);
   const project = computed(
     () => data.value.projects.find((p) => p.id === selectedId.value) || null,
@@ -46,6 +47,7 @@ export function useUptsWorkspace() {
       contractId: selectedContractId.value,
       employeeId: employeeId.value,
       q: search.value,
+      documentType:documentType.value,
     }),
   );
   const summary = computed(() =>
@@ -326,6 +328,7 @@ export function useUptsWorkspace() {
           contractId: selectedContractId.value || undefined,
           employeeId: employeeId.value || undefined,
           q: search.value,
+      documentType:documentType.value,
           archived: archived.value ? '1' : '0',
         },
       });
@@ -348,6 +351,7 @@ export function useUptsWorkspace() {
     selectedId.value = null;
     employeeId.value = null;
     search.value = '';
+    documentType.value='';
   }
   function initials(u: WorkUser) {
     return workUserName(u)
@@ -372,6 +376,7 @@ export function useUptsWorkspace() {
     })[status] || 'blue';
 
   return {
+    documentType,
     selectedContractId, allContracts, contract, openContract, contractStats, contractSaved,
     context,
     data,

@@ -108,7 +108,7 @@ export async function uploadProjectFile(event: H3Event, projectId: number) {
     const duplicate = await tx.workProjectFile.findUnique({ where: { clientKey: v.clientKey } });
     if (duplicate) fail(409, 'Загрузка с таким ключом уже завершена. Обновите список файлов.');
     const file = await tx.workProjectFile.create({ data: { id: randomUUID(), clientKey: v.clientKey, projectId, contractId,taskId:task?.id||null,documentType,documentDate:documentDate?new Date(documentDate+'T00:00:00Z'):null,documentComment, ownerId: a.id, scope: v.scope, name: v.name, ...stored } });
-    await writeAuditEvent({ event, db: tx, actorUserId: a.id, category: 'DATA', result: 'SUCCESS', resourceKey: 'projects.shared', entityType: 'WorkProjectFile', entityId: projectId, action: 'CREATE', afterData: { fileId: file.id, scope: file.scope, size: file.size, taskId:file.taskId, documentType:file.documentType }, note: 'Файл проекта добавлен' });
+    await writeAuditEvent({ event, db: tx, actorUserId: a.id, category: 'DATA', result: 'SUCCESS', resourceKey: contractId?'upts.documents':'projects.shared', entityType: 'WorkProjectFile', entityId: projectId, action: 'CREATE', afterData: { contractId:file.contractId, fileId: file.id, scope: file.scope, size: file.size, taskId:file.taskId, documentType:file.documentType }, note: (contractId?'УПТС: документ добавлен — ':'Файл проекта добавлен — ')+file.name });
     let workState;
     if(task&&file.scope==='SHARED'){
       const previous=await tx.workTask.findUniqueOrThrow({where:{id:task.id}});
@@ -131,7 +131,7 @@ export async function projectFileState(event: H3Event, projectId: number, rawId:
     if (v.version !== f.version) fail(409, 'Файл уже изменился. Обновите список.');
     if (!!f.deletedAt === v.deleted) return dto(f, p, a,tx);
     const updated = await tx.workProjectFile.update({ where: { id }, data: { deletedAt: v.deleted ? new Date() : null, version: { increment: 1 } } });
-    await writeAuditEvent({ event, db: tx, actorUserId: a.id, category: 'DATA', result: 'SUCCESS', resourceKey: 'projects.shared', entityType: 'WorkProjectFile', entityId: projectId, action: v.deleted ? 'DELETE' : 'RESTORE', afterData: { fileId: id, scope: f.scope, deleted: v.deleted }, note: v.deleted ? 'Файл проекта перемещён в корзину' : 'Файл проекта восстановлен' });
+    await writeAuditEvent({ event, db: tx, actorUserId: a.id, category: 'DATA', result: 'SUCCESS', resourceKey: f.contractId?'upts.documents':'projects.shared', entityType: 'WorkProjectFile', entityId: projectId, action: v.deleted ? 'DELETE' : 'RESTORE', afterData: { contractId:f.contractId, fileId: id, scope: f.scope, deleted: v.deleted }, note: (f.contractId?'УПТС: ':'')+(v.deleted?'Документ перемещён в корзину — ':'Документ восстановлен — ')+f.name });
     let workState;
     if(updated.taskId&&updated.scope==='SHARED'){
       const previous=await tx.workTask.findFirst({where:{id:updated.taskId,deletedAt:null}});
@@ -154,5 +154,6 @@ export async function downloadProjectFile(event: H3Event, projectId: number, raw
   setHeader(event, 'Content-Security-Policy', "sandbox; default-src 'none'");
   setHeader(event, 'Content-Length', f.size);
   if (getMethod(event) === 'HEAD') { await handle.close(); event.node.res.end(); return; }
+  if(f.contractId)await writeAuditEvent({event,actorUserId:a.id,category:'DATA',result:'SUCCESS',resourceKey:'upts.documents',entityType:'WorkProjectFile',entityId:projectId,action:'DOWNLOAD',note:'УПТС: скачан документ '+f.name,afterData:{fileId:f.id,contractId:f.contractId,scope:f.scope}});
   return sendStream(event, handle.createReadStream());
 }
