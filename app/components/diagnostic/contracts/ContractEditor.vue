@@ -107,7 +107,7 @@ const summaryColumns=[
    </div>
    <p v-if="pinError" class="contract-count-error" role="alert">{{ pinError }}</p>
    <p v-if="countsError" class="contract-count-error" role="alert">{{ countsError }} <button type="button" @click="loadCounts">Повторить</button></p>
-   <div id="contract-editor-panel" class="contract-editor-panel" :class="{'contract-editor-panel--tables':tab!==0}" role="tabpanel" :aria-labelledby="`contract-editor-tab-${tab}`">
+   <div id="contract-editor-panel" class="contract-editor-panel" :class="{'contract-editor-panel--tables':tab!==0}" role="tabpanel" :aria-labelledby="`contract-editor-tab-${tab}`" style="margin: 0 0px;">
     <form v-show="tab===0" id="diagnostic-contract-form" novalidate @submit.prevent="save">
      <h2 class="contract-requisites-heading">Реквизиты договора <small>· {{ statusLabel }}</small></h2>
      <p v-if="error" role="alert" class="contract-error">{{ error }}</p>
@@ -118,7 +118,7 @@ const summaryColumns=[
       <label>Исполнитель<select v-model="form.executor"><option :value="null">Не указан</option><option value="ОДИС">ОДИС</option><option value="Автодор Инжиниринг">Автодор Инжиниринг — организация в целом</option></select></label>
       <label>Сумма договора (с НДС), ₽<input v-model="form.amount" type="number" min="0" step="0.01" /></label>
      </fieldset>
-     <fieldset :disabled="readOnly||saving||catalogBusy" class="contract-fields-row">
+     <fieldset :disabled="readOnly||saving||catalogBusy" class="contract-fields-row" style="padding-bottom: 20px;">
       <label>Начало работ<input v-model="form.start" type="date" /></label>
       <label>Окончание работ<input v-model="form.finish" type="date" /></label>
       <label class="contract-field-wide">Тип проекта<CreatableNameSelect :model-value="projectTypeName" :items="projectTypes.map(i=>i.name)" :disabled="readOnly||saving" :can-create="canCreate" placeholder="Выберите или создайте тип проекта" @update:model-value="chooseName('project-types',$event)" /></label>
