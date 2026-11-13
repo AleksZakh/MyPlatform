@@ -29,7 +29,16 @@ test('structure work keeps code, executor and zero hours, never becomes a contra
 test('history is ignored, invalid business dates and unknown kinds are held',()=>{
  const index=newContractWorkIndex();
  assert.equal(analyzeUserWork(user({history:'\0'}),index).sourceHash,analyzeUserWork(user(),index).sourceHash);
- for(const patch of [{work_plan_start:'20201-07-09'},{work_plan_length:'-1'},{work_type:'unknown'},{work_plan_start:'2020-02-01',work_plan_finish:'2020-01-01'}])assert.equal(analyzeUserWork(user(patch),index).action,'INVALID_SOURCE');
+ for(const patch of [{work_plan_start:'20201-07-09'},{work_plan_length:'-1'},{work_plan_length:'.'},{work_type:'unknown'},{work_plan_start:'2020-02-01',work_plan_finish:'2020-01-01'}])assert.equal(analyzeUserWork(user(patch),index).action,'INVALID_SOURCE');
+});
+test('full dump placeholders and translated kinds retain originals without inventing structure links',()=>{
+ const index=newContractWorkIndex();indexContractWork(index,contract({user_work_id:'4'}));
+ const result=analyzeUserWork(user({building:'--',work_type:'Работы с договором',work_plan_length:'1.'}),index);
+ assert.equal(result.action,'DIRECT_LINK_MATCH');assert.equal(result.source.building,'--');assert.equal(result.source.work_type,'Работы с договором');
+ assert.equal(analyzeUserWork(user({building:'--',work_type:'Работы по сооружению'}),index).action,'INVALID_SOURCE');
+ assert.equal(analyzeUserWork(user({work_plan_length:'.5'}),index).candidates[0]!.differences.find(d=>d.field==='work_plan_length')!.userValue,'0.5');
+ assert.equal(analyzeUserWork(user({work_plan_length:'2.6666666666667'}),index).action,'INVALID_SOURCE');
+ assert(analyzeUserWork(user({work_plan_start:'0020-12-28'}),index).warnings.some(w=>w.includes('Подозрительный год')));
 });
 test('user SQL parser retains all business columns and rejects changed schemas',()=>{
  const raw=user({work_note:"Кавычка ' и ; точка"});

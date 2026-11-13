@@ -19,12 +19,12 @@ test('counts exclude deleted records and return 404 for missing contract',async(
 });
 test('work query scopes by contract/link and preserves snapshots and decimals',async()=>{
  let query:any;
- const db:any={diagnosticContractStructure:{findFirst:async(q:any)=>{query=q;return {id:5001,structureId:101,workAssignments:[{id:7,workCodeSnapshot:'305',workNameSnapshot:'Историческое название',criteriaSnapshot:'Критерий',hours:{toString:()=> '0.0001'},note:'Примечание'}]}}}};
+ const db:any={diagnosticContractStructure:{findFirst:async(q:any)=>{query=q;return {id:5001,structureId:101,workAssignments:[{id:7,workCodeSnapshot:'305',workNameSnapshot:'Историческое название',criteriaSnapshot:'Критерий',hours:{toString:()=> '0.0001'},note:'Примечание',status:'planned',warning:'',planStart:new Date('2020-01-02T00:00:00Z'),planFinish:null,planHours:{toString:()=> '0.0001'},planExecutor:'Исполнитель',factStart:null,factFinish:null,factHours:null,factExecutor:''}]}}}};
  const response=await contractStructureWorks(db,12,5001);
  assert.deepEqual(query.where,{id:5001,contractId:12,deletedAt:null,contract:{deletedAt:null},structure:{deletedAt:null}});
  assert.deepEqual(query.select.workAssignments.where,{deletedAt:null});
- assert.deepEqual(response,{linkId:5001,structureId:101,works:[{id:7,code:'305',name:'Историческое название',criteria:'Критерий',hours:'0.0001',note:'Примечание'}]});
- assert.equal('planHours' in response.works[0]!,false);
+ assert.deepEqual(response,{linkId:5001,structureId:101,works:[{id:7,code:'305',name:'Историческое название',criteria:'Критерий',hours:'0.0001',note:'Примечание',status:'planned',warning:'',planStart:'2020-01-02',planFinish:null,planHours:'0.0001',planExecutor:'Исполнитель',factStart:null,factFinish:null,factHours:null,factExecutor:''}]});
+ assert.equal(response.works[0]!.factHours,null);assert.equal(response.works[0]!.factExecutor,'');
  db.diagnosticContractStructure.findFirst=async()=>null;
  await assert.rejects(()=>contractStructureWorks(db,99,5001),(e:any)=>e.statusCode===404);
 });

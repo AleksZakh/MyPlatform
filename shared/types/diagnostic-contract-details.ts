@@ -9,8 +9,11 @@ export interface ContractStructureWorkRecord {
  code:string;
  name:string;
  criteria:string;
- hours:string;
+ hours:string|null;
  note:string;
+ status:string;warning:string;
+ planStart:string|null;planFinish:string|null;planHours:string|null;planExecutor:string;
+ factStart:string|null;factFinish:string|null;factHours:string|null;factExecutor:string;
 }
 export interface ContractStructureWorksResponse {
  linkId:number;

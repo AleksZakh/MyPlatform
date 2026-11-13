@@ -9,6 +9,9 @@ const selectedId=ref<number|null>(null);
 const selected=computed(()=>rows.value.find(row=>row.id===selectedId.value)??null);
 const works=ref<ContractStructureWorkRecord[]>([]),worksBusy=ref(false),worksError=ref('');
 const detail=ref<ContractStructureWorkRecord|null>(null);
+const date=(s:string|null)=>s?s.split('-').reverse().join('.'):'—';
+const statusLabels:Record<string,string>={completed:'Выполнена',unplanned:'Не запланирована',planned:'Запланирована',in_progress:'В работе',active:'В работе',overdue:'Просрочена'};
+const state=(s:string)=>statusLabels[s]||s||'Не указан';
 let listGeneration=0,worksGeneration=0;
 
 function clearWorks(){worksGeneration++;works.value=[];worksError.value='';worksBusy.value=false;detail.value=null;}
@@ -68,23 +71,41 @@ onBeforeUnmount(()=>{listGeneration++;worksGeneration++;});
    </div>
    <header class="cs-work-heading"><h3>Работы по сооружению <small v-if="selected&&!worksBusy&&!worksError">· Всего: {{ works.length }}</small></h3><button type="button" :disabled="!selected||worksBusy" @click="loadWorks">Обновить работы</button></header>
    <div class="contract-detail-table contract-compact-table cs-works" :aria-busy="worksBusy">
-    <table><thead><tr><th>№</th><th>Шифр</th><th>Работа</th><th>Трудоёмкость, чел·ч</th><th>Примечания</th></tr></thead>
+    <table><thead><tr><th>№</th><th>Шифр</th><th>Работа</th><th>Статус</th><th>Начало, план</th><th>Окончание, план</th><th>План, чел·ч</th><th>Исполнитель, план</th><th>Примечания</th></tr></thead>
      <tbody>
-      <tr v-if="!selected"><td colspan="5">Выберите сооружение для просмотра работ.</td></tr>
-      <tr v-else-if="worksBusy"><td colspan="5" role="status">Загрузка работ…</td></tr>
-      <tr v-else-if="worksError"><td colspan="5" role="alert">{{ worksError }} <button type="button" @click="loadWorks">Повторить</button></td></tr>
-      <tr v-else-if="!works.length"><td colspan="5">В этом договоре у выбранного сооружения пока нет сохранённых работ.</td></tr>
+      <tr v-if="!selected"><td colspan="9">Выберите сооружение для просмотра работ.</td></tr>
+      <tr v-else-if="worksBusy"><td colspan="9" role="status">Загрузка работ…</td></tr>
+      <tr v-else-if="worksError"><td colspan="9" role="alert">{{ worksError }} <button type="button" @click="loadWorks">Повторить</button></td></tr>
+      <tr v-else-if="!works.length"><td colspan="9">В этом договоре у выбранного сооружения пока нет сохранённых работ.</td></tr>
       <template v-else><tr v-for="(work,index) in works" :key="work.id" @dblclick="detail=work">
        <td>{{ index+1 }}</td><td>{{ work.code }}</td><td><button type="button" class="cw-name contract-cell-ellipsis" :title="work.name" @click="detail=work">{{ work.name }}</button></td>
-       <td class="cs-hours">{{ work.hours }}</td><td><span class="contract-cell-ellipsis cs-note" :title="work.note">{{ work.note||'—' }}</span></td>
+       <td>{{ state(work.status) }}</td><td>{{ date(work.planStart) }}</td><td>{{ date(work.planFinish) }}</td><td class="cs-hours">{{ work.planHours??'—' }}</td><td>{{ work.planExecutor||'—' }}</td><td><span class="contract-cell-ellipsis cs-note" :title="work.note">{{ work.note||'—' }}</span></td>
       </tr></template>
      </tbody>
     </table>
    </div>
   </section>
  </section>
- <UModal :open="!!detail" title="Работа по сооружению" :description="selected?`Код ИССО: ${selected.code}`:undefined" :ui="{content:'diagnostic-contract-modal cs-detail-modal w-[95vw] sm:max-w-xl'}" @update:open="value=>{if(!value)detail=null}">
-  <template #body><div v-if="detail" class="cs-detail"><h3>{{ detail.name }}</h3><p>Шифр: {{ detail.code }} · Трудоёмкость: {{ detail.hours }} чел·ч</p><h4>Критерий приёмки</h4><p>{{ detail.criteria||'Не указан' }}</p><h4>Примечание</h4><p>{{ detail.note||'Не указано' }}</p></div></template>
+ <UModal :open="!!detail" title="Работа по сооружению" :description="selected?`Код ИССО: ${selected.code}`:undefined" :ui="{content:'diagnostic-contract-modal cs-detail-modal w-[95vw] sm:max-w-xl',header:'cs-import-header',body:'cs-import-body',footer:'cs-import-footer'}" @update:open="value=>{if(!value)detail=null}">
+  <template #body><div v-if="detail" class="cs-detail">
+   <p>{{ state(detail.status) }}</p><h3>{{ detail.name }}</h3><p>Шифр: {{ detail.code }}</p>
+   <p v-if="detail.planHours===null&&detail.hours!==null">Трудоёмкость назначения: {{ detail.hours }} чел·ч</p>
+   <h4>Запланировано</h4><p>Исполнитель: <strong>{{ detail.planExecutor||'Не назначен' }}</strong></p>
+   <dl><div><dt>Начало</dt><dd>{{ date(detail.planStart) }}</dd></div><div><dt>Окончание</dt><dd>{{ date(detail.planFinish) }}</dd></div><div><dt>Трудоёмкость, чел·ч</dt><dd>{{ detail.planHours??'—' }}</dd></div></dl>
+   <h4>Фактически</h4><p>Исполнитель: <strong>{{ detail.factExecutor||'Не указан' }}</strong></p>
+   <dl><div><dt>Начало</dt><dd>{{ date(detail.factStart) }}</dd></div><div><dt>Окончание</dt><dd>{{ date(detail.factFinish) }}</dd></div><div><dt>Трудоёмкость, чел·ч</dt><dd>{{ detail.factHours??'—' }}</dd></div></dl>
+   <h4>Критерий приёмки</h4><p>{{ detail.criteria||'Не указан' }}</p><h4>Примечание</h4><p>{{ detail.note||'Не указано' }}</p>
+   <template v-if="detail.warning"><h4>Предупреждение</h4><p>{{ detail.warning }}</p></template>
+  </div></template>
   <template #footer><button type="button" @click="detail=null">Закрыть</button></template>
  </UModal>
 </template>
+
+<style>
+.cs-detail-modal .cs-import-header,.cs-detail-modal .cs-import-body,.cs-detail-modal .cs-import-footer{padding:16px 22px;box-sizing:border-box}
+.cs-detail-modal .cs-import-body{display:block;overflow-y:auto;min-width:0}
+.cs-detail-modal .cs-detail dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}
+.cs-detail-modal .cs-detail dt{font-size:12px}
+.cs-detail-modal .cs-detail dd{margin:4px 0 0;padding:8px;border:1px solid #8093a655;border-radius:4px;overflow-wrap:anywhere}
+@media(max-width:480px){.cs-detail-modal .cs-import-header,.cs-detail-modal .cs-import-body,.cs-detail-modal .cs-import-footer{padding-left:16px;padding-right:16px}.cs-detail-modal .cs-detail dl{grid-template-columns:1fr}}
+</style>

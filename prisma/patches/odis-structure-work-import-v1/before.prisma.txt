@@ -1,0 +1,24 @@
+model DiagnosticStructureWork {
+  id Int @id @default(autoincrement())
+  contractStructureId Int
+  structureId Int
+  workId Int
+  workCodeSnapshot String @db.VarChar(100)
+  workNameSnapshot String @db.VarChar(300)
+  criteriaSnapshot String @db.Text
+  catalogHoursSnapshot Decimal @db.Decimal(12, 4)
+  hours Decimal @db.Decimal(12, 4)
+  note String @default("") @db.Text
+  version Int @default(1)
+  createdById Int
+  updatedById Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  deletedById Int?
+  contractStructure DiagnosticContractStructure @relation(fields:[contractStructureId,structureId],references:[id,structureId],onDelete:Restrict,map:"ds_work_contract_link_fk")
+  work DiagnosticWork @relation(fields:[workId],references:[id],onDelete:Restrict)
+  @@index([contractStructureId, deletedAt])
+  @@index([workId])
+  @@map("diagnostic_structure_works")
+}

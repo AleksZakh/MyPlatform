@@ -43,7 +43,7 @@ onBeforeUnmount(()=>generation++);
    </table>
   </div>
   <small v-if="!busy&&!error">Работ: {{ rows.length }}</small>
-  <UModal :open="!!selected" title="Работа с договором" :ui="{content:'cw-detail-modal w-[95vw] sm:max-w-xl'}" @update:open="value=>{if(!value)selected=null}">
+  <UModal :open="!!selected" title="Работа с договором" :ui="{content:'cw-detail-modal w-[95vw] sm:max-w-xl',header:'cw-detail-header',body:'cw-detail-body',footer:'cw-detail-footer'}" @update:open="value=>{if(!value)selected=null}">
    <template #body><div v-if="selected" class="cw-detail">
     <span :class="['cw-status',{'cw-done':selected.status==='completed'}]">{{ state(selected.status) }}</span>
     <h3>{{ selected.name }}</h3><small>Шифр: {{ selected.code }}</small>
@@ -60,4 +60,22 @@ onBeforeUnmount(()=>generation++);
 </template>
 <style>
 .cw-help{font-size:12px;color:var(--contract-muted);margin:6px 0}.cw-name{text-align:left;text-decoration:underline;text-underline-offset:3px}.cw-note{max-width:420px;overflow:hidden;text-overflow:ellipsis}.cw-status{display:inline-block;font-size:12px;color:#175b99;background:#e7f1fd;padding:3px 7px;border-radius:4px}.cw-done{color:#166534;background:#dcfce7}.dark .cw-status{color:#bfdbfe;background:#1e3a5f}.dark .cw-done{color:#bbf7d0;background:#14532d}.cw-detail-modal{background:#f7f9fc;color:#23374d}.dark .cw-detail-modal{background:var(--contract-bg,#253542);color:var(--contract-text,#e2e8f0)}.cw-detail h3{font-size:20px;font-weight:600;margin:10px 0 4px}.cw-detail h4{font-weight:600;margin:18px 0 8px;border-bottom:1px solid #8093a655;padding-bottom:5px}.cw-description{white-space:pre-wrap;overflow-wrap:anywhere;margin:12px 0}.cw-detail dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}.cw-detail dt{font-size:12px}.cw-detail dd{padding:8px;border:1px solid #8093a655;border-radius:4px;margin-top:4px}.cw-close{padding:7px 14px;border:1px solid #8093a6;border-radius:4px}.contract-works tbody tr:hover{background:var(--contract-panel)}
+</style>
+<style>
+/* Local slot classes override the shared modal body p-2/sm:p-0 settings. */
+.cw-detail-modal .cw-detail-header,
+.cw-detail-modal .cw-detail-body,
+.cw-detail-modal .cw-detail-footer{padding-left:22px;padding-right:22px;box-sizing:border-box}
+.cw-detail-modal .cw-detail-header,
+.cw-detail-modal .cw-detail-footer{padding-top:14px;padding-bottom:14px}
+.cw-detail-modal .cw-detail-body{display:block;padding-top:16px;padding-bottom:16px;min-width:0;overflow-y:auto}
+.cw-detail-modal .cw-detail-footer{gap:12px;flex-wrap:wrap}
+.cw-detail{width:100%;min-width:0;overflow-wrap:anywhere}
+.cw-detail dd{margin-left:0;overflow-wrap:anywhere}
+@media(max-width:480px){
+ .cw-detail-modal .cw-detail-header,
+ .cw-detail-modal .cw-detail-body,
+ .cw-detail-modal .cw-detail-footer{padding-left:16px;padding-right:16px}
+ .cw-detail dl{grid-template-columns:1fr}
+}
 </style>
