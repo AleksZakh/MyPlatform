@@ -1,0 +1,23 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {applyTripBatches,approvedTripCandidates} from '../scripts/lib/odis-trip-apply';
+import {tripDigest,type TripCandidate} from '../scripts/lib/odis-trip-plan';
+import {tripCanonical} from '../shared/utils/diagnostic-trips';
+function candidate(i:number):TripCandidate{const input={contractId:1,executorId:1,start:'2026-11-01',finish:'2026-11-02',noStructures:false,destination:'',assignment:'Задание '+i,equipment:'',transport:'',accommodation:'',note:'',participantIds:[1,2],structureIds:[3,4]};return {number:'К-'+i,input,status:'COMPLETED',contentKey:tripDigest(tripCanonical(input,'COMPLETED')),origins:[{legacyId:i,sourceNumber:'К-'+i,sourceHash:'source-'+i}],action:'CREATE',targetId:null};}
+function fake(){
+ const state={rows:[] as any[],members:[] as any[],structures:[] as any[],origins:[] as any[],calls:0,corrupt:false};
+ const table=(name:'rows'|'members'|'structures'|'origins')=>({createMany:async({data}:any)=>{state.calls++;for(const d of data){if(name==='rows'&&state.rows.some(r=>r.contentKey===d.contentKey))throw Error('duplicate');state[name].push({...d,...(name==='rows'?{id:state.rows.length+1}:{})});}return {count:data.length};}});
+ const tx:any={diagnosticTrip:{...table('rows'),findMany:async({where,include,select}:any)=>{state.calls++;const rows=state.rows.filter(r=>where.contentKey?where.contentKey.in.includes(r.contentKey):where.id.in.includes(r.id));return rows.map(r=>select?{id:r.id,contentKey:r.contentKey}:{...r,participants:state.members.filter(m=>m.tripId===r.id),structures:state.corrupt?[]:state.structures.filter(s=>s.tripId===r.id)});}},diagnosticTripParticipant:table('members'),diagnosticTripStructure:table('structures'),diagnosticTripOrigin:{...table('origins'),findMany:async({where}:any)=>{state.calls++;return state.origins.filter(o=>where.legacyId.in.includes(o.legacyId));}}};return {state,tx};
+}
+test('361 поездка переносится пакетами, с полной сверкой и повторным запуском без дублей',async()=>{
+ const c=Array.from({length:361},(_,i)=>candidate(i+1)),{state,tx}=fake();
+ const r=await applyTripBatches(tx,c,[],4,'filehash');assert.equal(r.created,361);assert.equal(r.verifiedTrips,361);assert.equal(r.verifiedOrigins,361);assert.equal(state.members.length,722);assert.equal(state.structures.length,722);assert(state.calls<30,'Too many database calls: '+state.calls);
+ const next=c.map((c,i)=>({...c,targetId:i+1,action:'ALREADY_IMPORTED' as const}));
+ const repeat=await applyTripBatches(tx,approvedTripCandidates(c,next),state.origins,4,'filehash');assert.equal(repeat.created,0);assert.equal(repeat.originsCreated,0);assert.equal(repeat.verifiedTrips,361);assert.equal(state.rows.length,361);
+});
+test('Существующая поездка получает только недостающий старый ID',async()=>{const {state,tx}=fake(),c=candidate(1);await applyTripBatches(tx,[c],[],4,'hash');const alias={...c,targetId:1,origins:[...c.origins,{legacyId:2,sourceNumber:'К-2',sourceHash:'alias'}]};const r=await applyTripBatches(tx,[alias],state.origins,4,'hash');assert.equal(r.created,0);assert.equal(r.originsCreated,1);assert.equal(state.members.length,2);assert.equal(state.structures.length,2);});
+test('Конфликт сопоставления и дубли PLAN отклоняются до записи',()=>{const c=candidate(1);assert.throws(()=>approvedTripCandidates([c],[{...c,input:{...c.input,contractId:9}}]));assert.throws(()=>approvedTripCandidates([c,c],[c]));});
+test('Неполные связи обнаруживаются контрольной сверкой',async()=>{const {state,tx}=fake();state.corrupt=true;await assert.rejects(applyTripBatches(tx,[candidate(1)],[],4,'hash'),/контрольной сверки/);});
+test('Повреждённая строка старого ID обнаруживается',async()=>{const {state,tx}=fake(),c=candidate(1);await applyTripBatches(tx,[c],[],4,'hash');state.origins[0].sourceNumber='Повреждение';await assert.rejects(applyTripBatches(tx,[{...c,targetId:1}],state.origins,4,'hash'),/сверки старого ID/);});
+test('Приложенный PLAN v1 совместим с пакетной записью',async()=>{const path=process.env.ODIS_TRIP_PLAN;if(!path)return;const p=JSON.parse(await readFile(path,'utf8'));assert.equal(tripDigest(p.candidates),p.candidateHash);const {state,tx}=fake();const r=await applyTripBatches(tx,approvedTripCandidates(p.candidates,p.candidates),[],4,p.sourceHash);assert.equal(r.created,361);assert.equal(r.verifiedOrigins,361);assert.equal(state.members.length,860);assert.equal(state.structures.length,1616);console.log('PLAN v1: 361 trips, 860 participants, 1616 structures; '+state.calls+' mocked DB calls for writes and full verification.');});

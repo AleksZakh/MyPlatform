@@ -712,6 +712,7 @@ enum AccessAction {
 }
 
 model User {
+  diagnosticTripParticipations DiagnosticTripParticipant[]
   uptsNotificationsAuthored UptsNotification[] @relation("UptsNotificationActor")
   uptsNotificationsReceived UptsNotification[] @relation("UptsNotificationRecipient")
   diagnosticContracts DiagnosticContract[] @relation("DiagnosticSupervisor")
@@ -1412,6 +1413,7 @@ model DiagnosticProjectType {
 }
 
 model DiagnosticContract {
+  trips DiagnosticTrip[]
   legacyImport DiagnosticContractLegacyRow?
   id Int @id @default(autoincrement())
   number String @db.VarChar(150)
@@ -1529,6 +1531,7 @@ model DiagnosticWork {
 
 // Structures are shared between contracts; work effort belongs to an assignment.
 model DiagnosticStructure {
+  trips DiagnosticTripStructure[]
   id Int @id @default(autoincrement())
   code String @unique @db.VarChar(200)
   management String @default("") @db.Text
@@ -1610,6 +1613,7 @@ model DiagnosticStructureLegacyExecutor {
   @@map("diagnostic_structure_legacy_executors")
 }
 model DiagnosticStructureWork {
+  tripCompletion DiagnosticTripCompletion?
   id Int @id @default(autoincrement())
   contractStructureId Int
   structureId Int
@@ -1817,6 +1821,7 @@ model UptsNotification {
 }
 
 model DiagnosticContractWork {
+  tripCompletion DiagnosticTripCompletion?
  id Int @id @default(autoincrement())
  contractId Int
  workId Int
@@ -1851,4 +1856,99 @@ model DiagnosticContractWork {
  @@index([contractId,deletedAt])
  @@index([workId])
  @@map("diagnostic_contract_works")
+}
+
+
+model DiagnosticTripExecutor {
+ id Int @id @default(autoincrement())
+ name String @db.VarChar(255)
+ normalizedName String @unique @db.VarChar(255)
+ trips DiagnosticTrip[]
+ @@map("diagnostic_trip_executors")
+}
+
+
+model DiagnosticTrip {
+ id Int @id @default(autoincrement())
+ number String @db.VarChar(200)
+ contractId Int
+ contract DiagnosticContract @relation(fields:[contractId],references:[id],onDelete:Restrict)
+ executorId Int
+ executor DiagnosticTripExecutor @relation(fields:[executorId],references:[id],onDelete:Restrict)
+ start DateTime @db.Date
+ finish DateTime @db.Date
+ noStructures Boolean @default(false)
+ destination String @default("") @db.Text
+ assignment String @default("") @db.Text
+ equipment String @default("") @db.Text
+ transport String @default("") @db.Text
+ accommodation String @default("") @db.Text
+ note String @default("") @db.Text
+ status String @default("PLANNED") @db.VarChar(20)
+ contentKey String @unique @db.VarChar(64)
+ version Int @default(1)
+ createdById Int
+ updatedById Int
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ closedAt DateTime?
+ closedById Int?
+ participants DiagnosticTripParticipant[]
+ structures DiagnosticTripStructure[]
+ origins DiagnosticTripOrigin[]
+ completions DiagnosticTripCompletion[]
+ @@index([start,finish])
+ @@index([contractId])
+ @@index([executorId])
+ @@map("diagnostic_trips")
+}
+
+
+model DiagnosticTripParticipant {
+ tripId Int
+ userId Int
+ trip DiagnosticTrip @relation(fields:[tripId],references:[id],onDelete:Restrict)
+ user User @relation(fields:[userId],references:[id],onDelete:Restrict)
+ @@id([tripId,userId])
+ @@index([userId])
+ @@map("diagnostic_trip_participants")
+}
+
+
+model DiagnosticTripStructure {
+ tripId Int
+ structureId Int
+ trip DiagnosticTrip @relation(fields:[tripId],references:[id],onDelete:Restrict)
+ structure DiagnosticStructure @relation(fields:[structureId],references:[id],onDelete:Restrict)
+ @@id([tripId,structureId])
+ @@index([structureId])
+ @@map("diagnostic_trip_structures")
+}
+
+
+model DiagnosticTripOrigin {
+ legacyId Int @id
+ tripId Int
+ trip DiagnosticTrip @relation(fields:[tripId],references:[id],onDelete:Restrict)
+ sourceNumber String @db.VarChar(200)
+ sourceHash String @db.VarChar(64)
+ sourceFileHash String @db.VarChar(64)
+ targetHash String @db.VarChar(64)
+ importedById Int
+ importedAt DateTime @default(now())
+ @@index([tripId])
+ @@map("diagnostic_trip_origins")
+}
+
+
+model DiagnosticTripCompletion {
+ id Int @id @default(autoincrement())
+ tripId Int
+ trip DiagnosticTrip @relation(fields:[tripId],references:[id],onDelete:Restrict)
+ contractWorkId Int? @unique
+ contractWork DiagnosticContractWork? @relation(fields:[contractWorkId],references:[id],onDelete:Restrict)
+ structureWorkId Int? @unique
+ structureWork DiagnosticStructureWork? @relation(fields:[structureWorkId],references:[id],onDelete:Restrict)
+ @@index([tripId])
+ @@map("diagnostic_trip_completions")
 }
