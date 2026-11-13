@@ -2,7 +2,8 @@ import {Prisma} from '@prisma/client';
 import {createError,type H3Event} from 'h3';
 import {prisma} from '../../utils/prisma';
 import {writeAuditEvent} from '../../utils/auditLog';
-import {diagnosticSupervisors} from './supervisors';
+import {tripParticipants} from './trip-participants';
+import {syncTripStructureWorks} from './trip-structure-works';
 import {parseTripInput,tripDay} from '../../../shared/utils/diagnostic-trips';
 import type {TripInput,TripWorkCandidate,TripWorkFact} from '../../../shared/types/diagnostic-trips';
 import {tripHash,tripInclude,tripWriteData,serializeTrip} from './trip-data';
@@ -10,18 +11,18 @@ const fail=(message:string,statusCode=400)=>{throw createError({statusCode,messa
 export const tripId=(v:unknown)=>{const n=Number(v);if(!Number.isSafeInteger(n)||n<1||n>2147483647)fail('Неверный ID.');return n;};
 export function readTripInput(v:unknown){try{return parseTripInput(v);}catch(e){return fail((e as Error).message);}}
 async function atomic<T>(fn:(tx:Prisma.TransactionClient)=>Promise<T>){try{return await prisma.$transaction(async tx=>{await tx.$executeRaw`SELECT pg_advisory_xact_lock(71914,1)`;return fn(tx);},{isolationLevel:'Serializable',timeout:60000,maxWait:15000});}catch(e:any){if(['P2034','P2002'].includes(e.code))fail('Найдена одинаковая командировка либо данные изменены параллельно. Обновите список.',409);throw e;}}
-export async function tripCatalog(event:H3Event){const [contracts,executors,users]=await Promise.all([prisma.diagnosticContract.findMany({where:{deletedAt:null},select:{id:true,number:true},orderBy:{number:'asc'}}),prisma.diagnosticTripExecutor.findMany({select:{id:true,name:true},orderBy:{name:'asc'}}),diagnosticSupervisors(event)]);return {contracts,executors,participants:users.items,warning:users.warning};}
+export async function tripCatalog(event:H3Event){const [contracts,executors,users]=await Promise.all([prisma.diagnosticContract.findMany({where:{deletedAt:null},select:{id:true,number:true},orderBy:{number:'asc'}}),prisma.diagnosticTripExecutor.findMany({select:{id:true,name:true},orderBy:{name:'asc'}}),tripParticipants(event)]);return {contracts,executors,participants:users.items,directoryParticipants:users.directoryParticipants,warning:users.warning};}
 export async function listTrips(){return (await prisma.diagnosticTrip.findMany({include:tripInclude,orderBy:[{start:'desc'},{id:'desc'}]})).map(serializeTrip);}
 export async function getTrip(id:number){const row=await prisma.diagnosticTrip.findUnique({where:{id},include:tripInclude});if(!row)fail('Командировка не найдена.',404);return serializeTrip(row!);}
 async function references(tx:Prisma.TransactionClient,input:TripInput){
  if(!await tx.diagnosticContract.findFirst({where:{id:input.contractId,deletedAt:null}}))fail('Договор недоступен.');
  if(!await tx.diagnosticTripExecutor.findUnique({where:{id:input.executorId}}))fail('Выберите организацию-исполнителя.');
- if(await tx.user.count({where:{id:{in:input.participantIds},deletedAt:null,status:'ACTIVE'}})!==input.participantIds.length)fail('Участник недоступен.');
+ if(await tx.user.count({where:{id:{in:input.participantIds},deletedAt:null,OR:[{status:'ACTIVE'},{authType:'DOMAIN',status:'PENDING_ACTIVATION'}]}})!==input.participantIds.length)fail('Участник недоступен.');
  if(await tx.diagnosticStructure.count({where:{id:{in:input.structureIds},deletedAt:null}})!==input.structureIds.length)fail('Одно из сооружений недоступно.');
 }
 export async function saveTrip(event:H3Event,actorId:number,input:TripInput,id?:number,version?:number){
- const allowed=await diagnosticSupervisors(event);
- if(input.participantIds.some(id=>!allowed.items.some(u=>u.id===id)))fail(allowed.warning||'Участники должны быть активными сотрудниками ОДИС.');
+ const allowed=await tripParticipants(event);
+ if(input.participantIds.some(id=>!allowed.items.some(u=>u.id===id)))fail(allowed.warning||'Участник отсутствует в составе сотрудников ОДИС или его учётная запись недоступна.');
  return atomic(async tx=>{
   const before=id?await tx.diagnosticTrip.findUnique({where:{id},include:tripInclude}):null;
   if(id&&!before)fail('Командировка не найдена.',404);
@@ -39,6 +40,7 @@ export async function saveTrip(event:H3Event,actorId:number,input:TripInput,id?:
   }
   await tx.diagnosticTripParticipant.createMany({data:input.participantIds.map(userId=>({tripId:row.id,userId}))});
   if(input.structureIds.length)await tx.diagnosticTripStructure.createMany({data:input.structureIds.map(structureId=>({tripId:row.id,structureId}))});
+  if(!before?.origins.length)await syncTripStructureWorks(tx,row.id,input,actorId,before);
   const after=serializeTrip(await tx.diagnosticTrip.findUniqueOrThrow({where:{id:row.id},include:tripInclude}));
   await writeAuditEvent({event,db:tx,category:'DATA',action:before?'UPDATE':'CREATE',result:'SUCCESS',resourceKey:'diagnostic.contracts',entityType:'DiagnosticTrip',entityId:row.id,actorUserId:actorId,changes:{trip:{before:before?JSON.parse(JSON.stringify(serializeTrip(before))):null,after:JSON.parse(JSON.stringify(after))}}});
   return after;
@@ -48,7 +50,7 @@ export async function tripWorkCandidates(id:number):Promise<TripWorkCandidate[]>
  const trip=await getTrip(id),day=(d:Date|null)=>d?.toISOString().slice(0,10)??null;
  const [a,b]=await Promise.all([
   prisma.diagnosticContractWork.findMany({where:{contractId:trip.contractId,deletedAt:null,status:{not:'completed'},tripCompletion:null},orderBy:{id:'asc'}}),
-  prisma.diagnosticStructureWork.findMany({where:{structureId:{in:trip.structureIds},deletedAt:null,status:{not:'completed'},tripCompletion:null,contractStructure:{contractId:trip.contractId,deletedAt:null,structure:{deletedAt:null}}},include:{contractStructure:{include:{structure:{select:{code:true}}}}},orderBy:{id:'asc'}}),
+  prisma.diagnosticStructureWork.findMany({where:{structureId:{in:trip.structureIds},deletedAt:null,status:{not:'completed'},tripCompletion:null,OR:[{tripId:null},{tripId:id}],contractStructure:{contractId:trip.contractId,deletedAt:null,structure:{deletedAt:null}}},include:{contractStructure:{include:{structure:{select:{code:true}}}}},orderBy:{id:'asc'}}),
  ]);
  return [...a.map(w=>({id:w.id,kind:'contract' as const,name:w.name,structureCode:'',version:w.version,status:w.status,planStart:day(w.planStart),planFinish:day(w.planFinish),planHours:w.planHours?.toString()??null,planExecutor:w.planExecutor,factStart:day(w.factStart),factFinish:day(w.factFinish),factHours:w.factHours?.toString()??null,factExecutor:w.factExecutor})),...b.map(w=>({id:w.id,kind:'structure' as const,name:w.workNameSnapshot,structureCode:w.contractStructure.structure.code,version:w.version,status:w.status,planStart:day(w.planStart),planFinish:day(w.planFinish),planHours:w.planHours?.toString()??null,planExecutor:w.planExecutor,factStart:day(w.factStart),factFinish:day(w.factFinish),factHours:w.factHours?.toString()??null,factExecutor:w.factExecutor}))];
 }
@@ -74,10 +76,10 @@ export async function closeTrip(event:H3Event,actorId:number,id:number,version:n
   const name=trip.participants.find(p=>p.id===fact.executorId)!.name;
   const common={id:fact.id,version:fact.version,deletedAt:null,status:{not:'completed'},tripCompletion:null};
   const data={status:'completed',factStart:new Date(fact.start),factFinish:new Date(fact.finish),factHours:fact.hours,factExecutor:name,updatedById:actorId,version:{increment:1}};
-  const before=fact.kind==='contract'?await tx.diagnosticContractWork.findFirst({where:{...common,contractId:trip.contractId}}):await tx.diagnosticStructureWork.findFirst({where:{...common,structureId:{in:trip.structureIds},contractStructure:{contractId:trip.contractId,deletedAt:null,structure:{deletedAt:null}}}});
+  const before=fact.kind==='contract'?await tx.diagnosticContractWork.findFirst({where:{...common,contractId:trip.contractId}}):await tx.diagnosticStructureWork.findFirst({where:{...common,OR:[{tripId:null},{tripId:id}],structureId:{in:trip.structureIds},contractStructure:{contractId:trip.contractId,deletedAt:null,structure:{deletedAt:null}}}});
   if(!before)fail('Работа изменена или недоступна: '+fact.id,409);
   previousFacts.push({kind:fact.kind,id:fact.id,version:before!.version,status:before!.status,factStart:before!.factStart,factFinish:before!.factFinish,factHours:before!.factHours?.toString()??null,factExecutor:before!.factExecutor});
-  const result=fact.kind==='contract'?await tx.diagnosticContractWork.updateMany({where:{...common,contractId:trip.contractId},data}):await tx.diagnosticStructureWork.updateMany({where:{...common,structureId:{in:trip.structureIds},contractStructure:{contractId:trip.contractId,deletedAt:null,structure:{deletedAt:null}}},data});
+  const result=fact.kind==='contract'?await tx.diagnosticContractWork.updateMany({where:{...common,contractId:trip.contractId},data}):await tx.diagnosticStructureWork.updateMany({where:{...common,OR:[{tripId:null},{tripId:id}],structureId:{in:trip.structureIds},contractStructure:{contractId:trip.contractId,deletedAt:null,structure:{deletedAt:null}}},data});
   if(result.count!==1)fail('Работа изменена, уже закрыта или не относится к этой командировке: '+fact.id,409);
   await tx.diagnosticTripCompletion.create({data:{tripId:id,...(fact.kind==='contract'?{contractWorkId:fact.id}:{structureWorkId:fact.id})}});
  }

@@ -1,0 +1,1954 @@
+generator client {
+  // provider = "prisma-client"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model sessions {
+  id        Int    @id @default(autoincrement())
+  userId    Int
+  sessionId String @unique(map: "sessions_sessionid_unique") @db.VarChar(255)
+  timestamp BigInt // Без кастинга
+  users     users  @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "sessions_userid_foreign")
+
+  @@index([sessionId], map: "idx_sessions_sessionId")
+}
+
+model users {
+  id       Int        @id @default(autoincrement())
+  userName String     @unique(map: "users_username_unique") @db.VarChar(255)
+  password String     @db.VarChar(255)
+  login    String     @unique @db.VarChar(255)
+  email    String     @unique @db.VarChar(255)
+  role     String     @db.VarChar(100)
+  sessions sessions[]
+
+  @@index([userName], map: "idx_users_userName")
+}
+
+model AEng {
+  id Int @id @default(autoincrement())
+
+  // Основные данные из CSV
+  plp                  String    @db.Text
+  objectName           String    @db.Text
+  samplingActNumber    String    @db.Text
+  samplingDate         DateTime  @db.Date
+  samplingPlace        String    @db.Text
+  personProvidedSample String    @db.Text
+  materialReceiptDate  DateTime? @db.Date
+  materialName         String    @db.Text
+
+  // Документы (старое поле для обратной совместимости)
+  qualityDocument String @db.Text
+
+  // Новые поля для документов
+  sDocPath        String?   @db.Text
+  qualDocPath     String?   @db.Text
+  testDocPath     String?   @db.Text
+  protocolDocPath String?   @db.Text
+  qualDocNumber   String?   @db.Text
+  qualDocDate     DateTime? @db.Date
+  authorEmail     String?   @db.Text
+  editorEmail     String?   @db.Text
+
+  // Остальные данные из CSV
+  manufacturer   String?   @db.Text
+  protocolNumber String    @db.Text
+  protocolDate   DateTime? @db.Date
+  testResult     String    @db.Text
+  note           String?   @db.Text
+
+  // Системные поля
+  createdAt DateTime  @default(now())
+  editedAt  DateTime? @db.Date // Дата редактирования (только при обновлении через форму)
+
+  @@index([samplingActNumber])
+  @@index([protocolNumber])
+  @@index([editedAt])
+  @@map("aeng")
+}
+
+// ===== НОВЫЕ ТАБЛИЦЫ (ВЕРСИЯ 5) =====
+
+// ============================================
+// СПРАВОЧНИКИ
+// ============================================
+
+// 1. ПЛП
+model Plp {
+  id   Int     @id @default(autoincrement())
+  name String  @unique @db.VarChar(255)
+  note String? @db.Text
+
+  // Системные поля
+  createdAt   DateTime  @default(now())
+  authorEmail String?   @db.VarChar(255)
+  editedAt    DateTime? @updatedAt
+  editorEmail String?   @db.VarChar(255)
+
+  // Поля для мягкого удаления
+  deletedAt DateTime? @db.Date
+  deletedBy String?   @db.VarChar(255)
+
+  
+
+  samplingTests SamplingTest[]
+
+  @@map("plps")
+}
+
+// 2. Инспектор
+model Inspector {
+  id   Int     @id @default(autoincrement())
+  name String  @unique @db.VarChar(255)
+  note String? @db.Text
+
+  // Системные поля
+  createdAt   DateTime  @default(now())
+  authorEmail String?   @db.VarChar(255)
+  editedAt    DateTime? @updatedAt
+  editorEmail String?   @db.VarChar(255)
+
+  // Поля для мягкого удаления
+  deletedAt DateTime? @db.Date
+  deletedBy String?   @db.VarChar(255)
+
+  samplingTests SamplingTest[]
+
+  @@map("inspectors")
+}
+
+// 3. Производитель
+model Manufacturer {
+  id   Int     @id @default(autoincrement())
+  name String  @unique @db.Text
+  note String? @db.Text
+
+  // Один производитель может встречаться во многих поступлениях материалов
+  receipts ReceiptMaterial[]
+
+  // Системные поля
+  createdAt   DateTime  @default(now())
+  authorEmail String?   @db.VarChar(255)
+  editedAt    DateTime? @updatedAt
+  editorEmail String?   @db.VarChar(255)
+
+  // Мягкое удаление
+  deletedAt DateTime? @db.Date
+  deletedBy String?   @db.VarChar(255)
+
+  @@map("manufacturers")
+}
+
+// 4. Материал
+model Material {
+  id   Int     @id @default(autoincrement())
+  name String  @unique @db.Text
+  note String? @db.Text
+
+  // Материал не закреплён за одним производителем.
+  // Производитель хранится в конкретном ReceiptMaterial.
+  receipts ReceiptMaterial[]
+
+  // Системные поля
+  createdAt   DateTime  @default(now())
+  authorEmail String?   @db.VarChar(255)
+  editedAt    DateTime? @updatedAt
+  editorEmail String?   @db.VarChar(255)
+
+  // Мягкое удаление
+  deletedAt DateTime? @db.Date
+  deletedBy String?   @db.VarChar(255)
+
+  @@map("materials")
+}
+
+// ============================================
+// 5. Поступление материала
+// ============================================
+model ReceiptMaterial {
+  id Int @id @default(autoincrement())
+
+  // Поступление материала
+  // Nullable в БД для корректного хранения исторических данных.
+  // Для новых записей обязательность проверяет API.
+  receiptDate DateTime? @db.Date
+
+  // Документ о качестве может отсутствовать полностью
+  qualityDocumentDate   DateTime? @db.Date
+  qualityDocumentNumber String?   @db.VarChar(255)
+  qualityDocumentPath   String?   @db.Text
+
+  note String? @db.Text
+
+  materialId Int
+  material   Material @relation(fields: [materialId], references: [id])
+
+  // Производитель относится к конкретному поступлению, а не к виду материала
+  manufacturerId Int?
+  manufacturer   Manufacturer? @relation(fields: [manufacturerId], references: [id])
+
+  // Обратная сторона связи 1:1 с записью Реестра
+  samplingTest SamplingTest?
+
+  // Системные поля
+  createdAt   DateTime  @default(now())
+  authorEmail String?   @db.VarChar(255)
+  editedAt    DateTime? @updatedAt
+  editorEmail String?   @db.VarChar(255)
+
+  // Мягкое удаление
+  deletedAt DateTime? @db.Date
+  deletedBy String?   @db.VarChar(255)
+
+  @@index([receiptDate])
+  @@index([qualityDocumentDate])
+  @@index([materialId])
+  @@index([manufacturerId])
+  @@map("receipt_materials")
+}
+
+// 6. Объект испытаний
+model TestObject {
+  id       Int     @id @default(autoincrement())
+  name     String  @unique @db.Text
+  fullName String? @db.Text
+  note     String? @db.Text
+
+  // Системные поля
+  createdAt   DateTime  @default(now())
+  authorEmail String?   @db.VarChar(255)
+  editedAt    DateTime? @updatedAt
+  editorEmail String?   @db.VarChar(255)
+
+  // Поля для мягкого удаления
+  deletedAt DateTime? @db.Date
+  deletedBy String?   @db.VarChar(255)
+
+  locations TestLocation[]
+
+  @@index([name])
+  @@map("test_objects")
+}
+
+// 7. Место отбора
+model TestLocation {
+  id   Int     @id @default(autoincrement())
+  name String  @db.Text
+  note String? @db.Text
+
+  testObjectId Int
+  testObject   TestObject @relation(fields: [testObjectId], references: [id])
+
+  // Системные поля
+  createdAt   DateTime  @default(now())
+  authorEmail String?   @db.VarChar(255)
+  editedAt    DateTime? @updatedAt
+  editorEmail String?   @db.VarChar(255)
+
+  // Поля для мягкого удаления
+  deletedAt DateTime? @db.Date
+  deletedBy String?   @db.VarChar(255)
+
+  samplingTests SamplingTest[]
+
+  @@unique([testObjectId, name])
+  @@index([name])
+  @@map("test_locations")
+}
+
+// 8. Протокол испытаний
+model TestProtocol {
+  id Int @id @default(autoincrement())
+
+  // Nullable в БД ради честного хранения исторических данных.
+  // Для новых протоколов обязательность проверяет API.
+  protocolNumber       String?   @db.VarChar(255)
+  protocolDate         DateTime? @db.Date
+  protocolDocumentPath String?   @db.Text
+  testResult           String?   @db.Text
+  note                 String?   @db.Text
+
+  // Протокол относится к записи Реестра напрямую через SamplingTest.
+  // Связи TestProtocol -> ReceiptMaterial больше нет.
+  samplingTest SamplingTest?
+
+  // Системные поля
+  createdAt   DateTime  @default(now())
+  authorEmail String?   @db.VarChar(255)
+  editedAt    DateTime? @updatedAt
+  editorEmail String?   @db.VarChar(255)
+
+  // Мягкое удаление
+  deletedAt DateTime? @db.Date
+  deletedBy String?   @db.VarChar(255)
+
+  @@index([protocolNumber])
+  @@index([protocolDate])
+  @@map("test_protocols")
+}
+
+// ============================================
+// ГЛАВНАЯ ТАБЛИЦА - АКТЫ ОТБОРА ПРОБ
+// ============================================
+model SamplingTest {
+  attachments FileAttachment[]
+  id Int @id @default(autoincrement())
+
+  // Отбор проб
+  samplingActNumber    String   @db.VarChar(255)
+  samplingDate         DateTime @db.Date
+  samplingDocumentPath String?  @db.Text
+  note                 String?  @db.Text
+
+  // Справочники
+  plpId Int
+  plp   Plp @relation(fields: [plpId], references: [id])
+
+  inspectorId Int
+  inspector   Inspector @relation(fields: [inspectorId], references: [id])
+
+  // Место отбора обязательно. Объект определяется через TestLocation.testObjectId.
+  // testObjectId здесь намеренно НЕ дублируем.
+  testLocationId Int
+  testLocation   TestLocation @relation(fields: [testLocationId], references: [id])
+
+  // Одно поступление материала на одну запись Реестра
+  receiptMaterialId Int             @unique
+  receiptMaterial   ReceiptMaterial @relation(fields: [receiptMaterialId], references: [id])
+
+  // Один протокол максимум; до проведения испытания его может не быть
+  testProtocolId Int?          @unique
+  testProtocol   TestProtocol? @relation(fields: [testProtocolId], references: [id])
+
+  // Версия бизнес-правил и источник исторического импорта
+  businessRulesVersion Int     @default(1)
+  importSource         String? @db.VarChar(255)
+  importRowNumber      Int?
+
+  // Системные поля
+  createdAt   DateTime  @default(now())
+  authorEmail String?   @db.VarChar(255)
+  editedAt    DateTime? @updatedAt
+  editorEmail String?   @db.VarChar(255)
+
+  // Мягкое удаление
+  deletedAt DateTime? @db.Date
+  deletedBy String?   @db.VarChar(255)
+
+  @@unique([importSource, importRowNumber])
+  @@index([samplingActNumber])
+  @@index([samplingDate])
+  @@index([testLocationId])
+  @@map("sampling_tests")
+}
+
+// ============================================
+// 9. ЖУРНАЛ АУДИТА (AuditLog)
+// ============================================
+model AuditLog {
+  id Int @id @default(autoincrement())
+
+  // Старые поля.
+  // Для ACCESS/AUTH событий сущности БД может не быть.
+  entityType String? @db.VarChar(50)
+  entityId   Int?
+
+  // Что пытались сделать:
+  // CREATE / UPDATE / DELETE / VIEW / LOGIN / ...
+  action String @db.VarChar(20)
+
+  // Новый Event Log
+  category    String? @db.VarChar(20)
+  result      String? @db.VarChar(20)
+  resourceKey String? @db.VarChar(150)
+
+  actorUserId   Int?
+  actorLogin    String? @db.VarChar(255)
+  actorAuthType String? @db.VarChar(30)
+
+  targetUserId Int?
+
+  requestId String? @db.VarChar(100)
+  method    String? @db.VarChar(10)
+  route     String? @db.VarChar(500)
+
+  // Старое поле пока сохраняем
+  actorEmail String @db.VarChar(255)
+
+  timestamp DateTime @default(now())
+
+  note          String? @db.Text
+  beforeData    Json?
+  afterData     Json?
+  changedFields Json?
+  changes       Json?
+
+  ipAddress String? @db.VarChar(45)
+  userAgent String? @db.Text
+
+  @@index([entityType, entityId])
+  @@index([timestamp])
+  @@index([actorEmail])
+  @@index([action])
+  // Новые индексы
+  @@index([category])
+  @@index([result])
+  @@index([resourceKey])
+  @@index([actorUserId])
+  @@index([targetUserId])
+  @@map("audit_logs")
+}
+
+// ============================================
+// ШАБЛОНЫ ФИЛЬТРОВ ДЛЯ ТАБЛИЦЫ ОТБОРОВ ПРОБ
+// ============================================
+model FilterTemplate {
+  id Int @id @default(autoincrement())
+
+  // Уникальный идентификатор (дата создания в мс) — для сортировки и ссылок
+  timestamp BigInt @unique
+
+  // Название шаблона
+  name String @db.VarChar(255)
+
+  // Автор шаблона (email из сессии)
+  authorEmail String @db.VarChar(255)
+
+  // Сам фильтр в виде JSON
+  // Структура: { plp, objName, samplActNumber, sDateStart, ... }
+  filters Json
+
+  // Признак "по умолчанию" — один на пользователя (проверяется в API)
+  isDefault Boolean @default(false)
+
+  // Системные поля
+  createdAt   DateTime  @default(now())
+  editedAt    DateTime? @updatedAt
+  editorEmail String?   @db.VarChar(255)
+
+  // Мягкое удаление
+  deletedAt DateTime? @db.Date
+  deletedBy String?   @db.VarChar(255)
+
+  // Уникальность: один автор не может иметь два шаблона с одинаковым именем
+  @@unique([authorEmail, name])
+  @@index([authorEmail])
+  @@index([isDefault])
+  @@index([timestamp])
+  @@map("filter_templates")
+}
+
+// ============================================================
+// ПОДРАЗДЕЛЕНИЯ SPACE
+// ============================================================
+
+model Department {
+  workTasks WorkTask[]
+  workProjects WorkProject[]
+  id Int @id @default(autoincrement())
+
+  // Стабильный программный ключ.
+  // Например:
+  // laboratory-control
+  // diagnostics
+  // supply
+  // it
+  // hr
+  // transport
+  key String @unique @db.VarChar(100)
+
+  // Отображаемое название
+  name String @unique @db.VarChar(255)
+
+  description String? @db.Text
+
+  // Можно ли использовать подразделение в системе
+  isActive Boolean @default(true)
+
+  // Порядок отображения
+  sortOrder Int @default(0)
+
+  // Связанные ресурсы
+  resources         DepartmentResource[]
+  permissions       DepartmentPermission[]
+  directoryMappings DirectoryDepartmentMapping[]
+
+  users User[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([sortOrder])
+  @@map("departments")
+}
+
+// ============================================================
+// РЕСУРСЫ SPACE, НА КОТОРЫЕ МОЖНО ВЫДАВАТЬ ПРАВА
+// ============================================================
+
+model AccessResource {
+  userDenials UserPermissionDeny[]
+  spaceGroupPermissions SpaceGroupPermission[]
+  id Int @id @default(autoincrement())
+
+  // Стабильный программный ключ.
+  //
+  // Например:
+  // lab.sampling-tests
+  // lab.materials
+  // lab.test-protocols
+  key String @unique @db.VarChar(150)
+
+  // Название для UI
+  name String @db.VarChar(255)
+
+  description String? @db.Text
+
+  // Тип ресурса
+  type AccessResourceType @default(TABLE)
+
+  // Доступен ли ресурс в системе прав
+  isActive Boolean @default(true)
+
+  // Порядок отображения
+  sortOrder Int @default(0)
+
+  // Подразделения, использующие этот ресурс
+  departments DepartmentResource[]
+
+  registrationRequests RegistrationRequestResource[]
+
+  permissions UserPermission[]
+
+  departmentPermissions DepartmentPermission[]
+
+  domainGroupPermissions DomainGroupPermission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([type])
+  @@index([sortOrder])
+  @@map("access_resources")
+}
+
+// ============================================================
+// СВЯЗЬ ПОДРАЗДЕЛЕНИЙ С РЕСУРСАМИ
+// ============================================================
+//
+// many-to-many:
+//
+// одно подразделение имеет много ресурсов,
+// один ресурс может использоваться несколькими подразделениями.
+//
+
+model DepartmentResource {
+  departmentId Int
+  resourceId   Int
+
+  department Department     @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  resource   AccessResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  // Является ли подразделение владельцем ресурса.
+  //
+  // Например:
+  // "Материалы" принадлежат Лабораторному контролю,
+  // но позже могут быть доступны и другим подразделениям.
+
+  isOwner Boolean @default(false)
+
+  @@id([departmentId, resourceId])
+  @@index([resourceId])
+  @@map("department_resources")
+}
+
+// ============================================================
+// ТИПЫ РЕСУРСОВ
+// ============================================================
+
+enum AccessResourceType {
+  // Таблица / набор данных
+  TABLE
+
+  // Целый функциональный раздел приложения
+  SECTION
+
+  // Отдельная функция системы
+  FEATURE
+}
+
+// ============================================================
+// ЗАЯВКИ НА РЕГИСТРАЦИЮ
+// ============================================================
+
+model RegistrationRequest {
+  requestedGroups RegistrationRequestGroup[]
+  id Int @id @default(autoincrement())
+
+  // Данные заявителя
+  fullName     String @db.VarChar(255)
+  organization String @db.VarChar(255)
+  position     String @db.VarChar(255)
+  email        String @db.VarChar(255)
+
+  // Можно будет добавить в форму чуть позже
+  accessReason String? @db.Text
+
+  // Состояние заявки
+  status RegistrationRequestStatus @default(EMAIL_PENDING)
+
+  // Подтверждение электронной почты
+  emailVerifiedAt DateTime?
+
+  // Храним SHA-256 hash токена, а не сам токен
+  verificationTokenHash String? @unique @db.VarChar(64)
+
+  verificationExpiresAt DateTime?
+  verificationSentAt    DateTime?
+
+  // Рассмотрение заявки
+  reviewedAt      DateTime?
+  reviewedByLogin String?   @db.VarChar(255)
+  adminComment    String?   @db.Text
+
+  // Какие ресурсы запросил пользователь
+  requestedResources RegistrationRequestResource[]
+
+  createdUser User?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
+  @@index([email, status])
+  @@map("registration_requests")
+}
+
+// ============================================================
+// РЕСУРСЫ, ЗАПРОШЕННЫЕ В ЗАЯВКЕ
+// ============================================================
+
+model RegistrationRequestResource {
+  id Int @id @default(autoincrement())
+
+  registrationRequestId Int
+  resourceId            Int
+
+  registrationRequest RegistrationRequest @relation(fields: [registrationRequestId], references: [id], onDelete: Cascade)
+  resource            AccessResource      @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  // null  -> администратор ещё не рассмотрел
+  // true  -> доступ к ресурсу одобрен
+  // false -> доступ к ресурсу отклонён
+  approved Boolean?
+
+  // При желании администратор сможет оставить
+  // комментарий по конкретному ресурсу
+  adminComment String? @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@unique([registrationRequestId, resourceId])
+  @@index([registrationRequestId])
+  @@index([resourceId])
+  @@map("registration_request_resources")
+}
+
+// ============================================================
+// СОСТОЯНИЯ ЗАЯВКИ
+// ============================================================
+
+enum RegistrationRequestStatus {
+  // Ждём подтверждения email
+  EMAIL_PENDING
+
+  // Email подтверждён, ждём рассмотрения
+  PENDING_REVIEW
+
+  // Все запрошенные ресурсы одобрены
+  APPROVED
+
+  // Одобрена только часть ресурсов
+  PARTIALLY_APPROVED
+
+  // Заявка отклонена
+  REJECTED
+
+  // Истёк срок подтверждения email
+  EXPIRED
+
+  // Пользователь создан, регистрация завершена
+  COMPLETED
+}
+
+enum UserAuthType {
+  DOMAIN
+  EXTERNAL
+}
+
+enum UserStatus {
+  PENDING_ACTIVATION
+  ACTIVE
+  BLOCKED
+  DISABLED
+}
+
+enum AccessAction {
+  VIEW
+  CREATE
+  UPDATE
+  DELETE
+}
+
+model User {
+  diagnosticTripParticipations DiagnosticTripParticipant[]
+  uptsNotificationsAuthored UptsNotification[] @relation("UptsNotificationActor")
+  uptsNotificationsReceived UptsNotification[] @relation("UptsNotificationRecipient")
+  diagnosticContracts DiagnosticContract[] @relation("DiagnosticSupervisor")
+  permissionDenials UserPermissionDeny[]
+  deletedAt DateTime?
+
+  projectFiles WorkProjectFile[]
+  libraryVideoPositions LibraryVideoPosition[]
+  workInvitationsReceived WorkProjectInvitation[] @relation("WorkInviteRecipient")
+  workInvitationsSent WorkProjectInvitation[] @relation("WorkInviteSender")
+  workTaskComments WorkTaskComment[]
+  workTaskParticipations WorkTaskParticipant[]
+  assignedWorkTasks WorkTask[] @relation("WorkTaskAssignee")
+  createdWorkTasks WorkTask[] @relation("WorkTaskCreator")
+  workProjectMemberships WorkProjectMember[]
+  ownedWorkProjects WorkProject[] @relation("WorkProjectOwner")
+  profile UserProfile?
+  preferences UserPreference?
+
+  passwordResetTokenHash   String? @unique @db.VarChar(64)
+  passwordResetExpiresAt   DateTime?
+  passwordResetRequestedAt DateTime?
+  externalSessionVersion   Int @default(0)
+
+  receivedChatInvitation DomainChatInvitation? @relation("ChatInvitationRecipient")
+  sentChatInvitations DomainChatInvitation[] @relation("ChatInvitationSender")
+  chatMemberships ChatMember[]
+  chatMessages ChatMessage[]
+  spaceGroups SpaceGroupUser[]
+  id Int @id @default(autoincrement())
+
+  authType UserAuthType
+  status   UserStatus   @default(PENDING_ACTIVATION)
+
+  // Для DOMAIN
+  login String? @unique @db.VarChar(255)
+
+  // objectGUID / другой стабильный ID каталога
+  directoryObjectId String? @unique @db.VarChar(255)
+
+  // Для EXTERNAL и как возможный кэш для DOMAIN
+  email        String? @unique @db.VarChar(255)
+  fullName     String? @db.VarChar(255)
+  organization String? @db.VarChar(255)
+  position     String? @db.VarChar(255)
+
+  // Только EXTERNAL
+  passwordHash        String?   @db.VarChar(255)
+  activationTokenHash String?   @unique @db.VarChar(64)
+  activationExpiresAt DateTime?
+  activationSentAt    DateTime?
+  activatedAt         DateTime?
+
+  departmentId Int?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  registrationRequestId Int?                 @unique
+  registrationRequest   RegistrationRequest? @relation(fields: [registrationRequestId], references: [id], onDelete: SetNull)
+
+  permissions UserPermission[]
+  
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([authType])
+  @@index([departmentId])
+  @@map("app_users")
+}
+
+model UserPermission {
+  id Int @id @default(autoincrement())
+
+  userId     Int
+  resourceId Int
+  action     AccessAction
+
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resource AccessResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  grantedByLogin String? @db.VarChar(255)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, resourceId, action])
+  @@index([userId])
+  @@index([resourceId])
+  @@index([action])
+  @@map("user_permissions")
+}
+
+model DepartmentPermission {
+  id Int @id @default(autoincrement())
+
+  departmentId Int
+  resourceId   Int
+  action       AccessAction
+
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  resource AccessResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  grantedByLogin String? @db.VarChar(255)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([departmentId, resourceId, action])
+  @@index([departmentId])
+  @@index([resourceId])
+  @@index([action])
+  @@map("department_permissions")
+}
+
+model DirectoryDepartmentMapping {
+  id Int @id @default(autoincrement())
+
+  // Точное название department из Active Directory
+  directoryName String @unique @db.VarChar(255)
+
+  departmentId Int
+
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([departmentId])
+  @@map("directory_department_mappings")
+}
+
+model DomainGroupPermission {
+  id             Int            @id @default(autoincrement())
+  domainGroupId  Int
+  resourceId     Int
+  action         AccessAction
+  grantedByLogin String?        @db.VarChar(150)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  domainGroup    DomainGroup    @relation(fields: [domainGroupId], references: [id], onDelete: Cascade)
+  resource       AccessResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@unique([domainGroupId, resourceId, action])
+  @@index([resourceId, action])
+  @@map("domain_group_permissions")
+}
+
+model DomainGroup {
+  spaceGroups SpaceGroupDomain[]
+  id                Int                     @id @default(autoincrement())
+  directoryObjectId String                  @unique @db.VarChar(36)
+  name              String                  @db.VarChar(255)
+  distinguishedName String                  @db.Text
+  isActive          Boolean                 @default(true)
+  permissions       DomainGroupPermission[]
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  
+
+  @@map("domain_groups")
+}
+
+
+
+
+
+model SpaceGroup {
+  storagePath String? @unique @db.VarChar(240)
+  registrationRequests RegistrationRequestGroup[]
+  ownedProjects WorkProject[]
+  id Int @id @default(autoincrement())
+  name String @unique @db.VarChar(255)
+  isActive Boolean @default(true)
+  users SpaceGroupUser[]
+  domainGroups SpaceGroupDomain[]
+  permissions SpaceGroupPermission[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("space_groups")
+}
+
+
+model SpaceGroupUser {
+  groupId Int
+  userId Int
+  group SpaceGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@id([groupId, userId])
+  @@index([userId])
+  @@map("space_group_users")
+}
+
+
+model SpaceGroupDomain {
+  groupId Int
+  domainGroupId Int
+  group SpaceGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  domainGroup DomainGroup @relation(fields: [domainGroupId], references: [id], onDelete: Cascade)
+  @@id([groupId, domainGroupId])
+  @@index([domainGroupId])
+  @@map("space_group_domains")
+}
+
+
+model SpaceGroupPermission {
+  id Int @id @default(autoincrement())
+  groupId Int
+  resourceId Int
+  action AccessAction
+  grantedByLogin String? @db.VarChar(150)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  group SpaceGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  resource AccessResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  @@unique([groupId, resourceId, action])
+  @@index([resourceId, action])
+  @@map("space_group_permissions")
+}
+
+model PasswordResetLimit {
+  key String @id @db.VarChar(100)
+  startedAt DateTime
+  count Int
+  @@index([startedAt])
+  @@map("password_reset_limits")
+}
+
+// Additional documents of a registry record; built-in document fields remain intact.
+model FileAttachment {
+  id Int @id @default(autoincrement())
+  samplingTestId Int
+  samplingTest SamplingTest @relation(fields: [samplingTestId], references: [id])
+  name String @db.VarChar(255)
+  path String @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([samplingTestId])
+  @@map("file_attachments")
+}
+
+// Commit marker used to reconcile filesystem operations after a crash.
+model FileStorageOperation {
+  id String @id @db.VarChar(36)
+  kind String @db.VarChar(30)
+  createdAt DateTime @default(now())
+  @@map("file_storage_operations")
+}
+
+model LabExportSettings {
+  id Int @id @default(1)
+  recordLimit Int @default(500)
+  updatedAt DateTime @updatedAt
+  editorLogin String?
+  @@map("lab_export_settings")
+}
+
+
+model ChatConversation {
+  messageVersion Int @default(0)
+  id Int @id @default(autoincrement())
+  pairKey String @unique @db.VarChar(64)
+  kind String @default("DIRECT") @db.VarChar(10)
+  name String? @db.VarChar(120)
+  createdById Int?
+  createdAt DateTime @default(now())
+  archivedAt DateTime?
+  updatedAt DateTime @default(now())
+  members ChatMember[]
+  messages ChatMessage[]
+  @@map("chat_conversations")
+}
+model ChatMember {
+  conversationId Int
+  userId Int
+  readThrough Int @default(0)
+  role String @default("MEMBER") @db.VarChar(10)
+  unreadFrom Int @default(0)
+  conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  @@id([conversationId, userId])
+  @@index([userId, conversationId])
+  @@map("chat_members")
+}
+model ChatMessage {
+  revision Int @default(0)
+  editedAt DateTime?
+  deletedAt DateTime?
+  revisions ChatMessageRevision[]
+  id Int @id @default(autoincrement())
+  conversationId Int
+  senderId Int
+  clientId String @db.Uuid
+  body String @db.VarChar(4000)
+  createdAt DateTime @default(now())
+  conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender User @relation(fields: [senderId], references: [id], onDelete: Restrict)
+  @@unique([senderId, clientId])
+  @@index([conversationId, id])
+  @@index([conversationId, revision])
+  @@map("chat_messages")
+}
+
+model DomainChatInvitation {
+  id String @id @db.Uuid
+  recipientId Int @unique
+  senderId Int
+  directoryObjectId String @db.VarChar(255)
+  recipientVersion DateTime
+  reservedAt DateTime @default(now())
+  sentAt DateTime?
+  expiresAt DateTime
+  consumedAt DateTime?
+  recipient User @relation("ChatInvitationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  sender User @relation("ChatInvitationSender", fields: [senderId], references: [id], onDelete: Restrict)
+  @@index([senderId, reservedAt])
+  @@map("domain_chat_invitations")
+}
+
+model UserPreference {
+  userId Int @id
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  data Json
+  updatedAt DateTime @updatedAt
+  @@map("user_preferences")
+}
+
+model ChatMessageRevision {
+  id Int @id @default(autoincrement())
+  messageId Int
+  actorId Int
+  previousBody String @db.VarChar(4000)
+  previousRevision Int
+  action String @db.VarChar(10)
+  createdAt DateTime @default(now())
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  @@unique([messageId, previousRevision])
+  @@index([actorId, createdAt])
+  @@map("chat_message_revisions")
+}
+
+model UserProfile {
+  userId Int @id
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nickname String @default("") @db.VarChar(80)
+  contactEmail String @default("") @db.VarChar(255)
+  additionalEmail String @default("") @db.VarChar(255)
+  phone String @default("") @db.VarChar(50)
+  postalAddress String @default("") @db.VarChar(500)
+  about String @default("") @db.VarChar(1000)
+  avatar Bytes?
+  avatarVersion String? @db.VarChar(36)
+  updatedAt DateTime @updatedAt
+  @@map("user_profiles")
+}
+
+model LibraryCategory {
+  id Int @id @default(autoincrement())
+  name String @db.VarChar(200)
+  parentId Int?
+  parent LibraryCategory? @relation("LibraryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children LibraryCategory[] @relation("LibraryTree")
+  icon String @default("lucide:book-open") @db.VarChar(100)
+  iconAssetId String? @db.Uuid
+  iconAsset LibraryAsset? @relation(fields: [iconAssetId], references: [id], onDelete: Restrict)
+  position Int @default(0)
+  videos LibraryVideoCategory[]
+  books LibraryBookCategory[]
+  legacyId Int? @unique
+  @@index([parentId, position])
+  @@map("library_categories")
+}
+model LibraryBook {
+  id Int @id @default(autoincrement())
+  title String @db.VarChar(500)
+  author String @default("") @db.VarChar(500)
+  publisher String @default("") @db.VarChar(300)
+  year String @default("") @db.VarChar(100)
+  city String @default("") @db.VarChar(500)
+  keywords String @default("") @db.VarChar(2000)
+  note String @default("") @db.Text
+  series String @default("") @db.VarChar(300)
+  issue String @default("") @db.VarChar(100)
+  pdfId String @db.Uuid
+  pdf LibraryAsset @relation("LibraryPdf", fields: [pdfId], references: [id], onDelete: Restrict)
+  coverId String? @db.Uuid
+  cover LibraryAsset? @relation("LibraryCover", fields: [coverId], references: [id], onDelete: Restrict)
+  categories LibraryBookCategory[]
+  version Int @default(1)
+  deletedAt DateTime?
+  deletedBy Int?
+  createdBy Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  legacyId Int? @unique
+  legacyData Json?
+  clientKey String? @unique @db.Uuid
+  @@index([deletedAt, title])
+  @@index([series, year])
+  @@map("library_books")
+}
+model LibraryBookCategory {
+  bookId Int
+  categoryId Int
+  book LibraryBook @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  category LibraryCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  @@id([bookId, categoryId])
+  @@index([categoryId])
+  @@map("library_book_categories")
+}
+model LibraryAsset {
+  id String @id @db.Uuid
+  kind String @db.VarChar(10)
+  filename String @db.VarChar(255)
+  size Int
+  ownerId Int?
+  createdAt DateTime @default(now())
+  pdfBooks LibraryBook[] @relation("LibraryPdf")
+  coverBooks LibraryBook[] @relation("LibraryCover")
+  categoryIcons LibraryCategory[]
+  @@map("library_assets")
+}
+
+
+// Space tasks and projects — additive module, 2026-10-19.
+model WorkProject {
+  upts UptsProject?
+  files WorkProjectFile[]
+  groupId Int?
+  group SpaceGroup? @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  invitations WorkProjectInvitation[]
+  id Int @id @default(autoincrement())
+  clientKey String @unique @db.Uuid
+  name String @db.VarChar(200)
+  description String @default("") @db.Text
+  color String @default("#2563eb") @db.VarChar(7)
+  scope String @default("PRIVATE") @db.VarChar(20)
+  ownerId Int
+  owner User @relation("WorkProjectOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  departmentId Int?
+  department Department? @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  startDate DateTime? @db.Date
+  dueDate DateTime? @db.Date
+  archivedAt DateTime?
+  version Int @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  members WorkProjectMember[]
+  tasks WorkTask[]
+  @@index([groupId, archivedAt])
+  @@index([departmentId, archivedAt])
+  @@index([ownerId])
+  @@map("work_projects")
+}
+model WorkProjectMember {
+  projectId Int
+  userId Int
+  role String @default("MEMBER") @db.VarChar(20)
+  project WorkProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+  @@id([projectId, userId])
+  @@index([userId])
+  @@map("work_project_members")
+}
+model WorkTask {
+  resultFiles WorkProjectFile[]
+  notifications UptsNotification[]
+  uptsWorkMeta Json?
+  uptsContractId Int?
+  uptsContract UptsContract? @relation(fields: [uptsContractId], references: [id], onDelete: Restrict)
+  @@index([uptsContractId])
+  uptsObjectId Int?
+  @@index([uptsObjectId])
+  uptsObject UptsProjectObject? @relation(fields: [uptsObjectId], references: [id], onDelete: Restrict)
+  id Int @id @default(autoincrement())
+  clientKey String @unique @db.Uuid
+  title String @db.VarChar(250)
+  description String @default("") @db.Text
+  kind String @default("TASK") @db.VarChar(20)
+  status String @default("TODO") @db.VarChar(20)
+  priority String @default("NORMAL") @db.VarChar(20)
+  visibility String @default("PRIVATE") @db.VarChar(20)
+  creatorId Int
+  creator User @relation("WorkTaskCreator", fields: [creatorId], references: [id], onDelete: Restrict)
+  assigneeId Int?
+  assignee User? @relation("WorkTaskAssignee", fields: [assigneeId], references: [id], onDelete: Restrict)
+  departmentId Int?
+  department Department? @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  projectId Int?
+  project WorkProject? @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  plannedDate DateTime? @db.Date
+  startDate DateTime? @db.Date
+  dueDate DateTime? @db.Date
+  blockedReason String @default("") @db.VarChar(1000)
+  version Int @default(1)
+  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  participants WorkTaskParticipant[]
+  comments WorkTaskComment[]
+  @@index([assigneeId, deletedAt, plannedDate])
+  @@index([creatorId, deletedAt])
+  @@index([projectId, deletedAt, status])
+  @@index([departmentId, visibility, deletedAt])
+  @@map("work_tasks")
+}
+model WorkTaskParticipant {
+  taskId Int
+  userId Int
+  task WorkTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  @@id([taskId, userId])
+  @@index([userId])
+  @@map("work_task_participants")
+}
+model WorkTaskComment {
+  id Int @id @default(autoincrement())
+  clientKey String @unique @db.Uuid
+  taskId Int
+  authorId Int
+  body String @db.VarChar(5000)
+  task WorkTask @relation(fields: [taskId], references: [id], onDelete: Restrict)
+  author User @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+  @@index([taskId, id])
+  @@map("work_task_comments")
+}
+
+model WorkProjectInvitation {
+  emailStatus String @default("NOT_REQUESTED") @db.VarChar(24)
+  emailSentAt DateTime?
+  emailMessageId String? @db.VarChar(500)
+  emailErrorCode String? @db.VarChar(50)
+  id String @id @db.Uuid
+  projectId Int
+  userId Int
+  inviterId Int
+  role String @db.VarChar(20)
+  status String @default("PENDING") @db.VarChar(20)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  respondedAt DateTime?
+  project WorkProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user User @relation("WorkInviteRecipient", fields: [userId], references: [id], onDelete: Restrict)
+  inviter User @relation("WorkInviteSender", fields: [inviterId], references: [id], onDelete: Restrict)
+  @@unique([projectId, userId])
+  @@index([userId, status, expiresAt])
+  @@index([inviterId, createdAt])
+  @@map("work_project_invitations")
+}
+
+// Reusable video materials. Courses will reference these IDs; playback is not completion.
+model LibraryVideo {
+  id String @id @db.Uuid
+  clientKey String @unique @db.Uuid
+  title String @db.VarChar(500)
+  description String @default("") @db.Text
+  author String @default("") @db.VarChar(500)
+  filename String @db.VarChar(255)
+  fingerprint String @db.VarChar(64)
+  totalBytes BigInt
+  offset BigInt @default(0)
+  status String @default("UPLOADING") @db.VarChar(20)
+  error String? @db.VarChar(1000)
+  duration Float?
+  mediaPath String? @db.VarChar(100)
+  posterPath String? @db.VarChar(100)
+  sourcePath String? @db.VarChar(100)
+  mediaBytes BigInt?
+  leaseToken String? @db.Uuid
+  leaseUntil DateTime?
+  version Int @default(1)
+  createdBy Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  categories LibraryVideoCategory[]
+  chunks LibraryVideoChunk[]
+  positions LibraryVideoPosition[]
+  @@index([deletedAt, status, createdAt])
+  @@map("library_videos")
+}
+model LibraryVideoCategory {
+  videoId String @db.Uuid
+  categoryId Int
+  video LibraryVideo @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  category LibraryCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  @@id([videoId, categoryId])
+  @@index([categoryId])
+  @@map("library_video_categories")
+}
+model LibraryVideoChunk {
+  id String @id @db.Uuid
+  videoId String @db.Uuid
+  offset BigInt
+  size Int
+  video LibraryVideo @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  @@unique([videoId, offset])
+  @@map("library_video_chunks")
+}
+model LibraryVideoPosition {
+  videoId String @db.Uuid
+  userId Int
+  seconds Float
+  updatedAt DateTime @updatedAt
+  video LibraryVideo @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@id([videoId, userId])
+  @@map("library_video_positions")
+}
+model LibraryVideoSettings {
+  id Int @id @default(1)
+  maxBytes BigInt @default(3221225472)
+  updatedAt DateTime @updatedAt
+  @@map("library_video_settings")
+}
+
+// Files are stored outside public/ and releases; PRIVATE never inherits manager access.
+model WorkProjectFile {
+  storagePath String? @unique @db.VarChar(1000)
+  documentDate DateTime? @db.Date
+  documentComment String @default("") @db.VarChar(500)
+  storageFolder String? @db.VarChar(180)
+  task WorkTask? @relation(fields:[taskId],references:[id],onDelete:Restrict)
+  taskId Int?
+  documentType String? @db.VarChar(100)
+  @@index([taskId, deletedAt])
+  contractId Int?
+  @@index([contractId])
+  contract UptsContract? @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  id String @id @db.Uuid
+  clientKey String @unique @db.Uuid
+  projectId Int
+  ownerId Int
+  scope String @db.VarChar(10)
+  name String @db.VarChar(240)
+  size Int
+  sha256 String @db.VarChar(64)
+  storageKey String @unique @db.Uuid
+  version Int @default(1)
+  createdAt DateTime @default(now())
+  deletedAt DateTime?
+  project WorkProject @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  @@index([projectId, scope, ownerId, deletedAt, createdAt])
+  @@map("work_project_files")
+}
+
+model UsageEvent {
+  id String @id @db.VarChar(150)
+  actorId Int
+  recipientId Int?
+  kind String @db.VarChar(40)
+  target String @db.VarChar(200)
+  source String @db.VarChar(10)
+  occurredAt DateTime @default(now())
+  @@index([occurredAt])
+  @@index([actorId, occurredAt])
+  @@index([kind, occurredAt])
+  @@map("usage_events")
+}
+
+// Group requests do not confer membership until administrator provisioning.
+model RegistrationRequestGroup {
+  registrationRequestId Int
+  groupId Int
+  approved Boolean?
+  registrationRequest RegistrationRequest @relation(fields: [registrationRequestId], references: [id], onDelete: Cascade)
+  group SpaceGroup @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  @@id([registrationRequestId, groupId])
+  @@index([groupId])
+  @@map("registration_request_groups")
+}
+
+enum DiagnosticContractDirection {
+  INCOME
+  EXPENSE
+  INTERNAL
+}
+
+model DiagnosticCounterparty {
+  id Int @id @default(autoincrement())
+  name String @db.VarChar(255)
+  normalizedName String @unique @db.VarChar(255)
+  contracts DiagnosticContract[]
+  createdAt DateTime @default(now())
+  @@map("diagnostic_counterparties")
+}
+
+model DiagnosticProjectType {
+  id Int @id @default(autoincrement())
+  name String @unique @db.VarChar(255)
+  isActive Boolean @default(true)
+  contracts DiagnosticContract[]
+  @@map("diagnostic_project_types")
+}
+
+model DiagnosticContract {
+  trips DiagnosticTrip[]
+  legacyImport DiagnosticContractLegacyRow?
+  id Int @id @default(autoincrement())
+  number String @db.VarChar(150)
+  date DateTime @db.Date
+  counterpartyId Int
+  counterparty DiagnosticCounterparty @relation(fields:[counterpartyId],references:[id],onDelete:Restrict)
+  direction DiagnosticContractDirection
+  executor String? @db.VarChar(255)
+  start DateTime? @db.Date
+  finish DateTime? @db.Date
+  stages Int?
+  hours Decimal? @db.Decimal(14,2)
+  amount Decimal? @db.Decimal(18,2)
+  note String? @db.Text
+  projectTypeId Int?
+  projectType DiagnosticProjectType? @relation(fields:[projectTypeId],references:[id],onDelete:Restrict)
+  supervisorId Int?
+  supervisor User? @relation("DiagnosticSupervisor",fields:[supervisorId],references:[id],onDelete:SetNull)
+  relatedContractId Int?
+  relatedContract DiagnosticContract? @relation("DiagnosticRelated",fields:[relatedContractId],references:[id],onDelete:Restrict)
+  relatedExpenses DiagnosticContract[] @relation("DiagnosticRelated")
+  structures DiagnosticContractStructure[]
+  contractWorks DiagnosticContractWork[]
+  version Int @default(1)
+  createdById Int
+  updatedById Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  deletedById Int?
+  @@index([date,finish])
+  @@index([counterpartyId])
+  @@index([supervisorId])
+  @@index([relatedContractId])
+  @@index([deletedAt])
+  @@map("diagnostic_contracts")
+}
+
+// Stable link for the forthcoming structures module; the count is derived, never entered.
+model DiagnosticContractStructure {
+  id Int @id @default(autoincrement())
+  contractId Int
+  contract DiagnosticContract @relation(fields:[contractId],references:[id],onDelete:Restrict)
+  legacyStructureId String? @db.VarChar(150)
+  structureId Int
+  structure DiagnosticStructure @relation(fields:[structureId],references:[id],onDelete:Restrict)
+  legacyContractReferences DiagnosticStructureLegacyContract[]
+  workAssignments DiagnosticStructureWork[]
+  deletedAt DateTime?
+  @@index([legacyStructureId])
+  @@unique([contractId,structureId])
+  @@unique([id,structureId])
+  @@map("diagnostic_contract_structures")
+}
+
+model UserPermissionDeny {
+  userId Int
+  resourceId Int
+  action AccessAction
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  resource AccessResource @relation(fields:[resourceId],references:[id],onDelete:Cascade)
+  @@id([userId,resourceId,action])
+  @@map("user_permission_denials")
+}
+
+// Work library: code is an identifier, never a decimal number.
+model DiagnosticWorkGroup {
+  id           Int @id
+  name         String @unique @db.VarChar(300)
+  nextSequence Int @default(1)
+  categories   DiagnosticWorkCategory[]
+  works        DiagnosticWork[]
+  @@map("diagnostic_work_groups")
+}
+model DiagnosticWorkCategory {
+  id          Int @id @default(autoincrement())
+  groupId     Int
+  name        String @db.VarChar(250)
+  createdById Int?
+  createdAt   DateTime @default(now())
+  group       DiagnosticWorkGroup @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  works       DiagnosticWork[]
+  @@unique([groupId, name])
+  @@unique([id, groupId])
+  @@map("diagnostic_work_categories")
+}
+model DiagnosticWork {
+  id           Int @id @default(autoincrement())
+  legacyId     Int? @unique
+  code         String @unique @db.VarChar(100)
+  groupId      Int
+  sequence     Int
+  categoryId   Int
+  name         String @db.VarChar(300)
+  hours        Decimal @db.Decimal(12, 4)
+  criteria     String @db.VarChar(2000)
+  note         String @default("") @db.VarChar(4000)
+  version      Int @default(1)
+  createdById  Int
+  updatedById  Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
+  deletedById  Int?
+  deleteReason String? @db.VarChar(1000)
+  group        DiagnosticWorkGroup @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  category     DiagnosticWorkCategory @relation(fields: [categoryId, groupId], references: [id, groupId], onDelete: Restrict)
+  structureAssignments DiagnosticStructureWork[]
+  contractAssignments DiagnosticContractWork[]
+  @@unique([groupId, sequence])
+  @@index([deletedAt, groupId, sequence])
+  @@map("diagnostic_works")
+}
+
+
+// Structures are shared between contracts; work effort belongs to an assignment.
+model DiagnosticStructure {
+  trips DiagnosticTripStructure[]
+  id Int @id @default(autoincrement())
+  code String @unique @db.VarChar(200)
+  management String @default("") @db.Text
+  structureName String @default("") @db.Text
+  issoType String @default("") @db.Text
+  roadName String @default("") @db.Text
+  location String @default("") @db.Text
+  placementType String @default("") @db.Text
+  additionalId String @default("") @db.Text
+  obstacleType String @default("") @db.Text
+  obstacleName String @default("") @db.Text
+  region String @default("") @db.Text
+  district String @default("") @db.Text
+  operator String @default("") @db.Text
+  commissionedYear String @default("") @db.Text
+  expertOpinion String @default("") @db.Text
+  conditionRating String @default("") @db.Text
+  classAk String @default("") @db.Text
+  classNk String @default("") @db.Text
+  classEnz String @default("") @db.Text
+  lengthRaw String @default("") @db.Text
+  plannedWorks String @default("") @db.Text
+  note String @default("") @db.Text
+  locationMetres Decimal? @db.Decimal(13, 0)
+  lengthMetres Decimal? @db.Decimal(18, 6)
+  version Int @default(1)
+  createdById Int
+  updatedById Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  deletedById Int?
+  deleteReason String? @db.Text
+  legacyRows DiagnosticStructureLegacyRow[]
+  legacyContracts DiagnosticStructureLegacyContract[]
+  legacyExecutors DiagnosticStructureLegacyExecutor[]
+  contracts DiagnosticContractStructure[]
+  @@index([deletedAt, code])
+  @@index([locationMetres])
+  @@map("diagnostic_structures")
+}
+model DiagnosticStructureLegacyRow {
+  id Int @id @default(autoincrement())
+  legacyId Int @unique
+  structureId Int
+  sourceHash String @db.VarChar(64)
+  dumpHash String @db.VarChar(64)
+  rawData Json
+  importedById Int
+  importedAt DateTime @default(now())
+  structure DiagnosticStructure @relation(fields:[structureId],references:[id],onDelete:Restrict)
+  @@index([structureId])
+  @@map("diagnostic_structure_legacy_rows")
+}
+model DiagnosticStructureLegacyContract {
+  id Int @id @default(autoincrement())
+  structureId Int
+  key String @db.VarChar(64)
+  customer String @db.Text
+  number String @db.Text
+  dateText String @db.Text
+  date DateTime? @db.Date
+  contractStructureId Int?
+  linkedById Int?
+  linkedAt DateTime?
+  structure DiagnosticStructure @relation(fields:[structureId],references:[id],onDelete:Restrict)
+  contractStructure DiagnosticContractStructure? @relation(fields:[contractStructureId,structureId],references:[id,structureId],onDelete:Restrict,map:"ds_legacy_contract_link_fk")
+  @@unique([structureId, key])
+  @@index([contractStructureId])
+  @@map("diagnostic_structure_legacy_contracts")
+}
+model DiagnosticStructureLegacyExecutor {
+  id Int @id @default(autoincrement())
+  structureId Int
+  key String @db.VarChar(64)
+  name String @db.Text
+  structure DiagnosticStructure @relation(fields:[structureId],references:[id],onDelete:Restrict)
+  @@unique([structureId, key])
+  @@map("diagnostic_structure_legacy_executors")
+}
+model DiagnosticStructureWork {
+  tripCompletion DiagnosticTripCompletion?
+  id Int @id @default(autoincrement())
+  contractStructureId Int
+  structureId Int
+  workId Int
+  workCodeSnapshot String @db.VarChar(100)
+  workNameSnapshot String @db.VarChar(300)
+  criteriaSnapshot String @db.Text
+  catalogHoursSnapshot Decimal @db.Decimal(12, 4)
+  hours Decimal? @db.Decimal(14, 4)
+  note String @default("") @db.Text
+  planStart DateTime? @db.Date
+  planFinish DateTime? @db.Date
+  planHours Decimal? @db.Decimal(14, 4)
+  planExecutor String @default("") @db.Text
+  factStart DateTime? @db.Date
+  factFinish DateTime? @db.Date
+  factHours Decimal? @db.Decimal(14, 4)
+  factExecutor String @default("") @db.Text
+  status String @default("") @db.VarChar(100)
+  warning String @default("") @db.Text
+  legacyCanonicalId Int? @unique
+  legacyBusinessHash String? @unique @db.VarChar(64)
+  legacyUserWorkId Int?
+  legacySource Json?
+  legacyPersonalSource Json?
+  importSourceHash String? @db.VarChar(64)
+  importUserSourceHash String? @db.VarChar(64)
+  importedById Int?
+  importedAt DateTime?
+  legacyOrigins DiagnosticStructureWorkOrigin[]
+  version Int @default(1)
+  createdById Int?
+  updatedById Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  deletedById Int?
+  contractStructure DiagnosticContractStructure @relation(fields:[contractStructureId,structureId],references:[id,structureId],onDelete:Restrict,map:"ds_work_contract_link_fk")
+  work DiagnosticWork @relation(fields:[workId],references:[id],onDelete:Restrict)
+  @@index([contractStructureId, deletedAt])
+  @@index([workId])
+  @@map("diagnostic_structure_works")
+}
+
+model DiagnosticStructureWorkOrigin {
+  legacyId Int @id
+  assignmentId Int
+  sourceIdRaw String @db.Text
+  sourceCode String @db.VarChar(100)
+  sourceHash String @db.VarChar(64)
+  sourceFileHash String @db.VarChar(64)
+  assignment DiagnosticStructureWork @relation(fields:[assignmentId],references:[id],onDelete:Restrict)
+  @@index([assignmentId])
+  @@map("diagnostic_structure_work_origins")
+}
+
+model DiagnosticContractLegacyRow {
+  legacyId Int @id
+  contractId Int @unique
+  contract DiagnosticContract @relation(fields:[contractId],references:[id],onDelete:Restrict)
+  sourceHash String @db.VarChar(64)
+  rawData Json
+  supervisorText String @default("") @db.Text
+  relatedText String @default("") @db.Text
+  expectedStructures Int?
+  workCount Int?
+  importedById Int
+  importedAt DateTime @default(now())
+  @@map("diagnostic_contract_legacy_rows")
+}
+
+
+// UPTS pilot: work projects/tasks remain the source of team, permissions and scheduling.
+model UptsProject {
+  projectId Int @id
+  project WorkProject @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  projectType String @default("LAND") @db.VarChar(30)
+  status String @default("INTAKE") @db.VarChar(30)
+  basis String @default("") @db.VarChar(2000)
+  initiator String @default("") @db.VarChar(200)
+  receivedDate DateTime? @db.Date
+  completionNote String @default("") @db.VarChar(2000)
+  isDemo Boolean @default(false)
+  objects UptsProjectObject[]
+  contracts UptsContract[]
+  @@map("upts_projects")
+}
+model UptsObject {
+  clientKey String @unique @db.Uuid
+  id Int @id @default(autoincrement())
+  name String @db.VarChar(250)
+  cadastralNumber String? @unique @db.VarChar(100)
+  address String @default("") @db.VarChar(1000)
+  projects UptsProjectObject[]
+  createdAt DateTime @default(now())
+  @@map("upts_objects")
+}
+model UptsProjectObject {
+  id Int @id @default(autoincrement())
+  projectId Int
+  objectId Int
+  project UptsProject @relation(fields: [projectId], references: [projectId], onDelete: Restrict)
+  object UptsObject @relation(fields: [objectId], references: [id], onDelete: Restrict)
+  goal String @default("") @db.VarChar(1000)
+  cadastral String @default("TODO") @db.VarChar(20)
+  rights String @default("TODO") @db.VarChar(20)
+  restrictions String @default("TODO") @db.VarChar(20)
+  documents String @default("TODO") @db.VarChar(20)
+  handover String @default("TODO") @db.VarChar(20)
+  note String @default("") @db.VarChar(2000)
+  version Int @default(1)
+  tasks WorkTask[]
+  @@unique([projectId, objectId])
+  @@map("upts_project_objects")
+}
+model UptsContract {
+  storageFolder String? @unique @db.VarChar(240)
+  createdAt DateTime? @default(now())
+  deletedAt DateTime?
+  objectDetails Json @default("{}")
+  color String? @db.VarChar(7)
+  contractType String? @db.VarChar(20)
+  tasks WorkTask[]
+  applications UptsWorkApplication[]
+  id Int @id @default(autoincrement())
+  clientKey String @unique @db.Uuid
+  projectId Int
+  project UptsProject @relation(fields: [projectId], references: [projectId], onDelete: Restrict)
+  number String @db.VarChar(100)
+  name String @db.VarChar(250)
+  counterparty String @default("") @db.VarChar(250)
+  signedDate DateTime? @db.Date
+  dueDate DateTime? @db.Date
+  version Int @default(1)
+  files WorkProjectFile[]
+  @@index([projectId])
+  @@map("upts_contracts")
+}
+
+model UptsWorkDefinition {
+  responsibleRole String? @db.VarChar(20)
+  expectedResult String @default("") @db.Text
+  id Int @id @default(autoincrement())
+  clientKey String @unique @db.Uuid
+  name String @db.VarChar(250)
+  contractType String @db.VarChar(20)
+  active Boolean @default(true)
+  version Int @default(1)
+  templates UptsWorkTemplateItem[]
+  @@unique([contractType, name])
+  @@map("upts_work_definitions")
+}
+model UptsWorkTemplate {
+  workKindKey String? @db.VarChar(40)
+  id Int @id @default(autoincrement())
+  clientKey String @unique @db.Uuid
+  name String @db.VarChar(250)
+  contractType String @db.VarChar(20)
+  active Boolean @default(true)
+  version Int @default(1)
+  items UptsWorkTemplateItem[]
+  @@unique([contractType, name])
+  @@map("upts_work_templates")
+}
+model UptsWorkTemplateItem {
+  templateId Int
+  workId Int
+  position Int
+  template UptsWorkTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  work UptsWorkDefinition @relation(fields: [workId], references: [id], onDelete: Restrict)
+  @@id([templateId, workId])
+  @@unique([templateId, position])
+  @@map("upts_work_template_items")
+}
+
+model UptsWorkApplication {
+  clientKey String @id @db.Uuid
+  contractId Int
+  contract UptsContract @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  actorId Int
+  fingerprint String @db.Text
+  count Int
+  @@map("upts_work_applications")
+}
+
+model UptsNotification {
+  actor User @relation("UptsNotificationActor",fields:[actorId],references:[id],onDelete:Restrict)
+  recipient User @relation("UptsNotificationRecipient",fields:[recipientId],references:[id],onDelete:Restrict)
+  task WorkTask @relation(fields:[taskId],references:[id],onDelete:Restrict)
+ id String @id @db.Uuid
+ eventKey String @unique @db.VarChar(180)
+ actorId Int
+ recipientId Int
+ taskId Int
+ body String @db.VarChar(3000)
+ chatSentAt DateTime?
+ emailSentAt DateTime?
+ attempts Int @default(0)
+ nextAttemptAt DateTime @default(now())
+ lockedUntil DateTime?
+ lastError String? @db.VarChar(500)
+ createdAt DateTime @default(now())
+ @@index([nextAttemptAt])
+ @@map("upts_notifications")
+}
+
+model DiagnosticContractWork {
+  tripCompletion DiagnosticTripCompletion?
+ id Int @id @default(autoincrement())
+ contractId Int
+ workId Int
+ contract DiagnosticContract @relation(fields:[contractId],references:[id],onDelete:Restrict)
+ work DiagnosticWork @relation(fields:[workId],references:[id],onDelete:Restrict)
+ code String @db.VarChar(100)
+ name String @db.VarChar(300)
+ criteria String @db.Text
+ planStart DateTime? @db.Date
+ planFinish DateTime? @db.Date
+ planHours Decimal? @db.Decimal(14,4)
+ planExecutor String @default("") @db.Text
+ factStart DateTime? @db.Date
+ factFinish DateTime? @db.Date
+ factHours Decimal? @db.Decimal(14,4)
+ factExecutor String @default("") @db.Text
+ status String @db.VarChar(100)
+ note String @default("") @db.Text
+ legacyId Int? @unique
+ legacyUserWorkId String? @db.Text
+ sourceHash String? @db.VarChar(64)
+ rawData Json?
+ version Int @default(1)
+ createdById Int?
+ updatedById Int?
+ importedById Int?
+ importedAt DateTime?
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ deletedAt DateTime?
+ deletedById Int?
+ @@index([contractId,deletedAt])
+ @@index([workId])
+ @@map("diagnostic_contract_works")
+}
+
+
+model DiagnosticTripExecutor {
+ id Int @id @default(autoincrement())
+ name String @db.VarChar(255)
+ normalizedName String @unique @db.VarChar(255)
+ trips DiagnosticTrip[]
+ @@map("diagnostic_trip_executors")
+}
+
+
+model DiagnosticTrip {
+ id Int @id @default(autoincrement())
+ number String @db.VarChar(200)
+ contractId Int
+ contract DiagnosticContract @relation(fields:[contractId],references:[id],onDelete:Restrict)
+ executorId Int
+ executor DiagnosticTripExecutor @relation(fields:[executorId],references:[id],onDelete:Restrict)
+ start DateTime @db.Date
+ finish DateTime @db.Date
+ noStructures Boolean @default(false)
+ destination String @default("") @db.Text
+ assignment String @default("") @db.Text
+ equipment String @default("") @db.Text
+ transport String @default("") @db.Text
+ accommodation String @default("") @db.Text
+ note String @default("") @db.Text
+ status String @default("PLANNED") @db.VarChar(20)
+ contentKey String @unique @db.VarChar(64)
+ version Int @default(1)
+ createdById Int
+ updatedById Int
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ closedAt DateTime?
+ closedById Int?
+ participants DiagnosticTripParticipant[]
+ structures DiagnosticTripStructure[]
+ origins DiagnosticTripOrigin[]
+ completions DiagnosticTripCompletion[]
+ @@index([start,finish])
+ @@index([contractId])
+ @@index([executorId])
+ @@map("diagnostic_trips")
+}
+
+
+model DiagnosticTripParticipant {
+ tripId Int
+ userId Int
+ trip DiagnosticTrip @relation(fields:[tripId],references:[id],onDelete:Restrict)
+ user User @relation(fields:[userId],references:[id],onDelete:Restrict)
+ @@id([tripId,userId])
+ @@index([userId])
+ @@map("diagnostic_trip_participants")
+}
+
+
+model DiagnosticTripStructure {
+ tripId Int
+ structureId Int
+ trip DiagnosticTrip @relation(fields:[tripId],references:[id],onDelete:Restrict)
+ structure DiagnosticStructure @relation(fields:[structureId],references:[id],onDelete:Restrict)
+ @@id([tripId,structureId])
+ @@index([structureId])
+ @@map("diagnostic_trip_structures")
+}
+
+
+model DiagnosticTripOrigin {
+ legacyId Int @id
+ tripId Int
+ trip DiagnosticTrip @relation(fields:[tripId],references:[id],onDelete:Restrict)
+ sourceNumber String @db.VarChar(200)
+ sourceHash String @db.VarChar(64)
+ sourceFileHash String @db.VarChar(64)
+ targetHash String @db.VarChar(64)
+ importedById Int
+ importedAt DateTime @default(now())
+ @@index([tripId])
+ @@map("diagnostic_trip_origins")
+}
+
+
+model DiagnosticTripCompletion {
+ id Int @id @default(autoincrement())
+ tripId Int
+ trip DiagnosticTrip @relation(fields:[tripId],references:[id],onDelete:Restrict)
+ contractWorkId Int? @unique
+ contractWork DiagnosticContractWork? @relation(fields:[contractWorkId],references:[id],onDelete:Restrict)
+ structureWorkId Int? @unique
+ structureWork DiagnosticStructureWork? @relation(fields:[structureWorkId],references:[id],onDelete:Restrict)
+ @@index([tripId])
+ @@map("diagnostic_trip_completions")
+}

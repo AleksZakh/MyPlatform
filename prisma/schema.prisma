@@ -1613,6 +1613,9 @@ model DiagnosticStructureLegacyExecutor {
   @@map("diagnostic_structure_legacy_executors")
 }
 model DiagnosticStructureWork {
+  @@unique([tripId, structureId], map: "diagnostic_structure_works_trip_structure_key")
+  trip DiagnosticTrip? @relation(fields:[tripId],references:[id],onDelete:Restrict)
+  tripId Int?
   tripCompletion DiagnosticTripCompletion?
   id Int @id @default(autoincrement())
   contractStructureId Int
@@ -1869,6 +1872,7 @@ model DiagnosticTripExecutor {
 
 
 model DiagnosticTrip {
+  generatedWorks DiagnosticStructureWork[]
  id Int @id @default(autoincrement())
  number String @db.VarChar(200)
  contractId Int

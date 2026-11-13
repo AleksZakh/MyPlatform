@@ -22,14 +22,14 @@ export async function contractStructureWorks(db:ReadDb,contractId:number,linkId:
   select:{id:true,structureId:true,workAssignments:{
    where:{deletedAt:null},orderBy:[{workNameSnapshot:'asc'},{id:'asc'}],
    select:{id:true,workCodeSnapshot:true,workNameSnapshot:true,criteriaSnapshot:true,hours:true,note:true,status:true,warning:true,
-    planStart:true,planFinish:true,planHours:true,planExecutor:true,factStart:true,factFinish:true,factHours:true,factExecutor:true},
+    planStart:true,planFinish:true,planHours:true,planExecutor:true,factStart:true,factFinish:true,factHours:true,factExecutor:true,trip:{select:{number:true,participants:{select:{user:{select:{fullName:true,login:true}}}}}}},
   }},
  });
  if(!link)throw createError({statusCode:404,message:'Сооружение не найдено в этом договоре.'});
  return {linkId:link.id,structureId:link.structureId,works:link.workAssignments.map(row=>({
   id:row.id,code:row.workCodeSnapshot,name:row.workNameSnapshot,criteria:row.criteriaSnapshot,
-  hours:row.hours?.toString()??null,note:row.note,status:row.status,warning:row.warning,
-  planStart:row.planStart?.toISOString().slice(0,10)??null,planFinish:row.planFinish?.toISOString().slice(0,10)??null,planHours:row.planHours?.toString()??null,planExecutor:row.planExecutor,
+  hours:row.hours?.toString()??null,note:[row.trip?.number,row.note].filter(Boolean).join(' · '),status:row.status,warning:row.warning,
+  planStart:row.planStart?.toISOString().slice(0,10)??null,planFinish:row.planFinish?.toISOString().slice(0,10)??null,planHours:row.planHours?.toString()??null,planExecutor:row.planExecutor||row.trip?.participants.map(p=>p.user.fullName||p.user.login).filter(Boolean).join(", ")||'',
   factStart:row.factStart?.toISOString().slice(0,10)??null,factFinish:row.factFinish?.toISOString().slice(0,10)??null,factHours:row.factHours?.toString()??null,factExecutor:row.factExecutor,
  }))};
 }
