@@ -158,7 +158,7 @@ const summaryColumns=[
 </template>
 
 <style>
-/* Local contract chrome: matches the UPTS work card, without changing table colours. */
+/* Contract chrome matches the UPTS work card. */
 .diagnostic-contract-modal.odis-contract-editor{--odis-contract-chrome:#e8e8ea;--odis-contract-body:#fff;background:var(--odis-contract-body)!important}
 html.dark .diagnostic-contract-modal.odis-contract-editor{--odis-contract-chrome:#465765;--odis-contract-body:#293b4a}
 .odis-contract-editor>.contract-modal-header,.odis-contract-editor>.contract-modal-footer{background:var(--odis-contract-chrome)!important;color:var(--contract-text)}
@@ -167,11 +167,19 @@ html.dark .diagnostic-contract-modal.odis-contract-editor{--odis-contract-chrome
 .odis-contract-editor .contract-editor-panel--tables .contract-section-head{background:var(--contract-panel);padding:6px 10px;border-bottom:1px solid var(--contract-line)}
 .odis-contract-editor .contract-editor-panel--tables .contract-section-head h2{padding:0;border-bottom:0;margin:0}
 
-/* Keep section bars and tables adjacent; retain the original table surfaces. */
+/* Keep section bars and tables adjacent. */
 .odis-contract-editor .contract-editor-panel{padding-top:0}
 .odis-contract-editor .contract-editor-panel--tables .contract-section-head{margin:0}
 .odis-contract-editor .contract-structures-workspace{row-gap:0}
-.odis-contract-editor .contract-requisites-heading{background:var(--contract-panel);margin:0 -12px;padding:12px;border-bottom:1px solid var(--contract-line)}
+/* Extend only the requisites surface to the modal edges; keep fields inset. */
+.odis-contract-editor .contract-editor-panel:not(.contract-editor-panel--tables){margin-left:-12px;margin-right:-12px;padding-left:24px;padding-right:24px}
+.odis-contract-editor .contract-requisites-heading{background:var(--contract-panel);margin:0 -24px;padding:12px 24px;border-bottom:1px solid var(--contract-line)}
+.odis-contract-editor .contract-fields-row{min-width:0;margin-left:-24px;margin-right:-24px;padding-left:24px;padding-right:24px}
+/* White table bodies in both themes; keep headers and selection distinguishable. */
+.odis-contract-editor .contract-compact-table{background:#fff}
+.odis-contract-editor .contract-compact-table tbody{color:#253647}
+.odis-contract-editor .contract-compact-table tbody tr:not(.is-selected){background:#fff}
+.odis-contract-editor .contract-compact-table tbody tr:not(.is-selected):hover{background:#edf4fa}
 .odis-contract-editor .contract-editor-tabs{gap:14px}
 .odis-contract-editor .contract-editor-tab{position:relative;display:flex;flex:none;border:1px solid var(--contract-line);border-bottom:0;border-radius:5px 5px 0 0}
 .odis-contract-editor .contract-editor-tab.is-active{background:var(--contract-panel);box-shadow:inset 0 3px #2996b7}
