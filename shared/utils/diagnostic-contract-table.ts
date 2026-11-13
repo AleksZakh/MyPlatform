@@ -6,10 +6,10 @@ export const structureFilterColumns=[
  {key:'district',label:'Район расположения'},
 ] as const;
 export type StructureFilterKey=typeof structureFilterColumns[number]['key'];
-export type StructureFilters=Record<StructureFilterKey,string>;
-export const emptyStructureFilters=():StructureFilters=>({code:'',structureName:'',roadName:'',location:'',additionalId:'',obstacleName:'',district:''});
+export type ContractStructureFilters=Record<StructureFilterKey,string>;
+export const emptyStructureFilters=():ContractStructureFilters=>({code:'',structureName:'',roadName:'',location:'',additionalId:'',obstacleName:'',district:''});
 export const filterText=(value:string)=>value.normalize('NFKC').trim().toLocaleLowerCase('ru-RU').replace(/ё/g,'е');
-export function structureMatches(row:ContractStructureListItem,filters:StructureFilters,except?:StructureFilterKey){
+export function structureMatches(row:ContractStructureListItem,filters:ContractStructureFilters,except?:StructureFilterKey){
  return structureFilterColumns.every(({key})=>key===except||filterText(row[key]||'').includes(filterText(filters[key])));
 }
 export const workStatusLegend=[

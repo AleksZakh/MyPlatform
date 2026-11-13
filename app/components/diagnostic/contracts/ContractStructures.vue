@@ -82,8 +82,7 @@ onBeforeUnmount(()=>{listGeneration++;worksGeneration++;});
     <template v-if="selected"><p><strong>{{ selected.structureName||'Сооружение' }}</strong> · Код ИССО: <strong>{{ selected.code }}</strong> · {{ selected.location||'Место не указано' }}</p><p class="contract-cell-ellipsis cs-address" :title="[selected.roadName,selected.district].filter(Boolean).join(' · ')">{{ [selected.roadName,selected.district].filter(Boolean).join(' · ') }}</p></template>
     <p v-else>{{ busy?'Загрузка сооружений…':'Выберите сооружение в верхней таблице.' }}</p>
    </div>
-   <header class="cs-work-heading"><h3>Работы по сооружению <small v-if="selected&&!worksBusy&&!worksError">· Всего: {{ works.length }}</small></h3><button type="button" :disabled="!selected||worksBusy" @click="loadWorks">Обновить работы</button></header>
-   <WorkStatusLegend :unknown="hasUnknownStatus"/>
+   <header class="cs-work-heading"><h3>Работы по сооружению <small v-if="selected&&!worksBusy&&!worksError">· Всего: {{ works.length }}</small></h3><div class="odis-work-heading-tools"><WorkStatusLegend :unknown="hasUnknownStatus"/><button type="button" :disabled="!selected||worksBusy" @click="loadWorks">Обновить работы</button></div></header>
    <div class="contract-detail-table contract-compact-table cs-works" :aria-busy="worksBusy">
     <table><thead><tr><th class="odis-status-cell">Статус</th><th>№</th><th>Работа</th><th>Начало, план</th><th>Окончание, план</th><th>План, чел·ч</th><th>Исполнитель, план</th><th>Примечания</th></tr></thead>
      <tbody>

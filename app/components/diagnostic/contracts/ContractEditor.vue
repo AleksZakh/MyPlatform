@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {computed,reactive,ref,watch,onBeforeUnmount} from 'vue';
+import {computed,reactive,ref,watch,onBeforeUnmount,onMounted} from 'vue';
 import type {ContractDetailCounts} from '~~/shared/types/diagnostic-contract-details';
 import CreatableNameSelect from '../../common/CreatableNameSelect.vue';
 import ContractWorks from './ContractWorks.vue';
@@ -11,6 +11,24 @@ const props=defineProps<{contract:ContractRecord|null;catalog:DiagnosticCatalog;
 const emit=defineEmits<{close:[];edit:[];save:[ContractRecord]}>();
 const tabs=['Карточка договора','Работы с договором','Перечень сооружений'];
 const tab=ref(0),error=ref(''),saving=ref(false),confirmClose=ref(false);
+const startTabKey='space:diagnostic:contract-card:start-tab:v1';
+const pinnedTab=ref<number|null>(null),pinError=ref('');
+onMounted(()=>{
+ try{
+  const stored=localStorage.getItem(startTabKey);
+  if(stored!==null && /^[0-2]$/.test(stored)){
+   pinnedTab.value=Number(stored);
+   if(props.contract && props.readOnly)tab.value=pinnedTab.value;
+  }
+ }catch{/* The card remains usable when browser storage is unavailable. */}
+});
+function pinStartTab(){
+ pinError.value='';
+ try{
+  if(pinnedTab.value===tab.value){localStorage.removeItem(startTabKey);pinnedTab.value=null;}
+  else{localStorage.setItem(startTabKey,String(tab.value));pinnedTab.value=tab.value;}
+ }catch{pinError.value='Не удалось сохранить закрепление вкладки в браузере.';}
+}
 const counts=reactive<{works:number|null;structures:number|null}>({works:null,structures:null});
 const countsError=ref('');
 let countsRequest=0;
@@ -68,7 +86,7 @@ async function save(){
  try{await resolveNames();const saved=await $fetch<ContractRecord>('/api/diagnostic/contracts'+(c?'/'+c.id:''),{method:c?'PUT':'POST',headers:{'x-space-diagnostic':'1'},body:{...form,version:c?.version}});emit('save',saved);}
  catch(e){error.value=message(e);tab.value=0;}finally{saving.value=false;}
 }
-function moveTab(event:KeyboardEvent,index:number,step:number){tab.value=(index+step+3)%3;const buttons=(event.currentTarget as HTMLElement).parentElement?.querySelectorAll<HTMLButtonElement>('[role=tab]');buttons?.[tab.value]?.focus();}
+function moveTab(event:KeyboardEvent,index:number,step:number){tab.value=(index+step+3)%3;const buttons=(event.currentTarget as HTMLElement).closest('[role=tablist]')?.querySelectorAll<HTMLButtonElement>('[role=tab]');buttons?.[tab.value]?.focus();}
 const summaryColumns=[
  ['305','АИС конструктив + проезжая часть + GPS'],['306','АИС маломоб.+ПОС'],
  ['307','АИС гарантийный паспорт'],['308','АИС ведомость дефектов'],
@@ -81,11 +99,17 @@ const summaryColumns=[
 <template>
  <UModal :open="true" :title="contract?(readOnly?'Просмотр договора':'Редактирование договора'):'Новый договор'" :ui="{content:'diagnostic-contract-modal odis-contract-editor w-[96vw] sm:max-w-none h-[90dvh]',header:'contract-modal-header',body:'contract-modal-body',footer:'contract-modal-footer'}" @update:open="value=>{if(!value)close()}">
   <template #body>
-   <div class="contract-editor-tabs" role="tablist" aria-label="Карточка договора"><button v-for="(label,i) in tabs" :id="`contract-editor-tab-${i}`" :key="label" role="tab" :aria-selected="tab===i" :tabindex="tab===i?0:-1" aria-controls="contract-editor-panel" @click="tab=i" @keydown.right.prevent="moveTab($event,i,1)" @keydown.left.prevent="moveTab($event,i,-1)"><span>{{ label }}</span><small v-if="i===1" class="contract-tab-count">Всего работ: {{ counts.works ?? (countsError ? '—' : '…') }}</small><small v-if="i===2" class="contract-tab-count">Всего сооружений: {{ counts.structures ?? (countsError ? '—' : '…') }}</small></button></div>
+   <div class="contract-editor-tabs" role="tablist" aria-label="Карточка договора">
+    <div v-for="(label,i) in tabs" :key="label" class="contract-editor-tab" :class="{'is-active':tab===i}" role="presentation">
+     <button :id="`contract-editor-tab-${i}`" type="button" role="tab" :aria-selected="tab===i" :tabindex="tab===i?0:-1" aria-controls="contract-editor-panel" @click="tab=i" @keydown.right.prevent="moveTab($event,i,1)" @keydown.left.prevent="moveTab($event,i,-1)"><span>{{ label }}</span><small v-if="i===1" class="contract-tab-count">Всего работ: {{ counts.works ?? (countsError ? '—' : '…') }}</small><small v-if="i===2" class="contract-tab-count">Всего сооружений: {{ counts.structures ?? (countsError ? '—' : '…') }}</small></button>
+     <button v-if="contract&&readOnly" v-show="tab===i" type="button" class="contract-tab-pin" :class="{'is-pinned':pinnedTab===i}" :aria-pressed="pinnedTab===i" :aria-label="pinnedTab===i?'Открепить стартовую вкладку':'Открывать эту вкладку при просмотре договора'" :title="pinnedTab===i?'Открепить стартовую вкладку':'Открывать эту вкладку при просмотре договора'" @click="pinStartTab"><Icon name="emojione-monotone:pushpin" aria-hidden="true" /></button>
+    </div>
+   </div>
+   <p v-if="pinError" class="contract-count-error" role="alert">{{ pinError }}</p>
    <p v-if="countsError" class="contract-count-error" role="alert">{{ countsError }} <button type="button" @click="loadCounts">Повторить</button></p>
    <div id="contract-editor-panel" class="contract-editor-panel" :class="{'contract-editor-panel--tables':tab!==0}" role="tabpanel" :aria-labelledby="`contract-editor-tab-${tab}`">
     <form v-show="tab===0" id="diagnostic-contract-form" novalidate @submit.prevent="save">
-     <h2>Реквизиты договора <small>· {{ statusLabel }}</small></h2>
+     <h2 class="contract-requisites-heading">Реквизиты договора <small>· {{ statusLabel }}</small></h2>
      <p v-if="error" role="alert" class="contract-error">{{ error }}</p>
      <fieldset :disabled="readOnly||saving||catalogBusy" class="contract-fields-row">
       <label class="contract-field-wide">Номер договора *<input v-model="form.number" maxlength="150" required /></label>
@@ -142,4 +166,38 @@ html.dark .diagnostic-contract-modal.odis-contract-editor{--odis-contract-chrome
 .odis-contract-editor .contract-detail-table{background:var(--contract-bg)}
 .odis-contract-editor .contract-editor-panel--tables .contract-section-head{background:var(--contract-panel);padding:6px 10px;border-bottom:1px solid var(--contract-line)}
 .odis-contract-editor .contract-editor-panel--tables .contract-section-head h2{padding:0;border-bottom:0;margin:0}
+
+/* Keep section bars and tables adjacent; retain the original table surfaces. */
+.odis-contract-editor .contract-editor-panel{padding-top:0}
+.odis-contract-editor .contract-editor-panel--tables .contract-section-head{margin:0}
+.odis-contract-editor .contract-structures-workspace{row-gap:0}
+.odis-contract-editor .contract-requisites-heading{background:var(--contract-panel);margin:0 -12px;padding:12px;border-bottom:1px solid var(--contract-line)}
+.odis-contract-editor .contract-editor-tabs{gap:14px}
+.odis-contract-editor .contract-editor-tab{position:relative;display:flex;flex:none;border:1px solid var(--contract-line);border-bottom:0;border-radius:5px 5px 0 0}
+.odis-contract-editor .contract-editor-tab.is-active{background:var(--contract-panel);box-shadow:inset 0 3px #2996b7}
+.odis-contract-editor .contract-editor-tab [role=tab]{border:0;background:transparent;box-shadow:none;padding:10px 38px 8px 14px;white-space:nowrap}
+.odis-contract-editor .contract-editor-tabs .contract-tab-pin{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;padding:4px;border:0;border-radius:4px;background:transparent;color:var(--contract-text);cursor:pointer}
+.odis-contract-editor .contract-tab-pin .iconify{transition:transform .15s}
+.odis-contract-editor .contract-tab-pin.is-pinned{color:#117995}
+.odis-contract-editor .contract-tab-pin.is-pinned .iconify{transform:rotate(-45deg)}
+.odis-contract-editor .contract-tab-pin:hover{background:var(--contract-line)}
+html.dark .odis-contract-editor .contract-tab-pin.is-pinned{color:#78d6ea}
+.odis-contract-editor .contract-editor-tabs button:focus-visible{outline:2px solid #2996b7;outline-offset:-3px}
+.odis-contract-editor .odis-work-heading-tools{display:flex;align-items:center;justify-content:flex-end;gap:12px;min-width:0;margin-left:auto;overflow-x:auto}
+.odis-contract-editor .odis-work-heading-tools>.odis-work-legend{margin:0;flex-wrap:nowrap}
+.odis-contract-editor .odis-work-heading-tools>button{flex:none;margin:0;white-space:nowrap}
+.odis-contract-editor .cs-work-heading{margin-bottom:0;padding:4px 0}
+.odis-contract-editor .contract-works .contract-section-head h2,.odis-contract-editor .cs-work-heading h3{flex:0 1 auto}
+.odis-contract-editor .contract-footer-content button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;background:#fff;border:1px solid #91a5b9;color:#203d56;font-weight:500;box-shadow:0 1px 2px #18364b1a;cursor:pointer;transition:background-color .15s,border-color .15s,box-shadow .15s}
+.odis-contract-editor .contract-footer-content button:hover:not(:disabled){background:#dcecf7;border-color:#347b9c;box-shadow:0 2px 4px #18364b26}
+.odis-contract-editor .contract-footer-content button:focus-visible{outline:2px solid #2996b7;outline-offset:2px}
+.odis-contract-editor .contract-footer-content button:disabled{opacity:.5;cursor:default;box-shadow:none}
+.odis-contract-editor .contract-footer-content .contract-save{background:#176b88;border-color:#176b88;color:#fff}
+.odis-contract-editor .contract-footer-content .contract-save:hover:not(:disabled){background:#10536b;border-color:#10536b}
+html.dark .odis-contract-editor .contract-footer-content button:not(.contract-save){background:#cbd5e1;border-color:#94a3b8;color:#172b3a}
+html.dark .odis-contract-editor .contract-footer-content button:not(.contract-save):hover:not(:disabled){background:#e2e8f0;border-color:#78d6ea}
+@media(max-width:900px){
+ .odis-contract-editor .contract-section-head,.odis-contract-editor .cs-work-heading{flex-wrap:wrap}
+ .odis-contract-editor .odis-work-heading-tools{flex:1 1 100%;justify-content:flex-start}
+}
 </style>

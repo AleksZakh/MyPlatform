@@ -27,9 +27,7 @@ onBeforeUnmount(()=>generation++);
 </script>
 <template>
  <section class="contract-works">
-  <header class="contract-section-head"><h2>Перечень работ с договором</h2><button type="button" :disabled="busy||!contractId" @click="load">Обновить</button></header>
-  <p class="cw-help">Двойной щелчок по строке или нажатие на название — просмотр работы.</p>
-  <WorkStatusLegend :unknown="hasUnknownStatus"/>
+  <header class="contract-section-head"><h2 title="Двойной щелчок по строке или нажатие на название — просмотр работы.">Перечень работ с договором</h2><div class="odis-work-heading-tools"><WorkStatusLegend :unknown="hasUnknownStatus"/><button type="button" :disabled="busy||!contractId" @click="load">Обновить</button></div></header>
   <div class="contract-detail-table contract-compact-table cw-scroll" :aria-busy="busy">
    <table><thead><tr><th rowspan="2" class="odis-status-cell">Статус</th><th rowspan="2">№</th><th rowspan="2">Работа</th><th colspan="4">План</th><th colspan="4">Факт</th><th rowspan="2">Примечания</th></tr><tr><template v-for="group in ['plan','fact']" :key="group"><th>Дата начала</th><th>Чел·ч</th><th>Дата окончания</th><th>Исполнитель</th></template></tr></thead>
     <tbody>
