@@ -79,7 +79,7 @@ const summaryColumns=[
 ];
 </script>
 <template>
- <UModal :open="true" :title="contract?(readOnly?'Просмотр договора':'Редактирование договора'):'Новый договор'" :ui="{content:'diagnostic-contract-modal w-[96vw] sm:max-w-none h-[90dvh]',body:'contract-modal-body',footer:'contract-modal-footer'}" @update:open="value=>{if(!value)close()}">
+ <UModal :open="true" :title="contract?(readOnly?'Просмотр договора':'Редактирование договора'):'Новый договор'" :ui="{content:'diagnostic-contract-modal odis-contract-editor w-[96vw] sm:max-w-none h-[90dvh]',header:'contract-modal-header',body:'contract-modal-body',footer:'contract-modal-footer'}" @update:open="value=>{if(!value)close()}">
   <template #body>
    <div class="contract-editor-tabs" role="tablist" aria-label="Карточка договора"><button v-for="(label,i) in tabs" :id="`contract-editor-tab-${i}`" :key="label" role="tab" :aria-selected="tab===i" :tabindex="tab===i?0:-1" aria-controls="contract-editor-panel" @click="tab=i" @keydown.right.prevent="moveTab($event,i,1)" @keydown.left.prevent="moveTab($event,i,-1)"><span>{{ label }}</span><small v-if="i===1" class="contract-tab-count">Всего работ: {{ counts.works ?? (countsError ? '—' : '…') }}</small><small v-if="i===2" class="contract-tab-count">Всего сооружений: {{ counts.structures ?? (countsError ? '—' : '…') }}</small></button></div>
    <p v-if="countsError" class="contract-count-error" role="alert">{{ countsError }} <button type="button" @click="loadCounts">Повторить</button></p>
@@ -132,3 +132,14 @@ const summaryColumns=[
   <template #footer><div class="contract-footer-content"><button v-if="auxiliary==='summary'" disabled title="Экспорт станет доступен после подключения данных">Экспорт в Excel</button><div class="contract-footer-actions"><button @click="auxiliary=null">Закрыть</button></div></div></template>
  </UModal>
 </template>
+
+<style>
+/* Local contract chrome: matches the UPTS work card, without changing table colours. */
+.diagnostic-contract-modal.odis-contract-editor{--odis-contract-chrome:#e8e8ea;--odis-contract-body:#fff;background:var(--odis-contract-body)!important}
+html.dark .diagnostic-contract-modal.odis-contract-editor{--odis-contract-chrome:#465765;--odis-contract-body:#293b4a}
+.odis-contract-editor>.contract-modal-header,.odis-contract-editor>.contract-modal-footer{background:var(--odis-contract-chrome)!important;color:var(--contract-text)}
+.odis-contract-editor>.contract-modal-body{background:var(--odis-contract-body)}
+.odis-contract-editor .contract-detail-table{background:var(--contract-bg)}
+.odis-contract-editor .contract-editor-panel--tables .contract-section-head{background:var(--contract-panel);padding:6px 10px;border-bottom:1px solid var(--contract-line)}
+.odis-contract-editor .contract-editor-panel--tables .contract-section-head h2{padding:0;border-bottom:0;margin:0}
+</style>

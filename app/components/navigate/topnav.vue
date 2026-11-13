@@ -21,7 +21,7 @@
 
       <div>
         <NuxtLink to="/">
-          <Icon name="line-md:home" />
+          <Icon name="streamline-freehand-color:home-chimney-2" mode="svg" size="22" />
           Главная
         </NuxtLink>
       </div>
@@ -36,16 +36,16 @@
 
       <div>
         <UDropdownMenu :items="departmentPages.map(page => ({ label: page.label, to: page.to }))">
-          <button type="button" class="flex items-center gap-2 px-4" aria-label="Отделы"><Icon name="lucide:building-2" />Отделы<Icon name="lucide:chevron-down" /></button>
+          <button type="button" class="flex items-center gap-2 px-4" aria-label="Отделы"><Icon name="streamline-freehand-color:business-management-team-up" mode="svg" size="22" />Отделы<Icon name="lucide:chevron-down" /></button>
         </UDropdownMenu>
       </div>
 
       <div>
-        <NuxtLink to="/library" class="flex items-center gap-2 px-4"><Icon name="lucide:library" />Библиотека</NuxtLink>
+        <NuxtLink to="/library" class="flex items-center gap-2 px-4"><Icon name="streamline-freehand-color:book-library-shelf-1" mode="svg" size="22" />Библиотека</NuxtLink>
       </div>
       <div>
         <NuxtLink to="/ad/browser" class="flex items-center gap-2 px-4">
-          <Icon name="lucide:contact-round" />Телефонный справочник
+          <Icon name="streamline-freehand-color:phone-book" mode="svg" size="22" />Телефонный справочник
         </NuxtLink>
       </div>
     </div>
