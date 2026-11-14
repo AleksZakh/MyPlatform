@@ -30,6 +30,6 @@ export async function contractStructureWorks(db:ReadDb,contractId:number,linkId:
   id:row.id,code:row.workCodeSnapshot,name:row.workNameSnapshot,criteria:row.criteriaSnapshot,
   hours:row.hours?.toString()??null,note:[row.trip?.number,row.note].filter(Boolean).join(' · '),status:row.status,warning:row.warning,
   planStart:row.planStart?.toISOString().slice(0,10)??null,planFinish:row.planFinish?.toISOString().slice(0,10)??null,planHours:row.planHours?.toString()??null,planExecutor:row.planExecutor||row.trip?.participants.map(p=>p.user.fullName||p.user.login).filter(Boolean).join(", ")||'',
-  factStart:row.factStart?.toISOString().slice(0,10)??null,factFinish:row.factFinish?.toISOString().slice(0,10)??null,factHours:row.factHours?.toString()??null,factExecutor:row.factExecutor,
+  factStart:row.factStart?.toISOString().slice(0,10)??null,factFinish:row.factFinish?.toISOString().slice(0,10)??null,factHours:row.factHours?.toString()??null,factExecutor:row.factExecutor||(row.status==='completed'?row.trip?.participants.map(p=>p.user.fullName||p.user.login).filter(Boolean).join(', '):'')||'',
  }))};
 }

@@ -1,0 +1,9 @@
+import {tripDay} from './diagnostic-trips';
+export function tripToday(now=new Date()){return new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Moscow',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);}
+export function tripDays(start:string,finish:string){if(!tripDay(start)||!tripDay(finish)||finish<start)throw Error('Проверьте даты командировки.');return Math.round((Date.parse(finish)-Date.parse(start))/86400000)+1;}
+export const tripDefaultHours=(start:string,finish:string)=>String(tripDays(start,finish)*8);
+export const tripWorkType=(start:string,finish:string)=>start===finish?{code:'302',name:'Однодневный выезд'}:{code:'301',name:'Командировка'};
+export function nextTripNumber(numbers:string[]){let max=0;for(const text of numbers){const m=text.trim().match(/^[КK]-(\d+)$/iu);if(m){const n=Number(m[1]);if(!Number.isSafeInteger(n)||n>=2147483647)throw Error('Превышен диапазон номеров командировок.');max=Math.max(max,n);}}return 'К-'+String(max+1).padStart(4,'0');}
+export function hourUnits(value:unknown){if(typeof value!=='string')throw Error('Укажите фактическое время каждого участника.');const v=value.trim().replace(',','.');if(!/^\d{1,10}(\.\d{1,4})?$/.test(v))throw Error('Человеко-часы: неотрицательное число, до 4 знаков после запятой.');const [a,b='']=v.split('.');return BigInt(a!)*10000n+BigInt(b.padEnd(4,'0'));}
+export function hourLabel(units:bigint){return `${units/10000n}.${String(units%10000n).padStart(4,'0')}`.replace(/\.?0+$/,'')||'0';}
+export function allocateTripHours(values:string[],workIds:number[]){const total=values.reduce((s,v)=>s+hourUnits(v),0n);if(total>99999999999999n)throw Error('Общее количество человеко-часов слишком велико.');const ids=[...workIds].sort((a,b)=>a-b);if(!ids.length)return [];const n=BigInt(ids.length),base=total/n,remainder=total%n;return ids.map((id,i)=>({id,hours:hourLabel(base+(BigInt(i)<remainder?1n:0n))}));}

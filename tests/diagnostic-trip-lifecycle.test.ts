@@ -1,0 +1,9 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {tripToday,tripDays,tripDefaultHours,tripWorkType,nextTripNumber,hourUnits,hourLabel,allocateTripHours} from '../shared/utils/diagnostic-trip-lifecycle';
+test('Однодневный выезд 302; многодневная командировка 301',()=>{assert.equal(tripWorkType('2026-11-10','2026-11-10').code,'302');assert.equal(tripWorkType('2026-11-10','2026-11-12').code,'301');});
+test('Дни включают обе даты и выходные; 3 дня = 24 часа каждому',()=>{assert.equal(tripDefaultHours('2026-11-10','2026-11-12'),'24');assert.equal(tripDefaultHours('2026-11-10','2026-11-10'),'8');assert.equal(tripDays('2024-02-28','2024-03-01'),3);assert.throws(()=>tripDays('2026-02-30','2026-03-01'));});
+test('Сегодня определяется по Москве, не по часовому поясу браузера',()=>{assert.equal(tripToday(new Date('2026-11-13T22:30:00Z')),'2026-11-14');});
+test('Продолжение номеров с учётом старых ID и без зависимости от внутреннего id',()=>{assert.equal(nextTripNumber(['К-0522','К-S000435','К-0521','К-0503','К-0503']),'К-0523');assert.equal(nextTripNumber(['К-0522','К-0600']),'К-0601');assert.equal(nextTripNumber(['К-9999']),'К-10000');});
+test('Распределение сохраняет сумму: 2 участника по 24 часа = 48 часов всего',()=>{const a=allocateTripHours(['24','24'],[3,1,2]);assert.deepEqual(a,[{id:1,hours:'16'},{id:2,hours:'16'},{id:3,hours:'16'}]);const b=allocateTripHours(['8'],[1,2,3]);assert.equal(b.reduce((s,x)=>s+hourUnits(x.hours),0n),80000n);assert.equal(b[0]?.hours,'2.6667');});
+test('Десятичные часы и запрет некорректных/переполненных значений',()=>{assert.equal(hourLabel(hourUnits('1,2500')),'1.25');assert.equal(hourLabel(hourUnits('10')),'10');assert.equal(hourLabel(hourUnits('0')),'0');for(const v of ['-1','1e2','NaN','1.12345'])assert.throws(()=>hourUnits(v));assert.throws(()=>allocateTripHours(['9999999999','9999999999'],[1]));});

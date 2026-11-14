@@ -1,0 +1,22 @@
+model DiagnosticTripEmail {
+ id Int @id @default(autoincrement())
+ tripId Int
+ trip DiagnosticTrip @relation(fields:[tripId],references:[id],onDelete:Restrict)
+ userId Int
+ user User @relation(fields:[userId],references:[id],onDelete:Restrict)
+ tripVersion Int
+ contentKey String @db.VarChar(64)
+ email String? @db.VarChar(255)
+ subject String @db.VarChar(300)
+ body String @db.Text
+ status String @default("PENDING") @db.VarChar(20)
+ attempts Int @default(0)
+ lastError String? @db.VarChar(500)
+ messageId String? @db.VarChar(255)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ sentAt DateTime?
+ @@unique([tripId,tripVersion,userId])
+ @@index([status,createdAt])
+ @@map("diagnostic_trip_emails")
+}
