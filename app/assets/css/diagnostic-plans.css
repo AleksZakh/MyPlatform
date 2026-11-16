@@ -15,3 +15,16 @@ html.dark .odis-plans{--opr-bg:#293b4a;--opr-panel:#344b5e;--opr-chrome:#465765;
 .opr-col-status{width:48px}.opr-col-regional{width:85px}.opr-date-filters{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;padding:9px;background:var(--opr-panel);border-bottom:1px solid var(--opr-line);font-size:12px}.opr-date-filters>label{display:flex;flex-direction:column;gap:4px;min-width:0}.opr-date-filters select{max-width:100%}.opr-date-filters .trip-date-control{width:150px;display:flex;position:relative}.opr-date-filters .trip-date-text{width:100%;padding-right:34px}.opr-date-filters .trip-date-calendar{position:absolute;right:1px;top:1px;bottom:1px;width:30px;display:flex;align-items:center;justify-content:center;background:var(--opr-panel);border-left:1px solid var(--opr-line)}.opr-date-filters .trip-date-calendar input[type=date]{position:absolute;inset:0;width:100%;height:100%;opacity:0;padding:0;cursor:pointer}.opr-date-filters .trip-date-calendar:focus-within{outline:2px solid #2996b7}.opr-period-explanation{flex-basis:100%;color:var(--opr-muted)}.opr-filter-error{flex-basis:100%;color:#a12626;margin:0}html.dark .opr-filter-error{color:#ffc4c4}.opr-filter[aria-expanded=true]{background:var(--opr-selected);border-color:var(--opr-accent)}
 
 .odis-plans .opr-list-heading{flex-wrap:wrap;gap:8px 12px;min-width:0}.odis-plans .opr-list-heading h2{white-space:nowrap}.odis-plans .opr-status-legend{margin:0;flex-shrink:1;gap:3px 10px;color:var(--opr-text);font-size:12px}
+
+/* Use the actual shell content height: header/filter wrapping must not push the table below the footer. */
+.odis-plans{height:100%;min-height:0;min-width:0;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden}
+.odis-plans>.diag-module-tabs,.odis-plans>.opr-title{flex-shrink:0}
+.odis-plans .opr-layout{flex:1;min-height:0;min-width:0;overflow:auto;grid-template-rows:minmax(0,1fr);box-sizing:border-box}
+.odis-plans .opr-content{height:100%;min-height:0;overflow:hidden;box-sizing:border-box}
+.odis-plans .opr-panel{min-height:0;overflow:hidden}
+.odis-plans .opr-topline,.odis-plans .opr-toolbar,.odis-plans .opr-date-filters,.odis-plans .opr-error,.odis-plans .opr-results,.odis-plans .opr-list-notes{flex-shrink:0}
+.odis-plans .opr-table-scroll{flex:1 1 0;min-height:0;max-height:none;overscroll-behavior:contain}
+.odis-plans .opr-sections{min-height:0;overflow:auto}
+.odis-plans .opr-totals{display:inline-flex;gap:8px;margin-left:10px;font-size:12px;font-weight:400}
+@media(max-width:700px),(max-height:600px){.odis-plans .opr-content{height:auto;min-height:420px;overflow:visible}.odis-plans .opr-panel{overflow:visible}.odis-plans .opr-layout{grid-template-rows:minmax(420px,auto)}.odis-plans .opr-table-scroll{flex:0 0 auto;height:45dvh;min-height:160px}}
+@media(max-width:700px){.odis-plans .opr-layout{grid-template-rows:auto minmax(420px,auto)}.odis-plans .opr-sections{flex-shrink:0}}

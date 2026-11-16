@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {PlansHoursTotal} from '../shared/utils/diagnostic-plans-totals';
+import {PlanPageCollector} from '../server/services/diagnostic/plans-page';
+import type {CalendarRow} from '../shared/types/diagnostic-calendar';
+const row=(id:number,hours:string|null='2'):CalendarRow=>({id,key:`contract:${id}:1`,kind:'contract',contractId:1,contractNumber:'Д-1',structureCode:'',code:'607',name:'Работа',status:'planned',employeeId:1,employeeName:'Комов Сергей Николаевич',planStart:'2026-11-16',planFinish:'2026-11-20',planHours:hours,factStart:null,factFinish:null,factHours:null,planShared:false,factShared:false,planEstimated:false});
+test('Две работы по 2 часа: количество 2, сумма 4',()=>{const c=new PlanPageCollector(null);c.add(row(1));c.add(row(2));const r=c.finish();assert.equal(r.total,2);assert.equal(r.hoursSummary.hours,'4');});
+test('Точная сумма десятичных часов; план не складывается с фактом той же строки',()=>{const t=new PlansHoursTotal();t.add({...row(1,'0.1'),factHours:'90'});t.add(row(2,'0.2'));t.add({...row(3,null),factHours:'1.0001'});t.add(row(4,'0'));assert.deepEqual(t.result(),{hours:'1.3001',missing:0,shared:0,estimated:0,factOnly:1});});
+test('Пустые/некорректные часы отмечены; общие и расчётные часы не выдаются за точные личные',()=>{const t=new PlansHoursTotal();t.add(row(1,null));t.add(row(2,'bad'));t.add({...row(3,'16'),planShared:true});t.add({...row(4,'24'),planEstimated:true});t.add({...row(5,null),factHours:'8',factShared:true});assert.deepEqual(t.result(),{hours:'48',missing:2,shared:2,estimated:1,factOnly:1});});
+test('Сумма всех 401 строк одинакова на первой и последующей страницах; буфер 201',()=>{const rows=Array.from({length:401},(_,i)=>row(i+1));const a=new PlanPageCollector(null);rows.forEach(r=>a.add(r));const first=a.finish();const b=new PlanPageCollector(first.rows.at(-1)!);rows.forEach(r=>{b.add(r);assert(b.retained<=201);});assert.equal(first.hoursSummary.hours,'802');assert.deepEqual(b.finish().hoursSummary,first.hoursSummary);});

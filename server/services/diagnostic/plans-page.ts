@@ -2,6 +2,7 @@ import {createError} from 'h3';
 import {createHash} from 'node:crypto';
 import {calendarName} from '../../../shared/utils/diagnostic-calendar';
 import {tripDay} from '../../../shared/utils/diagnostic-trips';
+import {PlansHoursTotal} from '../../../shared/utils/diagnostic-plans-totals';
 import type {CalendarRow,CalendarUser} from '../../../shared/types/diagnostic-calendar';
 export const PLAN_BATCH=250,PLAN_PAGE=200;
 type Position=Pick<CalendarRow,'key'|'planStart'>;
@@ -14,14 +15,14 @@ export function readPlanCursor(value:unknown,context:string):Position|null{
 export const writePlanCursor=(p:Position,context:string)=>Buffer.from(JSON.stringify({v:1,context,key:p.key,planStart:p.planStart})).toString('base64url');
 /** Max heap: retains at most page size + 1 rows, irrespective of the source size/page number. */
 export class PlanPageCollector {
- private heap:CalendarRow[]=[];total=0;
+ private heap:CalendarRow[]=[];total=0;private hours=new PlansHoursTotal();
  constructor(private after:Position|null,private limit=PLAN_PAGE+1){}
  get retained(){return this.heap.length;}
- add(row:CalendarRow){this.total++;if(this.after&&planCompare(row,this.after)<=0)return;
+ add(row:CalendarRow){this.total++;this.hours.add(row);if(this.after&&planCompare(row,this.after)<=0)return;
   if(this.heap.length<this.limit){this.heap.push(row);let i=this.heap.length-1;while(i>0){const p=(i-1)>>1;if(planCompare(this.heap[p]!,this.heap[i]!)>=0)break;[this.heap[p],this.heap[i]]=[this.heap[i]!,this.heap[p]!];i=p;}return;}
   if(planCompare(row,this.heap[0]!)>=0)return;this.heap[0]=row;let i=0;for(;;){const a=i*2+1,b=a+1;if(a>=this.heap.length)break;const j=b<this.heap.length&&planCompare(this.heap[b]!,this.heap[a]!)>0?b:a;if(planCompare(this.heap[i]!,this.heap[j]!)>=0)break;[this.heap[i],this.heap[j]]=[this.heap[j]!,this.heap[i]!];i=j;}
  }
- finish(){const ordered=this.heap.sort(planCompare);return {rows:ordered.slice(0,this.limit-1),hasMore:ordered.length===this.limit,total:this.total};}
+ finish(){const ordered=this.heap.sort(planCompare);return {rows:ordered.slice(0,this.limit-1),hasMore:ordered.length===this.limit,total:this.total,hoursSummary:this.hours.result()};}
 }
 /** Conservative surname/login prefilter; full/initial ambiguity is still checked in JS. */
 export function planEmployeeFilter(user:CalendarUser|null){

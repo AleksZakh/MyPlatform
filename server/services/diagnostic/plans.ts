@@ -3,6 +3,7 @@ import {prisma} from '../../utils/prisma';
 import {getAccessActor} from '../access-control.service';
 import {plansRegionalCenters} from './plans-regional-centers';
 import {parsePlansPeriod,matchesPlansPeriod} from '../../../shared/utils/diagnostic-plans-period';
+import {PlansHoursTotal} from '../../../shared/utils/diagnostic-plans-totals';
 import {calendarRoster} from './calendar-roster';
 import {buildCalendar,calendarRows} from '../../../shared/utils/diagnostic-calendar';
 import {diagnosticWorkStatus} from '../../../shared/utils/diagnostic-contract-table';
@@ -21,7 +22,7 @@ export async function readEmployeePlans(event:H3Event,q:Record<string,unknown>):
  const currentUser={id:user.id,name:roster.users.find(p=>p.id===user.id)?.name||user.login||String(user.id)},pageSize=PLAN_PAGE;
  let warning=roster.warning;
  if(selection==='me'&&!roster.employees.some(p=>p.id===user.id))warning=[warning,'Ваше членство в группе ОДИС не подтверждено. Личный список пуст; проверьте состав группы.'].filter(Boolean).join(' ');
- const empty={period,currentUser,employees:roster.employees,selection,rows:[],total:0,page:1,pageSize,warning,unresolvedWorks:0,unlinkedTravelWorks:0,nextCursor:null};
+ const empty={period,currentUser,employees:roster.employees,selection,rows:[],total:0,hoursSummary:new PlansHoursTotal().result(),page:1,pageSize,warning,unresolvedWorks:0,unlinkedTravelWorks:0,nextCursor:null};
  const context=planContext(user.id,selection,search,period),after=readPlanCursor(q.cursor,context);
  if(page>1&&!after)throw createError({statusCode:400,message:'Обновите список перед переходом на следующую страницу.'});
  if(!roster.employees.length||selection==='me'&&!roster.employees.some(p=>p.id===user.id))return empty;
@@ -71,7 +72,7 @@ export async function readEmployeePlans(event:H3Event,q:Record<string,unknown>):
   check();if(structureIds.length)for(const w of await tx.diagnosticStructureWork.findMany({where:{id:{in:structureIds}},take:PLAN_PAGE,select:{id:true,note:true,warning:true,contractStructure:{select:{structure:{select:{location:true}}}}}}))info.set('structure:'+w.id,{note:w.note,location:w.contractStructure.structure.location,warning:w.warning});
   check();if(tripIds.length)for(const t of await tx.diagnosticTrip.findMany({where:{id:{in:tripIds}},take:PLAN_PAGE,select:{id:true,note:true}}))info.set('trip:'+t.id,{note:t.note,location:'',warning:''});
   check();const rows:PlanWorkRow[]=result.rows.map(r=>({...r,documentType:'Договор',regionalCenter:'',regionalCenterSource:'missing',...(info.get(r.kind+':'+r.id)??{note:'',location:'',warning:''})}));
-  return {period,currentUser,employees:roster.employees,selection,rows,total:result.total,page,pageSize,warning,unresolvedWorks:0,unlinkedTravelWorks:0,nextCursor:result.hasMore?writePlanCursor(result.rows[result.rows.length-1]!,context):null};
+  return {period,currentUser,employees:roster.employees,selection,rows,total:result.total,hoursSummary:result.hoursSummary,page,pageSize,warning,unresolvedWorks:0,unlinkedTravelWorks:0,nextCursor:result.hasMore?writePlanCursor(result.rows[result.rows.length-1]!,context):null};
  },{isolationLevel:'RepeatableRead',maxWait:2000,timeout:75000});
  check();const centers=await plansRegionalCenters(event,response.rows.map(r=>r.employeeId),()=>cancelled);
  if(cancelled)check();return {...response,rows:response.rows.map(r=>({...r,...centers.get(r.employeeId)}))};
