@@ -6,7 +6,7 @@ import type {CalendarRow,CalendarUser} from '../../../shared/types/diagnostic-ca
 export const PLAN_BATCH=250,PLAN_PAGE=200;
 type Position=Pick<CalendarRow,'key'|'planStart'>;
 export function planCompare(a:Position,b:Position){if(a.planStart===null&&b.planStart!==null)return 1;if(b.planStart===null&&a.planStart!==null)return -1;return String(b.planStart??'').localeCompare(String(a.planStart??''))||a.key.localeCompare(b.key);}
-export const planContext=(user:number,selection:string,search:string)=>createHash('sha256').update(JSON.stringify([user,selection,search])).digest('hex').slice(0,24);
+export const planContext=(user:number,selection:string,search:string,periodKey:unknown=null)=>createHash('sha256').update(JSON.stringify([user,selection,search,periodKey])).digest('hex').slice(0,24);
 export function readPlanCursor(value:unknown,context:string):Position|null{
  if(value===undefined)return null;
  try{if(typeof value!=='string'||value.length>512||!/^[A-Za-z0-9_-]+$/.test(value))throw Error();const v=JSON.parse(Buffer.from(value,'base64url').toString('utf8'));if(v.v!==1||v.context!==context||typeof v.key!=='string'||v.key.length>90||!/^(contract|structure|trip):[1-9]\d*:[1-9]\d*$/.test(v.key)||v.planStart!==null&&!tripDay(v.planStart))throw Error();return {key:v.key,planStart:v.planStart};}catch{throw createError({statusCode:400,message:'Страница устарела. Нажмите «Обновить».'});}

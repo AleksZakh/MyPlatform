@@ -1,6 +1,8 @@
 import {createError,setHeader,type H3Event} from 'h3';
 import {prisma} from '../../utils/prisma';
 import {getAccessActor} from '../access-control.service';
+import {plansRegionalCenters} from './plans-regional-centers';
+import {parsePlansPeriod,matchesPlansPeriod} from '../../../shared/utils/diagnostic-plans-period';
 import {calendarRoster} from './calendar-roster';
 import {buildCalendar,calendarRows} from '../../../shared/utils/diagnostic-calendar';
 import {diagnosticWorkStatus} from '../../../shared/utils/diagnostic-contract-table';
@@ -12,14 +14,15 @@ export async function readEmployeePlans(event:H3Event,q:Record<string,unknown>):
  if(typeof selection!=='string'||!['me','all'].includes(selection)&&(!/^[1-9]\d*$/.test(selection)||!Number.isSafeInteger(Number(selection))||Number(selection)>2147483647))throw createError({statusCode:400,message:'Некорректный сотрудник.'});
  const page=q.page===undefined?1:Number(q.page);if(q.page!==undefined&&(typeof q.page!=='string'||!/^\d+$/.test(q.page))||!Number.isSafeInteger(page)||page<1||page>100000)throw createError({statusCode:400,message:'Некорректная страница.'});
  if(q.search!==undefined&&typeof q.search!=='string')throw createError({statusCode:400,message:'Некорректная строка поиска.'});
+ let period;try{period=parsePlansPeriod(q);}catch(e){throw createError({statusCode:400,message:(e as Error).message});}
  const search=typeof q.search==='string'?q.search.trim().slice(0,200):'';
  const {user}=await getAccessActor(event),roster=await calendarRoster(event),employeeId=selection==='me'?user.id:selection==='all'?null:Number(selection);
  if(selection!=='me'&&employeeId!==null&&!roster.employees.some(p=>p.id===employeeId))throw createError({statusCode:400,message:'Сотрудник не входит в подтверждённый состав группы ОДИС. Обновите список.'});
  const currentUser={id:user.id,name:roster.users.find(p=>p.id===user.id)?.name||user.login||String(user.id)},pageSize=PLAN_PAGE;
  let warning=roster.warning;
  if(selection==='me'&&!roster.employees.some(p=>p.id===user.id))warning=[warning,'Ваше членство в группе ОДИС не подтверждено. Личный список пуст; проверьте состав группы.'].filter(Boolean).join(' ');
- const empty={currentUser,employees:roster.employees,selection,rows:[],total:0,page:1,pageSize,warning,unresolvedWorks:0,unlinkedTravelWorks:0,nextCursor:null};
- const context=planContext(user.id,selection,search),after=readPlanCursor(q.cursor,context);
+ const empty={period,currentUser,employees:roster.employees,selection,rows:[],total:0,page:1,pageSize,warning,unresolvedWorks:0,unlinkedTravelWorks:0,nextCursor:null};
+ const context=planContext(user.id,selection,search,period),after=readPlanCursor(q.cursor,context);
  if(page>1&&!after)throw createError({statusCode:400,message:'Обновите список перед переходом на следующую страницу.'});
  if(!roster.employees.length||selection==='me'&&!roster.employees.some(p=>p.id===user.id))return empty;
 
@@ -33,8 +36,8 @@ export async function readEmployeePlans(event:H3Event,q:Record<string,unknown>):
  const fields={id:true,planStart:true,planFinish:true,planHours:true,planExecutor:true,factStart:true,factFinish:true,factHours:true,factExecutor:true,status:true} as const;
  const day=(d:Date|null)=>d?.toISOString().slice(0,10)??null;
  const values=(w:{planStart:Date|null;planFinish:Date|null;planHours:{toString():string}|null;planExecutor:string;factStart:Date|null;factFinish:Date|null;factHours:{toString():string}|null;factExecutor:string;status:string})=>({planStart:day(w.planStart),planFinish:day(w.planFinish),planHours:w.planHours?.toString()??null,planExecutor:w.planExecutor,factStart:day(w.factStart),factFinish:day(w.factFinish),factHours:w.factHours?.toString()??null,factExecutor:w.factExecutor,status:diagnosticWorkStatus(w.status).key});
- const accept=(works:CalendarWork[],trips:CalendarTrip[]=[])=>{check();const built=buildCalendar(null,people,roster.users,works,trips);for(const row of calendarRows(built.rows,{employeeId,search,status:'',sort:'planStart',descending:true}))collector.add(row);};
- try{check();return await prisma.$transaction(async tx=>{
+ const accept=(works:CalendarWork[],trips:CalendarTrip[]=[])=>{check();const built=buildCalendar(null,people,roster.users,works,trips);for(const row of calendarRows(built.rows,{employeeId,search,status:'',sort:'planStart',descending:true}))if(matchesPlansPeriod(row,period))collector.add(row);};
+ try{check();const response=await prisma.$transaction(async tx=>{
   // LOCAL settings expire with this transaction; never change the application's pool defaults.
   await tx.$executeRaw`SET TRANSACTION READ ONLY`;
   await tx.$executeRaw`SET LOCAL work_mem = '1MB'`;
@@ -67,8 +70,10 @@ export async function readEmployeePlans(event:H3Event,q:Record<string,unknown>):
   if(contractIds.length)for(const w of await tx.diagnosticContractWork.findMany({where:{id:{in:contractIds}},take:PLAN_PAGE,select:{id:true,note:true}}))info.set('contract:'+w.id,{note:w.note,location:'',warning:''});
   check();if(structureIds.length)for(const w of await tx.diagnosticStructureWork.findMany({where:{id:{in:structureIds}},take:PLAN_PAGE,select:{id:true,note:true,warning:true,contractStructure:{select:{structure:{select:{location:true}}}}}}))info.set('structure:'+w.id,{note:w.note,location:w.contractStructure.structure.location,warning:w.warning});
   check();if(tripIds.length)for(const t of await tx.diagnosticTrip.findMany({where:{id:{in:tripIds}},take:PLAN_PAGE,select:{id:true,note:true}}))info.set('trip:'+t.id,{note:t.note,location:'',warning:''});
-  check();const rows:PlanWorkRow[]=result.rows.map(r=>({...r,...(info.get(r.kind+':'+r.id)??{note:'',location:'',warning:''})}));
-  return {currentUser,employees:roster.employees,selection,rows,total:result.total,page,pageSize,warning,unresolvedWorks:0,unlinkedTravelWorks:0,nextCursor:result.hasMore?writePlanCursor(result.rows[result.rows.length-1]!,context):null};
+  check();const rows:PlanWorkRow[]=result.rows.map(r=>({...r,documentType:'Договор',regionalCenter:'',regionalCenterSource:'missing',...(info.get(r.kind+':'+r.id)??{note:'',location:'',warning:''})}));
+  return {period,currentUser,employees:roster.employees,selection,rows,total:result.total,page,pageSize,warning,unresolvedWorks:0,unlinkedTravelWorks:0,nextCursor:result.hasMore?writePlanCursor(result.rows[result.rows.length-1]!,context):null};
  },{isolationLevel:'RepeatableRead',maxWait:2000,timeout:75000});
+ check();const centers=await plansRegionalCenters(event,response.rows.map(r=>r.employeeId),()=>cancelled);
+ if(cancelled)check();return {...response,rows:response.rows.map(r=>({...r,...centers.get(r.employeeId)}))};
  }catch(e:any){if(cancelled)throw createError({statusCode:499,message:'Запрос отменён.'});if(e?.code==='P2028'||e?.meta?.code==='57014'||/statement timeout/i.test(e?.message||''))throw createError({statusCode:504,message:'Превышено время загрузки работ. Выберите сотрудника и повторите запрос.'});throw e;}finally{event.node.res.off('close',onClose);}
 }
