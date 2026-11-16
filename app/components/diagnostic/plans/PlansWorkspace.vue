@@ -3,6 +3,8 @@ import {ref,computed,watch,onMounted,onBeforeUnmount} from 'vue';
 import TripDateInput from '../trips/TripDateInput.vue';
 import {plansWeek,parsePlansPeriod,type PlansPeriodMode} from '~~/shared/utils/diagnostic-plans-period';
 import WorkStatusIcon from '../contracts/WorkStatusIcon.vue';
+import WorkStatusLegend from '../contracts/WorkStatusLegend.vue';
+import {regionalCenterCode} from '~~/shared/utils/diagnostic-regional-center';
 import type {EmployeePlansResult,PlanWorkRow} from '~~/shared/types/diagnostic-plans';
 import {calendarShortName} from '~~/shared/utils/diagnostic-calendar';
 import {tripDateLabel} from '~~/shared/utils/diagnostic-trips';
@@ -12,7 +14,7 @@ const week=plansWeek(),filtersOpen=ref(false),periodMode=ref<PlansPeriodMode>('w
 const filterTitle=computed(()=>periodMode.value==='worklist'?'Текущая неделя, будущие и незакрытые работы':periodMode.value==='all'?'Все даты':`${tripDateLabel(dateFrom.value)} — ${tripDateLabel(dateTo.value)}`);
 function applyPeriod(){try{parsePlansPeriod({periodMode:draftMode.value,from:draftFrom.value,to:draftTo.value});}catch(e){filterError.value=(e as Error).message;return;}filterError.value='';periodMode.value=draftMode.value;dateFrom.value=draftFrom.value;dateTo.value=draftTo.value;refresh();}
 function resetPeriod(){const w=plansWeek();draftMode.value='worklist';draftFrom.value=w.from;draftTo.value=w.to;applyPeriod();}
-const centerTitle=(r:PlanWorkRow)=>({database:'Подразделение учётной записи Space',ad:'Подразделение из AD',missing:'Подразделение не указано',unavailable:'Не удалось получить подразделение из AD'}[r.regionalCenterSource]);
+const centerTitle=(r:PlanWorkRow)=>[r.regionalCenter,({database:'Подразделение учётной записи Space',ad:'Подразделение из AD',missing:'Подразделение не указано',unavailable:'Не удалось получить подразделение из AD'}[r.regionalCenterSource])].filter(Boolean).join(' · ');
 const employee=ref('me'),search=ref(''),page=ref(1),data=ref<EmployeePlansResult|null>(null),busy=ref(false),error=ref('');
 let generation=0,timer:ReturnType<typeof setTimeout>|undefined,controller:AbortController|undefined;
 const cursors=ref<(string|null)[]>([null]);
@@ -62,7 +64,7 @@ function moveTab(event:KeyboardEvent){tab.value=tab.value==='staff'?'external':'
     </div>
     <div id="odis-plans-panel" class="opr-panel" role="tabpanel" :aria-labelledby="`odis-plans-tab-${tab}`" tabindex="0">
      <div class="opr-toolbar">
-      <div class="opr-list-heading"><h2>{{tab==='staff'?'Перечень работ':'Работы внешних исполнителей'}}</h2><button class="opr-button opr-filter" type="button" :disabled="tab!=='staff'" aria-label="Фильтры списка работ" :title="filterTitle" :aria-expanded="filtersOpen" aria-controls="odis-plans-date-filters" @click="filtersOpen=!filtersOpen"><Icon name="lucide:filter" aria-hidden="true"/></button><button v-if="tab==='staff'" class="opr-button opr-refresh" type="button" :disabled="busy" @click="refresh">Обновить</button></div>
+      <div class="opr-list-heading"><h2>{{tab==='staff'?'Перечень работ':'Работы внешних исполнителей'}}</h2><button class="opr-button opr-filter" type="button" :disabled="tab!=='staff'" aria-label="Фильтры списка работ" :title="filterTitle" :aria-expanded="filtersOpen" aria-controls="odis-plans-date-filters" @click="filtersOpen=!filtersOpen"><Icon name="lucide:filter" aria-hidden="true"/></button><button v-if="tab==='staff'" class="opr-button opr-refresh" type="button" :disabled="busy" @click="refresh">Обновить</button><WorkStatusLegend v-if="tab==='staff'" class="opr-status-legend" :unknown="data?.rows.some(r=>r.status==='unknown')"/></div>
       <label class="opr-employee"><span>{{tab==='staff'?'Сотрудник':'Исполнитель'}}</span><select v-if="tab==='staff'" v-model="employee" aria-label="Сотрудник" :title="data?.warning||''"><option value="me">Мои работы{{data?.currentUser.name?' · '+calendarShortName(data.currentUser.name):''}}</option><option value="all">Все сотрудники</option><option v-for="person in data?.employees" :key="person.id" :value="String(person.id)">{{person.name}}</option></select><select v-else disabled aria-label="Внешний исполнитель"><option>Не выбран</option></select></label>
       <div class="opr-completion">
        <span>Факт. даты</span>
@@ -76,7 +78,7 @@ function moveTab(event:KeyboardEvent){tab.value=tab.value==='staff'?'external':'
       <label>Период<select v-model="draftMode" aria-label="Режим периода"><option value="worklist">Текущая неделя, будущие и незакрытые</option><option value="period">Выбранный период</option><option value="all">Все даты</option></select></label>
       <label v-if="draftMode==='period'">С<TripDateInput v-model="draftFrom" label="Начало периода"/></label><label v-if="draftMode==='period'">По<TripDateInput v-model="draftTo" label="Конец периода"/></label>
       <button class="opr-button" type="submit">Применить</button><button class="opr-button" type="button" @click="resetPeriod">По умолчанию</button>
-      <span class="opr-period-explanation">{{draftMode==='worklist'?'Неделя — с понедельника по воскресенье. Незакрытые работы без дат также включены.':draftMode==='period'?'Пересечение выбранного периода с датами плана или факта.':'Все сохранённые назначения независимо от дат и статуса.'}}</span>
+      <span class="opr-period-explanation">{{draftMode==='worklist'?'Неделя — с понедельника по воскресенье. Незакрытые работы без дат также включены.':draftMode==='period'?'Все статусы. Пересечение выбранного периода с датами плана или факта.':'Все сохранённые назначения независимо от дат и статуса.'}}</span>
       <p v-if="filterError" class="opr-filter-error" role="alert">{{filterError}}</p>
      </form>
      <p v-if="tab==='staff'&&error" class="opr-error" role="alert">{{error}} <button class="opr-button" @click="load">Повторить</button></p>
@@ -91,7 +93,7 @@ function moveTab(event:KeyboardEvent){tab.value=tab.value==='staff'?'external':'
         <tr v-else-if="error"><td colspan="12" class="opr-empty">Не удалось загрузить список работ.</td></tr>
         <template v-else>
          <tr v-for="row in data?.rows" :key="row.key" class="opr-work-row">
-          <td class="opr-center"><WorkStatusIcon :status="row.status"/></td><td :title="centerTitle(row)">{{row.regionalCenter||'—'}}</td><td :title="row.employeeName">{{calendarShortName(row.employeeName)}}</td><td>{{row.contractNumber}}</td><td>{{row.documentType}}</td><td>{{row.structureCode||'—'}}</td><td>{{row.location||'—'}}</td><td class="opr-work-name" :title="row.name">{{row.name}}</td>
+          <td class="opr-center"><WorkStatusIcon :status="row.status"/></td><td :title="centerTitle(row)">{{regionalCenterCode(row.regionalCenter)}}</td><td :title="row.employeeName">{{calendarShortName(row.employeeName)}}</td><td>{{row.contractNumber}}</td><td>{{row.documentType}}</td><td>{{row.structureCode||'—'}}</td><td>{{row.location||'—'}}</td><td class="opr-work-name" :title="row.name">{{row.name}}</td>
           <td :title="hourTitle(row)">{{row.planHours===null&&row.factHours!==null?'Ф: ':''}}{{row.planHours??row.factHours??'—'}}{{row.planShared||row.planHours===null&&row.factShared?' *':row.planEstimated?' ≈':''}}</td>
           <td :title="periodTitle(row)">{{row.planStart||row.planFinish?'':row.factStart||row.factFinish?'Ф: ':''}}{{rowPeriod(row)}}</td><td class="opr-work-note" :title="row.note">{{row.note||'—'}}</td>
           <td class="opr-center"><span v-if="row.warning" class="opr-data-warning" :title="row.warning" aria-label="Есть замечание к работе">!</span><span v-else>—</span></td>

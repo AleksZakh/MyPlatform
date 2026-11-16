@@ -4,6 +4,14 @@ import {plansWeek,parsePlansPeriod,matchesPlansPeriod} from '../shared/utils/dia
 import {tripToday} from '../shared/utils/diagnostic-trip-lifecycle';
 const filter=parsePlansPeriod({},'2026-11-16');
 const work=(planStart:string|null,planFinish:string|null,status='completed',factStart:string|null=null,factFinish:string|null=null)=>({planStart,planFinish,status,factStart,factFinish});
+test('Прошлый выбранный период включает каждый статус по плану или факту',()=>{
+ const p=parsePlansPeriod({periodMode:'period',from:'2026-10-01',to:'2026-10-31'},'2026-11-16');
+ for(const status of ['unplanned','planned','in_progress','completed','overdue','unknown']){
+  assert(matchesPlansPeriod(work('2026-10-05','2026-10-09',status),p),status);
+  assert(matchesPlansPeriod(work('2026-09-01','2026-09-02',status,'2026-10-31','2026-11-02'),p),status);
+  assert(!matchesPlansPeriod(work('2026-11-01','2026-11-02',status),p),status);
+ }
+});
 test('Неделя: понедельник–воскресенье, переход года и московское время',()=>{assert.deepEqual(plansWeek('2026-11-16'),{from:'2026-11-16',to:'2026-11-22'});assert.deepEqual(plansWeek('2026-11-22'),plansWeek('2026-11-16'));assert.deepEqual(plansWeek('2026-11-23'),{from:'2026-11-23',to:'2026-11-29'});assert.deepEqual(plansWeek('2027-01-01'),{from:'2026-12-28',to:'2027-01-03'});assert.deepEqual(plansWeek(tripToday(new Date('2026-11-15T21:30:00Z'))),plansWeek('2026-11-16'));});
 test('Работы со скриншота: 16–20 и 23–27 ноября включены, закрытый выезд 2–6 ноября исключён',()=>{assert(matchesPlansPeriod(work('2026-11-16','2026-11-20','planned'),filter));assert(matchesPlansPeriod(work('2026-11-23','2026-11-27','planned'),filter));assert(!matchesPlansPeriod(work('2026-11-02','2026-11-06'),filter));});
 test('Текущая неделя в любом статусе; незакрытые прошлые и без дат остаются',()=>{for(const status of ['completed','planned','in_progress','overdue','unknown'])assert(matchesPlansPeriod(work('2026-11-16','2026-11-22',status),filter));for(const status of ['planned','in_progress','overdue','unplanned','unknown']){assert(matchesPlansPeriod(work('2020-01-01','2020-01-02',status),filter));assert(matchesPlansPeriod(work(null,null,status),filter));}assert(!matchesPlansPeriod(work(null,null),filter));});
