@@ -1,0 +1,9 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {buildCalendar,calendarRows} from '../shared/utils/diagnostic-calendar';
+import type {CalendarWork} from '../shared/types/diagnostic-calendar';
+const people=[{id:1,name:'Иванов Иван Иванович'},{id:2,name:'Петров Пётр Петрович'}];
+const work:CalendarWork={id:1,kind:'contract',contractId:1,contractNumber:'Д-1',structureCode:'',code:'607',name:'Работа',status:'planned',planStart:null,planFinish:null,planExecutor:'Иванов И.И.',planHours:'8',factStart:null,factFinish:null,factExecutor:'',factHours:null};
+test('Планы включают назначения без дат; календарь месяца по-прежнему их исключает',()=>{assert.equal(buildCalendar(null,people,people,[work],[]).rows.length,1);assert.equal(buildCalendar('2026-11',people,people,[work],[]).rows.length,0);});
+test('Планы включают прошлые, будущие и выполненные работы, сохраняя владельца каждой фазы',()=>{const works=[{...work,planStart:'2020-01-01',planFinish:'2020-01-01'},{...work,id:2,planStart:'2030-01-01',planFinish:'2030-01-01'},{...work,id:3,status:'completed',planExecutor:'',factExecutor:'Петров П.П.',factHours:'4'}];const built=buildCalendar(null,people,people,works,[]);const rows=calendarRows(built.rows,{employeeId:2,search:'',status:'',sort:'planStart',descending:true});assert.equal(built.rows.length,3);assert.equal(rows.length,1);assert.equal(rows[0].planHours,null);assert.equal(rows[0].factHours,'4');});
+test('Планы не приписывают неразрешённые назначения сотруднику и не объединяют одноимённые работы',()=>{const works=[work,{...work,id:2},{...work,id:3,planExecutor:'Неизвестный Н.Н.'}];const result=buildCalendar(null,people,people,works,[]);assert.equal(result.rows.length,2);assert.equal(result.unresolvedWorks,1);assert.notEqual(result.rows[0].key,result.rows[1].key);});

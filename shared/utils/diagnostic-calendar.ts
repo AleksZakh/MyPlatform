@@ -17,23 +17,24 @@ export function calendarResolver(users:CalendarUser[]){
   return {ids:[...ids],unresolved};
  };
 }
-export function buildCalendar(month:string,employees:CalendarEmployee[],users:CalendarUser[],works:CalendarWork[],trips:CalendarTrip[]){
- calendarMonth(month);const roster=new Map(employees.map(e=>[e.id,e.name])),resolve=calendarResolver(users);const rows:CalendarRow[]=[];let unresolvedWorks=0,unlinkedTravelWorks=0;
+export function buildCalendar(month:string|null,employees:CalendarEmployee[],users:CalendarUser[],works:CalendarWork[],trips:CalendarTrip[]){
+ // A null month is the employee work list: include assignments without dates.
+ if(month!==null)calendarMonth(month);const inPeriod=(a:string|null,b:string|null)=>month===null||calendarOverlaps(a,b,month);const roster=new Map(employees.map(e=>[e.id,e.name])),resolve=calendarResolver(users);const rows:CalendarRow[]=[];let unresolvedWorks=0,unlinkedTravelWorks=0;
  for(const w of works){
-  if(!calendarOverlaps(w.planStart,w.planFinish,month)&&!calendarOverlaps(w.factStart,w.factFinish,month))continue;
+  if(!inPeriod(w.planStart,w.planFinish)&&!inPeriod(w.factStart,w.factFinish))continue;
   const plan=resolve(w.planExecutor),fact=resolve(w.factExecutor);
-  const missingPlan=!!(w.planStart||w.planFinish)&&(!w.planExecutor.trim()||plan.unresolved),missingFact=!!(w.factStart||w.factFinish)&&(!w.factExecutor.trim()||fact.unresolved);
+  const missingPlan=(month===null||!!(w.planStart||w.planFinish))&&(!w.planExecutor.trim()||plan.unresolved),missingFact=!!(w.factStart||w.factFinish||(month===null&&w.factExecutor.trim()))&&(!w.factExecutor.trim()||fact.unresolved);
   if(missingPlan||missingFact)unresolvedWorks++;
   let shown=false;
   for(const id of new Set([...plan.ids,...fact.ids])){
    if(!roster.has(id))continue;const isPlan=plan.ids.includes(id),isFact=fact.ids.includes(id);
-   if(!(isPlan&&calendarOverlaps(w.planStart,w.planFinish,month))&&!(isFact&&calendarOverlaps(w.factStart,w.factFinish,month)))continue;
+   if(!(isPlan&&inPeriod(w.planStart,w.planFinish))&&!(isFact&&inPeriod(w.factStart,w.factFinish)))continue;
    const {planExecutor:_,factExecutor:__,...data}=w;
    rows.push({...data,key:`${w.kind}:${w.id}:${id}`,employeeId:id,employeeName:roster.get(id)!,planStart:isPlan?w.planStart:null,planFinish:isPlan?w.planFinish:null,planHours:isPlan?w.planHours:null,factStart:isFact?w.factStart:null,factFinish:isFact?w.factFinish:null,factHours:isFact?w.factHours:null,planShared:isPlan&&(plan.ids.length>1||plan.unresolved),factShared:isFact&&(fact.ids.length>1||fact.unresolved),planEstimated:false});shown=true;
   }
   if(shown&&w.kind==='structure'&&['301','302'].includes(w.code))unlinkedTravelWorks++;
  }
- for(const t of trips){if(!calendarOverlaps(t.start,t.finish,month))continue;for(const p of t.participants){if(!roster.has(p.id))continue;
+ for(const t of trips){if(!inPeriod(t.start,t.finish))continue;for(const p of t.participants){if(!roster.has(p.id))continue;
   rows.push({id:t.id,key:`trip:${t.id}:${p.id}`,kind:'trip',contractId:t.contractId,contractNumber:t.contractNumber,structureCode:'',code:t.start===t.finish?'302':'301',name:`${t.start===t.finish?'Однодневный выезд':'Командировка'} (${t.number})`,status:t.status==='COMPLETED'?'completed':'planned',employeeId:p.id,employeeName:roster.get(p.id)!,planStart:t.start,planFinish:t.finish,planHours:tripDefaultHours(t.start,t.finish),factStart:t.status==='COMPLETED'?t.start:null,factFinish:t.status==='COMPLETED'?t.finish:null,factHours:t.status==='COMPLETED'?p.factHours:null,planShared:false,factShared:false,planEstimated:true});
  }}
  return {rows,unresolvedWorks,unlinkedTravelWorks};
