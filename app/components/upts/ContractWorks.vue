@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import WorkName from './WorkName.vue';
 import StageBatches from './StageBatches.vue';
-import {lastStage,objectTypeName} from '~~/shared/utils/upts-object-stages';
+import {lastStage,objectTypeName,usedWorkKinds} from '~~/shared/utils/upts-object-stages';
 import type {UptsStageBatch,UptsTaskStageRow} from '~~/shared/types/upts-object';
 import { ref, computed, onMounted, watch } from 'vue';
 import { workKindsFor } from '~~/shared/utils/upts-work-kinds';
@@ -82,7 +82,7 @@ async function apply() {
           <button type="button" :aria-pressed="mode === 'template'" @click="mode = 'template'">По шаблону</button>
           <button type="button" :aria-pressed="mode === 'manual'" @click="mode = 'manual'">Своя работа</button>
         </div>
-        <StageBatches v-if="mode==='stages'" v-model="batches" :library="lib" :object-type="contract.contractType||''" :start-number="firstNewStage" :disabled="saving||loading||!!loadError" />
+        <StageBatches v-if="mode==='stages'" v-model="batches" :library="lib" :object-type="contract.contractType||''" :start-number="firstNewStage" :used-kinds="usedWorkKinds(contract.objectDetails,existing)" :disabled="saving||loading||!!loadError" />
         <template v-else-if="mode === 'library'">
           <label>Поиск работы<input v-model="query" type="search" placeholder="Название работы" /></label>
           <div v-if="filteredWorks.length" class="upts-work-choices" role="group" aria-label="Работы из библиотеки">

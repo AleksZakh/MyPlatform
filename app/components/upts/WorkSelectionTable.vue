@@ -3,7 +3,7 @@ import WorkName from './WorkName.vue';
 import {computed,ref,watch,onMounted,onBeforeUnmount} from 'vue';
 import type {UptsStageWork} from '~~/shared/types/upts-object';
 import {UPTS_WORK_ROLES} from '~~/shared/utils/upts-work-kinds';
-const props=defineProps<{works:UptsStageWork[];stageCount:number;fixedStage?:number;disabled?:boolean}>();
+const props=defineProps<{works:UptsStageWork[];stageCount:number;fixedStage?:number;compactToolbar?:boolean;disabled?:boolean}>();
 const stages=defineModel<Record<string,number|''>>({required:true});
 const enabled=defineModel<string[]>('enabled',{required:true});
 const selected=ref<string[]>([]),anchor=ref<number|null>(null),dragStart=ref<number|null>(null);
@@ -56,13 +56,16 @@ onBeforeUnmount(()=>{window.removeEventListener('pointerup',end);window.removeEv
 </script>
 <template>
   <section class="upts-work-selection" aria-label="Выбор работ объекта">
-    <div class="upts-selection-actions">
-      <span role="status">Включено: {{ enabled.length }} · Выделено: {{ selected.length }}</span>
-      <button type="button" :disabled="disabled || !selected.length" @click="setEnabled(selected,true)">Включить выделенные</button>
+    <div class="upts-selection-actions" :class="{'upts-selection-actions-compact':compactToolbar}">
+      <slot name="toolbar-start" />
+      <span v-if="!compactToolbar" role="status">Включено: {{ enabled.length }} · Выделено: {{ selected.length }}</span>
+      <div class="upts-selection-buttons"><button type="button" :disabled="disabled || !selected.length" @click="setEnabled(selected,true)">Включить выделенные</button>
       <button type="button" :disabled="disabled || !selected.length" @click="setEnabled(selected,false)">Выключить выделенные</button>
-      <button type="button" :disabled="disabled || !selected.length" @click="selected=[]">Снять выделение</button>
+      <button type="button" :disabled="disabled || !selected.length" @click="selected=[]">Снять выделение</button></div>
+      <slot name="toolbar-end" />
     </div>
-    <p class="work-muted">Флажки включают работы. Shift-клик или перетягивание выделяют диапазон. {{ fixedStage ? 'Все работы этого набора относятся к этапу '+fixedStage+'.' : 'Этап в заголовке назначается выделенным строкам.' }}</p>
+    <p v-if="compactToolbar" class="upts-selection-count" role="status">Включено: {{ enabled.length }} · Выделено: {{ selected.length }}</p>
+    <p v-if="!fixedStage" class="work-muted">Флажки включают работы. Shift-клик или перетягивание выделяют диапазон. {{ fixedStage ? 'Все работы этого набора относятся к этапу '+fixedStage+'.' : 'Этап в заголовке назначается выделенным строкам.' }}</p>
     <p v-if="invalid" class="work-error" role="alert">У включённых работ укажите этап от 1 до {{ stageCount }}.</p>
     <div class="work-table-wrap">
       <table class="upts-selection-table">
@@ -85,7 +88,8 @@ onBeforeUnmount(()=>{window.removeEventListener('pointerup',end);window.removeEv
 </template>
 <style scoped>
 .upts-work-selection{min-width:0;--selection-head:#e9e9eb;--selection-hover:#e8f3f7;--selection-active:#d5eaf2}
-.upts-selection-actions{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:4px}.upts-selection-actions span{margin-right:auto;font-size:12px}.upts-selection-actions button{padding:3px 8px;font-size:12px}
+.upts-selection-actions{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:4px}.upts-selection-actions>span{margin-right:auto;font-size:12px}.upts-selection-actions button{padding:3px 8px;font-size:12px}
+.upts-selection-buttons{display:flex;flex-wrap:wrap;gap:6px}.upts-selection-actions-compact{align-items:end;gap:8px}.upts-selection-actions-compact .upts-selection-buttons{margin-left:auto}.upts-selection-actions-compact .upts-selection-buttons button{min-height:32px}.upts-selection-count{font-size:12px;margin:4px 0;color:var(--work-muted)}
 .upts-selection-table{width:100%;min-width:620px;font-size:13px;line-height:20px;border-collapse:collapse}
 .upts-selection-table th,.upts-selection-table td{padding:3px 8px;text-align:left;vertical-align:middle;border:0;border-bottom:1px solid var(--work-line);overflow-wrap:anywhere}
 .upts-selection-table th{background:var(--selection-head);color:var(--work-text);font-weight:500;position:sticky;top:0;z-index:1}

@@ -86,13 +86,13 @@ test('UPTS stage batches: creation, append, atomic editing, schedules, identity 
   const lib=await ok(await request('/lib'));
 
   const batch=(key:string,number:number,limit?:number)=>({stageNumber:number,workKindKey:key,startDate:'2026-11-17',endDate:'2026-12-01',selectedWorks:lib.templates.find((t:any)=>t.workKindKey===key).items.slice(0,limit).map((i:any)=>({id:i.work.id,version:i.work.version}))});
-  const input={clientKey:randomUUID(),number:'STAGES',name:'Много этапов',counterparty:'',signedDate:null,dueDate:null,contractType:'LAND',objectDetails:{engineerId:3,curatorId:2},templateId:null,templateVersion:null,manualWorks:[],stageBatches:[batch('LAND_DIVISION',1),batch('LAND_CHANGE',2),batch('LAND_DIVISION',3)]};
+  const input={clientKey:randomUUID(),number:'STAGES',name:'Много этапов',counterparty:'',signedDate:null,dueDate:null,contractType:'LAND',objectDetails:{engineerId:3,curatorId:2},templateId:null,templateVersion:null,manualWorks:[],stageBatches:[batch('LAND_DIVISION',1),batch('LAND_CHANGE',2),batch('LAND_RIGHT',3)]};
   const c=await ok(await request('/contracts',2,'POST',input));assert.equal(c.objectDetails.stageCount,3);assert.equal(c.objectDetails.stages.length,3);
-  const tasks=await db.workTask.findMany({where:{uptsContractId:c.id},orderBy:{id:'asc'}});assert.equal(tasks.length,26);assert(tasks.every(t=>t.assigneeId===3));
-  assert.deepEqual(tasks.map(t=>(t.uptsWorkMeta as any).stageNumber),[...Array(10).fill(1),...Array(6).fill(2),...Array(10).fill(3)]);
-  assert.deepEqual(tasks.map(t=>(t.uptsWorkMeta as any).workKindKey),[...Array(10).fill('LAND_DIVISION'),...Array(6).fill('LAND_CHANGE'),...Array(10).fill('LAND_DIVISION')]);
-  assert.equal(tasks[0]!.title,tasks[16]!.title);assert.notEqual(tasks[0]!.id,tasks[16]!.id,'same definition in another stage remains a separate work');
-  assert.equal((await ok(await request('/contracts',2,'POST',input))).id,c.id);assert.equal(await db.workTask.count({where:{uptsContractId:c.id}}),26);
+  const tasks=await db.workTask.findMany({where:{uptsContractId:c.id},orderBy:{id:'asc'}});assert.equal(tasks.length,19);assert(tasks.every(t=>t.assigneeId===3));
+  assert.deepEqual(tasks.map(t=>(t.uptsWorkMeta as any).stageNumber),[...Array(10).fill(1),...Array(6).fill(2),...Array(3).fill(3)]);
+  assert.deepEqual(tasks.map(t=>(t.uptsWorkMeta as any).workKindKey),[...Array(10).fill('LAND_DIVISION'),...Array(6).fill('LAND_CHANGE'),...Array(3).fill('LAND_RIGHT')]);
+  const common=tasks.find(t=>(t.uptsWorkMeta as any).stageNumber===2&&tasks.some(a=>(a.uptsWorkMeta as any).stageNumber===1&&(a.uptsWorkMeta as any).definitionId===(t.uptsWorkMeta as any).definitionId));assert(common,'shared definitions in different kinds remain separate works');
+  assert.equal((await ok(await request('/contracts',2,'POST',input))).id,c.id);assert.equal(await db.workTask.count({where:{uptsContractId:c.id}}),19);
   assert.equal((await request('/contracts',2,'POST',{...input,stageBatches:[batch('LAND_DIVISION',1)]})).status,409);
   for(const bad of [
     {stageBatches:[batch('LAND_DIVISION',2)]},
@@ -105,25 +105,35 @@ test('UPTS stage batches: creation, append, atomic editing, schedules, identity 
   ]){const before=await db.uptsContract.count();const r=await request('/contracts',2,'POST',{...input,clientKey:randomUUID(),...bad});assert([400,409].includes(r.status),await r.text());assert.equal(await db.uptsContract.count(),before);}
   await db.workTask.update({where:{id:tasks[0]!.id},data:{status:'DONE',uptsWorkMeta:{...tasks[0]!.uptsWorkMeta as any,resultText:'Сохранённый результат',completedAt:'2026-11-17T10:00:00Z'}}});
   const preserved=await db.workTask.findUniqueOrThrow({where:{id:tasks[0]!.id}});
-  const apply={clientKey:randomUUID(),contractVersion:c.version,templateId:null,templateVersion:null,manualWorks:[],stageBatches:[batch('LAND_RIGHT',4),batch('LAND_USE',5)]};
+  const apply={clientKey:randomUUID(),contractVersion:c.version,templateId:null,templateVersion:null,manualWorks:[],stageBatches:[batch('LAND_USE',4),batch('LAND_TECH_ERROR',5)]};
   assert.equal((await request(`/contracts/${c.id}/works`,3,'POST',apply)).status,403);
   await ok(await request(`/contracts/${c.id}/works`,2,'POST',apply));await ok(await request(`/contracts/${c.id}/works`,2,'POST',apply));
-  assert.equal(await db.workTask.count({where:{uptsContractId:c.id}}),32);
+  assert.equal(await db.workTask.count({where:{uptsContractId:c.id}}),25);
   assert.deepEqual(await db.workTask.findUniqueOrThrow({where:{id:tasks[0]!.id}}),preserved);
   assert.equal((await request(`/contracts/${c.id}/works`,2,'POST',{...apply,clientKey:randomUUID()})).status,409);
   let current=await db.uptsContract.findUniqueOrThrow({where:{id:c.id}});assert.equal((current.objectDetails as any).stages[4].number,5);
-  const edit={clientKey:current.clientKey,version:current.version,number:current.number,name:current.name,counterparty:'',signedDate:null,dueDate:null,contractType:'LAND',objectDetails:{...current.objectDetails as any,stages:(current.objectDetails as any).stages.map((s:any)=>({...s,startDate:'2026-11-18'}))},stageBatches:[batch('LAND_TECH_ERROR',6)]};
-  const edited=await ok(await request(`/projects/${c.projectId}/contracts/${c.id}`,2,'PUT',edit));assert.equal(edited.objectDetails.stageCount,6);assert.equal(edited.objectDetails.stages[0].startDate,'2026-11-18');assert.equal(await db.workTask.count({where:{uptsContractId:c.id}}),35);
+  const edit={clientKey:current.clientKey,version:current.version,number:current.number,name:current.name,counterparty:'',signedDate:null,dueDate:null,contractType:'LAND',objectDetails:{...current.objectDetails as any,stages:(current.objectDetails as any).stages.map((s:any)=>({...s,startDate:'2026-11-18'}))},stageBatches:[batch('LAND_REGISTER_ERROR',6)]};
+  const edited=await ok(await request(`/projects/${c.projectId}/contracts/${c.id}`,2,'PUT',edit));assert.equal(edited.objectDetails.stageCount,6);assert.equal(edited.objectDetails.stages[0].startDate,'2026-11-18');assert.equal(await db.workTask.count({where:{uptsContractId:c.id}}),29);
   assert.deepEqual(await db.workTask.findUniqueOrThrow({where:{id:tasks[0]!.id}}),preserved);
-  assert.equal((await request(`/projects/${c.projectId}/contracts/${c.id}`,2,'PUT',edit)).status,409);assert.equal(await db.workTask.count({where:{uptsContractId:c.id}}),35);
+  assert.equal((await request(`/projects/${c.projectId}/contracts/${c.id}`,2,'PUT',edit)).status,409);assert.equal(await db.workTask.count({where:{uptsContractId:c.id}}),29);
   const before=await db.uptsContract.findUniqueOrThrow({where:{id:c.id}});
-  const badEdit={...edit,version:before.version,number:'Не должен сохраниться',objectDetails:before.objectDetails,stageBatches:[{...batch('LAND_CHANGE',7),selectedWorks:[{...batch('LAND_CHANGE',7).selectedWorks[0],version:999}]}]};
+  const badEdit={...edit,version:before.version,number:'Не должен сохраниться',objectDetails:before.objectDetails,stageBatches:[{...batch('LAND_FORMATION',7),selectedWorks:[{...batch('LAND_FORMATION',7).selectedWorks[0],version:999}]}]};
   assert.equal((await request(`/projects/${c.projectId}/contracts/${c.id}`,2,'PUT',badEdit)).status,409);assert.deepEqual(await db.uptsContract.findUniqueOrThrow({where:{id:c.id}}),before);
   const overview=await ok(await request('/overview/'+c.id));assert.equal(overview.object.objectDetails.stages.length,6);assert.equal(overview.tasks[0].uptsWorkMeta.resultText,'Сохранённый результат');
-  assert(await db.auditLog.count({where:{entityType:'UptsContract',entityId:c.id,action:'APPLY'}}));assert.equal(await db.uptsNotification.count({where:{task:{uptsContractId:c.id}}}),35);
-  // More than 50 works and more than 50 stages are valid; definitions may repeat in different stages.
-  const many=await ok(await request('/contracts',2,'POST',{...input,clientKey:randomUUID(),number:'55 этапов',stageBatches:Array.from({length:55},(_,i)=>batch('LAND_RIGHT',i+1,1))}));
-  assert.equal(many.objectDetails.stageCount,55);assert.equal(await db.workTask.count({where:{uptsContractId:many.id}}),55);
+  assert(await db.auditLog.count({where:{entityType:'UptsContract',entityId:c.id,action:'APPLY'}}));assert.equal(await db.uptsNotification.count({where:{task:{uptsContractId:c.id}}}),29);
+  // Duplicate kinds are rejected in one request and against saved tasks/metadata.
+  const duplicates={...input,clientKey:randomUUID(),stageBatches:[batch('LAND_DIVISION',1),batch('LAND_DIVISION',2)]};
+  assert.equal((await request('/contracts',2,'POST',duplicates)).status,400);
+  const fresh=await db.uptsContract.findUniqueOrThrow({where:{id:c.id}});
+  const duplicateAppend={...apply,clientKey:randomUUID(),contractVersion:fresh.version,stageBatches:[batch('LAND_DIVISION',7)]};
+  assert.equal((await request(`/contracts/${c.id}/works`,2,'POST',duplicateAppend)).status,400);
+  assert.equal((await request(`/projects/${c.projectId}/contracts/${c.id}`,2,'PUT',{...edit,version:fresh.version,objectDetails:fresh.objectDetails,stageBatches:[batch('LAND_DIVISION',7)]})).status,400);
+  assert.equal(await db.workTask.count({where:{uptsContractId:c.id}}),29);
+  // Saved repeats from previous releases remain editable; only new repetitions are blocked.
+  const legacyDetails={...fresh.objectDetails as any,stageCount:55,stages:[...(fresh.objectDetails as any).stages,{number:55,workKindKey:'LAND_DIVISION',startDate:null,endDate:null}]};
+  await db.uptsContract.update({where:{id:c.id},data:{objectDetails:legacyDetails}});
+  const {stageBatches:omitted,...legacyEdit}=edit;
+  const kept=await ok(await request(`/projects/${c.projectId}/contracts/${c.id}`,2,'PUT',{...legacyEdit,version:fresh.version,objectDetails:legacyDetails}));assert.equal(kept.objectDetails.stageCount,55);
   // Legacy objects keep their original type and area; linear OKS uses a distinct value.
   const oks=await ok(await request('/contracts',2,'POST',{...input,clientKey:randomUUID(),number:'Линейный',contractType:'OKS',objectDetails:{engineerId:3,oksKind:'LINEAR',sourceLength:'12,5',sourceArea:'250'},stageBatches:[batch('OKS_FORMATION',1)]}));
   assert.equal(oks.contractType,'OKS');assert.equal(oks.objectDetails.sourceLength,'12,5');assert.equal(oks.objectDetails.sourceArea,'250');

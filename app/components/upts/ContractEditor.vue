@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import StageBatches from './StageBatches.vue';
 import StageAccordion from './StageAccordion.vue';
-import {objectStages,lastStage,objectMeasureLabel} from '~~/shared/utils/upts-object-stages';
+import {objectStages,lastStage,objectMeasureLabel,usedWorkKinds} from '~~/shared/utils/upts-object-stages';
 import { reactive, ref, computed, onMounted, watch, toRaw, nextTick } from "vue";
 import { workUserName, type WorkTaskDTO, type WorkUser } from '~~/shared/types/work';
 import ObjectFields from './ObjectFields.vue';
@@ -101,10 +101,12 @@ const form = reactive({
 });
 const manual=ref('');
 const selectedKind=ref('');
+const existingKinds=computed(()=>c?usedWorkKinds(c.objectDetails,existingWorks.value):[]);
+const usedKinds=computed(()=>new Set([...existingKinds.value,...batches.value.map(b=>b.workKindKey)]));
 const selectedKindKeys=computed(()=>[...new Set([...(c?(details.value.workKindKeys||(details.value.workKindKey?[details.value.workKindKey]:[])):[]),...batches.value.map(b=>b.workKindKey)])]);
 const objectType=computed({get:()=>form.contractType==='OKS'&&details.value.oksKind==='LINEAR'?'OKS_LINEAR':form.contractType,set:(type:string)=>{form.contractType=(type==='OKS_LINEAR'?'OKS':type) as UptsContractType;details.value.oksKind=type==='OKS_LINEAR'?'LINEAR':'AREA';}});
 const measurement=computed({get:()=>form.contractType==='OKS'&&details.value.oksKind==='LINEAR'?details.value.sourceLength:details.value.sourceArea,set:(value:string|undefined)=>{if(form.contractType==='OKS'&&details.value.oksKind==='LINEAR')details.value.sourceLength=value;else details.value.sourceArea=value;}});
-async function addKind(){activeTab.value='works';await nextTick();stageComposer.value?.add(selectedKind.value);}
+async function addKind(){if(usedKinds.value.has(selectedKind.value))return;activeTab.value='works';await nextTick();stageComposer.value?.add(selectedKind.value);}
 watch(selectedKind,()=>{if(!c&&!batches.value.length&&selectedKind.value&&library.value)addKind();});
 const enabledWorks=ref<string[]>([]);
 const manualNames=computed(()=>manual.value.split('\n').map(s=>s.trim()).filter(Boolean));
@@ -207,12 +209,12 @@ async function save() {
 }
 </script>
 <template>
-  <Modal :content-height="900" full-height compact-height wide fixed-sections grey-header icon="streamline-kameleon-color:map-pin" :title="c ? 'Редактирование объекта ' + (details.sourceCadastralNumber || c.number) : 'Новый объект'" @close="emit('close')">
+  <Modal :content-height="1040" tall full-height compact-height wide fixed-sections grey-header icon="streamline-kameleon-color:map-pin" :title="c ? 'Редактирование объекта ' + (details.sourceCadastralNumber || c.number) : 'Новый объект'" @close="emit('close')">
     <form class="work-form upts-object-form" @submit.prevent="save" @invalid.capture="revealInvalid">
       <fieldset class="upts-static upts-object-general" :disabled="saving" aria-label="Общая информация по объекту">
         <legend>Общая информация по объекту</legend>
         <div class="upts-object-general-grid">
-          <label v-if="form.contractType!=='OTHER'">Вид работ<select v-model="selectedKind" :disabled="saving || loading || !!libraryError"><option value="">Выберите вид работ</option><option v-for="kind in kinds" :key="kind.key" :value="kind.key">{{ kind.name }}</option></select><button v-if="c||batches.length" type="button" :disabled="saving||loading||worksLoading||!!worksError||!selectedKind" @click="addKind">+ Добавить вид работ</button></label>
+          <label v-if="form.contractType!=='OTHER'">Вид работ<div class="upts-kind-picker"><select v-model="selectedKind" :disabled="saving || loading || !!libraryError"><option value="">Выберите вид работ</option><option v-for="kind in kinds" :key="kind.key" :value="kind.key" :disabled="usedKinds.has(kind.key)">{{ kind.name }}</option></select><button type="button" aria-label="Добавить вид работ" title="Добавить вид работ" :disabled="saving||loading||worksLoading||!!worksError||!selectedKind||usedKinds.has(selectedKind)" @click="addKind">+</button></div></label>
           <label>Условный номер (название)<input v-model="form.number" required maxlength="100" /></label>
           <label>Кадастровый номер<input v-model="details.sourceCadastralNumber" maxlength="100" /></label>
           <label>Объект<input v-model="details.road" list="upts-object-roads" maxlength="500" placeholder="Автомобильная дорога" /><datalist id="upts-object-roads"><option v-for="road in roads" :key="road" :value="road" /></datalist></label>
@@ -251,7 +253,7 @@ async function save() {
              <WorkStagesTable v-model="workStages" :works="workRows.filter(w=>(workStages[w.key]||1)===stage.number)" :stage-count="effectiveStageCount" />
             </template></StageAccordion>
           </template>
-          <StageBatches v-if="form.contractType!=='OTHER'" ref="stageComposer" v-model="batches" :library="library" :object-type="form.contractType" :start-number="firstNewStage" :disabled="saving||loading||worksLoading||!!worksError||!!libraryError" />
+          <StageBatches v-if="form.contractType!=='OTHER'" ref="stageComposer" v-model="batches" :library="library" :object-type="form.contractType" :start-number="firstNewStage" :used-kinds="existingKinds" :disabled="saving||loading||worksLoading||!!worksError||!!libraryError" />
         </div>
       </fieldset>
       <fieldset class="upts-static upts-object-execution" :disabled="saving" aria-label="Параметры выполнения работ">
@@ -270,6 +272,7 @@ async function save() {
   </Modal>
 </template>
 <style scoped>
+.upts-kind-picker{display:flex;gap:6px;align-items:center}.upts-kind-picker select{flex:1;width:0;min-width:0}.upts-kind-picker button{flex:none;width:32px;height:32px;padding:0;font-size:20px;line-height:1}
 .upts-existing-stage-dates{display:flex;gap:12px;margin-bottom:8px}.upts-existing-stage-dates label{max-width:200px}
 .upts-object-form{--upts-static-bg:#edf2f7;height:100%;min-height:0;display:flex;flex-direction:column;gap:10px;overflow:hidden}
 .upts-object-form .upts-static{flex:0 1 auto;overflow:auto;border:1px solid var(--work-line);border-radius:8px;padding:8px 12px;margin:0;min-height:0;background:var(--upts-static-bg);gap:6px}

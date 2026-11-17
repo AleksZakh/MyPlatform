@@ -15,3 +15,7 @@ export function objectStages(d?:UptsObjectDetails|null,tasks:{uptsWorkMeta?:Upts
  return [...map.values()].sort((a,b)=>a.number-b.number);
 }
 export const stageLabel=(s:UptsObjectStage)=>`Этап ${s.number}`+(workKindName(s.workKindKey)?' · '+workKindName(s.workKindKey):'');
+/** Legacy objects can have repeated kinds; retain them, but do not offer another copy. */
+export function usedWorkKinds(d?:UptsObjectDetails|null,tasks:{uptsWorkMeta?:UptsWorkMeta|null}[]=[]){
+ return [...new Set([...(d?.workKindKeys||[]),d?.workKindKey,...(d?.stages||[]).map(s=>s.workKindKey),...tasks.flatMap(t=>[t.uptsWorkMeta?.workKindKey,...(t.uptsWorkMeta?.workKindKeys||[])])].filter((key):key is string=>!!key))];
+}

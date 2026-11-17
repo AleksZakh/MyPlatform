@@ -1,4 +1,4 @@
-import {lastStage} from '../../shared/utils/upts-object-stages';
+import {lastStage,usedWorkKinds} from '../../shared/utils/upts-object-stages';
 import {ensureObjectStorage} from './upts-storage';
 import {addObjectMember,queueUptsNotice} from './upts-workflow';
 import {workStagesSchema,checkNewWorkStages} from './upts-work-stages';
@@ -325,7 +325,7 @@ const selectedWorksSchema=z.array(z.object({id,version:id}).strict()).max(50)
 export const stageBatchesSchema=z.array(z.object({
  stageNumber:id,workKindKey:z.string().min(1).max(40),startDate:uptsDay,endDate:uptsDay,
  selectedWorks:z.array(z.object({id,version:id}).strict()).min(1).refine(rows=>new Set(rows.map(r=>r.id)).size===rows.length,'Работы внутри этапа не должны повторяться.'),
-}).strict()).min(1).refine(rows=>new Set(rows.map(r=>r.stageNumber)).size===rows.length,'Номера новых этапов не должны повторяться.').optional();
+}).strict()).min(1).refine(rows=>new Set(rows.map(r=>r.stageNumber)).size===rows.length,'Номера новых этапов не должны повторяться.').refine(rows=>new Set(rows.map(r=>r.workKindKey)).size===rows.length,'Этот вид работ уже добавлен.').optional();
 type StageBatches=NonNullable<z.infer<typeof stageBatchesSchema>>;
 function detailsWithBatches(details:UptsObjectDetails|undefined,batches:StageBatches){
  const stages=new Map((details?.stages||[]).map(s=>[s.number,s]));
@@ -349,6 +349,8 @@ async function resolveBatches(tx:DB,type:string|null,batches:StageBatches,base:n
 /** Called inside the same locked transaction as object editing; no partial save. */
 export async function appendStageBatches(tx:DB,event:H3Event,a:Actor,c:{id:number;projectId:number;number:string;contractType:string|null;objectDetails:unknown},batches:StageBatches,previous:UptsObjectDetails|null){
  const tasks=await tx.workTask.findMany({where:{uptsContractId:c.id,deletedAt:null},select:{uptsWorkMeta:true}});
+ const used=new Set(usedWorkKinds(previous,tasks as {uptsWorkMeta:import('../../shared/types/upts-object').UptsWorkMeta|null}[]));
+ if(batches.some(b=>used.has(b.workKindKey)))fail(400,'Этот вид работ уже добавлен в объект.');
  const resolved=await resolveBatches(tx,c.contractType,batches,lastStage(previous,tasks as {uptsWorkMeta:import('../../shared/types/upts-object').UptsWorkMeta|null}[]));
  const details=detailsWithBatches(c.objectDetails as UptsObjectDetails,batches);
  checkObjectKind(c.contractType,details);checkObjectSchedule(details,null);

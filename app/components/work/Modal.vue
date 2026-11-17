@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue';
-defineProps<{title:string;subtitle?:string;icon?:string;fullHeight?:boolean;wide?:boolean;viewportWidth?:boolean;fixedSections?:boolean;workCard?:boolean;greyHeader?:boolean;compactHeight?:boolean;contentHeight?:number}>(); const emit=defineEmits<{close:[]}>(); const dialog=ref<HTMLDialogElement>();
+defineProps<{title:string;subtitle?:string;icon?:string;fullHeight?:boolean;wide?:boolean;viewportWidth?:boolean;fixedSections?:boolean;workCard?:boolean;greyHeader?:boolean;compactHeight?:boolean;contentHeight?:number;tall?:boolean}>(); const emit=defineEmits<{close:[]}>(); const dialog=ref<HTMLDialogElement>();
 let previous:HTMLElement|null=null;
 onMounted(()=>{previous=document.activeElement as HTMLElement;dialog.value?.showModal();});
 onBeforeUnmount(()=>{dialog.value?.close();previous?.focus();});
 </script>
 <template>
- <Teleport to="body"><dialog ref="dialog" class="work-root work-dialog" :class="{'work-dialog-work-card':workCard,'work-dialog-grey-header':greyHeader,'work-dialog-compact-height':compactHeight,'work-dialog-full-height':fullHeight,'work-dialog-wide':wide,'work-dialog-viewport-width':viewportWidth,'work-dialog-fixed-sections':fixedSections}" :style="compactHeight ? {'--work-dialog-height':(contentHeight || 820)+'px'} : undefined" @close="emit('close')">
+ <Teleport to="body"><dialog ref="dialog" class="work-root work-dialog" :class="{'work-dialog-tall':tall,'work-dialog-work-card':workCard,'work-dialog-grey-header':greyHeader,'work-dialog-compact-height':compactHeight,'work-dialog-full-height':fullHeight,'work-dialog-wide':wide,'work-dialog-viewport-width':viewportWidth,'work-dialog-fixed-sections':fixedSections}" :style="compactHeight ? {'--work-dialog-height':(contentHeight || 820)+'px'} : undefined" @close="emit('close')">
   <header class="work-modal-head"><div><h2 :class="{'work-modal-title-with-icon':icon}"><Icon v-if="icon" :name="icon" aria-hidden="true" /><slot name="title">{{ title }}</slot></h2><p v-if="subtitle" class="work-muted">{{ subtitle }}</p></div><button type="button" class="work-icon-btn" aria-label="Закрыть" @click="emit('close')">×</button></header>
   <div class="work-modal-body"><slot /></div>
  </dialog></Teleport>
@@ -22,6 +22,7 @@ onBeforeUnmount(()=>{dialog.value?.close();previous?.focus();});
 .work-dialog-full-height .work-modal-body{flex:1 1 auto;min-height:0;max-height:none}
 @media(max-width:520px){.work-dialog-full-height{height:calc(100dvh - 20px);max-height:calc(100dvh - 20px)}}
 .work-dialog.work-dialog-compact-height{height:min(var(--work-dialog-height,820px),calc(100dvh - 32px))}
+.work-dialog.work-dialog-tall{height:min(var(--work-dialog-height,1040px),calc(100dvh - 12px));max-height:calc(100dvh - 12px)}
 .work-dialog-work-card .work-modal-head,.work-dialog-grey-header .work-modal-head{background:#e8e8ea}.work-dialog-work-card .work-modal-body{padding:0}
 :global(html.dark .work-dialog-work-card .work-modal-head),:global(html.dark .work-dialog-grey-header .work-modal-head){background:#465765}
 </style>
