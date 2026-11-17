@@ -9,6 +9,9 @@ import { fail } from './work/service';
 const text = z.string().trim().max(500);
 const person = z.number().int().positive().max(2147483647).nullable().optional();
 export const objectDetailsSchema = z.object({
+  oksKind:z.enum(['AREA','LINEAR']).optional(),
+  sourceLength:z.string().trim().max(30).refine(v=>!v || /^\d+(?:[.,]\d+)?$/.test(v),'Протяжённость должна быть неотрицательным числом.').optional(),
+  stages:z.array(z.object({number:z.number().int().positive().max(2147483647),workKindKey:z.string().max(40).nullable().optional(),startDate:uptsDay,endDate:uptsDay}).strict()).refine(rows=>new Set(rows.map(r=>r.number)).size===rows.length,'Номера этапов не должны повторяться.').optional(),
   basisContractNumber: z.string().trim().max(250).optional(),
   basisContractDate: uptsDay.optional(),
   requestNumber:z.string().trim().max(100).optional(),
@@ -29,9 +32,14 @@ export const objectDetailsSchema = z.object({
   otherDescription: z.string().trim().max(2000).optional(),
 }).strict();
 export function checkObjectKind(type:string|null, details?:UptsObjectDetails){
+  if(details?.stages?.some(s=>!validWorkKind(type,s.workKindKey)))fail(400,'Вид работ этапа не соответствует типу объекта.');
   if(!validWorkKind(type,details?.workKindKey) || details?.workKindKeys?.some(key=>!validWorkKind(type,key))) fail(400,'Вид работ не соответствует типу объекта.');
 }
 export function checkObjectSchedule(details:UptsObjectDetails|undefined, dueDate:string|null){
+  for(const s of details?.stages || []){
+    if(s.number>(details?.stageCount ?? 1))fail(400,'Номер этапа превышает количество этапов.');
+    if(s.startDate && s.endDate && s.startDate>s.endDate)fail(400,`Этап ${s.number}: окончание раньше начала.`);
+  }
   if(details?.workStartDate && dueDate && details.workStartDate>dueDate)
     fail(400,'Дата окончания работ не может быть раньше даты начала.');
 }

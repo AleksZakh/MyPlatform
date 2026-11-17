@@ -3,7 +3,7 @@ import WorkName from './WorkName.vue';
 import {computed,ref,watch,onMounted,onBeforeUnmount} from 'vue';
 import type {UptsStageWork} from '~~/shared/types/upts-object';
 import {UPTS_WORK_ROLES} from '~~/shared/utils/upts-work-kinds';
-const props=defineProps<{works:UptsStageWork[];stageCount:number;disabled?:boolean}>();
+const props=defineProps<{works:UptsStageWork[];stageCount:number;fixedStage?:number;disabled?:boolean}>();
 const stages=defineModel<Record<string,number|''>>({required:true});
 const enabled=defineModel<string[]>('enabled',{required:true});
 const selected=ref<string[]>([]),anchor=ref<number|null>(null),dragStart=ref<number|null>(null);
@@ -62,7 +62,7 @@ onBeforeUnmount(()=>{window.removeEventListener('pointerup',end);window.removeEv
       <button type="button" :disabled="disabled || !selected.length" @click="setEnabled(selected,false)">Выключить выделенные</button>
       <button type="button" :disabled="disabled || !selected.length" @click="selected=[]">Снять выделение</button>
     </div>
-    <p class="work-muted">Флажки включают работы. Shift-клик или перетягивание выделяют диапазон. Этап в заголовке назначается выделенным строкам.</p>
+    <p class="work-muted">Флажки включают работы. Shift-клик или перетягивание выделяют диапазон. {{ fixedStage ? 'Все работы этого набора относятся к этапу '+fixedStage+'.' : 'Этап в заголовке назначается выделенным строкам.' }}</p>
     <p v-if="invalid" class="work-error" role="alert">У включённых работ укажите этап от 1 до {{ stageCount }}.</p>
     <div class="work-table-wrap">
       <table class="upts-selection-table">
@@ -70,13 +70,13 @@ onBeforeUnmount(()=>{window.removeEventListener('pointerup',end);window.removeEv
         <thead><tr>
           <th class="upts-selection-check"><input type="checkbox" aria-label="Включить все работы" :disabled="disabled" :checked="allEnabled" :indeterminate="!!enabled.length && !allEnabled" @change="setEnabled(keys,!allEnabled)" /></th>
           <th>Работа</th>
-          <th class="upts-selection-stage"><label>Этап<select value="" aria-label="Этап выделенных работ" :disabled="disabled || !selected.length" @change="assign"><option value="">—</option><option v-for="n in stageCount" :key="n" :value="n">{{ n }}</option></select></label></th>
+          <th class="upts-selection-stage"><span v-if="fixedStage">Этап</span><label v-else>Этап<select value="" aria-label="Этап выделенных работ" :disabled="disabled || !selected.length" @change="assign"><option value="">—</option><option v-for="n in stageCount" :key="n" :value="n">{{ n }}</option></select></label></th>
           <th>Ответственная роль</th><th>Ожидаемый результат</th>
         </tr></thead>
         <tbody><tr v-for="(w,index) in works" :key="w.key" :data-work-key="w.key" :class="{'is-selected':selected.includes(w.key),'is-disabled':!enabled.includes(w.key)}" :aria-selected="selected.includes(w.key)" tabindex="0" @pointerdown="begin($event,index)" @pointerenter="enter($event,index)" @keydown="keyboard($event,index)">
           <td><input type="checkbox" :checked="enabled.includes(w.key)" :disabled="disabled" :aria-label="'Включить: '+w.name" @change="setEnabled([w.key],($event.target as HTMLInputElement).checked)" /></td>
           <td><WorkName :meta="w" emphasize>{{ w.name }}</WorkName></td>
-          <td class="upts-selection-stage"><input :value="stages[w.key] ?? 1" type="number" min="1" :max="stageCount" step="1" :required="enabled.includes(w.key)" :disabled="disabled || !enabled.includes(w.key)" :aria-label="'Этап работы: '+w.name" :aria-invalid="enabled.includes(w.key) && !valid(stages[w.key] ?? 1)" @input="setStage(w.key,$event)" /></td>
+          <td class="upts-selection-stage"><span v-if="fixedStage">{{ fixedStage }}</span><input v-else :value="stages[w.key] ?? 1" type="number" min="1" :max="stageCount" step="1" :required="enabled.includes(w.key)" :disabled="disabled || !enabled.includes(w.key)" :aria-label="'Этап работы: '+w.name" :aria-invalid="enabled.includes(w.key) && !valid(stages[w.key] ?? 1)" @input="setStage(w.key,$event)" /></td>
           <td>{{ w.responsibleRole ? UPTS_WORK_ROLES[w.responsibleRole] : 'Не указана' }}</td><td>{{ w.expectedResult || 'Не указан' }}</td>
         </tr></tbody>
       </table>

@@ -1,3 +1,4 @@
+import {lastStage} from '../../shared/utils/upts-object-stages';
 import {ensureObjectStorage} from './upts-storage';
 import {addObjectMember,queueUptsNotice} from './upts-workflow';
 import {workStagesSchema,checkNewWorkStages} from './upts-work-stages';
@@ -321,6 +322,41 @@ const selection = {
 };
 const selectedWorksSchema=z.array(z.object({id,version:id}).strict()).max(50)
   .refine(items=>new Set(items.map(w=>w.id)).size===items.length,'Работы не должны повторяться.').optional();
+export const stageBatchesSchema=z.array(z.object({
+ stageNumber:id,workKindKey:z.string().min(1).max(40),startDate:uptsDay,endDate:uptsDay,
+ selectedWorks:z.array(z.object({id,version:id}).strict()).min(1).refine(rows=>new Set(rows.map(r=>r.id)).size===rows.length,'Работы внутри этапа не должны повторяться.'),
+}).strict()).min(1).refine(rows=>new Set(rows.map(r=>r.stageNumber)).size===rows.length,'Номера новых этапов не должны повторяться.').optional();
+type StageBatches=NonNullable<z.infer<typeof stageBatchesSchema>>;
+function detailsWithBatches(details:UptsObjectDetails|undefined,batches:StageBatches){
+ const stages=new Map((details?.stages||[]).map(s=>[s.number,s]));
+ for(const b of batches)stages.set(b.stageNumber,{number:b.stageNumber,workKindKey:b.workKindKey,startDate:b.startDate,endDate:b.endDate});
+ const keys=[...new Set([...(details?.workKindKeys||(details?.workKindKey?[details.workKindKey]:[])),...batches.map(b=>b.workKindKey)])];
+ return {...details,stageCount:Math.max(details?.stageCount||1,...batches.map(b=>b.stageNumber)),stages:[...stages.values()].sort((a,b)=>a.number-b.number),workKindKeys:keys,workKindKey:keys[0]||null};
+}
+async function resolveBatches(tx:DB,type:string|null,batches:StageBatches,base:number){
+ const titles:ResolvedWork[]=[],numbers:number[]=[],cache=new Map<string,ResolvedWork[]>();
+ for(const [i,b] of batches.entries()){
+  if(b.stageNumber!==base+i+1)fail(409,'Новые виды работ должны занимать следующие этапы по порядку. Обновите карточку объекта.');
+  if(!validWorkKind(type,b.workKindKey))fail(400,'Вид работ этапа не соответствует типу объекта.');
+  if(b.startDate && b.endDate && b.startDate>b.endDate)fail(400,`Этап ${b.stageNumber}: окончание раньше начала.`);
+  const key=JSON.stringify([b.workKindKey,b.selectedWorks]);
+  let rows=cache.get(key);
+  if(!rows){rows=await titlesFor(tx,type,{templateId:null,templateVersion:null,manualWorks:[],selectedWorks:b.selectedWorks,workKindKeys:[b.workKindKey],workKindKey:b.workKindKey});cache.set(key,rows);}
+  titles.push(...rows);numbers.push(...rows.map(()=>b.stageNumber));
+ }
+ return {titles,numbers};
+}
+/** Called inside the same locked transaction as object editing; no partial save. */
+export async function appendStageBatches(tx:DB,event:H3Event,a:Actor,c:{id:number;projectId:number;number:string;contractType:string|null;objectDetails:unknown},batches:StageBatches,previous:UptsObjectDetails|null){
+ const tasks=await tx.workTask.findMany({where:{uptsContractId:c.id,deletedAt:null},select:{uptsWorkMeta:true}});
+ const resolved=await resolveBatches(tx,c.contractType,batches,lastStage(previous,tasks as {uptsWorkMeta:import('../../shared/types/upts-object').UptsWorkMeta|null}[]));
+ const details=detailsWithBatches(c.objectDetails as UptsObjectDetails,batches);
+ checkObjectKind(c.contractType,details);checkObjectSchedule(details,null);
+ const updated=await tx.uptsContract.update({where:{id:c.id},data:{objectDetails:details}});
+ const taskIds=await addWorks(tx,event,a,updated,resolved.titles,resolved.numbers);
+ await audit(tx,event,a,'UptsContract',c.id,'APPLY',{stageBatches:batches,taskIds,objectDetails:details});
+ return updated;
+}
 type ResolvedWork={name:string;definitionId:number|undefined;responsibleRole:string|null;expectedResult:string;workKindKey:string|null;workKindKeys?:string[]};
 async function titlesFor(
   tx: DB,
@@ -438,6 +474,7 @@ const contractInput = z
     dueDate: uptsDay,
     contractType: contractTypeSchema,
     objectDetails:objectDetailsSchema.optional(),
+    stageBatches:stageBatchesSchema,
     selectedWorks:selectedWorksSchema,
     ...selection,
   })
@@ -449,6 +486,10 @@ const contractInput = z
 export async function createContract(event: H3Event, raw: unknown) {
   const a = await uptsActor(event),
     v = parse(contractInput, raw);
+  if(v.stageBatches){
+    if(v.selectedWorks!==undefined || v.templateId || v.manualWorks.length || v.workStages)fail(400,'Выберите один способ добавления работ.');
+    v.objectDetails=detailsWithBatches(v.objectDetails,v.stageBatches);
+  }
   checkObjectKind(v.contractType,v.objectDetails);
   if(v.selectedWorks!==undefined && (v.templateId || v.manualWorks.length))fail(400,'Выберите один способ добавления работ.');
   if(v.selectedWorks?.length && !v.objectDetails?.workKindKeys?.length)fail(400,'Выберите виды работ для объекта.');
@@ -476,16 +517,18 @@ export async function createContract(event: H3Event, raw: unknown) {
         (v.objectDetails!==undefined && stableJson(old.objectDetails)!==stableJson(v.objectDetails))
       )
         fail(409, "Ключ операции уже использован.");
-      if(v.workStages || v.selectedWorks!==undefined){
+      if(v.workStages || v.selectedWorks!==undefined || v.stageBatches){
         const initial=await tx.auditLog.findFirst({where:{entityType:'UptsContract',entityId:old.id,action:'CREATE'},orderBy:{id:'asc'}});
-        const original=initial?.afterData as {workStages?:number[];selectedWorks?:{id:number;version:number}[]}|null;
+        const original=initial?.afterData as {stageBatches?:StageBatches;workStages?:number[];selectedWorks?:{id:number;version:number}[]}|null;
+        if(v.stageBatches && stableJson(original?.stageBatches || [])!==stableJson(v.stageBatches))fail(409,'Ключ операции уже использован с другим составом этапов.');
         if(v.workStages && stableJson(original?.workStages || [])!==stableJson(v.workStages))fail(409,'Ключ операции уже использован с другим распределением по этапам.');
         if(v.selectedWorks!==undefined && stableJson(original?.selectedWorks || [])!==stableJson(v.selectedWorks))fail(409,'Ключ операции уже использован с другим составом работ.');
       }
       await ensureObjectStorage(tx,old);
       return old;
     }
-    const titles = await titlesFor(tx, v.contractType, {...v,...(v.selectedWorks!==undefined?{workKindKeys:v.objectDetails?.workKindKeys || []}:{})});
+    const batchPlan=v.stageBatches?await resolveBatches(tx,v.contractType,v.stageBatches,0):null;
+    const titles = batchPlan?.titles || await titlesFor(tx, v.contractType, {...v,...(v.selectedWorks!==undefined?{workKindKeys:v.objectDetails?.workKindKeys || []}:{})});
     checkNewWorkStages(v.workStages,titles.length,v.objectDetails);
     if(v.objectDetails?.workKindKey && v.templateId && titles.some(w=>w.workKindKey!==v.objectDetails!.workKindKey)) fail(400,"Шаблон не соответствует выбранному виду работ.");
     let projectId = v.projectId;
@@ -539,12 +582,13 @@ export async function createContract(event: H3Event, raw: unknown) {
     c = await tx.uptsContract.update({where:{id:c.id},data:{color:uptsContractColor(c.id)}});
     if(!v.projectId) await tx.workProject.update({where:{id:projectId},data:{color:c.color!}});
     c={...c,storageFolder:await ensureObjectStorage(tx,c)};
-    const taskIds = await addWorks(tx, event, a, c, titles, v.workStages);
+    const taskIds = await addWorks(tx, event, a, c, titles, batchPlan?.numbers || v.workStages);
     await audit(tx, event, a, "UptsContract", c.id, "CREATE", {
       ...c,
       templateId: v.templateId,
       templateVersion: v.templateVersion,
       taskIds,
+      stageBatches:v.stageBatches || [],
       selectedWorks:v.selectedWorks || [],
       workStages: v.workStages || [],
       works: titles.map(w=>w.name),
@@ -555,6 +599,7 @@ export async function createContract(event: H3Event, raw: unknown) {
 // A stable key is persisted with the operation; retries cannot duplicate a whole set.
 const applyInput = z
   .object({ clientKey: z.string().uuid(), contractVersion: id, ...selection, workKindKey:z.string().max(40).nullable().optional(),
+    stageBatches:stageBatchesSchema,
     selectedWorks:selectedWorksSchema,
   })
   .strict();
@@ -572,6 +617,7 @@ export async function applyContractWorks(
     });
     const fingerprint = JSON.stringify({
       contractId,
+      ...(v.stageBatches?{stageBatches:v.stageBatches}:{}),
       templateId: v.templateId,
       templateVersion: v.templateVersion,
       manualWorks: v.manualWorks,
@@ -590,6 +636,14 @@ export async function applyContractWorks(
       return { created: prior.count };
     }
     version(c.version, v.contractVersion);
+    if(v.stageBatches){
+      if(v.selectedWorks!==undefined || v.templateId || v.manualWorks.length || v.workStages)fail(400,'Выберите один способ добавления работ.');
+      const updated=await appendStageBatches(tx,event,a,c,v.stageBatches,c.objectDetails as UptsObjectDetails|null);
+      const count=v.stageBatches.reduce((n,b)=>n+b.selectedWorks.length,0);
+      await tx.uptsWorkApplication.create({data:{clientKey:v.clientKey,contractId,actorId:a.id,fingerprint,count}});
+      const saved=await tx.uptsContract.update({where:{id:c.id},data:{version:{increment:1}}});
+      return {created:count,object:saved};
+    }
     const titles = await titlesFor(tx, c.contractType, v, true);
     checkNewWorkStages(v.workStages,titles.length,c.objectDetails as UptsObjectDetails);
     if (!titles.length)

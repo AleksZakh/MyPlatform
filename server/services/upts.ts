@@ -2,7 +2,7 @@ import {taskStagesSchema,saveTaskStages} from './upts-work-stages';
 import { objectDetailsSchema, checkObjectKind, checkObjectPeople, checkObjectSchedule } from './upts-object-input';
 import type { UptsObjectDetails } from '../../shared/types/upts-object';
 import { uptsContractColor } from '../../shared/utils/upts-color';
-import { contractTypeSchema } from './upts-library';
+import { contractTypeSchema,stageBatchesSchema,appendStageBatches } from './upts-library';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { getQuery, type H3Event } from 'h3';
@@ -69,6 +69,7 @@ const contractInput = z
     contractType: contractTypeSchema.nullable().optional(),
     objectDetails:objectDetailsSchema.optional(),
     taskStages:taskStagesSchema,
+    stageBatches:stageBatchesSchema,
     counterparty: z.string().trim().max(250),
     signedDate: uptsDay,
     dueDate: uptsDay,
@@ -309,6 +310,7 @@ export async function saveContract(
         return { id: old.id, value: old, changed: false };
       }
       if (old) version(old.version, v.version);
+      if(v.stageBatches && !old)fail(400,'Добавление этапов доступно только сохранённому объекту.');
       checkObjectSchedule(v.objectDetails ?? old?.objectDetails as UptsObjectDetails,v.dueDate);
       checkObjectKind(v.contractType === undefined ? old?.contractType || null : v.contractType,v.objectDetails ?? old?.objectDetails as UptsObjectDetails);
       if(old)await saveTaskStages(tx,event,a,old.id,v.objectDetails ?? old.objectDetails as UptsObjectDetails,v.taskStages);
@@ -330,6 +332,7 @@ export async function saveContract(
         : await tx.uptsContract.create({
             data: { ...data, projectId, clientKey: v.clientKey },
           });
+      if(v.stageBatches && old)result=await appendStageBatches(tx,event,a,result,v.stageBatches,old.objectDetails as UptsObjectDetails|null);
       if(!old) result=await tx.uptsContract.update({where:{id:result.id},data:{color:uptsContractColor(result.id)}});
       await ensureContractDirectory(projectId, result.id);
       return { id: result.id, value: result };

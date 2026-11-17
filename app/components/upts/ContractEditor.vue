@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import WorkName from './WorkName.vue';
+import StageBatches from './StageBatches.vue';
+import StageAccordion from './StageAccordion.vue';
+import {objectStages,lastStage,objectMeasureLabel} from '~~/shared/utils/upts-object-stages';
 import { reactive, ref, computed, onMounted, watch, toRaw, nextTick } from "vue";
 import { workUserName, type WorkTaskDTO, type WorkUser } from '~~/shared/types/work';
 import ObjectFields from './ObjectFields.vue';
 import WorkStagesTable from './WorkStagesTable.vue';
 import WorkSelectionTable from './WorkSelectionTable.vue';
-import {uptsWorkCandidates} from '~~/shared/utils/upts-work-selection';
 import { workKindsFor } from '~~/shared/utils/upts-work-kinds';
-import type { UptsObjectDetails, UptsTaskStageRow, UptsStageWork } from '~~/shared/types/upts-object';
+import type { UptsObjectDetails, UptsTaskStageRow, UptsStageWork, UptsStageBatch, UptsObjectStage } from '~~/shared/types/upts-object';
 import Modal from "../work/Modal.vue";
 import type { UptsContractDTO, UptsProjectDTO } from "~~/shared/types/upts";
 import {
@@ -35,6 +36,10 @@ const defaultsWarning=ref(''),defaultsLoading=ref(!c);
 async function loadDefaults(){if(c)return;defaultsLoading.value=true;try{const d=await $fetch<{curatorId:number;engineerId:number|null;warning:string}>('/api/upts/defaults');if(details.value.curatorId==null)details.value.curatorId=d.curatorId;if(details.value.engineerId==null)details.value.engineerId=d.engineerId;defaultsWarning.value=d.warning;}catch{defaultsWarning.value='Не удалось загрузить назначения по умолчанию. Выберите куратора и кадастрового инженера вручную.';}finally{defaultsLoading.value=false;}}
 const staff=ref<WorkUser[]>([]), staffLoading=ref(false), staffError=ref(''), validationError=ref('');
 const stageCount=ref<number|''>(details.value.stageCount ?? 1);
+const batches=ref<UptsStageBatch[]>([]),stageComposer=ref<InstanceType<typeof StageBatches>|null>(null),schedules=ref<UptsObjectStage[]>([]);
+const firstNewStage=computed(()=>c?lastStage(c.objectDetails,existingWorks.value)+1:1);
+const totalStages=computed(()=>Math.max(Number(stageCount.value)||1,...batches.value.map(b=>b.stageNumber),...schedules.value.map(s=>s.number)));
+const stagesValid=computed(()=>[...schedules.value,...batches.value].every(b=>!b.startDate||!b.endDate||b.startDate<=b.endDate));
 const objectRoles=[{key:'curatorId',label:'Куратор'},{key:'engineerId',label:'Кадастровый инженер'}] as const;
 function retainedPerson(id:number){
   const people=props.projects.flatMap(p=>[p.owner,...p.members.map(m=>m.user)]);
@@ -49,6 +54,11 @@ async function loadStaff(){
 const tabs=[{key:'characteristics',label:'Характеристика объекта',icon:'lucide:map-pinned'},{key:'works',label:'Работы с объектом',icon:'lucide:list-checks'}] as const;
 const existingWorks=ref<UptsTaskStageRow[]>([]), worksLoading=ref(!!c), worksError=ref('');
 const workStages=ref<Record<string,number|''>>({});
+watch(workStages,value=>{
+ if(!c)return;
+ for(const n of Object.values(value))if(typeof n==='number'&&Number.isInteger(n)&&n>0&&n<=Number(stageCount.value)&&!schedules.value.some(s=>s.number===n))schedules.value.push({number:n,startDate:null,endDate:null});
+ schedules.value.sort((a,b)=>a.number-b.number);
+},{deep:true});
 const effectiveStageCount=computed(()=>Number.isInteger(stageCount.value) && Number(stageCount.value)>0 ? Number(stageCount.value) : 1);
 async function loadStageWorks(){
  if(!c)return;worksLoading.value=true;worksError.value='';
@@ -56,6 +66,7 @@ async function loadStageWorks(){
   const data=await $fetch<{contractVersion:number;tasks:UptsTaskStageRow[]}>(`/api/upts/contracts/${c.id}/works`);
   if(data.contractVersion!==c.version)throw new Error('Объект изменился. Закройте карточку и откройте её заново.');
   existingWorks.value=data.tasks;
+  schedules.value=objectStages(c.objectDetails,data.tasks);stageCount.value=lastStage(c.objectDetails,data.tasks);
   workStages.value=Object.fromEntries(data.tasks.map(t=>['task:'+t.id,t.uptsWorkMeta?.stageNumber ?? 1]));
  }catch(e){worksError.value=e instanceof Error && e.message.startsWith('Объект изменился.')?e.message:'Не удалось загрузить работы объекта. Повторите загрузку перед сохранением.';}
  finally{worksLoading.value=false;}
@@ -89,23 +100,25 @@ const form = reactive({
 
 });
 const manual=ref('');
-const selectedKinds=ref<string[]>(details.value.workKindKeys ?? (details.value.workKindKey?[details.value.workKindKey]:[]));
-const selectedKind=computed({get:()=>selectedKinds.value.length===1?selectedKinds.value[0]:selectedKinds.value.length>1?'__legacy__':'',set:(key:string)=>{selectedKinds.value=key&&key!=='__legacy__'?[key]:key==='__legacy__'?selectedKinds.value:[];}});
+const selectedKind=ref('');
+const selectedKindKeys=computed(()=>[...new Set([...(c?(details.value.workKindKeys||(details.value.workKindKey?[details.value.workKindKey]:[])):[]),...batches.value.map(b=>b.workKindKey)])]);
+const objectType=computed({get:()=>form.contractType==='OKS'&&details.value.oksKind==='LINEAR'?'OKS_LINEAR':form.contractType,set:(type:string)=>{form.contractType=(type==='OKS_LINEAR'?'OKS':type) as UptsContractType;details.value.oksKind=type==='OKS_LINEAR'?'LINEAR':'AREA';}});
+const measurement=computed({get:()=>form.contractType==='OKS'&&details.value.oksKind==='LINEAR'?details.value.sourceLength:details.value.sourceArea,set:(value:string|undefined)=>{if(form.contractType==='OKS'&&details.value.oksKind==='LINEAR')details.value.sourceLength=value;else details.value.sourceArea=value;}});
+async function addKind(){activeTab.value='works';await nextTick();stageComposer.value?.add(selectedKind.value);}
+watch(selectedKind,()=>{if(!c&&!batches.value.length&&selectedKind.value&&library.value)addKind();});
 const enabledWorks=ref<string[]>([]);
-const selectedKindKeys=computed(()=>kinds.value.filter(k=>selectedKinds.value.includes(k.key)).map(k=>k.key));
-const candidates=computed(()=>uptsWorkCandidates(library.value,form.contractType,selectedKindKeys.value));
 const manualNames=computed(()=>manual.value.split('\n').map(s=>s.trim()).filter(Boolean));
 const workRows=computed<UptsStageWork[]>(()=>c
  ? existingWorks.value.map(t=>({key:'task:'+t.id,name:t.title,...t.uptsWorkMeta,status:t.status}))
  : form.contractType==='OTHER' ? manualNames.value.map((name,i)=>({key:'manual:'+i+':'+name,name}))
- : candidates.value.map(({work,kindKeys})=>({key:'definition:'+work.id,...work,workKindKeys:kindKeys})));
+ : []);
 const activeRows=computed(()=>c?workRows.value:workRows.value.filter(w=>enabledWorks.value.includes(w.key)));
 watch(()=>workRows.value.map(w=>w.key),keys=>{
  if(c)return;
  enabledWorks.value=enabledWorks.value.filter(key=>keys.includes(key));
  workStages.value=Object.fromEntries(Object.entries(workStages.value).filter(([key])=>keys.includes(key)));
 });
-watch(()=>form.contractType,()=>{selectedKinds.value=[];manual.value='';if(!c){enabledWorks.value=[];workStages.value={};}});
+watch(()=>form.contractType,()=>{selectedKind.value='';batches.value=[];manual.value='';if(!c){enabledWorks.value=[];workStages.value={};}});
 let attempt:{source:string;key:string}|null=null;
 async function load() {
   loading.value = true;
@@ -135,17 +148,20 @@ async function save() {
   if(stageCount.value!=='' && (!Number.isInteger(stageCount.value) || stageCount.value<1 || stageCount.value>2147483647)){
     validationError.value='Количество этапов должно быть целым положительным числом.';return;
   }
-  if(!c && !activeRows.value.length){
+  if(!stagesValid.value){validationError.value='У этапа дата окончания раньше даты начала.';activeTab.value='works';return;}
+  if(batches.value.some(b=>!b.selectedWorks.length)){validationError.value='Включите хотя бы одну работу в каждом новом этапе или уберите пустой этап.';activeTab.value='works';return;}
+  if(!c && (form.contractType==='OTHER'?!activeRows.value.length:!batches.value.length)){
     validationError.value='Нет включённых работ. Отметьте хотя бы одну работу флажком слева перед сохранением объекта.';activeTab.value='works';return;
   }
   const stageNumbers=activeRows.value.map(w=>workStages.value[w.key] ?? 1);
   if(stageNumbers.some(n=>typeof n!=='number' || !Number.isInteger(n) || n<1 || n>effectiveStageCount.value)){
     validationError.value='Укажите каждой работе этап в пределах количества этапов объекта.';activeTab.value='works';return;
   }
-  if(activeRows.value.length>50 && !c){validationError.value='За один раз можно включить не более 50 работ.';activeTab.value='works';return;}
+  if(activeRows.value.length>50 && !c && form.contractType==='OTHER'){validationError.value='За один раз можно включить не более 50 работ.';activeTab.value='works';return;}
   const fields = {
     clientKey: form.clientKey,
     version: form.version,
+    ...(batches.value.length?{stageBatches:batches.value.map(b=>({...b,startDate:b.startDate||null,endDate:b.endDate||null}))}:{}),
     ...(c?{taskStages:existingWorks.value.filter(t=>(workStages.value['task:'+t.id] ?? 1)!==(t.uptsWorkMeta?.stageNumber ?? 1)).map(t=>({id:t.id,version:t.version,stageNumber:workStages.value['task:'+t.id] ?? 1}))}:{}),
     number: form.number,
     name: c ? form.name : (details.value.sourceCadastralNumber?.trim() || form.number.trim()),
@@ -155,7 +171,8 @@ async function save() {
       workKindKeys:selectedKindKeys.value,
       workKindKey:selectedKindKeys.value[0] || null,
       workStartDate:details.value.workStartDate || null,
-      stageCount:stageCount.value===''?null:stageCount.value,
+      stageCount:totalStages.value,
+      stages:[...schedules.value.map(s=>({...s,startDate:s.startDate||null,endDate:s.endDate||null})),...batches.value.map(b=>({number:b.stageNumber,workKindKey:b.workKindKey,startDate:b.startDate||null,endDate:b.endDate||null}))],
       basisContractDate:details.value.basisContractDate || null,
       rightHolders:details.value.rightHolders?.map(v=>v.trim()).filter(Boolean),
       permittedUses:details.value.permittedUses?.map(v=>v.trim()).filter(Boolean),
@@ -164,8 +181,7 @@ async function save() {
     signedDate: form.signedDate || null,
     dueDate: form.dueDate || null,
   };
-  const chosenWorks=candidates.value.filter(({work})=>enabledWorks.value.includes('definition:'+work.id)).map(({work})=>({id:work.id,version:work.version}));
-  const source=JSON.stringify({fields,chosenWorks,manual:activeRows.value.map(w=>w.name),stageNumbers});
+  const source=JSON.stringify({fields,manual:activeRows.value.map(w=>w.name),stageNumbers});
   if(!attempt || attempt.source!==source)attempt={source,key:crypto.randomUUID()};
   const result = await send<UptsContractDTO>(
     c
@@ -177,13 +193,13 @@ async function save() {
       : {
           ...fields,
           clientKey:attempt.key,
-          workStages:stageNumbers,
+          ...(form.contractType==='OTHER'?{workStages:stageNumbers}:{}),
           projectId: null,
           visibility: 'UPTS_DEPARTMENT',
           memberIds: [],
           templateId:null,
           templateVersion:null,
-          ...(form.contractType==='OTHER'?{}:{selectedWorks:chosenWorks}),
+
           manualWorks:form.contractType==='OTHER'?activeRows.value.map(w=>w.name):[],
         },
   );
@@ -196,13 +212,13 @@ async function save() {
       <fieldset class="upts-static upts-object-general" :disabled="saving" aria-label="Общая информация по объекту">
         <legend>Общая информация по объекту</legend>
         <div class="upts-object-general-grid">
-          <label v-if="form.contractType!=='OTHER'">Вид работ<select v-model="selectedKind" :disabled="saving || loading || !!libraryError"><option value="">Выберите вид работ</option><option v-if="c && selectedKinds.length>1" value="__legacy__">Ранее выбрано несколько видов (сохранено)</option><option v-for="kind in kinds" :key="kind.key" :value="kind.key">{{ kind.name }}</option></select></label>
+          <label v-if="form.contractType!=='OTHER'">Вид работ<select v-model="selectedKind" :disabled="saving || loading || !!libraryError"><option value="">Выберите вид работ</option><option v-for="kind in kinds" :key="kind.key" :value="kind.key">{{ kind.name }}</option></select><button v-if="c||batches.length" type="button" :disabled="saving||loading||worksLoading||!!worksError||!selectedKind" @click="addKind">+ Добавить вид работ</button></label>
           <label>Условный номер (название)<input v-model="form.number" required maxlength="100" /></label>
           <label>Кадастровый номер<input v-model="details.sourceCadastralNumber" maxlength="100" /></label>
           <label>Объект<input v-model="details.road" list="upts-object-roads" maxlength="500" placeholder="Автомобильная дорога" /><datalist id="upts-object-roads"><option v-for="road in roads" :key="road" :value="road" /></datalist></label>
           <label>Местоположение (область, район)<input v-model="details.address" maxlength="500" /></label>
-          <label>Площадь, кв. м<input v-model="details.sourceArea" inputmode="decimal" maxlength="30" pattern="[0-9]+([.,][0-9]+)?" /></label>
-          <label>Тип<select v-model="form.contractType" required><option value="" disabled>Не выбрано</option><option v-for="(label,key) in UPTS_CONTRACT_TYPES" :key="key" :value="key">{{ label }}</option></select></label>
+          <label>Тип<select v-model="objectType" required ><option value="" disabled>Не выбрано</option><template v-for="(label,key) in UPTS_CONTRACT_TYPES" :key="key"><option :value="key">{{ key==='OKS'?'Объект капитального строительства (площ.)':label }}</option><option v-if="key==='OKS'" value="OKS_LINEAR">Объект капитального строительства (лин.)</option></template></select></label>
+          <label>{{ objectMeasureLabel(form.contractType,details) }}<input v-model="measurement" inputmode="decimal" maxlength="30" pattern="[0-9]+([.,][0-9]+)?" /></label>
           <label>Номер заявки<input v-model="details.requestNumber" maxlength="100" /></label>
           <div class="upts-contract-requisites"><label>Номер договора<input v-model="details.basisContractNumber" maxlength="250" /></label><label>От<input v-model="details.basisContractDate" type="date" aria-label="Дата договора" min="1900-01-01" max="2200-12-31" /></label></div>
         </div>
@@ -216,22 +232,26 @@ async function save() {
           <ObjectFields v-model="details" />
         </div>
         <div id="upts-object-works" v-show="activeTab==='works'" role="tabpanel" aria-labelledby="upts-tab-works" class="upts-works-fields">
-          <label class="upts-stage-count">Количество этапов<input v-model.number="stageCount" type="number" min="1" max="2147483647" step="1" inputmode="numeric" /></label>
+          <p v-if="form.contractType!=='OTHER'" class="work-muted">Этапов: {{ totalStages }}. Каждый новый вид работ добавляется отдельным этапом.</p>
+          <label v-else class="upts-stage-count">Количество этапов<input v-model.number="stageCount" type="number" min="1" max="2147483647" step="1" inputmode="numeric" /></label>
           <label v-if="form.contractType==='OTHER'">Описание деятельности<textarea v-model="details.otherDescription" rows="2" maxlength="2000" /></label>
           <p v-if="loading" role="status">Загружаем библиотеку…</p>
           <p v-if="libraryError" class="work-error" role="alert">{{ libraryError }} <button type="button" @click="load">Повторить</button></p>
-          <template v-if="!c">
+          <template v-if="!c && form.contractType==='OTHER'">
             <label v-if="form.contractType==='OTHER'">Работы — одна строка на работу<textarea v-model="manual" rows="3" maxlength="12550" /></label>
             <p v-if="!workRows.length && !loading && !libraryError" class="work-muted">{{ form.contractType==='OTHER' ? 'Введите названия работ, затем включите нужные строки.' : selectedKindKeys.length ? 'В библиотеке нет активных работ для выбранного вида.' : 'Выберите вид работ в общей информации, чтобы сформировать список.' }}</p>
             <WorkSelectionTable v-if="workRows.length" v-model="workStages" v-model:enabled="enabledWorks" :works="workRows" :stage-count="effectiveStageCount" :disabled="saving || loading || !!libraryError" />
           </template>
-          <template v-else>
+          <template v-if="c">
             <p v-if="worksLoading" role="status">Загружаем работы объекта…</p>
             <p v-if="worksError" class="work-error" role="alert">{{ worksError }} <button type="button" @click="loadStageWorks">Повторить</button></p>
             <p v-if="!worksLoading && !worksError && !existingWorks.length" class="work-muted">Работ пока нет.</p>
-            <p class="work-muted">Существующие работы сохраняются. Добавление доступно кнопкой «+ Работа» в карточке объекта.</p>
-            <WorkStagesTable v-if="workRows.length" v-model="workStages" :works="workRows" :stage-count="effectiveStageCount" />
+            <StageAccordion :stages="schedules"><template #default="{stage}">
+             <div class="upts-existing-stage-dates"><label>Начало этапа<input v-model="schedules.find(s=>s.number===stage.number)!.startDate" type="date" min="1900-01-01" max="2200-12-31" /></label><label>Окончание этапа<input v-model="schedules.find(s=>s.number===stage.number)!.endDate" type="date" :min="stage.startDate||'1900-01-01'" max="2200-12-31" /></label></div>
+             <WorkStagesTable v-model="workStages" :works="workRows.filter(w=>(workStages[w.key]||1)===stage.number)" :stage-count="effectiveStageCount" />
+            </template></StageAccordion>
           </template>
+          <StageBatches v-if="form.contractType!=='OTHER'" ref="stageComposer" v-model="batches" :library="library" :object-type="form.contractType" :start-number="firstNewStage" :disabled="saving||loading||worksLoading||!!worksError||!!libraryError" />
         </div>
       </fieldset>
       <fieldset class="upts-static upts-object-execution" :disabled="saving" aria-label="Параметры выполнения работ">
@@ -250,6 +270,7 @@ async function save() {
   </Modal>
 </template>
 <style scoped>
+.upts-existing-stage-dates{display:flex;gap:12px;margin-bottom:8px}.upts-existing-stage-dates label{max-width:200px}
 .upts-object-form{--upts-static-bg:#edf2f7;height:100%;min-height:0;display:flex;flex-direction:column;gap:10px;overflow:hidden}
 .upts-object-form .upts-static{flex:0 1 auto;overflow:auto;border:1px solid var(--work-line);border-radius:8px;padding:8px 12px;margin:0;min-height:0;background:var(--upts-static-bg);gap:6px}
 .upts-static legend{background:var(--upts-static-bg);border-radius:4px}

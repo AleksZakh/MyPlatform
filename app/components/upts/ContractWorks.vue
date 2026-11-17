@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import WorkName from './WorkName.vue';
+import StageBatches from './StageBatches.vue';
+import {lastStage,objectTypeName} from '~~/shared/utils/upts-object-stages';
+import type {UptsStageBatch,UptsTaskStageRow} from '~~/shared/types/upts-object';
 import { ref, computed, onMounted, watch } from 'vue';
 import { workKindsFor } from '~~/shared/utils/upts-work-kinds';
 import WorkStagesTable from './WorkStagesTable.vue';
@@ -11,7 +14,9 @@ const props = defineProps<{ contract: UptsContractDTO }>();
 const emit = defineEmits<{ close: []; saved: [] }>();
 const { send, saving, error } = useWorkApi();
 const lib = ref<UptsLibrary | null>(null), templateId = ref<number | null>(null);
-const mode = ref<'library' | 'template' | 'manual'>(props.contract.contractType==='OTHER'?'manual':'library');
+const mode = ref<'stages' | 'library' | 'template' | 'manual'>(props.contract.contractType==='OTHER'?'manual':'stages');
+const batches=ref<UptsStageBatch[]>([]),existing=ref<UptsTaskStageRow[]>([]);
+const firstNewStage=computed(()=>lastStage(props.contract.objectDetails,existing.value)+1);
 const workKindKey=ref<string|null>(props.contract.objectDetails?.workKindKey || null);
 const kinds=computed(()=>workKindsFor(props.contract.contractType));
 const selectedIds = ref<number[]>([]), query = ref(''), manual = ref('');
@@ -21,22 +26,24 @@ const filteredWorks = computed(() => works.value.filter(w => w.name.toLocaleLowe
 const selected = computed(() => selectedIds.value.map(id => works.value.find(w => w.id === id)).filter((w): w is NonNullable<typeof w> => !!w));
 const templates = computed(() => lib.value?.templates.filter(t => (!workKindKey.value || t.workKindKey===workKindKey.value) && t.active && t.contractType === props.contract.contractType && t.items.every(i => i.work.active)) || []);
 const chosen = computed(() => templates.value.find(t => t.id === templateId.value));
-const count = computed(() => mode.value === 'library' ? selected.value.length : mode.value === 'template' ? chosen.value?.items.length || 0 : manual.value.trim() ? 1 : 0);
-const canApply = computed(() => !!props.contract.contractType && !saving.value && !loading.value && !loadError.value && count.value > 0 && count.value <= 50);
+const count = computed(() => mode.value==='stages'?batches.value.reduce((n,b)=>n+b.selectedWorks.length,0):mode.value === 'library' ? selected.value.length : mode.value === 'template' ? chosen.value?.items.length || 0 : manual.value.trim() ? 1 : 0);
+const canApply = computed(() => !!props.contract.contractType && !saving.value && !loading.value && !loadError.value && count.value > 0 && (mode.value==='stages'||count.value<=50));
 const stageCount=computed(()=>props.contract.objectDetails?.stageCount ?? 1);
 const workStages=ref<Record<string,number|''>>({});
 const workRows=computed<UptsStageWork[]>(()=>mode.value==='manual'
  ? (manual.value.trim()?[{key:'manual',name:manual.value.trim()}]:[])
  : (mode.value==='template'?chosen.value?.items.map(i=>i.work) || []:selected.value).map(w=>({key:'definition:'+w.id,...w,workKindKey:mode.value==='template'?chosen.value?.workKindKey:workKindKey.value})));
-const stagesValid=computed(()=>workRows.value.every(w=>{const n=workStages.value[w.key] ?? 1;return typeof n==='number' && Number.isInteger(n) && n>=1 && n<=stageCount.value;}));
+const stagesValid=computed(()=>mode.value==='stages'?batches.value.every(b=>b.selectedWorks.length&&(!b.startDate||!b.endDate||b.startDate<=b.endDate)):workRows.value.every(w=>{const n=workStages.value[w.key] ?? 1;return typeof n==='number' && Number.isInteger(n) && n>=1 && n<=stageCount.value;}));
 let attempt: { source: string; key: string } | null = null;
 async function load() {
   loading.value = true; loadError.value = '';
   try {
-    lib.value = await $fetch<UptsLibrary>('/api/upts/library');
+    const [library,works]=await Promise.all([$fetch<UptsLibrary>('/api/upts/library'),$fetch<{contractVersion:number;tasks:UptsTaskStageRow[]}>(`/api/upts/contracts/${props.contract.id}/works`)]);
+    if(works.contractVersion!==props.contract.version)throw Error('stale');
+    lib.value=library;existing.value=works.tasks;
     templateId.value = templates.value[0]?.id ?? null;
     selectedIds.value = [];
-  } catch { loadError.value = 'Не удалось загрузить библиотеку работ.'; }
+  } catch(e) { loadError.value = e instanceof Error&&e.message==='stale'?'Объект изменился. Закройте окно, обновите карточку и повторите добавление.':'Не удалось загрузить библиотеку или работы объекта. Повторите загрузку.'; }
   finally { loading.value = false; }
 }
 watch(workKindKey,()=>{templateId.value=templates.value[0]?.id ?? null;});
@@ -45,7 +52,7 @@ async function apply() {
   if (!canApply.value || !stagesValid.value) return;
   const body = {
     contractVersion: props.contract.version,
-    workStages:workRows.value.map(w=>workStages.value[w.key] ?? 1),
+    ...(mode.value==='stages'?{stageBatches:batches.value.map(b=>({...b,startDate:b.startDate||null,endDate:b.endDate||null}))}:{workStages:workRows.value.map(w=>workStages.value[w.key] ?? 1)}),
     workKindKey:workKindKey.value,
     templateId: mode.value === 'template' ? templateId.value : null,
     templateVersion: mode.value === 'template' ? chosen.value?.version ?? null : null,
@@ -61,20 +68,22 @@ async function apply() {
   <Modal title="Добавить работы в объект" @close="emit('close')">
     <form class="work-form" @submit.prevent="apply">
       <strong>{{ contract.number }} · {{ contract.name }}</strong>
-      <p>{{ contract.contractType ? UPTS_CONTRACT_TYPES[contract.contractType] : 'Сначала укажите тип объекта в карточке.' }}</p>
+      <p>{{ objectTypeName(contract.contractType,contract.objectDetails) || 'Сначала укажите тип объекта в карточке.' }}</p>
       <p v-if="error || loadError" role="alert" class="work-error">
         {{ error || loadError }}
         <button v-if="loadError" type="button" :disabled="loading" @click="load">Повторить</button>
       </p>
       <p v-if="loading" role="status">Загружаем библиотеку…</p>
       <fieldset :disabled="saving || loading || !contract.contractType">
-        <label v-if="contract.contractType!=='OTHER'">Вид работ<select v-model="workKindKey"><option :value="null">Все виды работ</option><option v-for="k in kinds" :key="k.key" :value="k.key">{{ k.name }}</option></select></label>
+        <label v-if="contract.contractType!=='OTHER'&&mode!=='stages'">Вид работ<select v-model="workKindKey"><option :value="null">Все виды работ</option><option v-for="k in kinds" :key="k.key" :value="k.key">{{ k.name }}</option></select></label>
         <div v-if="contract.contractType!=='OTHER'" class="work-view-switch" role="group" aria-label="Способ добавления работ">
+          <button type="button" :aria-pressed="mode==='stages'" @click="mode='stages'">Вид работ / новый этап</button>
           <button type="button" :aria-pressed="mode === 'library'" @click="mode = 'library'">Из библиотеки</button>
           <button type="button" :aria-pressed="mode === 'template'" @click="mode = 'template'">По шаблону</button>
           <button type="button" :aria-pressed="mode === 'manual'" @click="mode = 'manual'">Своя работа</button>
         </div>
-        <template v-if="mode === 'library'">
+        <StageBatches v-if="mode==='stages'" v-model="batches" :library="lib" :object-type="contract.contractType||''" :start-number="firstNewStage" :disabled="saving||loading||!!loadError" />
+        <template v-else-if="mode === 'library'">
           <label>Поиск работы<input v-model="query" type="search" placeholder="Название работы" /></label>
           <div v-if="filteredWorks.length" class="upts-work-choices" role="group" aria-label="Работы из библиотеки">
             <label v-for="w in filteredWorks" :key="w.id" class="work-check">
@@ -99,8 +108,8 @@ async function apply() {
           <label>Название работы<input v-model="manual" required maxlength="250" placeholder="Введите название отдельной работы" /></label>
           <p class="work-muted">Работа будет добавлена только в этот объект. Библиотека и шаблоны не изменятся.</p>
         </template>
-        <WorkStagesTable v-if="workRows.length" v-model="workStages" :works="workRows" :stage-count="stageCount" />
-        <p class="work-muted">Будут созданы новые работы без исполнителей и сроков. Существующие работы сохранятся. Повторное добавление из нового окна создаст новые записи.</p>
+        <WorkStagesTable v-if="mode!=='stages'&&workRows.length" v-model="workStages" :works="workRows" :stage-count="stageCount" />
+        <p class="work-muted">Новые работы назначаются кадастровому инженеру объекта. Даты этапов сохраняются отдельно от фактических дат выполнения. Существующие работы сохранятся. Повторное добавление из нового окна создаст новые записи.</p>
       </fieldset>
       <div class="work-actions">
         <button class="work-primary" :disabled="!canApply || !stagesValid">{{ saving ? 'Добавление…' : count === 1 ? 'Добавить работу' : count ? `Добавить работы (${count})` : 'Добавить работы' }}</button>

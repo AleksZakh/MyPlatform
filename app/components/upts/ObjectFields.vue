@@ -8,7 +8,6 @@ const details=defineModel<UptsObjectDetails>({required:true});
     <div class="upts-repeat-fields"><label v-for="(_,i) in details.permittedUses" :key="i">{{ i ? 'Дополнительный ВРИ исходного ЗУ' : 'ВРИ исходного ЗУ' }}<input v-model="details.permittedUses![i]" maxlength="500" /></label></div>
     <label>Вид права<input v-model="details.rightKind" maxlength="500" /></label>
     <div class="upts-repeat-fields"><label v-for="(_,i) in details.rightHolders" :key="i">{{ i ? 'Дополнительный правообладатель' : 'Правообладатель' }}<input v-model="details.rightHolders![i]" maxlength="500" /></label></div>
-    <label>Площадь, кв. м<input v-model="details.sourceArea" inputmode="decimal" maxlength="30" pattern="[0-9]+([.,][0-9]+)?" /></label>
   </section>
 </template>
 <style scoped>

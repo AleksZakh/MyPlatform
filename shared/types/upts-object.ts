@@ -1,5 +1,9 @@
 /** Object card. Internal contract IDs/routes remain stable for existing links and files. */
 export type UptsObjectDetails = {
+  /** Stages are stored separately from task results and actual dates. */
+  stages?: UptsObjectStage[];
+  oksKind?: 'AREA' | 'LINEAR';
+  sourceLength?: string;
   basisContractNumber?: string;
   requestNumber?: string;
   landCategory?: string;
@@ -46,4 +50,18 @@ export type UptsStageWork = Pick<UptsWorkMeta, 'workKindKey' | 'workKindKeys'> &
 export type UptsTaskStageRow = {
   id: number; version: number; title: string; status: string;
   uptsWorkMeta: UptsWorkMeta | null;
+};
+
+export type UptsObjectStage = {
+  number: number;
+  workKindKey?: string | null;
+  startDate: string | null;
+  endDate: string | null;
+};
+export type UptsStageBatch = {
+  stageNumber: number;
+  workKindKey: string;
+  startDate: string | null;
+  endDate: string | null;
+  selectedWorks: {id:number;version:number}[];
 };
