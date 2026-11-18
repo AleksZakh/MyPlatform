@@ -1071,6 +1071,19 @@ model UserProfile {
   @@map("user_profiles")
 }
 
+/// Дополнительные контакты справочника, не синхронизируемые с AD.
+/// directoryKey = "guid:<objectGUID>" либо "login:<sAMAccountName>".
+model PhoneDirectoryDetails {
+  directoryKey String @id @db.VarChar(300)
+  city String @default("") @db.VarChar(120)
+  address String @default("") @db.VarChar(500)
+  room String @default("") @db.VarChar(100)
+  mobilePhone String @default("") @db.VarChar(50)
+  updatedByUserId Int?
+  updatedAt DateTime @updatedAt
+  @@map("phone_directory_details")
+}
+
 model LibraryCategory {
   id Int @id @default(autoincrement())
   name String @db.VarChar(200)

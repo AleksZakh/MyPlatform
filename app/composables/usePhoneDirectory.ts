@@ -10,7 +10,7 @@ export function usePhoneDirectory() {
   const department = ref('');
   const page = ref(1);
   const pageSize = 25;
-  const sortKey = ref<Exclude<keyof ContactDTO, 'id'>>('fullName');
+  const sortKey = ref<Exclude<keyof ContactDTO, 'id' | 'canEdit'>>('fullName');
   const descending = ref(false);
   const collator = new Intl.Collator('ru', {
     numeric: true,
@@ -36,6 +36,10 @@ export function usePhoneDirectory() {
             contact.email,
             contact.department,
             contact.position,
+            contact.city,
+            contact.address,
+            contact.room,
+            contact.mobilePhone,
           ].join(' '),
         );
         return words.every((word) => text.includes(word));

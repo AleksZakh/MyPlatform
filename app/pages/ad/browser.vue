@@ -11,6 +11,7 @@ const tabs = [
   { id: 'roads', label: 'Автодор-Платные дороги' },
 ] as const;
 const activeTab = ref<(typeof tabs)[number]['id']>('engineering');
+const activeIndex = computed(() => tabs.findIndex(tab => tab.id === activeTab.value));
 const selectedId = ref<string | null>(null);
 const phoneFilter = ref('');
 const centersOpen = ref(true);
@@ -20,13 +21,57 @@ const matches = computed(() => hasData.value ? filtered.value.filter(c => c.tele
 const pageRows = computed(() => matches.value.slice((page.value - 1) * 25, page.value * 25));
 const totalPages = computed(() => Math.max(1, Math.ceil(matches.value.length / 25)));
 const selected = computed(() => hasData.value ? contacts.value.find(c => c.id === selectedId.value) : undefined);
-const columns: {key: Exclude<keyof ContactDTO, 'id'>; label: string}[] = [
+const editing = ref(false);
+const saving = ref(false);
+const editError = ref('');
+const editFields = ref({ city: '', address: '', room: '', mobilePhone: '' });
+function beginEdit() {
+  if (!selected.value?.canEdit) return;
+  editFields.value = {
+    city: selected.value.city, address: selected.value.address,
+    room: selected.value.room, mobilePhone: selected.value.mobilePhone,
+  };
+  editing.value = true;
+  editError.value = '';
+}
+async function saveEdit() {
+  const contact = selected.value;
+  if (!contact?.canEdit || saving.value) return;
+  saving.value = true;
+  editError.value = '';
+  try {
+    const saved = await $fetch<typeof editFields.value>(`/api/contacts/${encodeURIComponent(contact.id)}`, {
+      method: 'PATCH', body: editFields.value,
+    });
+    Object.assign(contact, saved);
+    editing.value = false;
+  } catch (cause: unknown) {
+    const failure = cause as { data?: { message?: string; data?: { message?: string } } };
+    editError.value = failure.data?.data?.message || failure.data?.message || 'Не удалось сохранить изменения.';
+  } finally { saving.value = false; }
+}
+const columns: {key: Exclude<keyof ContactDTO, 'id' | 'canEdit'>; label: string}[] = [
   { key: 'fullName', label: 'ФИО' },
   { key: 'department', label: 'Отдел' },
   { key: 'telephoneNumber', label: 'Вн. тел.' },
   { key: 'email', label: 'mail' },
 ];
+const departmentAliases: Record<string, string> = {
+  'Административно-хозяйственный отдел': 'АХО',
+  'Управление обеспечения': 'УО',
+};
+function shortDepartment(value: string): string {
+  if (!value.trim()) return '—';
+  if (/Административно-хозяйственный отдел/i.test(value) && /Управление обеспечения/i.test(value)) return 'АХО, УО';
+  const parts = value.split(/[,;]/).map(part => part.trim()).filter(Boolean);
+  return parts.map(part => departmentAliases[part] ?? (
+    /^[А-ЯЁA-Z]{2,8}$/.test(part) ? part :
+    part.split(/[\s-]+/).filter(word => /[А-ЯЁA-Za-z]/.test(word))
+      .map(word => word[0]?.toLocaleUpperCase('ru-RU')).join('')
+  )).join(', ') || '—';
+}
 watch(activeTab, () => { selectedId.value = null; search.value = ''; department.value = ''; phoneFilter.value = ''; page.value = 1; });
+watch(selectedId, () => { editing.value = false; editError.value = ''; });
 watch(phoneFilter, () => { selectedId.value = null; page.value = 1; });
 watch(totalPages, n => { page.value = Math.min(page.value, n); });
 </script>
@@ -35,13 +80,13 @@ watch(totalPages, n => { page.value = Math.min(page.value, n); });
   <section class="directory">
     <header class="titlebar"><span><Icon name="lucide:phone" /> Телефонный справочник</span><button title="Обновить данные AD" :disabled="loading" @click="load"><Icon name="lucide:refresh-cw" /></button></header>
     <div class="workspace">
-      <nav class="tabs" aria-label="Организации">
+      <nav class="tabs" aria-label="Организации" :style="{ '--active-index': activeIndex }">
         <button v-for="tab in tabs" :key="tab.id" :class="{ active: activeTab === tab.id }" :aria-current="activeTab === tab.id ? 'page' : undefined" @click="activeTab = tab.id">{{ tab.label }}</button>
       </nav>
       <main class="main">
         <div class="controls">
           <div class="searchbox">
-            <input v-model="search" type="search" placeholder="ФИО" maxlength="200" aria-label="Поиск сотрудников" :disabled="!hasData" />
+            <input v-model="search" type="search" placeholder="ФИО, отдел, должность, телефон, почта" maxlength="200" aria-label="Поиск по всем полям" :disabled="!hasData" />
             <div class="summary"><span><i /> Все сотрудники</span><span>найдено — {{ matches.length }}</span></div>
           </div>
           <div class="filters">
@@ -60,7 +105,7 @@ watch(totalPages, n => { page.value = Math.min(page.value, n); });
               <tr v-if="loading && hasData"><td colspan="6" class="empty">Загрузка контактов AD…</td></tr>
               <template v-else-if="pageRows.length">
                 <tr v-for="(contact, i) in pageRows" :key="contact.id" tabindex="0" :class="{ selected: contact.id === selectedId }" @click="selectedId = contact.id" @keydown.enter="selectedId = contact.id">
-                  <td>{{ (page - 1) * 25 + i + 1 }}</td><td class="name">{{ contact.fullName }}</td><td>{{ contact.department || '—' }}</td><td>{{ contact.telephoneNumber || '—' }}</td><td><a v-if="contact.email" :href="`mailto:${contact.email}`" @click.stop>{{ contact.email }}</a><span v-else>—</span></td><td>—</td>
+                  <td>{{ (page - 1) * 25 + i + 1 }}</td><td class="name">{{ contact.fullName }}</td><td :title="contact.department">{{ shortDepartment(contact.department) }}</td><td>{{ contact.telephoneNumber || '—' }}</td><td><a v-if="contact.email" :href="`mailto:${contact.email}`" @click.stop>{{ contact.email }}</a><span v-else>—</span></td><td>{{ contact.city || '—' }}</td>
                 </tr>
               </template>
               <tr v-else><td colspan="6" class="empty">{{ !hasData ? 'Данные этой организации добавим на следующем этапе.' : error || (contacts.length ? 'По заданным условиям никого не найдено. Попробуйте изменить условия фильтрации.' : 'В справочнике пока нет контактов.') }}</td></tr>
@@ -71,7 +116,32 @@ watch(totalPages, n => { page.value = Math.min(page.value, n); });
       </main>
       <aside class="details">
         <h2>Информация о выбранном сотруднике</h2>
-        <template v-if="selected"><h3>{{ selected.fullName }}</h3><dl><dt>Должность</dt><dd>{{ selected.position || '—' }}</dd><dt>Отдел</dt><dd>{{ selected.department || '—' }}</dd><dt>Телефон</dt><dd>{{ selected.telephoneNumber || '—' }}</dd><dt>Электронная почта</dt><dd><a v-if="selected.email" :href="`mailto:${selected.email}`">{{ selected.email }}</a><span v-else>—</span></dd></dl></template>
+        <template v-if="selected">
+          <div class="avatar"><Icon name="lucide:user-round" /></div>
+          <h3>{{ selected.fullName }}</h3>
+          <p class="position">{{ selected.position || 'Должность не указана' }}</p>
+          <p class="department-full">{{ selected.department || 'Подразделение не указано' }}</p>
+          <form v-if="editing" class="edit-form" @submit.prevent="saveEdit">
+            <label>Город<input v-model="editFields.city" maxlength="120" /></label>
+            <label>Адрес<input v-model="editFields.address" maxlength="500" /></label>
+            <label>Комната<input v-model="editFields.room" maxlength="100" /></label>
+            <label>Мобильный телефон<input v-model="editFields.mobilePhone" maxlength="50" type="tel" /></label>
+            <p class="readonly-note">ФИО, отдел, должность, email и внутренний телефон поступают из AD и не редактируются здесь.</p>
+            <p v-if="editError" class="edit-error" role="alert">{{ editError }}</p>
+            <div class="edit-actions"><button type="button" :disabled="saving" @click="editing = false">Отмена</button><button type="submit" :disabled="saving">{{ saving ? 'Сохранение…' : 'Сохранить' }}</button></div>
+          </form>
+          <template v-else>
+            <button v-if="selected.canEdit" class="edit-button" @click="beginEdit"><Icon name="lucide:pencil" /> Редактировать</button>
+            <dl>
+              <dt><Icon name="lucide:map-pin" /> Город</dt><dd>{{ selected.city || '—' }}</dd>
+              <dt><Icon name="lucide:building-2" /> Адрес</dt><dd>{{ selected.address || '—' }}</dd>
+              <dt><Icon name="lucide:door-open" /> Комната</dt><dd>{{ selected.room || '—' }}</dd>
+              <dt><Icon name="lucide:mail" /> Email</dt><dd><a v-if="selected.email" :href="`mailto:${selected.email}`">{{ selected.email }}</a><span v-else>—</span></dd>
+              <dt><Icon name="lucide:phone-call" /> Вн. номер</dt><dd>{{ selected.telephoneNumber || '—' }}</dd>
+              <dt><Icon name="lucide:smartphone" /> Моб. номер</dt><dd>{{ selected.mobilePhone || '—' }}</dd>
+            </dl>
+          </template>
+        </template>
         <p v-else class="hint">Выберите сотрудника в таблице</p>
       </aside>
     </div>
@@ -91,4 +161,32 @@ watch(totalPages, n => { page.value = Math.min(page.value, n); });
 @media(max-width:1100px){.workspace{grid-template-columns:185px minmax(0,1fr) 225px;gap:7px}.controls{grid-template-columns:minmax(0,1fr) 160px}.tabs button{font-size:14px}.details{padding:14px 8px}}
 @media(max-width:800px){.directory{height:auto;min-height:calc(100dvh - 110px);overflow:visible}.workspace{display:flex;flex-direction:column}.tabs{flex-direction:row;overflow-x:auto}.tabs button{min-width:145px}.tabs button.active:after{height:4px;width:auto;left:0;right:0;top:auto}.main{min-height:480px}.controls{grid-template-columns:minmax(0,1fr) 160px}.table-area{min-height:250px}.details{border:1px solid var(--line)}.status{flex-wrap:wrap}}
 @media(max-width:560px){.controls{display:flex;flex-direction:column}.centers{min-height:50px}.table-area{overflow-x:auto}.table-area table{min-width:650px}}
+.directory{height:100%;min-height:0;box-sizing:border-box}
+.workspace{min-height:0}
+.tabs,.searchbox,.filters,.centers,.table-area,.details{box-shadow:0 2px 8px rgba(18,27,39,.12)}
+.tabs{background:var(--space-raised,#e9eaed)}
+.tabs button{transition:background-color .16s ease,color .16s ease,border-color .16s ease}
+.tabs button.active{color:var(--space-text,#39414d);border-color:#626b74;background:var(--space-panel,#fff)}
+.tabs button.active:after{background:#626b74;transition:background-color .18s ease}
+.tabs{position:relative}
+.tabs button{height:65px;min-height:65px}
+.tabs:after{content:'';position:absolute;right:0;top:calc(8px + var(--active-index) * 68px);height:65px;width:7px;border-radius:6px;background:#626b74;transition:top .2s ease-out;pointer-events:none}
+.tabs button.active:after{display:none}
+.searchbox,.filters{background:var(--space-raised,#e5e7eb)}
+.table-area{background:var(--space-raised,#e9eaed)}
+.table-area table{background:transparent}
+.table-area thead{background:var(--space-raised,#e9eaed)}
+.details{background:var(--space-raised,#e3e6ea)}
+.avatar{width:150px;height:150px;display:grid;place-items:center;margin:0 auto 13px;background:var(--space-panel,#f7f7f7);color:var(--space-muted,#b4b8bd)}
+.avatar :deep(svg){width:112px;height:112px;stroke-width:1}
+.details h3{font-size:19px;font-weight:500;margin:0 0 14px;overflow-wrap:anywhere}
+.details .position{margin:0 0 8px}
+.details .department-full{font-size:12px;line-height:1.5;color:var(--muted);margin:0 0 20px}
+.details dt{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:inherit}
+.details dd{margin:4px 0 12px 24px;overflow-wrap:anywhere}
+.details dl :deep(svg){flex:none}
+@media(max-width:800px){.directory{min-height:0;height:100%}}
+@media(max-width:800px){.tabs:after{display:none}.tabs button.active:after{display:block;background:#626b74}}
+.edit-button,.edit-actions button{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);border-radius:5px;padding:6px 10px;background:var(--panel)}
+.edit-button{margin:0 0 17px}.edit-form{display:flex;flex-direction:column;gap:12px}.edit-form label{display:flex;flex-direction:column;gap:4px}.edit-form input{width:100%;box-sizing:border-box}.edit-actions{display:flex;gap:8px;justify-content:flex-end}.edit-actions button[type=submit]{background:var(--space-accent,#2563eb);color:white}.readonly-note{font-size:12px;color:var(--muted)}.edit-error{color:var(--space-danger,#b42318)}
 </style>

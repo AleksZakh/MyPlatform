@@ -5,6 +5,11 @@ export interface ContactDTO {
   email: string;
   department: string;
   position: string;
+  city: string;
+  address: string;
+  room: string;
+  mobilePhone: string;
+  canEdit: boolean;
 }
 
 export interface ContactsResponse {
