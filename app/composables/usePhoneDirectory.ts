@@ -1,7 +1,8 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import type { Ref } from 'vue';
 import type { ContactDTO, ContactsResponse } from '~~/shared/types/contacts';
 
-export function usePhoneDirectory() {
+export function usePhoneDirectory(scope: Ref<string> = ref('engineering')) {
   const contacts = ref<ContactDTO[]>([]);
   const loading = ref(true);
   const error = ref('');
@@ -91,6 +92,7 @@ export function usePhoneDirectory() {
     try {
       const data = await $fetch<ContactsResponse>('/api/contacts', {
         signal: request.signal,
+        query: { scope: scope.value },
       });
       if (request.signal.aborted) return;
       contacts.value = data.contacts;
@@ -110,6 +112,7 @@ export function usePhoneDirectory() {
     }
   }
   onMounted(load);
+  watch(scope, () => { contacts.value = []; page.value = 1; load(); });
   onBeforeUnmount(() => controller?.abort());
   return {
     contacts,

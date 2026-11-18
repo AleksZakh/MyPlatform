@@ -1,14 +1,21 @@
-import { createError, defineEventHandler } from 'h3';
+import { createError, defineEventHandler, getQuery } from 'h3';
 import { adCache } from '../utils/adCache';
 import type { ContactsResponse } from '../../shared/types/contacts';
 import { prisma } from '../utils/prisma';
 import { directoryEditor, directoryKey, mayEditContact } from '../utils/phoneDirectory';
+import { scopedDirectoryUsers, type PhoneDirectoryScope } from '../services/phone-directory-scopes.service';
 
 // Authentication is enforced by server/middleware/auth.ts, as for /api/ad/*.
 // Read the existing cache even when stale; opening a phone book must not start
 // another LDAP sync or silently truncate the directory at the old 500-user cap.
 export default defineEventHandler(async (event): Promise<ContactsResponse> => {
-  const cache = await adCache.get();
+  const scope = String(getQuery(event).scope || 'engineering');
+  if (!['engineering', 'group', 'management', 'roads'].includes(scope)) {
+    throw createError({ statusCode: 400, message: 'Неизвестная организация справочника' });
+  }
+  const cache = scope === 'engineering'
+    ? await adCache.get()
+    : await scopedDirectoryUsers(event, scope as Exclude<PhoneDirectoryScope, 'engineering'>);
   if (!cache) {
     throw createError({
       statusCode: 503,

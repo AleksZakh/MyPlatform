@@ -15,12 +15,12 @@ const activeIndex = computed(() => tabs.findIndex(tab => tab.id === activeTab.va
 const selectedId = ref<string | null>(null);
 const phoneFilter = ref('');
 const centersOpen = ref(true);
-const { contacts, loading, error, search, department, departments, filtered, page, pageCount, sortKey, descending, sort, load, updatedLabel } = usePhoneDirectory();
-const hasData = computed(() => activeTab.value === 'engineering');
-const matches = computed(() => hasData.value ? filtered.value.filter(c => c.telephoneNumber.includes(phoneFilter.value.trim())) : []);
+const { contacts, loading, error, search, department, departments, filtered, page, pageCount, sortKey, descending, sort, load, updatedLabel } = usePhoneDirectory(activeTab);
+const hasData = computed(() => true);
+const matches = computed(() => filtered.value.filter(c => c.telephoneNumber.includes(phoneFilter.value.trim())));
 const pageRows = computed(() => matches.value.slice((page.value - 1) * 25, page.value * 25));
 const totalPages = computed(() => Math.max(1, Math.ceil(matches.value.length / 25)));
-const selected = computed(() => hasData.value ? contacts.value.find(c => c.id === selectedId.value) : undefined);
+const selected = computed(() => contacts.value.find(c => c.id === selectedId.value));
 const editing = ref(false);
 const saving = ref(false);
 const editError = ref('');
@@ -41,7 +41,7 @@ async function saveEdit() {
   editError.value = '';
   try {
     const saved = await $fetch<typeof editFields.value>(`/api/contacts/${encodeURIComponent(contact.id)}`, {
-      method: 'PATCH', body: editFields.value,
+      method: 'PATCH', body: editFields.value, query: { scope: activeTab.value },
     });
     Object.assign(contact, saved);
     editing.value = false;
@@ -58,17 +58,22 @@ const columns: {key: Exclude<keyof ContactDTO, 'id' | 'canEdit'>; label: string}
 ];
 const departmentAliases: Record<string, string> = {
   'Административно-хозяйственный отдел': 'АХО',
+  'Административно хозяйственный отдел': 'АХО',
+  'Отдел информационно-технического обеспечения': 'ОИНТО',
+  'Отдел информационно технического обеспечения': 'ОИНТО',
   'Управление обеспечения': 'УО',
 };
 function shortDepartment(value: string): string {
   if (!value.trim()) return '—';
   if (/Административно-хозяйственный отдел/i.test(value) && /Управление обеспечения/i.test(value)) return 'АХО, УО';
   const parts = value.split(/[,;]/).map(part => part.trim()).filter(Boolean);
-  return parts.map(part => departmentAliases[part] ?? (
-    /^[А-ЯЁA-Z]{2,8}$/.test(part) ? part :
-    part.split(/[\s-]+/).filter(word => /[А-ЯЁA-Za-z]/.test(word))
-      .map(word => word[0]?.toLocaleUpperCase('ru-RU')).join('')
-  )).join(', ') || '—';
+  return parts.map(part => {
+    const direct = Object.entries(departmentAliases).find(([name]) => name.toLocaleLowerCase('ru-RU') === part.toLocaleLowerCase('ru-RU'));
+    if (direct) return direct[1];
+    if (/^[А-ЯЁA-Z]{2,8}$/.test(part)) return part;
+    const words = part.split(/[\s-]+/).filter(word => /[А-ЯЁA-Za-z]/.test(word) && !/^(и|в|на|по|для|с|со|от)$/i.test(word));
+    return words.length < 2 ? part : words.map(word => word[0]?.toLocaleUpperCase('ru-RU')).join('');
+  }).join(', ') || '—';
 }
 watch(activeTab, () => { selectedId.value = null; search.value = ''; department.value = ''; phoneFilter.value = ''; page.value = 1; });
 watch(selectedId, () => { editing.value = false; editError.value = ''; });
@@ -108,14 +113,13 @@ watch(totalPages, n => { page.value = Math.min(page.value, n); });
                   <td>{{ (page - 1) * 25 + i + 1 }}</td><td class="name">{{ contact.fullName }}</td><td :title="contact.department">{{ shortDepartment(contact.department) }}</td><td>{{ contact.telephoneNumber || '—' }}</td><td><a v-if="contact.email" :href="`mailto:${contact.email}`" @click.stop>{{ contact.email }}</a><span v-else>—</span></td><td>{{ contact.city || '—' }}</td>
                 </tr>
               </template>
-              <tr v-else><td colspan="6" class="empty">{{ !hasData ? 'Данные этой организации добавим на следующем этапе.' : error || (contacts.length ? 'По заданным условиям никого не найдено. Попробуйте изменить условия фильтрации.' : 'В справочнике пока нет контактов.') }}</td></tr>
+              <tr v-else><td colspan="6" class="empty">{{ error || (contacts.length ? 'По заданным условиям никого не найдено. Попробуйте изменить условия фильтрации.' : 'В справочнике пока нет контактов.') }}</td></tr>
             </tbody>
           </table>
         </div>
         <nav v-if="hasData && totalPages > 1" class="pages"><span>Страница {{ page }} из {{ totalPages }}</span><button :disabled="page <= 1" @click="page--">Назад</button><button :disabled="page >= totalPages" @click="page++">Вперёд</button></nav>
       </main>
       <aside class="details">
-        <h2>Информация о выбранном сотруднике</h2>
         <template v-if="selected">
           <div class="avatar"><Icon name="lucide:user-round" /></div>
           <h3>{{ selected.fullName }}</h3>
@@ -187,6 +191,8 @@ watch(totalPages, n => { page.value = Math.min(page.value, n); });
 .details dl :deep(svg){flex:none}
 @media(max-width:800px){.directory{min-height:0;height:100%}}
 @media(max-width:800px){.tabs:after{display:none}.tabs button.active:after{display:block;background:#626b74}}
+.directory{--soft:color-mix(in srgb,var(--space-panel,#fff) 55%,var(--space-raised,#e9eaed) 45%)}
+.tabs,.table-area,.table-area thead,.details{background:var(--soft)}
 .edit-button,.edit-actions button{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);border-radius:5px;padding:6px 10px;background:var(--panel)}
 .edit-button{margin:0 0 17px}.edit-form{display:flex;flex-direction:column;gap:12px}.edit-form label{display:flex;flex-direction:column;gap:4px}.edit-form input{width:100%;box-sizing:border-box}.edit-actions{display:flex;gap:8px;justify-content:flex-end}.edit-actions button[type=submit]{background:var(--space-accent,#2563eb);color:white}.readonly-note{font-size:12px;color:var(--muted)}.edit-error{color:var(--space-danger,#b42318)}
 </style>

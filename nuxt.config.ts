@@ -37,8 +37,11 @@ export default defineNuxtConfig({
     ad: {
       url: process.env.AD_URL || 'ldap://localhost:389',
       baseDN: process.env.AD_DOMAIN_USERS || 'DC=local,DC=com',
+      phonebookGkUsersDN: process.env.AD_PHONEBOOK_GK_USERS_DN || '',
+      phonebookUkUsersDN: process.env.AD_PHONEBOOK_UK_USERS_DN || '',
+      phonebookRoadsUsersDN: process.env.AD_PHONEBOOK_ROADS_USERS_DN || '',
       username: process.env.AD_USERNAME || '',
-      groupsBaseDN: 'dc=corp,dc=avtodor-eng,dc=ru', // NUXT_AD_GROUPS_BASE_DN: domain root or OU containing security groups
+      groupsBaseDN: 'dc=corp,dc=avtodor-eng,dc=ru', // existing AD group lookup remains unchanged
       password: process.env.AD_PASSWORD || '',
       timeout: parseInt(process.env.AD_TIMEOUT || '5000'),
       databaseUrl: process.env.DATABASE_URL,
