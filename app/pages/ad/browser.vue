@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { usePhoneDirectory } from '~/composables/usePhoneDirectory';
 import type { ContactDTO } from '~~/shared/types/contacts';
+import { departmentAcronym } from '~~/shared/utils/phone-directory-acronym';
 
 useHead({ title: 'Телефонный справочник — Space' });
 const tabs = [
@@ -56,25 +57,6 @@ const columns: {key: Exclude<keyof ContactDTO, 'id' | 'canEdit'>; label: string}
   { key: 'telephoneNumber', label: 'Вн. тел.' },
   { key: 'email', label: 'mail' },
 ];
-const departmentAliases: Record<string, string> = {
-  'Административно-хозяйственный отдел': 'АХО',
-  'Административно хозяйственный отдел': 'АХО',
-  'Отдел информационно-технического обеспечения': 'ОИНТО',
-  'Отдел информационно технического обеспечения': 'ОИНТО',
-  'Управление обеспечения': 'УО',
-};
-function shortDepartment(value: string): string {
-  if (!value.trim()) return '—';
-  if (/Административно-хозяйственный отдел/i.test(value) && /Управление обеспечения/i.test(value)) return 'АХО, УО';
-  const parts = value.split(/[,;]/).map(part => part.trim()).filter(Boolean);
-  return parts.map(part => {
-    const direct = Object.entries(departmentAliases).find(([name]) => name.toLocaleLowerCase('ru-RU') === part.toLocaleLowerCase('ru-RU'));
-    if (direct) return direct[1];
-    if (/^[А-ЯЁA-Z]{2,8}$/.test(part)) return part;
-    const words = part.split(/[\s-]+/).filter(word => /[А-ЯЁA-Za-z]/.test(word) && !/^(и|в|на|по|для|с|со|от)$/i.test(word));
-    return words.length < 2 ? part : words.map(word => word[0]?.toLocaleUpperCase('ru-RU')).join('');
-  }).join(', ') || '—';
-}
 watch(activeTab, () => { selectedId.value = null; search.value = ''; department.value = ''; phoneFilter.value = ''; page.value = 1; });
 watch(selectedId, () => { editing.value = false; editError.value = ''; });
 watch(phoneFilter, () => { selectedId.value = null; page.value = 1; });
@@ -110,7 +92,7 @@ watch(totalPages, n => { page.value = Math.min(page.value, n); });
               <tr v-if="loading && hasData"><td colspan="6" class="empty">Загрузка контактов AD…</td></tr>
               <template v-else-if="pageRows.length">
                 <tr v-for="(contact, i) in pageRows" :key="contact.id" tabindex="0" :class="{ selected: contact.id === selectedId }" @click="selectedId = contact.id" @keydown.enter="selectedId = contact.id">
-                  <td>{{ (page - 1) * 25 + i + 1 }}</td><td class="name">{{ contact.fullName }}</td><td :title="contact.department">{{ shortDepartment(contact.department) }}</td><td>{{ contact.telephoneNumber || '—' }}</td><td><a v-if="contact.email" :href="`mailto:${contact.email}`" @click.stop>{{ contact.email }}</a><span v-else>—</span></td><td>{{ contact.city || '—' }}</td>
+                  <td>{{ (page - 1) * 25 + i + 1 }}</td><td class="name">{{ contact.fullName }}</td><td>{{ departmentAcronym(contact.department) }}</td><td>{{ contact.telephoneNumber || '—' }}</td><td><a v-if="contact.email" :href="`mailto:${contact.email}`" @click.stop>{{ contact.email }}</a><span v-else>—</span></td><td>{{ contact.city || '—' }}</td>
                 </tr>
               </template>
               <tr v-else><td colspan="6" class="empty">{{ error || (contacts.length ? 'По заданным условиям никого не найдено. Попробуйте изменить условия фильтрации.' : 'В справочнике пока нет контактов.') }}</td></tr>
