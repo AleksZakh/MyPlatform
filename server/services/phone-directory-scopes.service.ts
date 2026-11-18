@@ -31,7 +31,7 @@ export async function scopedDirectoryUsers(event: H3Event, scope: Exclude<PhoneD
   const storage = useStorage();
   const dnHash = createHash('sha256').update(baseDN.toLowerCase()).digest('hex').slice(0, 16);
   // Revision avoids the old, valid-but-empty user-only cache after upgrade.
-  const key = `phonebook:ad:contacts-v2:${scope}:${dnHash}`;
+  const key = `phonebook:ad:contacts-v3:${scope}:${dnHash}`;
   const previous = await storage.getItem<ScopedCache>(key);
   if (previous && Date.now() - Date.parse(previous.lastUpdated) < ttlMs) return previous;
 
@@ -41,7 +41,10 @@ export async function scopedDirectoryUsers(event: H3Event, scope: Exclude<PhoneD
       ad.find({
         baseDN,
         filter: '(&(objectCategory=person)(|(objectClass=user)(objectClass=contact)))',
-        scope: 'sub', timeLimit: 60,
+        scope: 'sub', timeLimit: 60, sizeLimit: 0,
+        // activedirectory2 adds a PagedResultsControl by default, but ldapjs
+        // only requests subsequent pages when opts.paged is explicitly set.
+        paged: { pageSize: 500 },
         attributes: [...DIRECTORY_USER_ATTRIBUTES, 'objectClass', 'objectCategory'],
         includeMembership: [], referrals: { enabled: false },
       } as any, (error: object, results: any) => {

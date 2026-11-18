@@ -42,6 +42,8 @@ test('LDAP scope requests both user and contact, reads other results, and invali
   const source = readFileSync(new URL('../server/services/phone-directory-scopes.service.ts', import.meta.url), 'utf8');
   assert.match(source, /objectClass=user\)\(objectClass=contact/);
   assert.match(source, /results\?\.other/);
-  assert.match(source, /phonebook:ad:contacts-v2/);
+  assert.match(source, /phonebook:ad:contacts-v3/);
+  assert.match(source, /paged:\s*\{\s*pageSize:\s*500\s*\}/);
+  assert.match(source, /sizeLimit:\s*0/);
   assert.match(source, /normalizePhoneContact/);
 });
