@@ -4,6 +4,7 @@ import type { ContactsResponse } from '../../shared/types/contacts';
 import { prisma } from '../utils/prisma';
 import { directoryEditor, directoryKey, mayEditContact } from '../utils/phoneDirectory';
 import { scopedDirectoryUsers, type PhoneDirectoryScope } from '../services/phone-directory-scopes.service';
+import { phoneDirectoryAvatarUrls } from '../utils/phone-directory-avatars';
 
 // Authentication is enforced by server/middleware/auth.ts, as for /api/ad/*.
 // Read the existing cache even when stale; opening a phone book must not start
@@ -29,10 +30,16 @@ export default defineEventHandler(async (event): Promise<ContactsResponse> => {
   const actor = await directoryEditor(event);
   const users = cache.users.filter(user => !user.accountDisabled);
   const keys = users.map(directoryKey);
-  const details = await prisma.phoneDirectoryDetails.findMany({
-    where: { directoryKey: { in: keys } },
-  });
+  const [details, avatars] = await Promise.all([
+    prisma.phoneDirectoryDetails.findMany({ where: { directoryKey: { in: keys } } }),
+    // Only versions and AD identities: the JPEG bytes are fetched for the selected card.
+    prisma.userProfile.findMany({
+      where: { avatarVersion: { not: null }, user: { authType: 'DOMAIN', status: 'ACTIVE', deletedAt: null } },
+      select: { userId: true, avatarVersion: true, user: { select: { directoryObjectId: true, login: true } } },
+    }),
+  ]);
   const byKey = new Map(details.map(item => [item.directoryKey, item]));
+  const avatarUrl = phoneDirectoryAvatarUrls(avatars);
   return {
     lastUpdated: cache.lastUpdated,
     contacts: users
@@ -47,6 +54,7 @@ export default defineEventHandler(async (event): Promise<ContactsResponse> => {
         address: byKey.get(directoryKey(user))?.address || '',
         room: byKey.get(directoryKey(user))?.room || '',
         mobilePhone: byKey.get(directoryKey(user))?.mobilePhone || '',
+        avatarUrl: avatarUrl(user),
         canEdit: mayEditContact(actor, user),
       })),
   };

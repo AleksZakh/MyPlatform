@@ -9,6 +9,7 @@ export interface ContactDTO {
   address: string;
   room: string;
   mobilePhone: string;
+  avatarUrl: string | null;
   canEdit: boolean;
 }
 

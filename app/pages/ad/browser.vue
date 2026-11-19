@@ -9,7 +9,7 @@ const tabs = [
   { id: 'engineering', label: 'Автодор-Инжиниринг' },
   { id: 'group', label: 'ГК Автодор' },
   { id: 'management', label: 'УК Автодор' },
-  { id: 'roads', label: 'Автодор-Платные дороги' },
+  { id: 'roads', label: 'Автодор-Платные дороги и другие общества группы компаний' },
 ] as const;
 const activeTab = ref<(typeof tabs)[number]['id']>('engineering');
 const activeIndex = computed(() => tabs.findIndex(tab => tab.id === activeTab.value));
@@ -22,6 +22,7 @@ const matches = computed(() => filtered.value.filter(c => c.telephoneNumber.incl
 const pageRows = computed(() => matches.value.slice((page.value - 1) * 25, page.value * 25));
 const totalPages = computed(() => Math.max(1, Math.ceil(matches.value.length / 25)));
 const selected = computed(() => contacts.value.find(c => c.id === selectedId.value));
+const failedAvatarUrl = ref('');
 const editing = ref(false);
 const saving = ref(false);
 const editError = ref('');
@@ -51,14 +52,14 @@ async function saveEdit() {
     editError.value = failure.data?.data?.message || failure.data?.message || 'Не удалось сохранить изменения.';
   } finally { saving.value = false; }
 }
-const columns: {key: Exclude<keyof ContactDTO, 'id' | 'canEdit'>; label: string}[] = [
+const columns: {key: Exclude<keyof ContactDTO, 'id' | 'canEdit' | 'avatarUrl'>; label: string}[] = [
   { key: 'fullName', label: 'ФИО' },
   { key: 'department', label: 'Отдел' },
   { key: 'telephoneNumber', label: 'Вн. тел.' },
   { key: 'email', label: 'mail' },
 ];
 watch(activeTab, () => { selectedId.value = null; search.value = ''; department.value = ''; phoneFilter.value = ''; page.value = 1; });
-watch(selectedId, () => { editing.value = false; editError.value = ''; });
+watch(selectedId, () => { editing.value = false; editError.value = ''; failedAvatarUrl.value = ''; });
 watch(phoneFilter, () => { selectedId.value = null; page.value = 1; });
 watch(totalPages, n => { page.value = Math.min(page.value, n); });
 </script>
@@ -67,7 +68,7 @@ watch(totalPages, n => { page.value = Math.min(page.value, n); });
   <section class="directory">
     <header class="titlebar"><span><Icon name="lucide:phone" /> Телефонный справочник</span><button title="Обновить данные AD" :disabled="loading" @click="load"><Icon name="lucide:refresh-cw" /></button></header>
     <div class="workspace">
-      <nav class="tabs" aria-label="Организации" :style="{ '--active-index': activeIndex }">
+      <nav class="tabs" :class="{ 'roads-active': activeTab === 'roads' }" aria-label="Организации" :style="{ '--active-index': activeIndex }">
         <button v-for="tab in tabs" :key="tab.id" :class="{ active: activeTab === tab.id }" :aria-current="activeTab === tab.id ? 'page' : undefined" @click="activeTab = tab.id">{{ tab.label }}</button>
       </nav>
       <main class="main">
@@ -103,7 +104,10 @@ watch(totalPages, n => { page.value = Math.min(page.value, n); });
       </main>
       <aside class="details">
         <template v-if="selected">
-          <div class="avatar"><Icon name="lucide:user-round" /></div>
+          <div class="avatar">
+            <img v-if="selected.avatarUrl && failedAvatarUrl !== selected.avatarUrl" :src="selected.avatarUrl" class="avatar-photo" alt="" width="150" height="150" @error="failedAvatarUrl = selected.avatarUrl" />
+            <Icon v-else name="streamline-freehand-color:face-id-male-1" size="112" aria-hidden="true" />
+          </div>
           <h3>{{ selected.fullName }}</h3>
           <p class="position">{{ selected.position || 'Должность не указана' }}</p>
           <p class="department-full">{{ selected.department || 'Подразделение не указано' }}</p>
@@ -156,7 +160,10 @@ watch(totalPages, n => { page.value = Math.min(page.value, n); });
 .tabs button.active:after{background:#626b74;transition:background-color .18s ease}
 .tabs{position:relative}
 .tabs button{height:65px;min-height:65px}
-.tabs:after{content:'';position:absolute;right:0;top:calc(8px + var(--active-index) * 68px);height:65px;width:7px;border-radius:6px;background:#626b74;transition:top .2s ease-out;pointer-events:none}
+.tabs button:last-child{height:114px;min-height:114px;line-height:1.35}
+.tabs:after{content:'';position:absolute;right:0;top:calc(8px + var(--active-index) * 68px);height:65px;width:7px;border-radius:6px;background:#626b74;transition:top .2s ease-out,height .2s ease-out;pointer-events:none}
+.tabs.roads-active:after{height:114px}
+@media(max-width:1100px){.tabs button:last-child{height:130px;min-height:130px}.tabs.roads-active:after{height:130px}}
 .tabs button.active:after{display:none}
 .searchbox,.filters{background:var(--space-raised,#e5e7eb)}
 .table-area{background:var(--space-raised,#e9eaed)}
@@ -164,6 +171,7 @@ watch(totalPages, n => { page.value = Math.min(page.value, n); });
 .table-area thead{background:var(--space-raised,#e9eaed)}
 .details{background:var(--space-raised,#e3e6ea)}
 .avatar{width:150px;height:150px;display:grid;place-items:center;margin:0 auto 13px;background:var(--space-panel,#f7f7f7);color:var(--space-muted,#b4b8bd)}
+.avatar-photo{display:block;width:100%;height:100%;object-fit:cover}
 .avatar :deep(svg){width:112px;height:112px;stroke-width:1}
 .details h3{font-size:19px;font-weight:500;margin:0 0 14px;overflow-wrap:anywhere}
 .details .position{margin:0 0 8px}
@@ -173,6 +181,7 @@ watch(totalPages, n => { page.value = Math.min(page.value, n); });
 .details dl :deep(svg){flex:none}
 @media(max-width:800px){.directory{min-height:0;height:100%}}
 @media(max-width:800px){.tabs:after{display:none}.tabs button.active:after{display:block;background:#626b74}}
+@media(max-width:800px){.tabs button:last-child{min-width:245px;height:65px;min-height:65px;font-size:12px}}
 .directory{--soft:color-mix(in srgb,var(--space-panel,#fff) 55%,var(--space-raised,#e9eaed) 45%)}
 .tabs,.table-area,.table-area thead,.details{background:var(--soft)}
 .edit-button,.edit-actions button{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);border-radius:5px;padding:6px 10px;background:var(--panel)}

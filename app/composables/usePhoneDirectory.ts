@@ -11,7 +11,7 @@ export function usePhoneDirectory(scope: Ref<string> = ref('engineering')) {
   const department = ref('');
   const page = ref(1);
   const pageSize = 25;
-  const sortKey = ref<Exclude<keyof ContactDTO, 'id' | 'canEdit'>>('fullName');
+  const sortKey = ref<Exclude<keyof ContactDTO, 'id' | 'canEdit' | 'avatarUrl'>>('fullName');
   const descending = ref(false);
   const collator = new Intl.Collator('ru', {
     numeric: true,
