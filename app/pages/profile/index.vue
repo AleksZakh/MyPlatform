@@ -144,7 +144,6 @@ async function sendTestEmail() {
   --profile-border: #c9d4e2; --profile-text: #172b45; --profile-muted: #546782; --profile-accent: #2463ad;
   display: flex; flex-direction: column; box-sizing: border-box; width: 100%; height: 100%; min-height: 0; min-width: 0;
   overflow: hidden; padding: 14px clamp(12px, 2vw, 24px); background: var(--profile-bg); color: var(--profile-text);
-  border-left: 1px solid #bdcddd; box-shadow: inset 7px 0 12px -11px rgb(28 62 99 / .28);
   font-size: .875rem; line-height: 1.4;
 }
 html.dark:not([data-space-contrast="high"]) .space-profile {
@@ -152,7 +151,6 @@ html.dark:not([data-space-contrast="high"]) .space-profile {
   --profile-bg: #243140; --profile-panel: var(--space-panel, #1d222b); --profile-subtle: var(--space-raised, #272e39);
   --profile-border: var(--space-line, #465263); --profile-text: var(--space-text, #e6eaf0);
   --profile-muted: var(--space-muted, #b0bbcb); --profile-accent: var(--space-accent, #8db8ff);
-  border-left-color: #485c71; box-shadow: inset 7px 0 13px -10px rgb(0 0 0 / .55);
 }
 .profile-heading { display: flex; align-items: end; justify-content: space-between; min-width: 0; gap: 12px; flex: none; margin-bottom: 12px; }
 .profile-breadcrumbs { color: var(--profile-muted); font-size: .75rem; margin-bottom: 4px; }

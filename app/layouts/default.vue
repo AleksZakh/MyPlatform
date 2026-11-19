@@ -25,7 +25,7 @@
 
       <!-- Контент текущей страницы -->
       <main
-        class="main-content relative bg-transparent"
+        class="main-content relative"
         :class="{
           'main-content--contained':
             isContainedMain,
@@ -157,8 +157,20 @@ const toggleSidebar = () => {
   min-width: 0;
   min-height: 0;
 
+  /* The light-gray sidebar stays visually separate from the workspace on every route. */
+  background-color: #e5edf7;
+  border-left: 1px solid #bdcddd;
+  box-shadow: inset 7px 0 12px -11px rgb(28 62 99 / .28);
+
   overflow-x: hidden;
   overflow-y: auto;
+}
+
+/* Keep the existing graphite sidebar and module-specific surfaces intact. */
+:global(html.dark:not([data-space-contrast="high"])) .main-content {
+  background-color: #243140;
+  border-left-color: #485c71;
+  box-shadow: inset 7px 0 13px -10px rgb(0 0 0 / .55);
 }
 
 
