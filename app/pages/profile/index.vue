@@ -4,12 +4,11 @@ import { useProfileSettings } from '~/composables/useProfileSettings';
 definePageMeta({ public: false });
 useSeoMeta({ title: 'Мой профиль — Space' });
 
-const { user, ready, busy, error, load, draft, notice, apply, defaults, confirmReset, resetTable, notificationFields, legacyAvailable, importLegacy } = useProfileSettings();
+const { user, ready, busy, error, load, draft, notice, apply, defaults, notificationFields } = useProfileSettings();
 const tabs = [
   { key: 'personal', label: 'Личные данные', icon: 'i-lucide-user-round' },
   { key: 'display', label: 'Оформление', icon: 'i-lucide-palette' },
   { key: 'notifications', label: 'Уведомления', icon: 'i-lucide-bell' },
-  { key: 'tables', label: 'Рабочие таблицы', icon: 'i-lucide-table-2' },
 ] as const;
 type ProfileTab = typeof tabs[number]['key'];
 const activeTab = ref<ProfileTab>('personal');
@@ -134,22 +133,6 @@ async function sendTestEmail() {
         <div v-else class="profile-tab-card profile-state"><p v-if="error" role="alert">{{ error }} <button type="button" class="underline" @click="load">Повторить</button></p><p v-else role="status">Загрузка настроек…</p></div>
       </section>
 
-      <section id="profile-panel-tables" v-show="activeTab === 'tables'" role="tabpanel" aria-labelledby="profile-tab-tables" tabindex="0" class="profile-panel">
-        <div v-if="ready" class="profile-tab-card">
-          <div class="profile-card-heading"><h2>Рабочие таблицы</h2><p>Порядок и видимость колонок реестра сохраняются в вашем профиле. Изменять их можно непосредственно в таблице.</p></div>
-          <div class="profile-actions">
-            <UButton v-if="legacyAvailable" type="button" variant="outline" color="neutral" :disabled="busy" @click="importLegacy">Перенести старые настройки этого браузера</UButton>
-            <UButton type="button" variant="outline" color="neutral" :disabled="busy" @click="confirmReset = true">Сбросить настройки реестра</UButton>
-          </div>
-          <div v-if="confirmReset" class="profile-confirm">
-            <p>Восстановить стандартный набор и порядок колонок?</p>
-            <div class="profile-actions"><UButton type="button" :loading="busy" @click="resetTable">Восстановить</UButton><UButton type="button" variant="ghost" color="neutral" @click="confirmReset = false">Отмена</UButton></div>
-          </div>
-          <p v-if="error" role="alert" class="profile-error">{{ error }}</p>
-          <p v-if="notice" role="status" class="profile-feedback">{{ notice }}</p>
-        </div>
-        <div v-else class="profile-tab-card profile-state"><p v-if="error" role="alert">{{ error }} <button type="button" class="underline" @click="load">Повторить</button></p><p v-else role="status">Загрузка настроек…</p></div>
-      </section>
     </div>
   </div>
 </template>
@@ -205,7 +188,6 @@ html.dark:not([data-space-contrast="high"]) .space-profile :is(.profile-tab-card
 .profile-feedback { border-radius: 6px; border: 1px solid var(--profile-border); background: var(--profile-subtle); padding: 8px 10px; font-size: .8125rem; }
 .space-profile .profile-error { border-radius: 6px; border: 1px solid #d97777; color: #a11d2b; padding: 8px 10px; font-size: .8125rem; }
 html.dark:not([data-space-contrast="high"]) .space-profile .profile-error { color: #fca5a5; }
-.profile-confirm { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--profile-border); border-radius: 8px; background: var(--profile-subtle); }
 .profile-state { min-height: 100px; justify-content: center; }
 .space-profile .profile-personal-card { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 1200px; margin: 0 auto; }
 .space-profile .profile-personal-layout { display: grid; grid-template-columns: minmax(230px, .8fr) minmax(0, 1.7fr); gap: 22px; min-width: 0; }
