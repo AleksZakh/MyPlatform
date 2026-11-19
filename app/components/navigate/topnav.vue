@@ -1,5 +1,5 @@
 <template>
-  <nav class="space-topnav bg-sky-100" aria-label="Главное меню">
+  <nav class="space-topnav" aria-label="Главное меню">
 
     <!-- Logo -->
 
@@ -309,14 +309,14 @@ const logout = async () => {
 
 
 <style>
-.space-topnav{display:flex;align-items:center;gap:12px;min-width:0;padding:10px 12px;box-sizing:border-box}
+.space-topnav{display:flex;align-items:center;gap:12px;min-width:0;padding:10px 12px;box-sizing:border-box;background:#c5dceb;color:#192d43;border-bottom:1px solid #acc5d8;box-shadow:0 2px 8px rgba(23,59,86,.15);position:relative;z-index:2}
 .space-topnav-logo{display:flex;align-items:center;flex:0 0 200px;min-width:0}
 .space-topnav-logo img{display:block;width:200px;max-width:100%;height:auto}
 .space-topnav-menu{display:flex;flex:0 0 auto;align-items:center;flex-wrap:nowrap;gap:4px;min-width:0}
 .space-topnav-menu>div{flex:none}
-.space-topnav .space-topnav-link{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:36px;padding:6px 10px;white-space:nowrap;border:1px solid transparent;border-radius:6px;line-height:20px;box-sizing:border-box;transition:background-color .15s,border-color .15s}
+.space-topnav .space-topnav-link{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:36px;padding:6px 10px;white-space:nowrap;background:#f2f8fc;border:1px solid #b6cbdc;border-radius:6px;line-height:20px;box-sizing:border-box;transition:background-color .15s,border-color .15s}
 .space-topnav-link .iconify{flex:none}
-.space-topnav .space-topnav-link:hover{background:#ffffffb3;border-color:#a5bfd1}
+.space-topnav .space-topnav-link:hover{background:#fff;border-color:#8cacc5}
 .space-topnav-account{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex:1 1 240px;min-width:80px;margin-left:auto}
 .space-topnav-user{display:flex;flex:0 1 auto;flex-direction:column;align-items:flex-end;min-width:0;margin-left:auto}
 .space-topnav-user>span{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -328,6 +328,10 @@ const logout = async () => {
 .space-topnav .space-topnav-link:focus-visible,.space-topnav-session>:focus-visible,.space-topnav .space-chat-launcher:focus-visible{outline:2px solid #2996b7;outline-offset:2px}
 html.dark .space-topnav .space-topnav-link,html.dark .space-topnav-session>a,html.dark .space-topnav-session>button{background:#cbd5e1!important;border-color:#94a3b8!important;color:#172b3a!important}
 html.dark .space-topnav .space-topnav-link:hover,html.dark .space-topnav-session>a:hover,html.dark .space-topnav-session>button:hover{background:#e2e8f0!important;border-color:#78d6ea!important}
+html.dark:not([data-space-contrast="high"]) .space-topnav .space-topnav-link,html.dark:not([data-space-contrast="high"]) .space-topnav-session>a,html.dark:not([data-space-contrast="high"]) .space-topnav-session>button{background:#4d6880!important;border-color:#6e879c!important;color:#f2f7fc!important}
+html.dark:not([data-space-contrast="high"]) .space-topnav .space-topnav-link:hover,html.dark:not([data-space-contrast="high"]) .space-topnav-session>a:hover,html.dark:not([data-space-contrast="high"]) .space-topnav-session>button:hover{background:#607d95!important;border-color:#94b6d5!important}
+html[data-space-contrast="high"] .space-topnav{background:#fff!important;color:#111827!important;border-bottom:2px solid #475569;box-shadow:none}
+html[data-space-contrast="high"] .space-topnav .space-topnav-link,html[data-space-contrast="high"] .space-topnav-session>a,html[data-space-contrast="high"] .space-topnav-session>button{background:#fff!important;border-color:#475569!important;color:#111827!important}
 @media(max-width:1150px){.space-topnav{gap:8px}.space-topnav-logo{flex-basis:150px}.space-topnav .space-topnav-link{gap:6px;padding:6px 8px}.space-topnav-account{gap:8px}}
 /* Only move the whole menu to its own row when the header no longer fits. */
 @media(max-width:960px){.space-topnav{flex-wrap:wrap}.space-topnav-menu{order:3;flex:1 1 100%;overflow-x:auto;padding:2px 0 4px}.space-topnav-account{flex:1 1 140px}.space-topnav-user{max-width:calc(100vw - 270px)}}

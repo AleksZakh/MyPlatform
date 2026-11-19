@@ -62,18 +62,37 @@
     color: var(--space-text);
     border-color: var(--space-line);
   }
+  /* Variant B: the portal header stays darker than the work area. */
+  html.dark:not([data-space-contrast="high"]) .layout-wrapper > nav.space-topnav {
+    background-color: #1f3245 !important;
+    color: #f2f7fc;
+    border-bottom-color: #526d82;
+    box-shadow: 0 3px 12px rgba(5,18,30,.4);
+  }
   html.dark:not([data-space-contrast="high"]) :is(.bg-zinc-50, .bg-zinc-100, .bg-neutral-50, .bg-neutral-100) {
     background-color: var(--space-panel) !important;
   }
   html.dark:not([data-space-contrast="high"]) :is(.bg-sky-50, .bg-sky-100, .bg-blue-50, .bg-blue-100, .bg-indigo-50) {
     background-color: var(--space-selection) !important;
   }
-  html.dark:not([data-space-contrast="high"]) :is(.hover\:bg-zinc-50, .hover\:bg-zinc-100, .hover\:bg-gray-50, .hover\:bg-gray-100, .hover\:bg-slate-50, .hover\:bg-slate-100, .hover\:bg-sky-50, .department-card):hover {
+  html.dark:not([data-space-contrast="high"]) :is(.hover\:bg-zinc-50, .hover\:bg-zinc-100, .hover\:bg-gray-50, .hover\:bg-gray-100, .hover\:bg-slate-50, .hover\:bg-slate-100, .hover\:bg-sky-50):hover {
     background-color: var(--space-hover) !important;
   }
   html.dark:not([data-space-contrast="high"]) .department-card {
+    --department-card-body: #3b5366;
+    --department-card-header: #293f53;
+    --department-card-footer: #2d455a;
+    --department-card-icon: #516c82;
+    --department-card-icon-border: #7892a8;
+    --department-card-border: #526d82;
+    --department-card-shadow: 0 7px 22px rgba(7,24,37,.42),0 2px 5px rgba(7,24,37,.32);
+    --department-card-shadow-hover: 0 11px 28px rgba(6,23,34,.58);
     color: var(--space-text);
-    border-color: var(--space-line);
+    background-color: var(--department-card-body);
+    border-color: var(--department-card-border);
+  }
+  html.dark:not([data-space-contrast="high"]) .department-card:hover {
+    background-color: var(--department-card-body);
   }
   html.dark:not([data-space-contrast="high"]) :is([role=option][data-highlighted], [role=option][aria-selected=true]) {
     background-color: var(--space-selection);

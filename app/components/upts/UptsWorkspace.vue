@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import WorkName from './WorkName.vue';
 import DocumentExport from './DocumentExport.vue';
+import ReportBuilder from './ReportBuilder.vue';
 import EventJournal from './EventJournal.vue';
 import { uptsContractColor } from '~~/shared/utils/upts-color';
 import { workTaskColor, workTaskContext } from '~~/shared/types/work';
@@ -40,7 +41,7 @@ import ContractEditor from './ContractEditor.vue';
 import TemplateEditor from './TemplateEditor.vue';
 import WorkLibrary from './WorkLibrary.vue';
 import ContractWorks from './ContractWorks.vue';
-import { ref,computed } from 'vue';
+import { ref,computed,watch } from 'vue';
 import { UPTS_CONTRACT_TYPES } from '~~/shared/types/upts-library';
 const contractWorks = ref(false);
 const {
@@ -106,7 +107,10 @@ const {
   projectStats,
   statusClass,
 } = useUptsWorkspace();
-const documentExport=ref(false),eventJournal=ref(false);
+const reportRoute=useRoute();
+const documentExport=ref(false),eventJournal=ref(false),reportBuilder=ref(reportRoute.query.reports==='1');
+const initialReportId=computed(()=>typeof reportRoute.query.reportId==='string'?reportRoute.query.reportId:undefined);
+watch(()=>[reportRoute.query.reports,reportRoute.query.reportId],()=>{if(reportRoute.query.reports==='1')reportBuilder.value=true;});
 const documentTypes=computed(()=>[...new Set(allContracts.value.flatMap(c=>c.documentTypes||[]))].sort((a,b)=>a.localeCompare(b,'ru')));
 const exportFilters=computed(()=>({projectId:selectedId.value||undefined,contractId:selectedContractId.value||undefined,employeeId:employeeId.value||undefined,q:search.value,documentType:documentType.value,archived:archived.value?'1':'0'}));
 const overviewId=ref<number|null>(null),deletingObject=ref<UptsContractDTO|null>(null),deleteError=ref(''),deleteBusy=ref(false);
@@ -141,6 +145,7 @@ async function removeObject(){if(!deletingObject.value)return;deleteBusy.value=t
         </button>
       </nav>
       <div class="upts-module-tools work-actions">
+        <button @click="reportBuilder=true"><Icon name="lucide:chart-no-axes-combined" /> Отчёты</button>
         <NuxtLink
           to="/projects"
           class="upts-space-link"
@@ -769,7 +774,7 @@ async function removeObject(){if(!deletingObject.value)return;deleteBusy.value=t
     />
     <TaskEditor
       ref="taskEditorRef"
-      :modal="!!overviewId"
+      :modal="!!overviewId||reportBuilder"
       v-if="taskEditor && context"
       :key="editingTask?.id || 'new'"
       :task="editingTask"
@@ -855,6 +860,7 @@ async function removeObject(){if(!deletingObject.value)return;deleteBusy.value=t
         </button>
       </div></Modal
     >
+    <ReportBuilder v-if="reportBuilder" :initial-job-id="initialReportId" :filters="exportFilters" @close="reportBuilder=false" @object="overviewId=$event" @work="editTask($event)" />
     <DocumentExport v-if="documentExport" :filters="exportFilters" @close="documentExport=false" />
     <EventJournal v-if="eventJournal" @close="eventJournal=false" />
   </section>

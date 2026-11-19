@@ -87,9 +87,9 @@ async function managed(db: DB, projectId: number, a: Actor) {
     fail(404, 'Проект не подключён к УПТС.');
   return p;
 }
-export async function snapshot(event: H3Event) {
+export async function snapshot(event: H3Event, reportFilters?: Record<string, unknown>) {
   const a = await workActor(event),
-    q = getQuery(event);
+    q = reportFilters ?? getQuery(event) ?? {};
   const projectId = q.projectId ? positiveId(q.projectId) : null,
     contractId = q.contractId ? positiveId(q.contractId) : null,
     employeeId = q.employeeId ? positiveId(q.employeeId) : null;

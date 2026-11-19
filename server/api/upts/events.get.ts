@@ -16,7 +16,7 @@ export default defineEventHandler(async event=>{
   {entityType:'UptsProjectObject',entityId:{in:links.map(l=>l.id)}},
   {entityType:'UptsObject',entityId:{in:links.flatMap(l=>l.objectId?[l.objectId]:[])}},
   {entityType:'WorkProjectFile',entityId:{in:ids},afterData:{path:['scope'],equals:'SHARED'}},
-  {entityType:'UptsExport',actorUserId:a.id},
+  {entityType:{in:['UptsExport','UptsReport']},actorUserId:a.id},
   {entityType:{in:['UptsWorkDefinition','UptsWorkTemplate','UptsLibraryWork','UptsTemplate']}}
  ]};
  const and:Prisma.AuditLogWhereInput[]=[scope];
