@@ -77,12 +77,14 @@ test('more than eight significant words show first four, preserving internal и'
   );
 });
 
-// Static source wiring checks, not a browser/render test.
-test('phone-directory table applies the helper to every contact and retains the full sidebar value', () => {
+// The legacy acronym helper remains covered above, but is no longer used by the table.
+test('phone-directory table shows every full department name without clipping and retains the sidebar value', () => {
   const source = readFileSync(new URL('../app/pages/ad/browser.vue', import.meta.url), 'utf8');
-  assert.match(source, /import\s*\{[^}]*departmentAcronym[^}]*\}\s*from\s*['"][^'"]*phone-directory-acronym['"]/);
   assert.match(source, /v-for="\(contact, i\) in pageRows"/);
-  assert.match(source, /\{\{\s*departmentAcronym\(contact\.department\)\s*\}\}/);
+  assert.match(source, /class="department-name"[^>]*>\{\{\s*contact\.department\s*\|\|\s*'—'\s*\}\}<\/td>/);
   assert.match(source, /class="department-full">\{\{\s*selected\.department\s*\|\|/);
-  assert.doesNotMatch(source, /departmentAliases|function shortDepartment/);
+  assert.match(source, /\.table-area table\{table-layout:fixed;min-width:880px\}/);
+  assert.match(source, /\.table-area th:nth-child\(3\)\{width:27%\}/);
+  assert.match(source, /\.table-area td\.department-name\{[^}]*font-size:11px;[^}]*white-space:normal;[^}]*overflow-wrap|\.table-area td\.department-name\{[^}]*font-size:11px;[^}]*white-space:normal/);
+  assert.doesNotMatch(source, /departmentAcronym\(|departmentAliases|function shortDepartment|line-clamp/);
 });

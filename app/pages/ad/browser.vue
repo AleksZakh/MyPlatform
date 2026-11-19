@@ -2,7 +2,6 @@
 import { computed, ref, watch } from 'vue';
 import { usePhoneDirectory } from '~/composables/usePhoneDirectory';
 import type { ContactDTO } from '~~/shared/types/contacts';
-import { departmentAcronym } from '~~/shared/utils/phone-directory-acronym';
 
 useHead({ title: 'Телефонный справочник — Space' });
 const tabs = [
@@ -93,7 +92,7 @@ watch(totalPages, n => { page.value = Math.min(page.value, n); });
               <tr v-if="loading && hasData"><td colspan="6" class="empty">Загрузка контактов AD…</td></tr>
               <template v-else-if="pageRows.length">
                 <tr v-for="(contact, i) in pageRows" :key="contact.id" tabindex="0" :class="{ selected: contact.id === selectedId }" @click="selectedId = contact.id" @keydown.enter="selectedId = contact.id">
-                  <td>{{ (page - 1) * 25 + i + 1 }}</td><td class="name">{{ contact.fullName }}</td><td>{{ departmentAcronym(contact.department) }}</td><td>{{ contact.telephoneNumber || '—' }}</td><td><a v-if="contact.email" :href="`mailto:${contact.email}`" @click.stop>{{ contact.email }}</a><span v-else>—</span></td><td>{{ contact.city || '—' }}</td>
+                  <td>{{ (page - 1) * 25 + i + 1 }}</td><td class="name">{{ contact.fullName }}</td><td class="department-name" :title="contact.department || undefined">{{ contact.department || '—' }}</td><td>{{ contact.telephoneNumber || '—' }}</td><td><a v-if="contact.email" :href="`mailto:${contact.email}`" @click.stop>{{ contact.email }}</a><span v-else>—</span></td><td>{{ contact.city || '—' }}</td>
                 </tr>
               </template>
               <tr v-else><td colspan="6" class="empty">{{ error || (contacts.length ? 'По заданным условиям никого не найдено. Попробуйте изменить условия фильтрации.' : 'В справочнике пока нет контактов.') }}</td></tr>
@@ -147,6 +146,15 @@ watch(totalPages, n => { page.value = Math.min(page.value, n); });
 .tabs{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;gap:3px;overflow:auto;padding:8px 9px}.tabs button{flex:none;position:relative;text-align:left;white-space:normal;min-height:42px;border:1px solid transparent;border-radius:5px;background:transparent;color:var(--muted);font-size:16px;padding:9px 10px}.tabs button:hover{background:var(--bg)}.tabs button.active{border-color:#ff8900;color:#f07800;background:var(--panel)}.tabs button.active:after{content:'';position:absolute;right:-10px;top:0;bottom:0;width:7px;border-radius:6px;background:#ff8a00}
 .main{display:flex;flex-direction:column;gap:6px;min-height:0;min-width:0}.controls{display:grid;grid-template-columns:minmax(0,3fr) minmax(170px,1fr);grid-template-rows:90px 90px;gap:5px 10px}.searchbox,.filters,.centers{border:1px solid var(--line);border-radius:5px;padding:10px;background:var(--panel)}.searchbox{background:var(--space-raised,#e5e7eb);display:flex;flex-direction:column;justify-content:space-between;gap:8px}.directory input,.directory select{border:1px solid var(--line);border-radius:4px;background:var(--panel);min-width:0;padding:6px 10px}.searchbox input{width:100%;height:35px}.summary{display:flex;align-items:center;justify-content:space-between;gap:10px}.summary span:first-child{display:flex;align-items:center;gap:6px}.summary i{width:14px;height:14px;border-radius:50%;border:4px solid #2878f0;background:var(--panel)}.filters{display:flex;flex-direction:column;gap:8px}.filters label{display:flex;align-items:center;gap:12px}.filters label span{width:47px;flex:none}.filters select{width:min(100%,360px)}.filters input{width:135px}.centers{grid-column:2;grid-row:1/3;padding:8px}.centers-header{display:flex;justify-content:space-between;gap:5px}.centers-header>span:last-child{display:flex}.centers button{background:transparent;border:0;padding:2px}.centers small{color:var(--muted)}
 .table-area{flex:1;min-height:0;overflow:auto;border:1px solid var(--line);border-radius:5px;background:var(--panel)}table{width:100%;border-collapse:collapse;text-align:left}thead{position:sticky;top:0;background:var(--panel);z-index:1}th,td{padding:8px 9px;border-bottom:1px solid var(--line);vertical-align:top}th{border-bottom-color:var(--muted);font-weight:600}th:first-child{width:38px}th button{background:transparent;border:0;font-weight:600;padding:0}tbody tr:not(:has(.empty)){cursor:pointer}tbody tr:hover,tbody tr.selected{background:var(--space-raised,#e6edf6)}.name{font-weight:600}.empty{color:var(--muted)}.pages{display:flex;justify-content:flex-end;align-items:center;gap:9px}.pages button{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:4px 9px}
+.table-area table{table-layout:fixed;min-width:880px}
+.table-area th:nth-child(1){width:4%}
+.table-area th:nth-child(2){width:23%}
+.table-area th:nth-child(3){width:27%}
+.table-area th:nth-child(4){width:12%}
+.table-area th:nth-child(5){width:23%}
+.table-area th:nth-child(6){width:11%}
+.table-area td{overflow-wrap:anywhere}
+.table-area td.department-name{font-size:11px;line-height:1.3;white-space:normal;word-break:normal;hyphens:auto;padding-top:6px;padding-bottom:6px}
 .details{background:var(--panel);border-left:1px solid var(--line);padding:19px 14px;overflow:auto;min-width:0}.details h2{font-size:14px;font-weight:500;text-align:center;margin:0 0 25px}.details h3{font-size:16px;margin:0 0 18px}.details dl{overflow-wrap:anywhere}.details dt{color:var(--muted);font-size:12px}.details dd{margin:3px 0 13px}.hint{text-align:center;color:var(--muted);margin-top:45px}.status{flex:none;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;background:var(--space-raised,#dce5f4);border-top:1px solid var(--line);font-size:12px}.status small{color:var(--muted)}
 @media(max-width:1100px){.workspace{grid-template-columns:185px minmax(0,1fr) 225px;gap:7px}.controls{grid-template-columns:minmax(0,1fr) 160px}.tabs button{font-size:14px}.details{padding:14px 8px}}
 @media(max-width:800px){.directory{height:auto;min-height:calc(100dvh - 110px);overflow:visible}.workspace{display:flex;flex-direction:column}.tabs{flex-direction:row;overflow-x:auto}.tabs button{min-width:145px}.tabs button.active:after{height:4px;width:auto;left:0;right:0;top:auto}.main{min-height:480px}.controls{grid-template-columns:minmax(0,1fr) 160px}.table-area{min-height:250px}.details{border:1px solid var(--line)}.status{flex-wrap:wrap}}
