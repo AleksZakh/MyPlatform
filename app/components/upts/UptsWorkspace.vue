@@ -50,7 +50,6 @@ const {
   data,
   loading,
   error,
-  exporting,
   section,
   view,
   selectedId,
@@ -101,7 +100,6 @@ const {
   editObject,
   editContract,
   showFiles,
-  exportExcel,
   clearFilters,
   initials,
   projectStats,
@@ -154,14 +152,6 @@ async function removeObject(){if(!deletingObject.value)return;deleteBusy.value=t
         >
           <Icon name="lucide:external-link" />
         </NuxtLink>
-        <button
-          :disabled="loading || exporting || !!error"
-          @click="exportExcel"
-        >
-          <Icon name="lucide:download" />{{
-            exporting ? 'Формируем…' : 'Excel'
-          }}
-        </button>
         <button :disabled="loading || !!error" title="Экспорт документов УПТС" aria-label="Экспорт документов УПТС" @click="documentExport=true"><Icon name="streamline-freehand-color:database-hand" size="24" /><Icon name="material-symbols:line-end-arrow-notch" /><Icon name="vscode-icons:file-type-excel2" size="24" /></button>
         <button v-if="context" class="work-primary" @click="editContract()">
           + Объект
@@ -703,7 +693,7 @@ async function removeObject(){if(!deletingObject.value)return;deleteBusy.value=t
           </div>
         </section>
         <section v-else-if="section === 'contracts'" class="upts-panel">
-          <div class="upts-section-head"><h2>Объекты</h2><button class="work-primary" @click="editContract()">+ Объект</button></div>
+          <div class="upts-section-head"><h2>Объекты</h2></div>
           <div v-if="contractRows.length" class="upts-object-cards"><ObjectCard v-for="c in contractRows" :key="c.id" :object="c" @view="overviewId=c.id" @remove="deletingObject=c" :owner="c.project.owner" :count="contractStats(c).total" :can-manage="c.project.canManage && !c.project.archivedAt" @open="openContract(c)" @edit="editContract(c)" @works="openContract(c); section='tasks'" @add="openContract(c); contractWorks=true" @files="showFiles(c.project,c.id)" /></div><p v-else class="work-empty">Объектов пока нет.</p>
         </section>
         <section v-else-if="section === 'files' && project" class="upts-panel">
