@@ -9,6 +9,7 @@ import type {EmployeePlansResult,PlanWorkRow} from '~~/shared/types/diagnostic-p
 import {calendarShortName} from '~~/shared/utils/diagnostic-calendar';
 import {tripDateLabel} from '~~/shared/utils/diagnostic-trips';
 import DiagnosticModuleTabs from '../DiagnosticModuleTabs.vue';
+const auditing=ref(false);
 const tab=ref<'staff'|'external'>('staff');
 const week=plansWeek(),filtersOpen=ref(false),periodMode=ref<PlansPeriodMode>('worklist'),dateFrom=ref(week.from),dateTo=ref(week.to),draftMode=ref<PlansPeriodMode>('worklist'),draftFrom=ref(week.from),draftTo=ref(week.to),filterError=ref('');
 const filterTitle=computed(()=>periodMode.value==='worklist'?'Текущая неделя, будущие и незакрытые работы':periodMode.value==='all'?'Все даты':`${tripDateLabel(dateFrom.value)} — ${tripDateLabel(dateTo.value)}`);
@@ -26,7 +27,7 @@ function cancelCurrent(){generation++;controller?.abort();clearTimeout(timer);}
 function pause(signal:AbortSignal){return new Promise<void>((resolve,reject)=>{const abort=()=>{clearTimeout(t);reject(new Error('Отменено'));};const t=setTimeout(()=>{signal.removeEventListener('abort',abort);resolve();},1000);signal.addEventListener('abort',abort,{once:true});if(signal.aborted)abort();});}
 async function load(){
  if(tab.value!=='staff')return;cancelCurrent();const g=generation,c=new AbortController();controller=c;busy.value=true;error.value='';
- const query={employee:employee.value,search:search.value,page:page.value,periodMode:periodMode.value,...(periodMode.value==='period'?{from:dateFrom.value,to:dateTo.value}:{}),...(cursors.value[page.value-1]?{cursor:cursors.value[page.value-1]}:{})};
+ const query={...(auditing.value?{audit:"1"}:{}),employee:employee.value,search:search.value,page:page.value,periodMode:periodMode.value,...(periodMode.value==='period'?{from:dateFrom.value,to:dateTo.value}:{}),...(cursors.value[page.value-1]?{cursor:cursors.value[page.value-1]}:{})};
  try{let result:EmployeePlansResult|undefined;for(let attempt=0;attempt<16;attempt++){try{result=await $fetch<EmployeePlansResult>('/api/diagnostic/plans',{query,signal:c.signal,retry:0});break;}catch(e:any){if(c.signal.aborted)throw e;if(e?.data?.data?.code!=='PLANS_BUSY'||attempt===15)throw e;await pause(c.signal);}}
   if(g===generation&&result){data.value=result;cursors.value[page.value]=result.nextCursor;cursors.value.length=page.value+1;}
  }catch(e:any){if(g===generation&&!c.signal.aborted)error.value=e?.data?.message||e?.message||'Не удалось загрузить работы.';}
@@ -82,8 +83,17 @@ function moveTab(event:KeyboardEvent){tab.value=tab.value==='staff'?'external':'
       <label v-if="draftMode==='period'">С<TripDateInput v-model="draftFrom" label="Начало периода"/></label><label v-if="draftMode==='period'">По<TripDateInput v-model="draftTo" label="Конец периода"/></label>
       <button class="opr-button" type="submit">Применить</button><button class="opr-button" type="button" @click="resetPeriod">По умолчанию</button>
       <span class="opr-period-explanation">{{draftMode==='worklist'?'Неделя — с понедельника по воскресенье. Незакрытые работы без дат также включены.':draftMode==='period'?'Все статусы. Пересечение выбранного периода с датами плана или факта.':'Все сохранённые назначения независимо от дат и статуса.'}}</span>
+      <label><span>Диагностика выборки</span><input v-model="auditing" type="checkbox" @change="refresh"/></label>
       <p v-if="filterError" class="opr-filter-error" role="alert">{{filterError}}</p>
      </form>
+     <section v-if="tab==='staff' && auditing && summaryReady && data?.audit" class="opr-audit" aria-label="Проверка выборки">
+      <strong>{{ !data.audit.eligible ? 'Выборка остановлена при проверке состава ОДИС' : data.audit.sources.reduce((n,s)=>n+s.accepted,0)===data.total ? 'Сумма по источникам совпадает с итогом списка' : 'Расхождение между источниками и итогом списка' }}</strong>
+      <p>Первая колонка счётчиков показывает записи после условий БД. Следующие колонки показывают назначения сотрудникам. Одна запись может дать несколько назначений.</p>
+      <table><thead><tr><th>Источник и условия БД</th><th>Из БД</th><th>По исполнителю</th><th>После поиска</th><th>После периода</th></tr></thead>
+      <tbody><tr v-for="s in data.audit.sources" :key="s.model"><td><details><summary>{{ s.table }}</summary><pre>{{ s.where }}</pre></details></td><td>{{ s.read }}</td><td>{{ s.assigned }}</td><td>{{ s.searched }}</td><td><meter min="0" :max="Math.max(1,s.assigned)" :value="s.accepted"></meter> {{ s.accepted }}</td></tr></tbody></table>
+      <p v-for="c in data.audit.controls" :key="c.start">ДСиР-2025-478 · АИС ИССО-Н. Внесение данных · {{tripDateLabel(c.start)}} — {{tripDateLabel(c.finish)}} · 2 ч. <b>{{c.accepted===1?'Найдена':c.accepted>1?'Найдено несколько совпадений':c.searched?'Исключена периодом':c.assigned?'Исключена поиском':'Совпадений среди назначений нет'}}</b></p>
+      <details><summary>Применённые параметры</summary><pre>{{ JSON.stringify({employee:data.selection,search,period:data.period},null,2) }}</pre></details>
+     </section>
      <p v-if="tab==='staff'&&error" class="opr-error" role="alert">{{error}} <button class="opr-button" @click="load">Повторить</button></p>
      <div class="opr-table-scroll" role="region" aria-label="Таблица планов" :aria-busy="busy" tabindex="0">
       <table>
@@ -114,3 +124,9 @@ function moveTab(event:KeyboardEvent){tab.value=tab.value==='staff'?'external':'
  </section>
 </template>
 <style src="~/assets/css/diagnostic-plans.css"></style>
+
+<style scoped>
+.opr-audit{padding:8px 12px;max-height:32vh;overflow:auto;background:var(--opr-panel);color:var(--opr-text);flex:none}
+.opr-audit table{border-collapse:collapse}.opr-audit th,.opr-audit td{padding:3px 10px;text-align:left;border:1px solid var(--opr-line)}
+.opr-audit summary{cursor:pointer}.opr-audit meter{width:64px}.opr-audit p{margin:4px 0}
+</style>

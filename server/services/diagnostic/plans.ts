@@ -1,3 +1,5 @@
+import {komovControls,recordControl} from '../../../shared/utils/diagnostic-plans-control';
+import {Prisma} from '@prisma/client';
 import {createError,setHeader,type H3Event} from 'h3';
 import {prisma} from '../../utils/prisma';
 import {getAccessActor} from '../access-control.service';
@@ -22,7 +24,11 @@ export async function readEmployeePlans(event:H3Event,q:Record<string,unknown>):
  const currentUser={id:user.id,name:roster.users.find(p=>p.id===user.id)?.name||user.login||String(user.id)},pageSize=PLAN_PAGE;
  let warning=roster.warning;
  if(selection==='me'&&!roster.employees.some(p=>p.id===user.id))warning=[warning,'Ваше членство в группе ОДИС не подтверждено. Личный список пуст; проверьте состав группы.'].filter(Boolean).join(' ');
- const empty={period,currentUser,employees:roster.employees,selection,rows:[],total:0,hoursSummary:new PlansHoursTotal().result(),page:1,pageSize,warning,unresolvedWorks:0,unlinkedTravelWorks:0,nextCursor:null};
+ const audit: EmployeePlansResult['audit'] = q.audit==='1' ? {
+  eligible:peopleEligible(), sources:[], controls:komovControls(roster.employees.find(p=>p.id===employeeId)?.name??'')
+ } : undefined;
+ function peopleEligible(){return roster.employees.length>0 && (selection!=='me'||roster.employees.some(p=>p.id===user.id));}
+ const empty={audit,period,currentUser,employees:roster.employees,selection,rows:[],total:0,hoursSummary:new PlansHoursTotal().result(),page:1,pageSize,warning,unresolvedWorks:0,unlinkedTravelWorks:0,nextCursor:null};
  const context=planContext(user.id,selection,search,period),after=readPlanCursor(q.cursor,context);
  if(page>1&&!after)throw createError({statusCode:400,message:'Обновите список перед переходом на следующую страницу.'});
  if(!roster.employees.length||selection==='me'&&!roster.employees.some(p=>p.id===user.id))return empty;
@@ -37,7 +43,33 @@ export async function readEmployeePlans(event:H3Event,q:Record<string,unknown>):
  const fields={id:true,planStart:true,planFinish:true,planHours:true,planExecutor:true,factStart:true,factFinish:true,factHours:true,factExecutor:true,status:true} as const;
  const day=(d:Date|null)=>d?.toISOString().slice(0,10)??null;
  const values=(w:{planStart:Date|null;planFinish:Date|null;planHours:{toString():string}|null;planExecutor:string;factStart:Date|null;factFinish:Date|null;factHours:{toString():string}|null;factExecutor:string;status:string})=>({planStart:day(w.planStart),planFinish:day(w.planFinish),planHours:w.planHours?.toString()??null,planExecutor:w.planExecutor,factStart:day(w.factStart),factFinish:day(w.factFinish),factHours:w.factHours?.toString()??null,factExecutor:w.factExecutor,status:diagnosticWorkStatus(w.status).key});
- const accept=(works:CalendarWork[],trips:CalendarTrip[]=[])=>{check();const built=buildCalendar(null,people,roster.users,works,trips);for(const row of calendarRows(built.rows,{employeeId,search,status:'',sort:'planStart',descending:true}))if(matchesPlansPeriod(row,period))collector.add(row);};
+ const describeSource=(model:string,where:object)=>{
+  if(!audit)return;
+  const meta=Prisma.dmmf.datamodel.models.find(item=>item.name===model);
+  const source={model,table:meta?.dbName||model,where:JSON.stringify(where,null,2),read:0,assigned:0,searched:0,accepted:0};
+  audit.sources.push(source);
+  return source;
+ };
+ const accept=(works:CalendarWork[],trips:CalendarTrip[],source:ReturnType<typeof describeSource>)=>{
+  check();
+  const built=buildCalendar(null,people,roster.users,works,trips);
+  const rows=calendarRows(built.rows,{employeeId,search,status:'',sort:'planStart',descending:true});
+  if(audit?.controls.length){
+   for(const row of built.rows)if(row.employeeId===employeeId)recordControl(audit.controls,row,'assigned');
+   for(const row of rows)recordControl(audit.controls,row,'searched');
+  }
+  if(source){
+   source.read+=works.length+trips.length;
+   source.assigned+=built.rows.filter(r=>employeeId===null||r.employeeId===employeeId).length;
+   source.searched+=rows.length;
+  }
+  for(const row of rows){
+   if(!matchesPlansPeriod(row,period))continue;
+   collector.add(row);
+   if(audit?.controls.length)recordControl(audit.controls,row,'accepted');
+   if(source)source.accepted++;
+  }
+ };
  try{check();const response=await prisma.$transaction(async tx=>{
   // LOCAL settings expire with this transaction; never change the application's pool defaults.
   await tx.$executeRaw`SET TRANSACTION READ ONLY`;
@@ -49,18 +81,24 @@ export async function readEmployeePlans(event:H3Event,q:Record<string,unknown>):
   const gate=await tx.$queryRaw<{locked:boolean}[]>`SELECT pg_try_advisory_xact_lock(71916, 2) AS locked`;
   if(!gate[0]?.locked){setHeader(event,'Retry-After',1);throw createError({statusCode:503,message:'Предыдущая загрузка ещё завершается. Повторите запрос через несколько секунд.',data:{code:'PLANS_BUSY'}});}
   let last:number|undefined;
-  for(;;){check();const boundary:{id?:{lt:number}}=last===undefined?{}:{id:{lt:last}};const batch=await tx.diagnosticContractWork.findMany({where:{deletedAt:null,contract:{deletedAt:null},...employeeFilter,...boundary},orderBy:{id:'desc'},take:PLAN_BATCH,select:{...fields,contractId:true,code:true,name:true,contract:{select:{number:true}}}});
-   accept(batch.map(w=>({...values(w),id:w.id,kind:'contract',contractId:w.contractId,contractNumber:w.contract.number,structureCode:'',code:w.code,name:w.name})));
+  const contractWhere={deletedAt:null,contract:{deletedAt:null},...employeeFilter};
+  const contractTrace=describeSource('DiagnosticContractWork',contractWhere);
+  for(;;){check();const boundary:{id?:{lt:number}}=last===undefined?{}:{id:{lt:last}};const batch=await tx.diagnosticContractWork.findMany({where:{...contractWhere,...boundary},orderBy:{id:'desc'},take:PLAN_BATCH,select:{...fields,contractId:true,code:true,name:true,contract:{select:{number:true}}}});
+   accept(batch.map(w=>({...values(w),id:w.id,kind:'contract',contractId:w.contractId,contractNumber:w.contract.number,structureCode:'',code:w.code,name:w.name})),[],contractTrace);
    if(batch.length<PLAN_BATCH)break;last=batch[batch.length-1]!.id;
   }
   last=undefined;
-  for(;;){check();const boundary:{id?:{lt:number}}=last===undefined?{}:{id:{lt:last}};const batch=await tx.diagnosticStructureWork.findMany({where:{deletedAt:null,tripId:null,contractStructure:{deletedAt:null,contract:{deletedAt:null},structure:{deletedAt:null}},...employeeFilter,...boundary},orderBy:{id:'desc'},take:PLAN_BATCH,select:{...fields,workCodeSnapshot:true,workNameSnapshot:true,contractStructure:{select:{contractId:true,contract:{select:{number:true}},structure:{select:{code:true}}}}}});
-   accept(batch.map(w=>({...values(w),id:w.id,kind:'structure',contractId:w.contractStructure.contractId,contractNumber:w.contractStructure.contract.number,structureCode:w.contractStructure.structure.code,code:w.workCodeSnapshot,name:w.workNameSnapshot})));
+  const structureWhere={deletedAt:null,tripId:null,contractStructure:{deletedAt:null,contract:{deletedAt:null},structure:{deletedAt:null}},...employeeFilter};
+  const structureTrace=describeSource('DiagnosticStructureWork',structureWhere);
+  for(;;){check();const boundary:{id?:{lt:number}}=last===undefined?{}:{id:{lt:last}};const batch=await tx.diagnosticStructureWork.findMany({where:{...structureWhere,...boundary},orderBy:{id:'desc'},take:PLAN_BATCH,select:{...fields,workCodeSnapshot:true,workNameSnapshot:true,contractStructure:{select:{contractId:true,contract:{select:{number:true}},structure:{select:{code:true}}}}}});
+   accept(batch.map(w=>({...values(w),id:w.id,kind:'structure',contractId:w.contractStructure.contractId,contractNumber:w.contractStructure.contract.number,structureCode:w.contractStructure.structure.code,code:w.workCodeSnapshot,name:w.workNameSnapshot})),[],structureTrace);
    if(batch.length<PLAN_BATCH)break;last=batch[batch.length-1]!.id;
   }
   last=undefined;
-  for(;;){check();const boundary:{id?:{lt:number}}=last===undefined?{}:{id:{lt:last}};const batch=await tx.diagnosticTrip.findMany({where:{deletedAt:null,contract:{deletedAt:null},participants:{some:{userId:{in:people.map(p=>p.id)}}},...boundary},orderBy:{id:'desc'},take:PLAN_BATCH,select:{id:true,number:true,contractId:true,contract:{select:{number:true}},start:true,finish:true,status:true,participants:{where:{userId:{in:people.map(p=>p.id)}},select:{userId:true,factHours:true}}}});
-   accept([],batch.map(t=>({id:t.id,number:t.number,contractId:t.contractId,contractNumber:t.contract.number,start:day(t.start)!,finish:day(t.finish)!,status:t.status,participants:t.participants.map(p=>({id:p.userId,factHours:p.factHours?.toString()??null}))})));
+  const tripWhere={deletedAt:null,contract:{deletedAt:null},participants:{some:{userId:{in:people.map(p=>p.id)}}}};
+  const tripTrace=describeSource('DiagnosticTrip',tripWhere);
+  for(;;){check();const boundary:{id?:{lt:number}}=last===undefined?{}:{id:{lt:last}};const batch=await tx.diagnosticTrip.findMany({where:{...tripWhere,...boundary},orderBy:{id:'desc'},take:PLAN_BATCH,select:{id:true,number:true,contractId:true,contract:{select:{number:true}},start:true,finish:true,status:true,participants:{where:{userId:{in:people.map(p=>p.id)}},select:{userId:true,factHours:true}}}});
+   accept([],batch.map(t=>({id:t.id,number:t.number,contractId:t.contractId,contractNumber:t.contract.number,start:day(t.start)!,finish:day(t.finish)!,status:t.status,participants:t.participants.map(p=>({id:p.userId,factHours:p.factHours?.toString()??null}))})),tripTrace);
    if(batch.length<PLAN_BATCH)break;last=batch[batch.length-1]!.id;
   }
   check();const result=collector.finish();
@@ -72,7 +110,7 @@ export async function readEmployeePlans(event:H3Event,q:Record<string,unknown>):
   check();if(structureIds.length)for(const w of await tx.diagnosticStructureWork.findMany({where:{id:{in:structureIds}},take:PLAN_PAGE,select:{id:true,note:true,warning:true,contractStructure:{select:{structure:{select:{location:true}}}}}}))info.set('structure:'+w.id,{note:w.note,location:w.contractStructure.structure.location,warning:w.warning});
   check();if(tripIds.length)for(const t of await tx.diagnosticTrip.findMany({where:{id:{in:tripIds}},take:PLAN_PAGE,select:{id:true,note:true}}))info.set('trip:'+t.id,{note:t.note,location:'',warning:''});
   check();const rows:PlanWorkRow[]=result.rows.map(r=>({...r,documentType:'Договор',regionalCenter:'',regionalCenterSource:'missing',...(info.get(r.kind+':'+r.id)??{note:'',location:'',warning:''})}));
-  return {period,currentUser,employees:roster.employees,selection,rows,total:result.total,hoursSummary:result.hoursSummary,page,pageSize,warning,unresolvedWorks:0,unlinkedTravelWorks:0,nextCursor:result.hasMore?writePlanCursor(result.rows[result.rows.length-1]!,context):null};
+  return {audit,period,currentUser,employees:roster.employees,selection,rows,total:result.total,hoursSummary:result.hoursSummary,page,pageSize,warning,unresolvedWorks:0,unlinkedTravelWorks:0,nextCursor:result.hasMore?writePlanCursor(result.rows[result.rows.length-1]!,context):null};
  },{isolationLevel:'RepeatableRead',maxWait:2000,timeout:75000});
  check();const centers=await plansRegionalCenters(event,response.rows.map(r=>r.employeeId),()=>cancelled);
  if(cancelled)check();return {...response,rows:response.rows.map(r=>({...r,...centers.get(r.employeeId)}))};
