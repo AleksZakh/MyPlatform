@@ -1,3 +1,4 @@
+import {workSourcePeriod,tripSourcePeriod} from './plans-source-period';
 import {komovControls,recordControl} from '../../../shared/utils/diagnostic-plans-control';
 import {Prisma} from '@prisma/client';
 import {createError,setHeader,type H3Event} from 'h3';
@@ -13,6 +14,7 @@ import {PLAN_BATCH,PLAN_PAGE,PlanPageCollector,planEmployeeFilter,planContext,re
 import type {CalendarWork,CalendarTrip} from '../../../shared/types/diagnostic-calendar';
 import type {EmployeePlansResult,PlanWorkRow} from '../../../shared/types/diagnostic-plans';
 export async function readEmployeePlans(event:H3Event,q:Record<string,unknown>):Promise<EmployeePlansResult>{
+ const requestStart=Date.now();
  const selection=q.employee===undefined?'me':q.employee;
  if(typeof selection!=='string'||!['me','all'].includes(selection)&&(!/^[1-9]\d*$/.test(selection)||!Number.isSafeInteger(Number(selection))||Number(selection)>2147483647))throw createError({statusCode:400,message:'Некорректный сотрудник.'});
  const page=q.page===undefined?1:Number(q.page);if(q.page!==undefined&&(typeof q.page!=='string'||!/^\d+$/.test(q.page))||!Number.isSafeInteger(page)||page<1||page>100000)throw createError({statusCode:400,message:'Некорректная страница.'});
@@ -70,6 +72,12 @@ export async function readEmployeePlans(event:H3Event,q:Record<string,unknown>):
    if(source)source.accepted++;
   }
  };
+ let stage='transaction';
+ const stages:Record<string,number>={};
+ let stageStart=Date.now();
+ stages.setup=stageStart-requestStart;
+ const enter=(next:string)=>{const now=Date.now();stages[stage]=now-stageStart;stageStart=now;stage=next;};
+ let outcome='ok';
  try{check();const response=await prisma.$transaction(async tx=>{
   // LOCAL settings expire with this transaction; never change the application's pool defaults.
   await tx.$executeRaw`SET TRANSACTION READ ONLY`;
@@ -81,26 +89,32 @@ export async function readEmployeePlans(event:H3Event,q:Record<string,unknown>):
   const gate=await tx.$queryRaw<{locked:boolean}[]>`SELECT pg_try_advisory_xact_lock(71916, 2) AS locked`;
   if(!gate[0]?.locked){setHeader(event,'Retry-After',1);throw createError({statusCode:503,message:'Предыдущая загрузка ещё завершается. Повторите запрос через несколько секунд.',data:{code:'PLANS_BUSY'}});}
   let last:number|undefined;
-  const contractWhere={deletedAt:null,contract:{deletedAt:null},...employeeFilter};
+  // Audit needs pre-period counts and must still see excluded control records.
+  const workFilters=audit?employeeFilter:{AND:[employeeFilter,workSourcePeriod(period)]};
+  enter('contractWorks');
+  const contractWhere={deletedAt:null,contract:{deletedAt:null},...workFilters};
   const contractTrace=describeSource('DiagnosticContractWork',contractWhere);
   for(;;){check();const boundary:{id?:{lt:number}}=last===undefined?{}:{id:{lt:last}};const batch=await tx.diagnosticContractWork.findMany({where:{...contractWhere,...boundary},orderBy:{id:'desc'},take:PLAN_BATCH,select:{...fields,contractId:true,code:true,name:true,contract:{select:{number:true}}}});
    accept(batch.map(w=>({...values(w),id:w.id,kind:'contract',contractId:w.contractId,contractNumber:w.contract.number,structureCode:'',code:w.code,name:w.name})),[],contractTrace);
    if(batch.length<PLAN_BATCH)break;last=batch[batch.length-1]!.id;
   }
   last=undefined;
-  const structureWhere={deletedAt:null,tripId:null,contractStructure:{deletedAt:null,contract:{deletedAt:null},structure:{deletedAt:null}},...employeeFilter};
+  enter('structureWorks');
+  const structureWhere={deletedAt:null,tripId:null,contractStructure:{deletedAt:null,contract:{deletedAt:null},structure:{deletedAt:null}},...workFilters};
   const structureTrace=describeSource('DiagnosticStructureWork',structureWhere);
   for(;;){check();const boundary:{id?:{lt:number}}=last===undefined?{}:{id:{lt:last}};const batch=await tx.diagnosticStructureWork.findMany({where:{...structureWhere,...boundary},orderBy:{id:'desc'},take:PLAN_BATCH,select:{...fields,workCodeSnapshot:true,workNameSnapshot:true,contractStructure:{select:{contractId:true,contract:{select:{number:true}},structure:{select:{code:true}}}}}});
    accept(batch.map(w=>({...values(w),id:w.id,kind:'structure',contractId:w.contractStructure.contractId,contractNumber:w.contractStructure.contract.number,structureCode:w.contractStructure.structure.code,code:w.workCodeSnapshot,name:w.workNameSnapshot})),[],structureTrace);
    if(batch.length<PLAN_BATCH)break;last=batch[batch.length-1]!.id;
   }
   last=undefined;
-  const tripWhere={deletedAt:null,contract:{deletedAt:null},participants:{some:{userId:{in:people.map(p=>p.id)}}}};
+  enter('trips');
+  const tripWhere={...(audit?{}:tripSourcePeriod(period)),deletedAt:null,contract:{deletedAt:null},participants:{some:{userId:{in:people.map(p=>p.id)}}}};
   const tripTrace=describeSource('DiagnosticTrip',tripWhere);
   for(;;){check();const boundary:{id?:{lt:number}}=last===undefined?{}:{id:{lt:last}};const batch=await tx.diagnosticTrip.findMany({where:{...tripWhere,...boundary},orderBy:{id:'desc'},take:PLAN_BATCH,select:{id:true,number:true,contractId:true,contract:{select:{number:true}},start:true,finish:true,status:true,participants:{where:{userId:{in:people.map(p=>p.id)}},select:{userId:true,factHours:true}}}});
    accept([],batch.map(t=>({id:t.id,number:t.number,contractId:t.contractId,contractNumber:t.contract.number,start:day(t.start)!,finish:day(t.finish)!,status:t.status,participants:t.participants.map(p=>({id:p.userId,factHours:p.factHours?.toString()??null}))})),tripTrace);
    if(batch.length<PLAN_BATCH)break;last=batch[batch.length-1]!.id;
   }
+  enter('pageDetails');
   check();const result=collector.finish();
   // Fetch free text/location only for visible records, never for the whole register.
   const info=new Map<string,{note:string;location:string;warning:string}>();
@@ -112,7 +126,14 @@ export async function readEmployeePlans(event:H3Event,q:Record<string,unknown>):
   check();const rows:PlanWorkRow[]=result.rows.map(r=>({...r,documentType:'Договор',regionalCenter:'',regionalCenterSource:'missing',...(info.get(r.kind+':'+r.id)??{note:'',location:'',warning:''})}));
   return {audit,period,currentUser,employees:roster.employees,selection,rows,total:result.total,hoursSummary:result.hoursSummary,page,pageSize,warning,unresolvedWorks:0,unlinkedTravelWorks:0,nextCursor:result.hasMore?writePlanCursor(result.rows[result.rows.length-1]!,context):null};
  },{isolationLevel:'RepeatableRead',maxWait:2000,timeout:75000});
+ enter('regionalCenters');
  check();const centers=await plansRegionalCenters(event,response.rows.map(r=>r.employeeId),()=>cancelled);
  if(cancelled)check();return {...response,rows:response.rows.map(r=>({...r,...centers.get(r.employeeId)}))};
- }catch(e:any){if(cancelled)throw createError({statusCode:499,message:'Запрос отменён.'});if(e?.code==='P2028'||e?.meta?.code==='57014'||/statement timeout/i.test(e?.message||''))throw createError({statusCode:504,message:'Превышено время загрузки работ. Выберите сотрудника и повторите запрос.'});throw e;}finally{event.node.res.off('close',onClose);}
+ }catch(e:any){outcome=String(e?.meta?.code??e?.code??e?.statusCode??'error');if(cancelled)throw createError({statusCode:499,message:'Запрос отменён.'});if(e?.code==='P2028'||e?.meta?.code==='57014'||/statement timeout/i.test(e?.message||''))throw createError({statusCode:504,message:'Превышено время загрузки работ. Выберите сотрудника и повторите запрос.'});throw e;}finally{
+  event.node.res.off('close',onClose);
+  if(outcome!=='ok'||Date.now()-requestStart>=5000){
+   stages[stage]=Date.now()-stageStart;
+   console.info('[odis-plans]',JSON.stringify({employee:selection,mode:period.mode,page,audit:!!audit,outcome,lastStage:stage,totalMs:Date.now()-requestStart,ms:stages}));
+  }
+ }
 }
