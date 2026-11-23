@@ -135,13 +135,16 @@
   background: var(--opr-panel);
   border-left: 1px solid var(--opr-line);
 }
-.odp .trip-date-calendar input {
+.odp .trip-date-calendar input[type="date"] {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   opacity: 0;
   cursor: pointer;
+}
+.odp .trip-date-calendar input[type="date"]:disabled {
+  cursor: not-allowed;
 }
 .odp-upper {
   display: grid;
