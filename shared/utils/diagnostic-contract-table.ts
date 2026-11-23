@@ -21,6 +21,7 @@ export const workStatusLegend=[
 ] as const;
 export function diagnosticWorkStatus(value:string|null|undefined){
  const raw=value?.trim()||'';
- const key=({scheduled:'planned',active:'in_progress',performed:'in_progress'} as Record<string,string>)[raw]||raw;
+ const normalized=raw.toLowerCase();
+ const key=({scheduled:'planned',active:'in_progress',performed:'in_progress'} as Record<string,string>)[normalized]||normalized;
  return workStatusLegend.find(s=>s.key===key)??{key:'unknown',label:'Неизвестный статус',title:raw?'Неизвестный статус: '+raw:'Статус не указан'};
 }

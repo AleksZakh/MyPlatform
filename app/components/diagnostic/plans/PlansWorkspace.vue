@@ -2,6 +2,7 @@
 import {ref,computed,watch,onMounted,onBeforeUnmount} from 'vue';
 import TripDateInput from '../trips/TripDateInput.vue';
 import {plansWeek,parsePlansPeriod,type PlansPeriodMode} from '~~/shared/utils/diagnostic-plans-period';
+import PlanEditor from './PlanEditor.vue';
 import WorkStatusIcon from '../contracts/WorkStatusIcon.vue';
 import WorkStatusLegend from '../contracts/WorkStatusLegend.vue';
 import {regionalCenterCode} from '~~/shared/utils/diagnostic-regional-center';
@@ -10,6 +11,13 @@ import {calendarShortName} from '~~/shared/utils/diagnostic-calendar';
 import {tripDateLabel} from '~~/shared/utils/diagnostic-trips';
 import DiagnosticModuleTabs from '../DiagnosticModuleTabs.vue';
 const auditing=ref(false);
+const planning=ref(false),canPlan=ref(false),planNotice=ref('');
+onMounted(async()=>{try{canPlan.value=(await $fetch<{allowed:boolean}>('/api/access/check',{query:{resource:'diagnostic.contracts',action:'CREATE'}})).allowed;}catch{canPlan.value=false;}});
+function planSaved(person:number){
+ planning.value=false;planNotice.value='Работы сохранены в плане.';
+ if(employee.value==='all'||employee.value===String(person)||employee.value==='me'&&data.value?.currentUser.id===person)refresh();
+ else employee.value=String(person);
+}
 const tab=ref<'staff'|'external'>('staff');
 const week=plansWeek(),filtersOpen=ref(false),periodMode=ref<PlansPeriodMode>('worklist'),dateFrom=ref(week.from),dateTo=ref(week.to),draftMode=ref<PlansPeriodMode>('worklist'),draftFrom=ref(week.from),draftTo=ref(week.to),filterError=ref('');
 const filterTitle=computed(()=>periodMode.value==='worklist'?'Текущая неделя, будущие и незакрытые работы':periodMode.value==='all'?'Все даты':`${tripDateLabel(dateFrom.value)} — ${tripDateLabel(dateTo.value)}`);
@@ -29,11 +37,16 @@ async function load(){
  if(tab.value!=='staff')return;cancelCurrent();const g=generation,c=new AbortController();controller=c;busy.value=true;error.value='';
  const query={...(auditing.value?{audit:"1"}:{}),employee:employee.value,search:search.value,page:page.value,periodMode:periodMode.value,...(periodMode.value==='period'?{from:dateFrom.value,to:dateTo.value}:{}),...(cursors.value[page.value-1]?{cursor:cursors.value[page.value-1]}:{})};
  try{let result:EmployeePlansResult|undefined;for(let attempt=0;attempt<16;attempt++){try{result=await $fetch<EmployeePlansResult>('/api/diagnostic/plans',{query,signal:c.signal,retry:0});break;}catch(e:any){if(c.signal.aborted)throw e;if(e?.data?.data?.code!=='PLANS_BUSY'||attempt===15)throw e;await pause(c.signal);}}
-  if(g===generation&&result){data.value=result;cursors.value[page.value]=result.nextCursor;cursors.value.length=page.value+1;}
+  if(g!==generation)return;
+  if(!result || !Array.isArray(result.rows) || !Array.isArray(result.employees)
+      || !Number.isSafeInteger(result.total) || result.total<result.rows.length
+      || (query.page===1 && result.total>0 && !result.rows.length)
+      || result.selection!==query.employee)throw Error('Сервер вернул некорректный ответ при загрузке списка работ.');
+  data.value=result;cursors.value[page.value]=result.nextCursor;cursors.value.length=page.value+1;
  }catch(e:any){if(g===generation&&!c.signal.aborted)error.value=e?.data?.message||e?.message||'Не удалось загрузить работы.';}
  finally{if(g===generation)busy.value=false;}
 }
-function schedule(delay=150){cancelCurrent();timer=setTimeout(()=>void load(),delay);}
+function schedule(delay=150){cancelCurrent();busy.value=true;error.value='';timer=setTimeout(()=>void load(),delay);}
 function resetPage(){cursors.value=[null];page.value=1;}
 function refresh(){resetPage();void load();}
 function nextPage(){if(!data.value?.nextCursor||busy.value)return;cursors.value[page.value]=data.value.nextCursor;page.value++;void load();}
@@ -51,6 +64,7 @@ function moveTab(event:KeyboardEvent){tab.value=tab.value==='staff'?'external':'
 </script>
 <template>
  <section class="odis-plans">
+  <PlanEditor v-if="planning" @close="planning=false" @saved="planSaved"/><p v-if="planNotice" role="status">{{planNotice}}</p>
   <DiagnosticModuleTabs active="plans"><label class="opr-search"><Icon name="lucide:search" aria-hidden="true"/><input v-model="search" type="search" placeholder="Работа, договор, ФИО, ИССО" aria-label="Поиск работ" :disabled="tab!=='staff'"/></label></DiagnosticModuleTabs>
   <header class="opr-title"><h1>Планы и отчёты</h1></header>
   <div class="opr-layout">
@@ -64,7 +78,7 @@ function moveTab(event:KeyboardEvent){tab.value=tab.value==='staff'?'external':'
      <div class="opr-tabs" role="tablist" aria-label="Планы работ">
       <button v-for="item in tabs" :id="`odis-plans-tab-${item.id}`" :key="item.id" type="button" role="tab" :aria-selected="tab===item.id" aria-controls="odis-plans-panel" :tabindex="tab===item.id?0:-1" @click="tab=item.id" @keydown.right.prevent="moveTab" @keydown.left.prevent="moveTab">{{item.label}}</button>
      </div>
-     <button class="opr-button opr-plan-button" type="button" disabled title="Планирование работ станет доступно на следующем этапе"><Icon name="lucide:calendar-plus" aria-hidden="true"/>Запланировать работы</button>
+     <button class="opr-button opr-plan-button" type="button" :disabled="!canPlan||tab!=='staff'" @click="planNotice='';planning=true"><Icon name="lucide:calendar-plus" aria-hidden="true"/>Запланировать работы</button>
     </div>
     <div id="odis-plans-panel" class="opr-panel" role="tabpanel" :aria-labelledby="`odis-plans-tab-${tab}`" tabindex="0">
      <div class="opr-toolbar">
@@ -111,12 +125,12 @@ function moveTab(event:KeyboardEvent){tab.value=tab.value==='staff'?'external':'
           <td :title="periodTitle(row)">{{row.planStart||row.planFinish?'':row.factStart||row.factFinish?'Ф: ':''}}{{rowPeriod(row)}}</td><td class="opr-work-note" :title="row.note">{{row.note||'—'}}</td>
           <td class="opr-center"><span v-if="row.warning" class="opr-data-warning" :title="row.warning" aria-label="Есть замечание к работе">!</span><span v-else>—</span></td>
          </tr>
-         <tr v-if="!data?.rows.length"><td colspan="12" class="opr-empty"><p>{{search?'По вашему запросу ничего не найдено.':'Для выбранного сотрудника работы не найдены.'}}</p></td></tr>
+         <tr v-if="data && !data.rows.length"><td colspan="12" class="opr-empty"><p>{{search?'По вашему запросу ничего не найдено.':'Для выбранного сотрудника работы не найдены.'}}</p></td></tr>
         </template>
        </tbody>
       </table>
      </div>
-     <div v-if="tab==='staff'" class="opr-results"><span>Строк: {{error?0:data?.total??0}}</span><div><button class="opr-button" :disabled="busy||!!error||(data?.page??1)<=1" @click="previousPage">Назад</button><span>{{page}} / {{pages}}</span><button class="opr-button" :disabled="busy||!!error||!data?.nextCursor" @click="nextPage">Далее</button></div></div>
+     <div v-if="tab==='staff'" class="opr-results"><span>Строк: {{summaryReady?data?.total:'—'}}</span><div><button class="opr-button" :disabled="busy||!!error||(data?.page??1)<=1" @click="previousPage">Назад</button><span>{{page}} / {{pages}}</span><button class="opr-button" :disabled="busy||!!error||!data?.nextCursor" @click="nextPage">Далее</button></div></div>
      <div v-if="tab==='staff'&&data&&!error" class="opr-list-notes"><p>* — общие часы; ≈ — расчётный план поездки; Ф — фактические данные. Подробности — при наведении на часы и срок.</p><p v-if="data.unresolvedWorks">В общем перечне есть работы с незаполненными или неоднозначными исполнителями: {{data.unresolvedWorks}}. Такие назначения требуют уточнения.</p><p v-if="data.unlinkedTravelWorks">Выездов без подтверждённой связи с командировкой: {{data.unlinkedTravelWorks}}. Они показаны отдельно.</p></div>
     </div>
    </div>

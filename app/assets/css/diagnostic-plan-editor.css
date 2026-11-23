@@ -1,0 +1,290 @@
+.odp,
+.odp dialog {
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--opr-line);
+  border-radius: 7px;
+  background: var(--opr-bg);
+  color: var(--opr-text);
+  box-shadow: 0 16px 50px #172d4540;
+}
+.odp[open] {
+  width: min(96vw, 1680px);
+  max-width: none;
+  height: min(94dvh, 980px);
+  max-height: none;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+.odp::backdrop,
+.odp dialog::backdrop {
+  background: #14263877;
+}
+.odp header,
+.odp footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 16px;
+  background: var(--opr-chrome);
+}
+.odp footer {
+  justify-content: flex-end;
+  border-top: 1px solid var(--opr-line);
+}
+.odp button {
+  padding: 5px 10px;
+  border: 1px solid var(--opr-line);
+  border-radius: 4px;
+  background: var(--opr-field);
+}
+.odp button.primary {
+  background: #176b88;
+  color: white;
+  border-color: #176b88;
+}
+.odp main {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 10px 15px;
+  min-height: 0;
+  overflow: auto;
+}
+.odp h2,
+.odp h3,
+.odp p {
+  margin: 0;
+}
+.odp h2 {
+  font-size: 19px;
+  font-weight: 600;
+  text-align: center;
+}
+.odp h3,
+.odp-total {
+  font-weight: 600;
+  background: var(--opr-panel);
+  padding: 6px 9px;
+  border-bottom: 1px solid var(--opr-line);
+}
+.odp h3 small {
+  font-weight: 400;
+}
+.odp p[role='alert'] {
+  color: var(--ui-error, #ae292b);
+  padding: 4px 8px;
+}
+.odp-controls {
+  padding: 0 10px 0;
+  margin: 0;
+  min-width: 0;
+  border: 1px solid var(--opr-line);
+  background: var(--opr-panel);
+}
+.odp-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  justify-content: space-between;
+  padding: 5px 0;
+}
+.odp-line + .odp-line {
+  border-top: 1px solid var(--opr-line);
+}
+.odp-line label,
+.odp-tools label,
+.odp-dates,
+.odp-tabs,
+.odp-search {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.odp-line select {
+  width: clamp(185px, 24vw, 400px);
+}
+.odp-dates {
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.odp-tabs button[aria-pressed='true'] {
+  box-shadow: inset 0 3px var(--opr-accent);
+  font-weight: 600;
+}
+.odp-tabs {
+  flex-wrap: wrap;
+}
+.odp .trip-date-control {
+  position: relative;
+  display: inline-flex;
+  width: 144px;
+}
+.odp .trip-date-text {
+  width: 100%;
+  padding-right: 32px;
+}
+.odp .trip-date-calendar {
+  display: grid;
+  place-items: center;
+  position: absolute;
+  inset: 1px 1px 1px auto;
+  width: 30px;
+  background: var(--opr-panel);
+  border-left: 1px solid var(--opr-line);
+}
+.odp .trip-date-calendar input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.odp-upper {
+  display: grid;
+  grid-template-columns: minmax(180px, 23%) minmax(360px, 1fr) auto;
+  gap: 9px;
+  min-height: 200px;
+  flex: 1.2;
+}
+.odp-upper section,
+.odp-basket {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--opr-line);
+  min-width: 0;
+}
+.odp-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-height: 39px;
+  padding: 4px 7px;
+}
+.odp-tools input:not([type='checkbox']) {
+  width: clamp(36px, 4vw, 80px);
+}
+.odp-status {
+  gap: 3px 12px;
+}
+.odp-status label {
+  gap: 4px;
+  white-space: nowrap;
+}
+.odp-table,
+.odp table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  text-align: left;
+  font-size: 13px;
+}
+.odp th,
+.odp td {
+  padding: 3px 6px;
+  border-bottom: 1px solid var(--opr-line);
+  vertical-align: middle;
+}
+.odp th {
+  position: sticky;
+  top: 0;
+  background: var(--opr-panel);
+  font-weight: 600;
+  z-index: 1;
+}
+.odp .odp-scroll {
+  overflow: auto;
+  min-height: 0;
+  flex: 1;
+}
+.odp aside {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 40px;
+}
+.odp tr.travel {
+  background: #fff0c8;
+  color: #493811;
+}
+html.dark .odp tr.travel {
+  background: #59472e;
+  color: #fff2cc;
+}
+.odp tr.chosen {
+  box-shadow: inset 3px 0 var(--opr-accent);
+  background: var(--opr-selected);
+}
+.odp tr.travel.chosen {
+  outline: 1px solid var(--opr-accent);
+  outline-offset: -1px;
+}
+.odp-basket {
+  min-height: 140px;
+  flex: 1;
+}
+.odp-total {
+  border-top: 1px solid var(--opr-line);
+  border-bottom: 0;
+  text-align: right;
+}
+.odp-child[open] {
+  width: min(90vw, 1280px);
+  height: min(80dvh, 740px);
+  display: flex;
+  flex-direction: column;
+}
+.odp-search {
+  padding: 8px 12px;
+}
+.odp-confirm {
+  max-width: min(460px, 92vw);
+}
+.odp-confirm p {
+  padding: 18px;
+}
+@media (max-width: 850px) {
+  .odp-upper {
+    grid-template-columns: minmax(150px, 30%) minmax(270px, 1fr);
+    min-height: 265px;
+  }
+  .odp aside {
+    grid-column: 1/-1;
+    flex-direction: row;
+    justify-content: flex-end;
+    padding: 0;
+  }
+  .odp main {
+    padding: 6px;
+  }
+  .odp-line select {
+    width: 200px;
+  }
+}
+@media (max-width: 550px) {
+  .odp-upper {
+    display: flex;
+    flex-direction: column;
+    flex: none;
+  }
+  .odp-upper section {
+    height: 185px;
+  }
+  .odp-tabs {
+    gap: 3px;
+  }
+  .odp-basket {
+    min-height: 180px;
+  }
+  .odp-dates {
+    gap: 4px;
+  }
+  .odp .trip-date-control {
+    width: 120px;
+  }
+}

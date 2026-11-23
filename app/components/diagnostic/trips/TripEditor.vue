@@ -3,14 +3,21 @@ import {ref,reactive,computed} from 'vue';
 import type {TripCatalog,TripRecord,TripStructureItem} from '~~/shared/types/diagnostic-trips';
 import {tripToday,tripDefaultHours,tripDays,tripWorkType,hourUnits,hourLabel} from '~~/shared/utils/diagnostic-trip-lifecycle';
 import {parseTripInput} from '~~/shared/utils/diagnostic-trips';
+import type {TripDraft} from '~~/shared/utils/diagnostic-planning';
 import TripDateInput from './TripDateInput.vue';
 import TripStructurePicker from './TripStructurePicker.vue';
-const props=defineProps<{trip:TripRecord|null;catalog:TripCatalog;readOnly:boolean;closing?:boolean}>();
+const props=defineProps<{trip:TripRecord|null;catalog:TripCatalog;readOnly:boolean;closing?:boolean;initialPlan?:TripDraft|null}>();
 const emit=defineEmits<{close:[];saved:[TripRecord]}>();
-const c=props.trip,form=reactive({contractId:c?.contractId??0,executorId:c?.executorId??props.catalog.executors.find(e=>e.name==='ОДИС')?.id??0,start:c?.start??'',finish:c?.finish??'',noStructures:c?.noStructures??false,destination:c?.destination??'',assignment:c?.assignment??'',equipment:c?.equipment??'',transport:c?.transport??'',accommodation:c?.accommodation??'',note:c?.note??'',participantIds:[...(c?.participantIds||[])]});
-const structures=ref<TripStructureItem[]>([...(c?.structures||[])]),participantQuery=ref(''),busy=ref(false),error=ref(''),confirmClose=ref(false);
+const c=props.trip,draft=c?null:props.initialPlan;
+const form=reactive({contractId:c?.contractId??draft?.contractId??0,executorId:c?.executorId??props.catalog.executors.find(e=>e.name==='ОДИС')?.id??0,start:c?.start??draft?.start??'',finish:c?.finish??draft?.finish??'',noStructures:c?.noStructures??false,destination:c?.destination??'',assignment:c?.assignment??draft?.assignment??'',equipment:c?.equipment??'',transport:c?.transport??'',accommodation:c?.accommodation??'',note:c?.note??'',participantIds:[...(c?.participantIds||(draft?[draft.participant.id]:[]))]});
+const structures=ref<TripStructureItem[]>([...(c?.structures||draft?.structures||[])]),participantQuery=ref(''),busy=ref(false),error=ref(''),confirmClose=ref(false);
+const selectedSource=reactive<Record<number,number>>({});
+const sourceChoices=computed(()=>structures.value.flatMap(s=>{
+ const rows=draft?.contractId===form.contractId?draft.sources.filter(r=>r.structureId===s.id):[];
+ return rows?.length?[{structure:s,rows}]:[];
+}));
 const locked=computed(()=>props.readOnly||busy.value);
-const resolvedParticipants=ref<{id:number;name:string}[]>([]);
+const resolvedParticipants=ref<{id:number;name:string}[]>(draft&&!props.catalog.participants.some(p=>p.id===draft.participant.id)?[draft.participant]:[]);
 const allParticipants=computed(()=>[...props.catalog.participants,...resolvedParticipants.value,...(c?.participants||[]).filter(p=>!props.catalog.participants.some(u=>u.id===p.id))]);
 const matches=computed(()=>[
  ...props.catalog.participants.map(u=>({...u,key:String(u.id)})),
@@ -44,10 +51,15 @@ async function save(){
  if(addPerson.value){error.value='Участник выбран, но не добавлен в список. Нажмите «Добавить» либо сбросьте выбор участника перед сохранением.';return;}
  try{
   const input=parseTripInput({...form,structureIds:structures.value.map(s=>s.id)});
+  const sourceWorks=sourceChoices.value.map(({structure,rows})=>{
+   const source=rows.length===1?rows[0]:rows.find(r=>r.id===selectedSource[structure.id]);
+   if(!source)throw Error('Выберите строку работы для ИССО '+structure.code+'.');
+   return {id:source.id,version:source.version,structureId:structure.id};
+  });
   const backdated=(!c||c.start!==input.start)&&input.start<tripToday();
   if(backdated&&!window.confirm('Вы планируете командировку в прошлом — заполняете её задним числом. Подтвердить сохранение?'))return;
   busy.value=true;
-  const row=await $fetch<TripRecord>('/api/diagnostic/trips'+(c?'/'+c.id:''),{method:c?'PUT':'POST',headers:{'x-space-diagnostic':'1'},body:{...input,version:c?.version,backdatedConfirmed:backdated}});emit('saved',row);
+  const row=await $fetch<TripRecord>('/api/diagnostic/trips'+(c?'/'+c.id:''),{method:c?'PUT':'POST',headers:{'x-space-diagnostic':'1'},body:{...input,...(sourceWorks.length?{sourceWorks}:{}),version:c?.version,backdatedConfirmed:backdated}});emit('saved',row);
  }catch(e:any){error.value=e?.data?.message||e.message||'Не удалось сохранить командировку.';}finally{busy.value=false;}
 }
 async function complete(){
@@ -64,13 +76,16 @@ async function complete(){
 <template>
  <UModal :open="true" :title="closing?'Закрытие командировки '+trip?.number:trip?(readOnly?'Просмотр командировки':'Редактирование командировки'):'Новая командировка'" :ui="{content:'odis-trip-modal '+(readOnly?'odis-trip-view':'odis-trip-edit'),header:'trip-modal-header',body:'trip-modal-body',footer:'trip-modal-footer'}" @update:open="v=>{if(!v)close()}">
   <template #body><form id="odis-trip-form" @submit.prevent="save">
-   <div class="trip-main-fields"><div class="trip-dates-contract"><label>Организация-исполнитель *<select v-model.number="form.executorId" :disabled="locked"><option :value="0">Выберите исполнителя</option><option v-for="e in catalog.executors" :key="e.id" :value="e.id">{{e.name}}</option></select></label><label>Номер договора *<select :value="form.contractId" :disabled="locked" @change="changeContract"><option :value="0">Выберите договор</option><option v-if="trip&&!catalog.contracts.some(c=>c.id===trip.contractId)" :value="trip.contractId">{{trip.contractNumber}} — недоступен</option><option v-for="c in catalog.contracts" :key="c.id" :value="c.id">{{c.number}}</option></select></label><label>Дата начала *<TripDateInput v-model="form.start" label="Дата начала" :disabled="locked" required/></label><label>Дата окончания *<TripDateInput v-model="form.finish" label="Дата окончания" :disabled="locked" required/></label></div>
+   <div class="trip-main-fields"><div class="trip-dates-contract"><label>Организация-исполнитель *<select v-model.number="form.executorId" :disabled="locked"><option :value="0">Выберите исполнителя</option><option v-for="e in catalog.executors" :key="e.id" :value="e.id">{{e.name}}</option></select></label><label>Номер договора *<select :value="form.contractId" :disabled="locked" @change="changeContract"><option :value="0">Выберите договор</option><option v-if="trip&&!catalog.contracts.some(c=>c.id===trip?.contractId)" :value="trip.contractId">{{trip.contractNumber}} — недоступен</option><option v-for="c in catalog.contracts" :key="c.id" :value="c.id">{{c.number}}</option></select></label><label>Дата начала *<TripDateInput v-model="form.start" label="Дата начала" :disabled="locked" required/></label><label>Дата окончания *<TripDateInput v-model="form.finish" label="Дата окончания" :disabled="locked" required/></label></div>
    <div class="trip-participants"><label>Участники *<input v-if="!readOnly" v-model="participantQuery" :disabled="locked" placeholder="Найти участника по фамилии"/></label><div v-if="!readOnly" class="trip-person-add"><select v-model="addPerson" :disabled="locked"><option value="">Выберите участника</option><option v-for="p in matches" :key="p.key" :value="p.key">{{p.name}}</option></select><button type="button" :disabled="locked||!addPerson" @click="add">Добавить</button></div><ul><li v-for="id in form.participantIds" :key="id">{{allParticipants.find(p=>p.id===id)?.name||('#'+id)}}<button v-if="!readOnly" type="button" :disabled="locked" :aria-label="`Убрать участника ${allParticipants.find(p=>p.id===id)?.name}`" @click="form.participantIds=form.participantIds.filter(p=>p!==id)">×</button></li><li v-if="!form.participantIds.length">Участники не выбраны</li></ul></div></div>
    <div class="trip-bar"><strong>Сооружения</strong><label class="trip-inline-check"><input type="checkbox" :checked="form.noStructures" :disabled="locked" @change="toggleNoStructures"/>Без указания сооружений</label></div>
    <label v-if="form.noStructures" class="trip-destination">Место назначения / маршрут<textarea v-model="form.destination" :disabled="locked" rows="2" maxlength="10000"/></label>
    <div v-else-if="readOnly" class="trip-table-scroll trip-picker-table"><table><thead><tr><th>Код ИССО</th><th>Сооружение</th><th>Автодорога</th><th>Км+м</th><th>Доп. идентификатор</th></tr></thead><tbody><tr v-for="s in structures" :key="s.id"><td>{{s.code}}</td><td>{{s.structureName}}</td><td>{{s.roadName}}</td><td>{{s.location}}</td><td>{{s.additionalId}}</td></tr></tbody></table></div>
    <TripStructurePicker v-else v-model="structures" :contract-id="form.contractId" :disabled="locked"/>
    <p v-if="!readOnly&&!trip?.legacyIds.length&&form.start&&form.finish" class="trip-notice">{{form.noStructures?'Без сооружений работы по сооружениям не создаются.':`Для каждого сооружения будет создана работа «${tripWorkType(form.start,form.finish).name}» (${tripWorkType(form.start,form.finish).code}).`}}</p>
+   <template v-for="group in sourceChoices" :key="group.structure.id"><label v-if="group.rows.length>1">Работа для ИССО {{group.structure.code}}. К командировке привязывается одна строка по каждому сооружению.
+    <select v-model.number="selectedSource[group.structure.id]"><option :value="undefined" disabled>Выберите работу</option><option v-for="r in group.rows" :key="r.id" :value="r.id">{{r.name}} · № {{r.id}}</option></select>
+   </label></template>
    <div class="trip-bar"><strong>Дополнительная информация</strong></div><div class="trip-extra"><label>Задание<textarea v-model="form.assignment" :disabled="locked" rows="2" maxlength="10000"/></label><label>Оборудование<textarea v-model="form.equipment" :disabled="locked" rows="2" maxlength="10000"/></label><label>Транспорт<input v-model="form.transport" :disabled="locked" maxlength="10000" list="trip-transport-options"/><datalist id="trip-transport-options"><option>Корпоративный транспорт</option><option>Личный транспорт</option><option>Общественный транспорт</option></datalist></label><label>Проживание<input v-model="form.accommodation" :disabled="locked" maxlength="10000"/></label><div class="trip-documents"><span>Документы по командировке</span><button type="button" disabled>Прикрепление документов пока недоступно</button></div><label>Примечания<textarea v-model="form.note" :disabled="locked" rows="2" maxlength="10000"/></label><div class="trip-info">{{trip?.number||'Номер будет назначен при сохранении'}}<br/>{{trip?.status==='COMPLETED'?'Завершена':'Запланирована'}}<span v-if="trip?.previousNumber"> · Прежний номер: {{trip.previousNumber}}</span><span v-if="trip?.legacyIds.length"> · Старые ID: {{trip.legacyIds.join(', ')}}</span></div></div>
    <section v-if="closing||trip?.participants.some(p=>p.factHours!=null)" class="trip-facts">
     <div class="trip-bar"><strong>Фактическое время участников</strong><span>Всего: {{totalHours}} чел·ч</span></div>

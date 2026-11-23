@@ -22,7 +22,7 @@ test('Отбор работ, включая неполные даты и раз�
     const query=workSourcePeriod({from,to,mode});
     for(const a of dates)for(const b of dates)for(const c of dates)for(const d of dates){
       if((a&&b&&a>b)||(c&&d&&c>d))continue;
-      for(const status of ['scheduled','completed','overdue','']){
+      for(const status of ['scheduled','performed','completed','overdue','']){
         const source={status,planStart:a,planFinish:b,factStart:c,factFinish:d};
         for(const [plan,fact] of [[true,true],[true,false],[false,true]]){
           const p=plan?interval(a,b):[null,null],f=fact?interval(c,d):[null,null];

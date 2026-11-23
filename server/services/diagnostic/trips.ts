@@ -4,7 +4,7 @@ import {createError,type H3Event} from 'h3';
 import {prisma} from '../../utils/prisma';
 import {writeAuditEvent} from '../../utils/auditLog';
 import {tripParticipants} from './trip-participants';
-import {syncTripStructureWorks} from './trip-structure-works';
+import {syncTripStructureWorks,type PlanningTripSource} from './trip-structure-works';
 import {queueTripEmails} from './trip-email';
 import {tripToday,nextTripNumber,hourUnits,hourLabel,allocateTripHours} from '../../../shared/utils/diagnostic-trip-lifecycle';
 import {parseTripInput,tripDay} from '../../../shared/utils/diagnostic-trips';
@@ -23,7 +23,7 @@ async function references(tx:Prisma.TransactionClient,input:TripInput){
  if(await tx.user.count({where:{id:{in:input.participantIds},deletedAt:null,OR:[{status:'ACTIVE'},{authType:'DOMAIN',status:'PENDING_ACTIVATION'}]}})!==input.participantIds.length)fail('Участник недоступен.');
  if(await tx.diagnosticStructure.count({where:{id:{in:input.structureIds},deletedAt:null}})!==input.structureIds.length)fail('Одно из сооружений недоступно.');
 }
-export async function saveTrip(event:H3Event,actorId:number,input:TripInput,id?:number,version?:number,backdatedConfirmed=false){
+export async function saveTrip(event:H3Event,actorId:number,input:TripInput,id?:number,version?:number,backdatedConfirmed=false,sources:PlanningTripSource[]=[]){
  const allowed=await tripParticipants(event);
  if(input.participantIds.some(id=>!allowed.items.some(u=>u.id===id)))fail(allowed.warning||'Участник отсутствует в составе сотрудников ОДИС или его учётная запись недоступна.');
  return atomic(async tx=>{
@@ -44,7 +44,7 @@ export async function saveTrip(event:H3Event,actorId:number,input:TripInput,id?:
   }
   await tx.diagnosticTripParticipant.createMany({data:input.participantIds.map(userId=>({tripId:row.id,userId}))});
   if(input.structureIds.length)await tx.diagnosticTripStructure.createMany({data:input.structureIds.map(structureId=>({tripId:row.id,structureId}))});
-  if(!before?.origins.length)await syncTripStructureWorks(tx,row.id,input,actorId,before);
+  if(!before?.origins.length)await syncTripStructureWorks(tx,row.id,input,actorId,before,sources);
   const stored=await tx.diagnosticTrip.findUniqueOrThrow({where:{id:row.id},include:tripInclude});
   if(!before||before.contentKey!==stored.contentKey)await queueTripEmails(tx,stored,input);
   const after=serializeTrip(await tx.diagnosticTrip.findUniqueOrThrow({where:{id:row.id},include:tripInclude}));
