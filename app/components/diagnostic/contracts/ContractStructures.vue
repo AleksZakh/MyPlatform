@@ -3,10 +3,12 @@ import {computed,ref,watch,onBeforeUnmount} from 'vue';
 import type {ContractStructureListItem} from '~~/shared/types/diagnostic-contract-structures';
 import type {ContractStructureWorkRecord,ContractStructureWorksResponse} from '~~/shared/types/diagnostic-contract-details';
 import ContractColumnFilter from './ContractColumnFilter.vue';
+import WorkCard from './WorkCard.vue';
+import {onWorkChange} from '~/composables/diagnostic/workChanges';
 import WorkStatusIcon from './WorkStatusIcon.vue';
 import WorkStatusLegend from './WorkStatusLegend.vue';
 import {structureFilterColumns,emptyStructureFilters,structureMatches,filterText,diagnosticWorkStatus,type StructureFilterKey} from '~~/shared/utils/diagnostic-contract-table';
-const props=defineProps<{contractId:number|null}>();
+const props=defineProps<{contractId:number|null;contractNumber:string;canEdit:boolean;employees:{id:number;name:string}[]}>();
 const emit=defineEmits<{count:[number]}>();
 const rows=ref<ContractStructureListItem[]>([]),busy=ref(false),error=ref('');
 const filters=ref(emptyStructureFilters()),filterResetKey=ref(0),filterPortal=ref<HTMLElement|null>(null);
@@ -19,7 +21,6 @@ const selected=computed(()=>rows.value.find(row=>row.id===selectedId.value)??nul
 const works=ref<ContractStructureWorkRecord[]>([]),worksBusy=ref(false),worksError=ref('');
 const detail=ref<ContractStructureWorkRecord|null>(null);
 const date=(s:string|null)=>s?s.split('-').reverse().join('.'):'—';
-const state=(s:string)=>diagnosticWorkStatus(s).title;
 const hasUnknownStatus=computed(()=>works.value.some(work=>diagnosticWorkStatus(work.status).key==='unknown'));
 let listGeneration=0,worksGeneration=0;
 
@@ -50,6 +51,20 @@ async function load(){
 watch(()=>props.contractId,()=>{clearFilters();void load();},{immediate:true});
 watch(visibleRows,list=>{if(!list.some(row=>row.id===selectedId.value))selectedId.value=list[0]?.id??null;});
 watch(selectedId,()=>void loadWorks());
+// Keep an open draft intact. Its version is checked at save time.
+let refreshAfterClose=false;
+onWorkChange(()=>{
+ if (detail.value) refreshAfterClose=true;
+ else void loadWorks();
+});
+function closeDetail() {
+ detail.value=null;
+ if (refreshAfterClose) reloadAfterSave();
+}
+function reloadAfterSave() {
+ refreshAfterClose=false;
+ void loadWorks();
+}
 onBeforeUnmount(()=>{listGeneration++;worksGeneration++;});
 </script>
 
@@ -99,19 +114,8 @@ onBeforeUnmount(()=>{listGeneration++;worksGeneration++;});
    </div>
   </section>
  </section>
- <UModal :open="!!detail" title="Работа по сооружению" :description="selected?`Код ИССО: ${selected.code}`:undefined" :ui="{content:'diagnostic-contract-modal cs-detail-modal w-[95vw] sm:max-w-xl',header:'cs-import-header',body:'cs-import-body',footer:'cs-import-footer'}" @update:open="value=>{if(!value)detail=null}">
-  <template #body><div v-if="detail" class="cs-detail">
-   <p>{{ state(detail.status) }}</p><h3>{{ detail.name }}</h3><p>Шифр: {{ detail.code }}</p>
-   <p v-if="detail.planHours===null&&detail.hours!==null">Трудоёмкость назначения: {{ detail.hours }} чел·ч</p>
-   <h4>Запланировано</h4><p>Исполнитель: <strong>{{ detail.planExecutor||'Не назначен' }}</strong></p>
-   <dl><div><dt>Начало</dt><dd>{{ date(detail.planStart) }}</dd></div><div><dt>Окончание</dt><dd>{{ date(detail.planFinish) }}</dd></div><div><dt>Трудоёмкость, чел·ч</dt><dd>{{ detail.planHours??'—' }}</dd></div></dl>
-   <h4>Фактически</h4><p>Исполнитель: <strong>{{ detail.factExecutor||'Не указан' }}</strong></p>
-   <dl><div><dt>Начало</dt><dd>{{ date(detail.factStart) }}</dd></div><div><dt>Окончание</dt><dd>{{ date(detail.factFinish) }}</dd></div><div><dt>Трудоёмкость, чел·ч</dt><dd>{{ detail.factHours??'—' }}</dd></div></dl>
-   <h4>Критерий приёмки</h4><p>{{ detail.criteria||'Не указан' }}</p><h4>Примечание</h4><p>{{ detail.note||'Не указано' }}</p>
-   <template v-if="detail.warning"><h4>Предупреждение</h4><p>{{ detail.warning }}</p></template>
-  </div></template>
-  <template #footer><button type="button" @click="detail=null">Закрыть</button></template>
- </UModal>
+ <WorkCard v-if="detail && contractId" :row="detail" kind="structure" :contract-id="contractId"
+   :contract-number="contractNumber" :employees="employees" :can-edit="canEdit" :isso="selected?.code" :link-id="selectedId" @close="closeDetail" @saved="reloadAfterSave" />
 </template>
 
 <style>
@@ -120,10 +124,4 @@ onBeforeUnmount(()=>{listGeneration++;worksGeneration++;});
 .cs-filter-count{display:inline-block;margin-left:10px;font-size:12px;font-weight:400;color:var(--contract-text,#253647)}
 .contract-compact-table th.cs-filter-heading{vertical-align:top}
 
-.cs-detail-modal .cs-import-header,.cs-detail-modal .cs-import-body,.cs-detail-modal .cs-import-footer{padding:16px 22px;box-sizing:border-box}
-.cs-detail-modal .cs-import-body{display:block;overflow-y:auto;min-width:0}
-.cs-detail-modal .cs-detail dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}
-.cs-detail-modal .cs-detail dt{font-size:12px}
-.cs-detail-modal .cs-detail dd{margin:4px 0 0;padding:8px;border:1px solid #8093a655;border-radius:4px;overflow-wrap:anywhere}
-@media(max-width:480px){.cs-detail-modal .cs-import-header,.cs-detail-modal .cs-import-body,.cs-detail-modal .cs-import-footer{padding-left:16px;padding-right:16px}.cs-detail-modal .cs-detail dl{grid-template-columns:1fr}}
 </style>

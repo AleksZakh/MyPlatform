@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {ref,computed,watch,onMounted,onBeforeUnmount} from 'vue';
+import {onWorkChange} from '~/composables/diagnostic/workChanges';
 import DiagnosticModuleTabs from '../DiagnosticModuleTabs.vue';
 import ContractEditor from '../contracts/ContractEditor.vue';
 import WorkStatusIcon from '../contracts/WorkStatusIcon.vue';
@@ -23,6 +24,11 @@ function moveMonth(step:number){const d=new Date(month.value+'-01T00:00:00Z');if
 watch([month,employeeId,status,sort,descending],()=>{page.value=1;generation++;clearTimeout(timer);timer=setTimeout(()=>void load(),0);});
 watch(search,()=>{page.value=1;generation++;clearTimeout(timer);timer=setTimeout(()=>void load(),250);});
 watch(page,()=>{generation++;clearTimeout(timer);timer=setTimeout(()=>void load(),0);});
+onWorkChange(()=>void load());
+const canEditWork=ref(false);
+onMounted(async()=>{
+ try{canEditWork.value=(await $fetch<{allowed:boolean}>('/api/access/check',{query:{resource:'diagnostic.contracts',action:'UPDATE'}})).allowed;}catch{canEditWork.value=false;}
+});
 onMounted(load);onBeforeUnmount(()=>{generation++;contractGeneration++;clearTimeout(timer);});
 async function openContract(row:CalendarRow){if(busy.value)return;const g=++contractGeneration;opening.value=true;error.value='';selected.value=row.key;try{const [record,options]=await Promise.all([$fetch<ContractRecord>('/api/diagnostic/contracts/'+row.contractId),$fetch<DiagnosticCatalog>('/api/diagnostic/catalog')]);if(g!==contractGeneration)return;contract.value=record;catalog.value=options;}catch(e:any){if(g===contractGeneration)error.value=e?.data?.message||'Не удалось открыть договор. Возможно, он удалён или недоступен.';}finally{if(g===contractGeneration)opening.value=false;}}
 function closeContract(){contract.value=null;catalog.value=null;}
@@ -42,7 +48,7 @@ function closeContract(){contract.value=null;catalog.value=null;}
   <p v-if="data?.unresolvedWorks" class="oc-warning">Работ с незаполненным или неоднозначным исполнителем: {{data.unresolvedWorks}}. Неопределённые назначения не включены в персональные строки.</p>
   <p v-if="data?.unlinkedTravelWorks" class="oc-warning">Работ по выездам без связи с командировкой: {{data.unlinkedTravelWorks}}. Они показаны отдельно; для исключения возможных исторических дублей требуется сопоставление.</p>
  </main></div>
- <ContractEditor v-if="contract&&catalog" :contract="contract" :catalog="catalog" read-only :can-create="false" :can-edit="false" @close="closeContract"/>
+ <ContractEditor v-if="contract&&catalog" :contract="contract" :catalog="catalog" read-only :can-create="false" :can-edit="false" :can-edit-works="canEditWork" @close="closeContract"/>
 </section></template>
 <style src="~/assets/css/diagnostic-calendar.css"></style>
 <style src="~/assets/css/diagnostic-contracts.css"></style>

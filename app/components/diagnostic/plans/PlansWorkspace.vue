@@ -2,6 +2,7 @@
 import {ref,computed,watch,onMounted,onBeforeUnmount} from 'vue';
 import TripDateInput from '../trips/TripDateInput.vue';
 import {plansWeek,parsePlansPeriod,type PlansPeriodMode} from '~~/shared/utils/diagnostic-plans-period';
+import {onWorkChange} from '~/composables/diagnostic/workChanges';
 import PlanEditor from './PlanEditor.vue';
 import WorkStatusIcon from '../contracts/WorkStatusIcon.vue';
 import WorkStatusLegend from '../contracts/WorkStatusLegend.vue';
@@ -53,6 +54,7 @@ function nextPage(){if(!data.value?.nextCursor||busy.value)return;cursors.value[
 function previousPage(){if(page.value<=1||busy.value)return;page.value--;void load();}
 watch(employee,()=>{resetPage();schedule();});watch(search,()=>{resetPage();schedule(300);});
 watch(tab,()=>{cancelCurrent();busy.value=false;if(tab.value==='staff')refresh();});
+onWorkChange(refresh);
 onMounted(load);onBeforeUnmount(cancelCurrent);
 const period=(a:string|null,b:string|null)=>a||b?`${tripDateLabel(a)} — ${tripDateLabel(b)}`:'—';
 const rowPeriod=(r:PlanWorkRow)=>period(r.planStart||r.planFinish?r.planStart:r.factStart,r.planStart||r.planFinish?r.planFinish:r.factFinish);

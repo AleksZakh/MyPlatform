@@ -7,7 +7,7 @@ import ContractStructures from './ContractStructures.vue';
 import {contractDateTime} from '~~/shared/utils/diagnostic-contract-search';
 import type {ContractRecord,ContractInput,DiagnosticCatalog} from '~~/shared/types/diagnostic-contracts';
 import {contractStatus} from '~~/shared/utils/diagnostic-contracts';
-const props=defineProps<{contract:ContractRecord|null;catalog:DiagnosticCatalog;readOnly:boolean;canCreate:boolean;canEdit:boolean}>();
+const props=defineProps<{contract:ContractRecord|null;catalog:DiagnosticCatalog;readOnly:boolean;canCreate:boolean;canEdit:boolean;canEditWorks?:boolean}>();
 const emit=defineEmits<{close:[];edit:[];save:[ContractRecord]}>();
 const tabs=['Карточка договора','Работы с договором','Перечень сооружений'];
 const tab=ref(0),error=ref(''),saving=ref(false),confirmClose=ref(false);
@@ -97,7 +97,7 @@ const summaryColumns=[
 ];
 </script>
 <template>
- <UModal :open="true" :title="contract?(readOnly?'Просмотр договора':'Редактирование договора'):'Новый договор'" :ui="{content:'diagnostic-contract-modal odis-contract-editor w-[96vw] sm:max-w-none h-[90dvh]',header:'contract-modal-header',body:'contract-modal-body',footer:'contract-modal-footer'}" @update:open="value=>{if(!value)close()}">
+ <UModal :open="true" :description="contract?.number" :title="contract?(readOnly?'Просмотр договора':'Редактирование договора'):'Новый договор'" :ui="{content:'diagnostic-contract-modal odis-contract-editor w-[96vw] sm:max-w-none h-[90dvh]',description:'text-xs',header:'contract-modal-header',body:'contract-modal-body',footer:'contract-modal-footer'}" @update:open="value=>{if(!value)close()}">
   <template #body>
    <div class="contract-editor-tabs" role="tablist" aria-label="Карточка договора">
     <div v-for="(label,i) in tabs" :key="label" class="contract-editor-tab" :class="{'is-active':tab===i}" role="presentation">
@@ -136,8 +136,8 @@ const summaryColumns=[
       <span><strong>Обновлено:</strong> {{ contract.editor }} · {{ contractDateTime(contract.updatedAt) }}</span>
      </div>
     </form>
-    <ContractWorks v-if="tab===1" :contract-id="contract?.id??null" @count="counts.works=$event" />
-    <ContractStructures v-if="tab===2" :contract-id="contract?.id??null" @count="counts.structures=$event" />
+    <ContractWorks v-if="tab===1" :contract-id="contract?.id??null" :contract-number="contract?.number??''" :employees="catalog.supervisors" :can-edit="canEditWorks??canEdit" @count="counts.works=$event" />
+    <ContractStructures v-if="tab===2" :contract-id="contract?.id??null" :contract-number="contract?.number??''" :employees="catalog.supervisors" :can-edit="canEditWorks??canEdit" @count="counts.structures=$event" />
    </div>
   </template>
   <template #footer><div class="contract-footer-content"><div class="contract-secondary-actions"><button type="button" @click="auxiliary='documents'"><Icon name="lucide:folder-open" />Документы к договору</button><button type="button" @click="auxiliary='summary'"><Icon name="lucide:table-2" />Сводная таблица работ</button></div><small>{{ readOnly?'Режим просмотра':'Поля со звёздочкой обязательны. Остальные можно заполнить позже.' }}</small><div v-if="confirmClose" class="contract-discard" role="alert">Отменить несохранённые изменения?<button :disabled="saving" @click="emit('close')">Да, закрыть</button><button @click="confirmClose=false">Продолжить</button></div><div class="contract-footer-actions"><button v-if="contract&&readOnly&&canEdit" type="button" @click="emit('edit')"><Icon name="lucide:pencil" />Редактировать</button><button v-if="!readOnly" :disabled="saving||catalogBusy" class="contract-save" type="submit" form="diagnostic-contract-form">{{ saving?'Сохранение…':'Сохранить' }}</button><button @click="close">{{ readOnly?'Закрыть':'Отменить' }}</button></div></div></template>
