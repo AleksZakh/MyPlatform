@@ -16,19 +16,22 @@ export function dueWorkBatch(kind: 'contract' | 'structure') {
         WHERE link.id = w."contractStructureId" AND link."deletedAt" IS NULL
       ) AND w."tripId" IS NULL`
     : Prisma.sql`EXISTS (SELECT 1 FROM diagnostic_contracts c WHERE c.id = w."contractId" AND c."deletedAt" IS NULL)`;
-  const dueDate = Prisma.sql`CASE WHEN lower(trim(w.status)) IN ('planned','scheduled')
+  const planned = Prisma.sql`lower(trim(w.status)) IN ('planned','scheduled')`;
+  const dueDate = Prisma.sql`CASE WHEN ${planned}
     THEN w."planStart" ELSE w."planFinish" END`;
 
   return Prisma.sql`
     WITH due AS (
       SELECT w.id,
-        CASE WHEN w."planFinish" IS NULL OR w."planFinish" > ${moscowToday} THEN 'in_progress'
+        CASE WHEN w."planFinish" IS NULL OR w."planFinish" >= ${moscowToday} THEN 'in_progress'
              WHEN w."autoCompleteHours" IS NULL THEN 'overdue'
              ELSE 'completed' END AS next
       FROM ${table} w
       WHERE w."deletedAt" IS NULL AND w."factFinish" IS NULL
         AND lower(trim(w.status)) IN ('planned','scheduled','active','performed','in_progress')
-        AND ${dueDate} <= ${moscowToday} AND ${parent}
+        AND ${dueDate} <= ${moscowToday}
+        AND (${planned} OR w."planFinish" < ${moscowToday})
+        AND ${parent}
       ORDER BY ${dueDate}, w.id
       LIMIT ${batchSize} FOR UPDATE OF w SKIP LOCKED
     )

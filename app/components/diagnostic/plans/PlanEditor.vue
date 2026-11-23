@@ -667,7 +667,7 @@ async function save() {
                 <td class="odp-auto-cell">
                   <input v-model="r.autoComplete" type="checkbox" :disabled="pending || isTravel(r)"
                     :aria-label="'Автозавершение — ' + r.name"
-                    :title="isTravel(r) ? 'Командировки закрываются в разделе «Командировки»' : 'Завершить в плановую дату с трудозатратами из библиотеки'" />
+                    :title="isTravel(r) ? 'Командировки закрываются в разделе «Командировки»' : 'Закрыть после окончания последнего планового дня с трудозатратами из библиотеки'" />
                 </td>
                 <td>
                   <button class="odp-remove" title="Убрать из перечня"

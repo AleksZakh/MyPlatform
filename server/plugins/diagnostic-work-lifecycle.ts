@@ -6,14 +6,15 @@ export default defineNitroPlugin((app) => {
   let stopped = false;
   let timer: ReturnType<typeof setTimeout>;
   async function tick() {
-    let delay = 60000;
+    let backlog = false;
     try {
-      if (await advanceDueWorks()) delay = 1000;
+      backlog = await advanceDueWorks();
     } catch (error) {
       console.error('[ОДИС] Ошибка автоматического обновления статусов работ', error);
     } finally {
       if (!stopped) {
-        timer = setTimeout(tick, delay);
+        const untilNextMinute = 60000 - Date.now() % 60000;
+        timer = setTimeout(tick, backlog ? Math.min(1000, untilNextMinute) : untilNextMinute);
         timer.unref();
       }
     }
