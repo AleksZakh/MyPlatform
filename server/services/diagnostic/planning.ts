@@ -203,7 +203,7 @@ type Command = {
   start: string;
   finish: string;
   confirmedStatus: string;
-  items: PlanItem[];
+  items: (PlanItem & { autoComplete?: true })[];
 };
 export function command(body: any): Command {
   if (
@@ -216,15 +216,18 @@ export function command(body: any): Command {
     !body.items.length
   )
     return fail('Укажите договор, период, сотрудника и работы.');
-  const items: PlanItem[] = body.items.map((x: any) => {
+  const items: Command['items'] = body.items.map((x: any) => {
     if (!x || !Object.hasOwn(categoryNames, x.category) || !['existing', 'library'].includes(x.origin))
       return fail('Некорректная работа.');
+    if (x.autoComplete !== undefined && typeof x.autoComplete !== 'boolean')
+      return fail('Некорректное значение автозавершения.');
     return {
       category: x.category,
       origin: x.origin,
       id: positive(x.id),
       version: x.origin === 'existing' ? positive(x.version) : 0,
       linkId: x.category === 'structure' ? positive(x.linkId) : null,
+      ...(x.autoComplete ? { autoComplete: true as const } : {}),
     };
   });
   if (new Set(items.map(itemKey)).size !== items.length) return fail('В перечне есть повторяющиеся работы.');
@@ -308,7 +311,7 @@ export async function savePlanning(event: H3Event, actorId: number, body: unknow
           if (!w || w.category.name.trim() !== categoryNames[i.category]) return conflict();
           if (isTravel({ ...i, code: w.code }))
             return fail('Командировки планируются в разделе «Командировки».');
-          const common = { ...data, createdById: actorId, workId: w.id, planHours: w.hours, note: w.note };
+          const common = { ...data, autoCompleteHours: i.autoComplete ? w.hours : null, createdById: actorId, workId: w.id, planHours: w.hours, note: w.note };
           if (i.linkId)
             newStructures.push({
               ...common,
@@ -349,6 +352,7 @@ export async function savePlanning(event: H3Event, actorId: number, body: unknow
             ...assignmentSelect,
             contractStructureId: true,
             workCodeSnapshot: true,
+            work: { select: { hours: true } },
             hours: true,
             catalogHoursSnapshot: true,
           },
@@ -361,7 +365,7 @@ export async function savePlanning(event: H3Event, actorId: number, body: unknow
           return conflict();
         // Group equal-hour updates so a selection of several hundred structures stays one short transaction.
         for (const kind of ['contract', 'structure'] as const) {
-          const batches = new Map<string, { id: number; version: number }[]>();
+          const batches = new Map<string, { planHours: string; autoCompleteHours: string | null; rows: { id: number; version: number }[] }>();
           for (const w of kind === 'contract' ? contractRows : structureRows) {
             const row = claimed.get((kind === 'contract' ? 'c' : 's') + w.id)!;
             if (!freeWork(w) || row.version !== w.version) return conflict();
@@ -370,17 +374,17 @@ export async function savePlanning(event: H3Event, actorId: number, body: unknow
                 return conflict();
             } else if ((row.category === 'other') !== (w.work.category.name === categoryNames.other))
               return conflict();
-            const h = String(
-              w.planHours ?? ('work' in w ? w.work.hours : (w.hours ?? w.catalogHoursSnapshot)),
-            );
-            const batch = batches.get(h) ?? [];
-            batch.push({ id: w.id, version: w.version });
-            batches.set(h, batch);
+            const planHours = String(w.planHours ?? ('hours' in w ? w.hours ?? w.catalogHoursSnapshot : w.work.hours));
+            const autoCompleteHours = row.autoComplete ? String(w.work.hours) : null;
+            const key = JSON.stringify([planHours, autoCompleteHours]);
+            const batch = batches.get(key) ?? { planHours, autoCompleteHours, rows: [] };
+            batch.rows.push({ id: w.id, version: w.version });
+            batches.set(key, batch);
           }
-          for (const [planHours, rows] of batches) {
+          for (const { planHours, autoCompleteHours, rows } of batches.values()) {
             const args = {
               where: { OR: rows, deletedAt: null },
-              data: { ...data, planHours, version: { increment: 1 } },
+              data: { ...data, planHours, autoCompleteHours, version: { increment: 1 } },
             };
             const updated =
               kind === 'contract'

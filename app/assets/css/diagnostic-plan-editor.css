@@ -339,3 +339,25 @@ html.dark .odp tr.travel {
   width: 16px;
   height: 16px;
 }
+
+.odp .odp-basket td {
+  padding-block: 1px;
+  line-height: 1.2;
+}
+.odp .odp-auto-cell {
+  width: 1%;
+  white-space: nowrap;
+  text-align: center;
+}
+.odp .odp-auto-cell input {
+  margin: 0;
+  vertical-align: middle;
+}
+.odp button.odp-remove {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 22px;
+  min-height: 0;
+  padding: 0;
+}

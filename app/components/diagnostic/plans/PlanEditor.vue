@@ -38,7 +38,7 @@ const kmFrom = ref(''),
   records = ref<PlanRow[]>([]),
   extra = ref<PlanRow[]>([]);
 const checked = ref(new Map<string, PlanRow>()),
-  basket = ref(new Map<string, PlanRow>());
+  basket = ref(new Map<string, PlanRow & { autoComplete: boolean }>());
 const libraryIds = ref<number[]>([]),
   librarySearch = ref(''),
   message = ref(''),
@@ -280,7 +280,7 @@ const applicable = computed(() => [...checked.value.values()].filter(canSelect))
 function apply() {
   for (const r of applicable.value) {
     const k = itemKey(r);
-    basket.value.set(k, r);
+    basket.value.set(k, { ...r, autoComplete: false });
     checked.value.delete(k);
   }
   message.value = '';
@@ -318,6 +318,12 @@ function addLibrary() {
   library.value?.close();
 }
 const items = computed(() => [...basket.value.values()]);
+const autoRows = computed(() => items.value.filter((r) => !isTravel(r)));
+const autoCount = computed(() => autoRows.value.filter((r) => r.autoComplete).length);
+function toggleAutoComplete(event: Event) {
+  const enabled = (event.target as HTMLInputElement).checked;
+  for (const row of autoRows.value) row.autoComplete = enabled;
+}
 const duration = computed(() =>
   new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 4 }).format(
     items.value.reduce((n, r) => n + Math.round(Number(r.hours || 0) * 10000), 0) / 10000,
@@ -355,11 +361,12 @@ async function save() {
       start: start.value,
       finish: finish.value,
       confirmedStatus: contract.value.status,
-      items: regular.map(({ id, origin, category, linkId, version }) => ({
+      items: regular.map(({ id, origin, category, linkId, version, autoComplete }) => ({
         id,
         origin,
         category,
         linkId,
+        autoComplete,
         version,
       })),
     };
@@ -637,7 +644,16 @@ async function save() {
                 <th>Начало</th>
                 <th>Окончание</th>
                 <th>чел·ч</th>
-                <th></th>
+                <th class="odp-auto-cell">
+                  <label title="Автозавершение для всех работ в перечне">
+                    <input type="checkbox" aria-label="Выбрать все работы для автозавершения"
+                      :checked="autoRows.length > 0 && autoCount === autoRows.length"
+                      :indeterminate="autoCount > 0 && autoCount < autoRows.length"
+                      :disabled="pending || !autoRows.length" @change="toggleAutoComplete" />
+                    Автозавершение
+                  </label>
+                </th>
+                <th aria-label="Действия"></th>
               </tr>
             </thead>
             <tbody>
@@ -648,13 +664,18 @@ async function save() {
                 <td>{{ tripDateLabel(start) }}</td>
                 <td>{{ tripDateLabel(finish) }}</td>
                 <td>{{ r.hours ?? '—' }}</td>
+                <td class="odp-auto-cell">
+                  <input v-model="r.autoComplete" type="checkbox" :disabled="pending || isTravel(r)"
+                    :aria-label="'Автозавершение — ' + r.name"
+                    :title="isTravel(r) ? 'Командировки закрываются в разделе «Командировки»' : 'Завершить в плановую дату с трудозатратами из библиотеки'" />
+                </td>
                 <td>
-                  <button
+                  <button class="odp-remove" title="Убрать из перечня"
                     :disabled="pending"
                     :aria-label="'Убрать ' + r.name"
                     @click="basket.delete(itemKey(r))"
                   >
-                    Убрать
+                    <Icon name="streamline-freehand-color:delete-bin-2" size="16" aria-hidden="true" />
                   </button>
                 </td>
               </tr>
