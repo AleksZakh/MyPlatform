@@ -288,3 +288,51 @@ html.dark .odp tr.travel {
     width: 120px;
   }
 }
+.odp button.odp-close {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  font-size: 26px;
+  line-height: 1;
+}
+.odp .odp-pick-cell {
+  width: 28px;
+  padding-inline: 3px;
+  text-align: center;
+}
+.odp .odp-pick-cell input {
+  margin: 0;
+  vertical-align: middle;
+}
+.odp .odp-isso,
+.odp .odp-road strong {
+  font-weight: 700;
+  white-space: nowrap;
+}
+.odp .odp-road {
+  width: 100%;
+  max-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.odp .odp-road small {
+  font-size: 11px;
+  color: var(--opr-muted);
+}
+.odp .odp-road strong + small:not(:empty) {
+  margin-inline-start: 4px;
+}
+.odp aside button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+.odp aside button .iconify {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+}

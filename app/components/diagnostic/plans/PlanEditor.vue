@@ -170,6 +170,24 @@ const visibleLinks = computed(() => {
       (b === null || (s.locationMetres !== null && s.locationMetres <= b)),
   );
 });
+const selectedLinks = computed(() => new Set(selection.value));
+const visibleSelectedLinks = computed(() => visibleLinks.value.filter((s) => selectedLinks.value.has(s.linkId)).length);
+function toggleVisibleLinks(event: Event) {
+  const select = (event.target as HTMLInputElement).checked;
+  const next = new Set(selection.value);
+  for (const { linkId } of visibleLinks.value) {
+    if (select) next.add(linkId);
+    else next.delete(linkId);
+  }
+  selection.value = [...next];
+  anchor.value = 0;
+}
+function roadParts(name: string) {
+  const text = name.trim();
+  const match = /^(?:а\/д\s+)?(?:[А-ЯA-Z]{1,3}|\d{1,2}[А-ЯA-Z]{1,2})\s*[-‐‑–—]\s*\d+[А-ЯA-Z]?(?=$|[\s,.:;(«"–—-])/iu.exec(text);
+  return { code: match?.[0] ?? '', description: text.slice(match?.[0].length ?? 0).trimStart() };
+}
+const structureRows = computed(() => visibleLinks.value.map((s) => ({ ...s, road: roadParts(s.roadName) })));
 function selectLink(id: number, e: MouseEvent | KeyboardEvent, toggle = false) {
   const next = new Set(selection.value),
     ids = visibleLinks.value.map((s) => s.linkId);
@@ -236,18 +254,29 @@ const visible = computed(() =>
   [...records.value, ...extra.value].filter(
     (r) =>
       r.category === category.value &&
-      (!r.linkId || selection.value.includes(r.linkId)) &&
+      (!r.linkId || selectedLinks.value.has(r.linkId)) &&
       filters.value.includes(r.status) &&
       !basket.value.has(itemKey(r)),
   ),
 );
+const canSelect = (r: PlanRow) => r.available && r.status === 'unplanned';
+const selectableRows = computed(() => visible.value.filter(canSelect));
+const visibleCheckedRows = computed(() => selectableRows.value.filter((r) => checked.value.has(itemKey(r))).length);
+function toggleVisibleRows(event: Event) {
+  const select = (event.target as HTMLInputElement).checked;
+  for (const r of selectableRows.value) {
+    const k = itemKey(r);
+    if (select) checked.value.set(k, r);
+    else checked.value.delete(k);
+  }
+}
 function toggleRow(r: PlanRow) {
-  if (!r.available) return;
+  if (!canSelect(r)) return;
   const k = itemKey(r);
   if (checked.value.has(k)) checked.value.delete(k);
   else checked.value.set(k, r);
 }
-const applicable = computed(() => [...checked.value.values()].filter((r) => r.available));
+const applicable = computed(() => [...checked.value.values()].filter(canSelect));
 function apply() {
   for (const r of applicable.value) {
     const k = itemKey(r);
@@ -256,7 +285,7 @@ function apply() {
   }
   message.value = '';
 }
-const targets = computed(() => links.value.filter((s) => selection.value.includes(s.linkId)));
+const targets = computed(() => links.value.filter((s) => selectedLinks.value.has(s.linkId)));
 const libraryWorks = computed(() =>
   (options.value?.library || []).filter(
     (w) =>
@@ -382,7 +411,7 @@ async function save() {
   <dialog ref="modal" class="odp" aria-labelledby="odp-title" @cancel.prevent="close">
     <header>
       <strong id="odp-title">Добавление работ в план</strong
-      ><button aria-label="Закрыть" @click="close">×</button>
+      ><button class="odp-close" aria-label="Закрыть" @click="close">×</button>
     </header>
     <main>
       <h2>Параметры планируемой работы</h2>
@@ -431,7 +460,7 @@ async function save() {
               :aria-pressed="category === cat"
               @click="category = cat"
             >
-              {{ label }}
+              {{ label }}<span v-if="cat === 'structure' && contract && !loadingLinks && !linkError"> ({{ links.length }})</span>
             </button>
           </div>
         </div>
@@ -453,13 +482,19 @@ async function save() {
           </div>
           <p v-if="kmError" role="alert">{{ kmError }}</p>
           <h3>
-            Сооружения <small>({{ selection.length }} / {{ visibleLinks.length }})</small>
+            Сооружения <small>({{ visibleSelectedLinks }} / {{ visibleLinks.length }})</small>
           </h3>
           <div class="odp-scroll">
             <table>
               <thead>
                 <tr>
-                  <th></th>
+                  <th class="odp-pick-cell" scope="col">
+                    <input type="checkbox" title="Выбрать все видимые сооружения" aria-label="Выбрать все видимые сооружения"
+                      :disabled="category !== 'structure' || loadingLinks || !!linkError || !visibleLinks.length"
+                      :checked="category === 'structure' && visibleLinks.length > 0 && visibleSelectedLinks === visibleLinks.length"
+                      :indeterminate="category === 'structure' && visibleSelectedLinks > 0 && visibleSelectedLinks < visibleLinks.length"
+                      @change="toggleVisibleLinks" />
+                  </th>
                   <th>км+м</th>
                   <th>ИССО</th>
                   <th>А/д</th>
@@ -480,22 +515,25 @@ async function save() {
                 </tr>
                 <template v-else
                   ><tr
-                    v-for="s in visibleLinks"
+                    v-for="s in structureRows"
                     :key="s.linkId"
-                    :class="{ chosen: selection.includes(s.linkId) }"
+                    :class="{ chosen: selectedLinks.has(s.linkId) }"
                     @click="selectLink(s.linkId, $event)"
                   >
-                    <td>
+                    <td class="odp-pick-cell">
                       <input
                         type="checkbox"
                         :aria-label="'Выбрать ИССО ' + s.code"
-                        :checked="selection.includes(s.linkId)"
+                        :checked="selectedLinks.has(s.linkId)"
                         @click.stop="selectLink(s.linkId, $event, true)"
                       />
                     </td>
                     <td>{{ s.location }}</td>
-                    <td>{{ s.code }}</td>
-                    <td>{{ s.roadName }}</td>
+                    <td class="odp-isso">{{ s.code }}</td>
+                    <td class="odp-road" :title="s.roadName">
+                      <strong v-if="s.road.code">{{ s.road.code }}</strong>
+                      <small>{{ s.road.description }}</small>
+                    </td>
                   </tr></template
                 >
               </tbody>
@@ -520,7 +558,13 @@ async function save() {
             <table>
               <thead>
                 <tr>
-                  <th></th>
+                  <th class="odp-pick-cell" scope="col">
+                    <input type="checkbox" title="Выбрать все нераспределённые работы" aria-label="Выбрать все нераспределённые работы"
+                      :disabled="loading || !!rowError || !selectableRows.length"
+                      :checked="selectableRows.length > 0 && visibleCheckedRows === selectableRows.length"
+                      :indeterminate="visibleCheckedRows > 0 && visibleCheckedRows < selectableRows.length"
+                      @change="toggleVisibleRows" />
+                  </th>
                   <th>Код ИССО</th>
                   <th>Название работы</th>
                   <th>Группа</th>
@@ -550,9 +594,9 @@ async function save() {
                   :class="{ chosen: checked.has(itemKey(r)), travel: isTravel(r) }"
                   @click="toggleRow(r)"
                 >
-                  <td>
+                  <td class="odp-pick-cell">
                     <input
-                      v-if="r.available"
+                      v-if="canSelect(r)"
                       type="checkbox"
                       :aria-label="r.name"
                       :checked="checked.has(itemKey(r))"
@@ -574,8 +618,11 @@ async function save() {
             :disabled="!contract || (category === 'structure' && !selection.length) || pending"
             @click="openLibrary"
           >
-            Добавить</button
-          ><button :disabled="!ready || !applicable.length || pending" @click="apply">Применить</button>
+            <Icon name="streamline-freehand-color:add-sign-bold" size="16" aria-hidden="true" />Добавить
+          </button>
+          <button :disabled="!ready || !applicable.length || pending" @click="apply">
+            <Icon name="streamline-freehand-color:form-validation-check-double" size="16" aria-hidden="true" />Применить
+          </button>
         </aside>
       </div>
       <section class="odp-basket">
@@ -626,7 +673,7 @@ async function save() {
     <dialog ref="library" class="odp-child" aria-labelledby="odp-lib-title">
       <header>
         <strong id="odp-lib-title">Добавление работ · {{ categoryNames[category] }}</strong
-        ><button aria-label="Закрыть библиотеку" @click="library?.close()">×</button>
+        ><button class="odp-close" aria-label="Закрыть библиотеку" @click="library?.close()">×</button>
       </header>
       <label class="odp-search"
         >Поиск <input v-model="librarySearch" type="search" placeholder="Шифр, название, группа"
