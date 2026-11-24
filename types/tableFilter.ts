@@ -1,4 +1,6 @@
 export interface ITableFilter {
+    /** Exact catalog choices; absent in old substring-based templates. */
+    exactFields?: string[];
     plp: string | null;
     objName:string | null;
     samplActNumber: string | null;
@@ -9,7 +11,7 @@ export interface ITableFilter {
     //----------------------------
     receiveDateStart: string | null;
     receiveDateEnd: string | null;
-    materialName: string | null;
+    materialName: string | string[] | null;
     qualiDateStart: string | null;
     qualiDateEnd: string | null;
     qualiDocNumber: string | null;

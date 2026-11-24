@@ -1,3 +1,5 @@
+import { deserializeLabFilterState } from '../../shared/utils/lab-filter-storage';
+import { materialFilterValues } from '../../shared/utils/lab-filter-values';
 import type { Prisma } from '@prisma/client';
 import { getCookie, type H3Event } from 'h3';
 
@@ -18,8 +20,7 @@ export function readRegistryFilters(event: H3Event): Record<string, unknown> {
   const raw = getCookie(event, 'lab_reestrTable_filter');
   if (!raw) return {};
   try {
-    let parsed: unknown;
-    try { parsed = JSON.parse(raw); } catch { parsed = JSON.parse(decodeURIComponent(raw)); }
+    const parsed = deserializeLabFilterState(raw.startsWith('%') ? decodeURIComponent(raw) : raw);
     const filter = (parsed as { filter?: unknown })?.filter;
     return filter && typeof filter === 'object' && !Array.isArray(filter)
       ? filter as Record<string, unknown> : {};
@@ -28,14 +29,16 @@ export function readRegistryFilters(event: H3Event): Record<string, unknown> {
 
 export function buildRegistryFilter(cookieFilters: Record<string, unknown>): Prisma.SamplingTestWhereInput {
   const AND: Prisma.SamplingTestWhereInput[] = [{ deletedAt: null }];
+  const exactFields = Array.isArray(cookieFilters.exactFields) ? cookieFilters.exactFields : [];
+  const catalogName = (key: string): Prisma.StringFilter => ({
+    ...(exactFields.includes(key) ? { equals: String(cookieFilters[key]) } : { contains: String(cookieFilters[key]) }),
+    mode: 'insensitive',
+  });
     // ПЛП
     if (cookieFilters.plp) {
       AND.push({
         plp: {
-          name: {
-            contains: String(cookieFilters.plp),
-            mode: 'insensitive',
-          },
+          name: catalogName('plp'),
         },
       });
     }
@@ -46,10 +49,7 @@ export function buildRegistryFilter(cookieFilters: Record<string, unknown>): Pri
       AND.push({
         testLocation: {
           testObject: {
-            name: {
-              contains: String(cookieFilters.objName),
-              mode: 'insensitive',
-            },
+            name: catalogName('objName'),
           },
         },
       });
@@ -71,10 +71,7 @@ export function buildRegistryFilter(cookieFilters: Record<string, unknown>): Pri
     if (cookieFilters.sPlace) {
       AND.push({
         testLocation: {
-          name: {
-            contains: String(cookieFilters.sPlace),
-            mode: 'insensitive',
-          },
+          name: catalogName('sPlace'),
         },
       });
     }
@@ -84,27 +81,19 @@ export function buildRegistryFilter(cookieFilters: Record<string, unknown>): Pri
     if (cookieFilters.sProvaider) {
       AND.push({
         inspector: {
-          name: {
-            contains: String(cookieFilters.sProvaider),
-            mode: 'insensitive',
-          },
+          name: catalogName('sProvaider'),
         },
       });
     }
 
 
-    // Материал
-    if (cookieFilters.materialName) {
-      AND.push({
-        receiptMaterial: {
-          material: {
-            name: {
-              contains: String(cookieFilters.materialName),
-              mode: 'insensitive',
-            },
-          },
-        },
-      });
+    // New multi-selection is exact OR; legacy single strings keep substring matching.
+    const materials = materialFilterValues(cookieFilters.materialName);
+    if (materials.length) {
+      AND.push({ receiptMaterial: { material: { name: {
+        ...(Array.isArray(cookieFilters.materialName) ? { in: materials } : { contains: materials[0] }),
+        mode: 'insensitive',
+      } } } });
     }
 
 
@@ -113,10 +102,7 @@ export function buildRegistryFilter(cookieFilters: Record<string, unknown>): Pri
       AND.push({
         receiptMaterial: {
           manufacturer: {
-            name: {
-              contains: String(cookieFilters.manufacturer),
-              mode: 'insensitive',
-            },
+            name: catalogName('manufacturer'),
           },
         },
       });
@@ -141,7 +127,7 @@ export function buildRegistryFilter(cookieFilters: Record<string, unknown>): Pri
       AND.push({
         testProtocol: {
           testResult: {
-            contains: String(cookieFilters.testResult),
+            equals: String(cookieFilters.testResult),
             mode: 'insensitive',
           },
         },
@@ -271,5 +257,8 @@ export function describeRegistryFilters(filters: Record<string, unknown>): strin
     qualiDateStart: 'Дата документа о качестве с', qualiDateEnd: 'Дата документа о качестве по',
     testReportDataStart: 'Дата протокола с', testReportDataEnd: 'Дата протокола по',
   };
-  return Object.entries(labels).flatMap(([key, label]) => filters[key] ? [`${label}: ${String(filters[key])}`] : []);
+  return Object.entries(labels).flatMap(([key, label]) => {
+    const value = key === 'materialName' ? materialFilterValues(filters[key]).join('; ') : filters[key];
+    return value ? [`${label}: ${String(value)}`] : [];
+  });
 }

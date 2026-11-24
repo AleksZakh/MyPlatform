@@ -1,3 +1,5 @@
+import { serializeLabFilterState, deserializeLabFilterState } from '~~/shared/utils/lab-filter-storage'
+import { normalizeLabFilters, hasLabFilterValue, materialFilterValues } from '~~/shared/utils/lab-filter-values'
 import { defineStore,createPinia } from 'pinia'
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 import type { ITableFilter } from '@@/types/tableFilter'
@@ -39,6 +41,7 @@ export const useTableFilterStore = defineStore('tableFilter', {
 
     // Включаем сохранение состояния через куки для Nuxt SSR
     persist: {
+        serializer: { serialize: serializeLabFilterState, deserialize: deserializeLabFilterState },
         key: 'lab_reestrTable_filter', // Имя куки в браузере
     },
     
@@ -49,7 +52,7 @@ export const useTableFilterStore = defineStore('tableFilter', {
          * Используется для того, чтобы показывать кнопку "Сбросить фильтры".
          */
         isFilterActive: (state) => {
-            return Object.values(state.filter).some(value => value !== null)
+            return Object.entries(state.filter).some(([key, value]) => key !== 'exactFields' && hasLabFilterValue(value))
         },
 
         /**
@@ -57,7 +60,7 @@ export const useTableFilterStore = defineStore('tableFilter', {
          * Используется для отображения бейджа с числом активных фильтров.
          */
         getActiveFiltersCount: (state) => {
-            return Object.values(state.filter).filter(value => value !== null).length
+            return Object.entries(state.filter).filter(([key, value]) => key !== 'exactFields' && hasLabFilterValue(value)).length
         },
 
         /**
@@ -73,7 +76,7 @@ export const useTableFilterStore = defineStore('tableFilter', {
             if (filter.samplActNumber) descriptions.push(`№ акта: ${filter.samplActNumber}`);
             if (filter.sPlace) descriptions.push(`Место: ${filter.sPlace}`);
             if (filter.sProvaider) descriptions.push(`Инспектор: ${filter.sProvaider}`);
-            if (filter.materialName) descriptions.push(`Материал: ${filter.materialName}`);
+            if (materialFilterValues(filter.materialName).length) descriptions.push(`Материалы: ${materialFilterValues(filter.materialName).join('; ')}`);
             if (filter.manufacturer) descriptions.push(`Производитель: ${filter.manufacturer}`);
             if (filter.testResult) descriptions.push(`Результат: ${filter.testResult}`);
             if (filter.testProtocolNumber) descriptions.push(`№ протокола: ${filter.testProtocolNumber}`);
@@ -122,7 +125,13 @@ export const useTableFilterStore = defineStore('tableFilter', {
          * Позволяет обновлять как одно поле, так и пачку полей сразу.
          */
         setFilter(newFilter: Partial<ITableFilter>) {
-            this.filter = { ...this.filter, ...newFilter }
+            const next = normalizeLabFilters({ ...this.filter, ...newFilter })
+            // The server consumes this persisted cookie for the registry and exports.
+            // Do not silently keep an older cookie when a large selection exceeds browser limits.
+            if (JSON.stringify(next).length > 60000 || encodeURIComponent(serializeLabFilterState({ filter: next, isLoaded: this.isLoaded })).length > 3800) {
+                throw new Error('Слишком большой набор условий для сохранения в браузере. Уменьшите число выбранных материалов или длину текстовых условий.')
+            }
+            this.filter = next
             // this.saveToStorage()
         },
 
@@ -167,7 +176,7 @@ export const useTableFilterStore = defineStore('tableFilter', {
          * Проверяет, активен ли конкретный фильтр по ключу
          */
         isFilterActiveByKey(key: keyof ITableFilter): boolean {
-            return this.filter[key] !== null && this.filter[key] !== undefined && this.filter[key] !== ''
+            return key !== 'exactFields' && hasLabFilterValue(this.filter[key])
         },
 
         /**
@@ -175,7 +184,7 @@ export const useTableFilterStore = defineStore('tableFilter', {
          */
         getActiveFilters(): Array<{ key: string; value: any }> {
             return Object.entries(this.filter)
-                .filter(([_, value]) => value !== null && value !== undefined && value !== '')
+                .filter(([key, value]) => key !== 'exactFields' && hasLabFilterValue(value))
                 .map(([key, value]) => ({ key, value }))
         }
     }
