@@ -2,15 +2,21 @@
 import {computed,reactive,ref,watch,onBeforeUnmount,onMounted} from 'vue';
 import type {ContractDetailCounts} from '~~/shared/types/diagnostic-contract-details';
 import CreatableNameSelect from '../../common/CreatableNameSelect.vue';
+import type {CalendarRow} from '~~/shared/types/diagnostic-calendar';
+import TripFromList from '../trips/TripFromList.vue';
+import {vRevealWorkRow} from './revealWorkRow';
+import {tripDateLabel} from '~~/shared/utils/diagnostic-trips';
 import ContractWorks from './ContractWorks.vue';
 import ContractStructures from './ContractStructures.vue';
 import {contractDateTime} from '~~/shared/utils/diagnostic-contract-search';
 import type {ContractRecord,ContractInput,DiagnosticCatalog} from '~~/shared/types/diagnostic-contracts';
 import {contractStatus} from '~~/shared/utils/diagnostic-contracts';
-const props=defineProps<{contract:ContractRecord|null;catalog:DiagnosticCatalog;readOnly:boolean;canCreate:boolean;canEdit:boolean;canEditWorks?:boolean}>();
+const props=defineProps<{contract:ContractRecord|null;catalog:DiagnosticCatalog;readOnly:boolean;canCreate:boolean;canEdit:boolean;canEditWorks?:boolean;focusWork?:CalendarRow|null}>();
 const emit=defineEmits<{close:[];edit:[];save:[ContractRecord]}>();
-const tabs=['Карточка договора','Работы с договором','Перечень сооружений'];
-const tab=ref(0),error=ref(''),saving=ref(false),confirmClose=ref(false);
+const trip=props.focusWork?.kind==='trip'?props.focusWork:null;
+const tripOpen=ref(false);
+const tabs=['Карточка договора','Работы с договором','Перечень сооружений',...(trip?['Командировка']:[])];
+const tab=ref(trip?3:props.focusWork?.kind==='structure'?2:props.focusWork?1:0),error=ref(''),saving=ref(false),confirmClose=ref(false);
 const startTabKey='space:diagnostic:contract-card:start-tab:v1';
 const pinnedTab=ref<number|null>(null),pinError=ref('');
 onMounted(()=>{
@@ -18,7 +24,7 @@ onMounted(()=>{
   const stored=localStorage.getItem(startTabKey);
   if(stored!==null && /^[0-2]$/.test(stored)){
    pinnedTab.value=Number(stored);
-   if(props.contract && props.readOnly)tab.value=pinnedTab.value;
+   if(props.contract && props.readOnly && !props.focusWork)tab.value=pinnedTab.value;
   }
  }catch{/* The card remains usable when browser storage is unavailable. */}
 });
@@ -86,7 +92,7 @@ async function save(){
  try{await resolveNames();const saved=await $fetch<ContractRecord>('/api/diagnostic/contracts'+(c?'/'+c.id:''),{method:c?'PUT':'POST',headers:{'x-space-diagnostic':'1'},body:{...form,version:c?.version}});emit('save',saved);}
  catch(e){error.value=message(e);tab.value=0;}finally{saving.value=false;}
 }
-function moveTab(event:KeyboardEvent,index:number,step:number){tab.value=(index+step+3)%3;const buttons=(event.currentTarget as HTMLElement).closest('[role=tablist]')?.querySelectorAll<HTMLButtonElement>('[role=tab]');buttons?.[tab.value]?.focus();}
+function moveTab(event:KeyboardEvent,index:number,step:number){tab.value=(index+step+tabs.length)%tabs.length;const buttons=(event.currentTarget as HTMLElement).closest('[role=tablist]')?.querySelectorAll<HTMLButtonElement>('[role=tab]');buttons?.[tab.value]?.focus();}
 const summaryColumns=[
  ['305','АИС конструктив + проезжая часть + GPS'],['306','АИС маломоб.+ПОС'],
  ['307','АИС гарантийный паспорт'],['308','АИС ведомость дефектов'],
@@ -102,7 +108,7 @@ const summaryColumns=[
    <div class="contract-editor-tabs" role="tablist" aria-label="Карточка договора">
     <div v-for="(label,i) in tabs" :key="label" class="contract-editor-tab" :class="{'is-active':tab===i}" role="presentation">
      <button :id="`contract-editor-tab-${i}`" type="button" role="tab" :aria-selected="tab===i" :tabindex="tab===i?0:-1" aria-controls="contract-editor-panel" @click="tab=i" @keydown.right.prevent="moveTab($event,i,1)" @keydown.left.prevent="moveTab($event,i,-1)"><span>{{ label }}</span><small v-if="i===1" class="contract-tab-count">Всего работ: {{ counts.works ?? (countsError ? '—' : '…') }}</small><small v-if="i===2" class="contract-tab-count">Всего сооружений: {{ counts.structures ?? (countsError ? '—' : '…') }}</small></button>
-     <button v-if="contract&&readOnly" v-show="tab===i" type="button" class="contract-tab-pin" :class="{'is-pinned':pinnedTab===i}" :aria-pressed="pinnedTab===i" :aria-label="pinnedTab===i?'Открепить стартовую вкладку':'Открывать эту вкладку при просмотре договора'" :title="pinnedTab===i?'Открепить стартовую вкладку':'Открывать эту вкладку при просмотре договора'" @click="pinStartTab"><svg class="iconify odis-local-pin" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><g transform="rotate(45 12 12)"><path d="M8 2h8v2l-1 1v5l3 3v2h-5l-.6 6.5-.4 1-.4-1L11 15H6v-2l3-3V5L8 4z"/></g></svg></button>
+     <button v-if="contract&&readOnly&&i<3" v-show="tab===i" type="button" class="contract-tab-pin" :class="{'is-pinned':pinnedTab===i}" :aria-pressed="pinnedTab===i" :aria-label="pinnedTab===i?'Открепить стартовую вкладку':'Открывать эту вкладку при просмотре договора'" :title="pinnedTab===i?'Открепить стартовую вкладку':'Открывать эту вкладку при просмотре договора'" @click="pinStartTab"><svg class="iconify odis-local-pin" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><g transform="rotate(45 12 12)"><path d="M8 2h8v2l-1 1v5l3 3v2h-5l-.6 6.5-.4 1-.4-1L11 15H6v-2l3-3V5L8 4z"/></g></svg></button>
     </div>
    </div>
    <p v-if="pinError" class="contract-count-error" role="alert">{{ pinError }}</p>
@@ -136,8 +142,16 @@ const summaryColumns=[
       <span><strong>Обновлено:</strong> {{ contract.editor }} · {{ contractDateTime(contract.updatedAt) }}</span>
      </div>
     </form>
-    <ContractWorks v-if="tab===1" :contract-id="contract?.id??null" :contract-number="contract?.number??''" :employees="catalog.supervisors" :can-edit="canEditWorks??canEdit" @count="counts.works=$event" />
-    <ContractStructures v-if="tab===2" :contract-id="contract?.id??null" :contract-number="contract?.number??''" :employees="catalog.supervisors" :can-edit="canEditWorks??canEdit" @count="counts.structures=$event" />
+    <div v-if="tab===3 && trip" class="contract-detail-table contract-compact-table">
+     <table><thead><tr><th>Работа</th><th>Сотрудник</th><th>Начало</th><th>Окончание</th></tr></thead>
+      <tbody><tr v-reveal-work-row="'focus'" class="odis-work-highlight" tabindex="0" @dblclick="tripOpen=true" @keydown.enter.self.prevent="tripOpen=true">
+       <td><button type="button" class="cw-name" @click="tripOpen=true">{{trip.name}}</button></td>
+       <td>{{trip.employeeName}}</td><td>{{tripDateLabel(trip.planStart)}}</td><td>{{tripDateLabel(trip.planFinish)}}</td>
+      </tr></tbody></table>
+     <TripFromList v-if="tripOpen" :id="trip.id" :contract-id="trip.contractId" @close="tripOpen=false"/>
+    </div>
+    <ContractWorks v-if="tab===1" :focus-id="focusWork?.kind==='contract'?focusWork.id:undefined" :contract-id="contract?.id??null" :contract-number="contract?.number??''" :employees="catalog.supervisors" :can-edit="canEditWorks??canEdit" @count="counts.works=$event" />
+    <ContractStructures v-if="tab===2" :focus-id="focusWork?.kind==='structure'?focusWork.id:undefined" :focus-link="focusWork?.kind==='structure'?focusWork.linkId:undefined" :contract-id="contract?.id??null" :contract-number="contract?.number??''" :employees="catalog.supervisors" :can-edit="canEditWorks??canEdit" @count="counts.structures=$event" />
    </div>
   </template>
   <template #footer><div class="contract-footer-content"><div class="contract-secondary-actions"><button type="button" @click="auxiliary='documents'"><Icon name="lucide:folder-open" />Документы к договору</button><button type="button" @click="auxiliary='summary'"><Icon name="lucide:table-2" />Сводная таблица работ</button></div><small>{{ readOnly?'Режим просмотра':'Поля со звёздочкой обязательны. Остальные можно заполнить позже.' }}</small><div v-if="confirmClose" class="contract-discard" role="alert">Отменить несохранённые изменения?<button :disabled="saving" @click="emit('close')">Да, закрыть</button><button @click="confirmClose=false">Продолжить</button></div><div class="contract-footer-actions"><button v-if="contract&&readOnly&&canEdit" type="button" @click="emit('edit')"><Icon name="lucide:pencil" />Редактировать</button><button v-if="!readOnly" :disabled="saving||catalogBusy" class="contract-save" type="submit" form="diagnostic-contract-form">{{ saving?'Сохранение…':'Сохранить' }}</button><button @click="close">{{ readOnly?'Закрыть':'Отменить' }}</button></div></div></template>
@@ -208,4 +222,9 @@ html.dark .odis-contract-editor .contract-footer-content button:not(.contract-sa
  .odis-contract-editor .contract-section-head,.odis-contract-editor .cs-work-heading{flex-wrap:wrap}
  .odis-contract-editor .odis-work-heading-tools{flex:1 1 100%;justify-content:flex-start}
 }
+</style>
+
+<style>
+.odis-contract-editor .contract-compact-table tr.odis-work-highlight>td{background:var(--contract-panel);box-shadow:inset 0 -1px var(--contract-line)}
+.odis-contract-editor .contract-compact-table tr.odis-work-highlight>td:first-child{box-shadow:inset 3px 0 #1686a6}
 </style>

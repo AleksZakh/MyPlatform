@@ -1,7 +1,7 @@
 export interface CalendarEmployee {id:number;name:string}
 export interface CalendarUser extends CalendarEmployee {login?:string|null}
 export interface CalendarWork {
- id:number;kind:'contract'|'structure';contractId:number;contractNumber:string;structureCode:string;code:string;name:string;status:string;
+ linkId?:number;id:number;kind:'contract'|'structure';contractId:number;contractNumber:string;structureCode:string;code:string;name:string;status:string;
  planStart:string|null;planFinish:string|null;planHours:string|null;planExecutor:string;
  factStart:string|null;factFinish:string|null;factHours:string|null;factExecutor:string;
 }

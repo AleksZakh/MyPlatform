@@ -16,11 +16,11 @@ export async function contractDetailCounts(db:ReadDb,contractId:number):Promise<
  return {works:contract._count.contractWorks,structures:contract._count.structures};
 }
 
-export async function contractStructureWorks(db:ReadDb,contractId:number,linkId:number):Promise<ContractStructureWorksResponse>{
+export async function contractStructureWorks(db:ReadDb,contractId:number,linkId:number,workId?:number):Promise<ContractStructureWorksResponse>{
  const link=await db.diagnosticContractStructure.findFirst({
   where:{id:linkId,contractId,deletedAt:null,contract:{deletedAt:null},structure:{deletedAt:null}},
   select:{id:true,structureId:true,workAssignments:{
-   where:{deletedAt:null},orderBy:[{workNameSnapshot:'asc'},{id:'asc'}],
+   where:{deletedAt:null,...(workId?{id:workId}:{})},orderBy:[{workNameSnapshot:'asc'},{id:'asc'}],
    select:{id:true,workCodeSnapshot:true,workNameSnapshot:true,version:true,autoCompleteHours:true,tripCompletion:{select:{tripId:true}},work:{select:{criteria:true}},hours:true,note:true,status:true,warning:true,
     planStart:true,planFinish:true,planHours:true,planExecutor:true,factStart:true,factFinish:true,factHours:true,factExecutor:true,trip:{select:{number:true,participants:{select:{user:{select:{fullName:true,login:true}}}}}}},
   }},

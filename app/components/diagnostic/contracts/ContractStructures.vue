@@ -3,12 +3,15 @@ import {computed,ref,watch,onBeforeUnmount} from 'vue';
 import type {ContractStructureListItem} from '~~/shared/types/diagnostic-contract-structures';
 import type {ContractStructureWorkRecord,ContractStructureWorksResponse} from '~~/shared/types/diagnostic-contract-details';
 import ContractColumnFilter from './ContractColumnFilter.vue';
+import {vRevealWorkRow} from './revealWorkRow';
 import WorkCard from './WorkCard.vue';
 import {onWorkChange} from '~/composables/diagnostic/workChanges';
 import WorkStatusIcon from './WorkStatusIcon.vue';
 import WorkStatusLegend from './WorkStatusLegend.vue';
 import {structureFilterColumns,emptyStructureFilters,structureMatches,filterText,diagnosticWorkStatus,type StructureFilterKey} from '~~/shared/utils/diagnostic-contract-table';
-const props=defineProps<{contractId:number|null;contractNumber:string;canEdit:boolean;employees:{id:number;name:string}[]}>();
+const props=defineProps<{contractId:number|null;contractNumber:string;focusId?:number;focusLink?:number;canEdit:boolean;employees:{id:number;name:string}[]}>();
+const highlight=ref(props.focusId);
+const focusNotice=ref('');
 const emit=defineEmits<{count:[number]}>();
 const rows=ref<ContractStructureListItem[]>([]),busy=ref(false),error=ref('');
 const filters=ref(emptyStructureFilters()),filterResetKey=ref(0),filterPortal=ref<HTMLElement|null>(null);
@@ -32,7 +35,10 @@ async function loadWorks(){
  worksBusy.value=true;
  try{
   const data=await $fetch<ContractStructureWorksResponse>(`/api/diagnostic/contracts/${contractId}/structures/${linkId}/works`);
-  if(request===worksGeneration&&data.linkId===linkId)works.value=data.works;
+  if(request===worksGeneration&&data.linkId===linkId){
+    works.value=data.works;
+    focusNotice.value=linkId===props.focusLink && !data.works.some(w=>w.id===props.focusId)?'Выбранная в календаре работа больше недоступна.':'';
+  }
  }catch(e:any){if(request===worksGeneration)worksError.value=e?.data?.message||'Не удалось загрузить работы сооружения.';}
  finally{if(request===worksGeneration)worksBusy.value=false;}
 }
@@ -44,12 +50,14 @@ async function load(){
  try{
   const data=await $fetch<ContractStructureListItem[]>(`/api/diagnostic/contracts/${contractId}/structures`);
   if(request!==listGeneration)return;
-  rows.value=data;emit('count',data.length);selectedId.value=visibleRows.value[0]?.id??null;
+  rows.value=data;emit('count',data.length);const target=props.focusId?data.find(r=>r.id===props.focusLink):undefined;
+  focusNotice.value=props.focusId&&!target?'Сооружение выбранной работы больше недоступно.':'';
+  selectedId.value=props.focusId?target?.id??null:visibleRows.value[0]?.id??null;
  }catch(e:any){if(request===listGeneration)error.value=e?.data?.message||'Не удалось загрузить сооружения.';}
  finally{if(request===listGeneration)busy.value=false;}
 }
 watch(()=>props.contractId,()=>{clearFilters();void load();},{immediate:true});
-watch(visibleRows,list=>{if(!list.some(row=>row.id===selectedId.value))selectedId.value=list[0]?.id??null;});
+watch(visibleRows,list=>{if(!(focusNotice.value && selectedId.value===null) && !list.some(row=>row.id===selectedId.value))selectedId.value=list[0]?.id??null;});
 watch(selectedId,()=>void loadWorks());
 // Keep an open draft intact. Its version is checked at save time.
 let refreshAfterClose=false;
@@ -75,6 +83,7 @@ onBeforeUnmount(()=>{listGeneration++;worksGeneration++;});
    <button type="button" :disabled="!hasFilters" @click="clearFilters">Очистить фильтры</button>
    <button type="button" :disabled="busy||!contractId" @click="load">Обновить</button>
   </header>
+  <p v-if="focusNotice" role="status">{{focusNotice}}</p>
   <div ref="filterPortal" class="cs-filter-layer"></div>
   <div class="contract-detail-table contract-compact-table cs-list" :aria-busy="busy">
    <table><caption class="sr-only">Сооружения договора. Нажмите на код ИССО для просмотра работ.</caption>
@@ -84,7 +93,7 @@ onBeforeUnmount(()=>{listGeneration++;worksGeneration++;});
      <tr v-else-if="error"><td colspan="8" role="alert">{{ error }} <button type="button" @click="load">Повторить</button></td></tr>
      <tr v-else-if="!rows.length"><td colspan="8">{{ contractId?'К этому договору пока не привязаны сооружения.':'Сохраните договор, чтобы просмотреть связанные сооружения.' }}</td></tr>
      <tr v-else-if="!visibleRows.length"><td colspan="8">По заданным фильтрам сооружения не найдены. <button type="button" @click="clearFilters">Очистить фильтры</button></td></tr>
-     <template v-else><tr v-for="(row,index) in visibleRows" :key="row.id" :class="{'is-selected':selectedId===row.id}" @click="selectedId=row.id">
+     <template v-else><tr v-for="(row,index) in visibleRows" :key="row.id" v-reveal-work-row="props.focusLink===row.id?'scroll':false" :class="{'is-selected':selectedId===row.id}" @click="selectedId=row.id">
       <td>{{ index+1 }}</td><td><button type="button" class="cs-code" :aria-pressed="selectedId===row.id" :aria-label="`Работы сооружения ${row.code}`" @click.stop="selectedId=row.id">{{ row.code }}</button></td>
       <td>{{ row.structureName }}</td><td><span class="contract-cell-ellipsis cs-road" :title="row.roadName">{{ row.roadName }}</span></td>
       <td>{{ row.location }}</td><td>{{ row.additionalId }}</td><td>{{ row.obstacleName }}</td><td>{{ row.district }}</td>
@@ -105,7 +114,7 @@ onBeforeUnmount(()=>{listGeneration++;worksGeneration++;});
       <tr v-else-if="worksBusy"><td colspan="8" role="status">Загрузка работ…</td></tr>
       <tr v-else-if="worksError"><td colspan="8" role="alert">{{ worksError }} <button type="button" @click="loadWorks">Повторить</button></td></tr>
       <tr v-else-if="!works.length"><td colspan="8">В этом договоре у выбранного сооружения пока нет сохранённых работ.</td></tr>
-      <template v-else><tr v-for="(work,index) in works" :key="work.id" @dblclick="detail=work">
+      <template v-else><tr v-for="(work,index) in works" :key="work.id" tabindex="-1" v-reveal-work-row="highlight===work.id?'focus':false" :class="{'odis-work-highlight':highlight===work.id}" @click="highlight=work.id" @keydown.enter.self.prevent="detail=work" @dblclick="detail=work">
        <td class="odis-status-cell"><WorkStatusIcon :status="work.status"/></td><td>{{ index+1 }}</td><td><button type="button" class="cw-name contract-cell-ellipsis" :title="work.name" @click="detail=work">{{ work.name }}</button></td>
        <td>{{ date(work.planStart) }}</td><td>{{ date(work.planFinish) }}</td><td class="cs-hours">{{ work.planHours??'—' }}</td><td>{{ work.planExecutor||'—' }}</td><td><span class="contract-cell-ellipsis cs-note" :title="work.note">{{ work.note||'—' }}</span></td>
       </tr></template>

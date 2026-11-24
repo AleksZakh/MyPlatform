@@ -25,6 +25,10 @@ test('work query scopes by contract/link and preserves snapshots and decimals',a
  assert.deepEqual(query.select.workAssignments.where,{deletedAt:null});
  assert.deepEqual(response,{linkId:5001,structureId:101,works:[{id:7,code:'305',name:'Историческое название',criteria:'Критерий',version:3,autoComplete:false,tripManaged:false,hours:'0.0001',note:'Примечание',status:'planned',warning:'',planStart:'2020-01-02',planFinish:null,planHours:'0.0001',planExecutor:'Исполнитель',factStart:null,factFinish:null,factHours:null,factExecutor:''}]});
  assert.equal(response.works[0]!.factHours,null);assert.equal(response.works[0]!.factExecutor,'');
+ await contractStructureWorks(db,12,5001,7);
+ assert.deepEqual(query.select.workAssignments.where,{deletedAt:null,id:7});
+ assert.equal(query.where.contractId,12);
+ assert.equal(query.where.id,5001);
  db.diagnosticContractStructure.findFirst=async()=>null;
  await assert.rejects(()=>contractStructureWorks(db,99,5001),(e:any)=>e.statusCode===404);
 });

@@ -3,6 +3,7 @@ import {ref,computed,watch,onMounted,onBeforeUnmount} from 'vue';
 import TripDateInput from '../trips/TripDateInput.vue';
 import {plansWeek,parsePlansPeriod,type PlansPeriodMode} from '~~/shared/utils/diagnostic-plans-period';
 import {onWorkChange} from '~/composables/diagnostic/workChanges';
+import WorkFromList from '../contracts/WorkFromList.vue';
 import PlanEditor from './PlanEditor.vue';
 import WorkStatusIcon from '../contracts/WorkStatusIcon.vue';
 import WorkStatusLegend from '../contracts/WorkStatusLegend.vue';
@@ -12,6 +13,8 @@ import {calendarShortName} from '~~/shared/utils/diagnostic-calendar';
 import {tripDateLabel} from '~~/shared/utils/diagnostic-trips';
 import DiagnosticModuleTabs from '../DiagnosticModuleTabs.vue';
 const auditing=ref(false);
+const openedWork=ref<PlanWorkRow|null>(null),canEditWork=ref(false);
+onMounted(async()=>{try{canEditWork.value=(await $fetch<{allowed:boolean}>('/api/access/check',{query:{resource:'diagnostic.contracts',action:'UPDATE'}})).allowed;}catch{canEditWork.value=false;}});
 const planning=ref(false),canPlan=ref(false),planNotice=ref('');
 onMounted(async()=>{try{canPlan.value=(await $fetch<{allowed:boolean}>('/api/access/check',{query:{resource:'diagnostic.contracts',action:'CREATE'}})).allowed;}catch{canPlan.value=false;}});
 function planSaved(person:number){
@@ -66,6 +69,7 @@ function moveTab(event:KeyboardEvent){tab.value=tab.value==='staff'?'external':'
 </script>
 <template>
  <section class="odis-plans">
+  <WorkFromList v-if="openedWork" :key="openedWork.key" :source="openedWork" :can-edit="canEditWork" :employees="data?.employees??[]" @close="openedWork=null"/>
   <PlanEditor v-if="planning" @close="planning=false" @saved="planSaved"/><p v-if="planNotice" role="status">{{planNotice}}</p>
   <DiagnosticModuleTabs active="plans"><label class="opr-search"><Icon name="lucide:search" aria-hidden="true"/><input v-model="search" type="search" placeholder="Работа, договор, ФИО, ИССО" aria-label="Поиск работ" :disabled="tab!=='staff'"/></label></DiagnosticModuleTabs>
   <header class="opr-title"><h1>Планы и отчёты</h1></header>
@@ -121,7 +125,7 @@ function moveTab(event:KeyboardEvent){tab.value=tab.value==='staff'?'external':'
         <tr v-else-if="busy"><td colspan="12" class="opr-empty" role="status">Загрузка работ…</td></tr>
         <tr v-else-if="error"><td colspan="12" class="opr-empty">Не удалось загрузить список работ.</td></tr>
         <template v-else>
-         <tr v-for="row in data?.rows" :key="row.key" class="opr-work-row">
+         <tr v-for="row in data?.rows" :key="row.key" class="opr-work-row" tabindex="0" @dblclick="openedWork=row" @keydown.enter.self.prevent="openedWork=row">
           <td class="opr-center"><WorkStatusIcon :status="row.status"/></td><td :title="centerTitle(row)">{{regionalCenterCode(row.regionalCenter)}}</td><td :title="row.employeeName">{{calendarShortName(row.employeeName)}}</td><td>{{row.contractNumber}}</td><td>{{row.documentType}}</td><td>{{row.structureCode||'—'}}</td><td>{{row.location||'—'}}</td><td class="opr-work-name" :title="row.name">{{row.name}}</td>
           <td :title="hourTitle(row)">{{row.planHours===null&&row.factHours!==null?'Ф: ':''}}{{row.planHours??row.factHours??'—'}}{{row.planShared||row.planHours===null&&row.factShared?' *':row.planEstimated?' ≈':''}}</td>
           <td :title="periodTitle(row)">{{row.planStart||row.planFinish?'':row.factStart||row.factFinish?'Ф: ':''}}{{rowPeriod(row)}}</td><td class="opr-work-note" :title="row.note">{{row.note||'—'}}</td>
