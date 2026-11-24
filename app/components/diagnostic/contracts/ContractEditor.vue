@@ -7,7 +7,7 @@ import TripFromList from '../trips/TripFromList.vue';
 import {vRevealWorkRow} from './revealWorkRow';
 import {tripDateLabel} from '~~/shared/utils/diagnostic-trips';
 import TemplatePicker from '../records/TemplatePicker.vue';
-import type {TemplateUse} from '~~/shared/types/diagnostic-templates';
+import type {ContractSelection} from '~~/shared/types/diagnostic-templates';
 import ContractWorks from './ContractWorks.vue';
 import ContractStructures from './ContractStructures.vue';
 import {contractDateTime} from '~~/shared/utils/diagnostic-contract-search';
@@ -67,15 +67,31 @@ function chooseName(kind:'counterparties'|'project-types',value:string){
  else{projectTypeName.value=item?.name||value;form.projectTypeId=item?.id??null;}
 }
 
-const templatePicker=ref(false);
-const pendingTemplates=ref<(TemplateUse & {name:string})[]>([]);
-function stageTemplate(use:TemplateUse,name:string){
- const existing=pendingTemplates.value.find(t=>t.templateId===use.templateId);
- if(existing)existing.structureIds=[...new Set([...existing.structureIds,...use.structureIds])];
- else pendingTemplates.value.push({...use,name});
- templatePicker.value=false;
+const picker=ref<'manual'|'template'|null>(null);
+const selections=ref<ContractSelection[]>([]);
+const workSelections=computed(()=>selections.value.filter(s=>!s.structures.length));
+const structureSelections=computed(()=>selections.value.filter(s=>s.structures.length));
+function uniqueById<T extends {id:number|string}>(rows:T[]):T[]{
+ return [...new Map(rows.map(r=>[r.id,r])).values()];
 }
-const snapshot=()=>JSON.stringify({form,templates:pendingTemplates.value,counterparty:counterpartyName.value,projectType:projectTypeName.value});
+const draftWorks=computed(()=>uniqueById(workSelections.value.flatMap(s=>s.works)));
+const draftStructures=computed(()=>uniqueById(structureSelections.value.flatMap(s=>s.structures)));
+function stage(selection:ContractSelection){
+ const previous=selections.value.find(s=>s.template?.id===selection.template?.id&&!!s.structures.length===!!selection.structures.length);
+ if(previous){
+  previous.works=uniqueById([...previous.works,...selection.works]);
+  previous.structures=uniqueById([...previous.structures,...selection.structures]);
+ }else selections.value.push(selection);
+ picker.value=null;
+}
+function serializeSelections(){
+ const manual=selections.value.filter(s=>!s.template);
+ return {
+  templates:selections.value.flatMap(s=>s.template?[{templateId:s.template.id,structureIds:s.structures.map(r=>Number(r.id))}]:[]),
+  additions:{workIds:manual.flatMap(s=>s.works.map(w=>w.id)),structureIds:manual.flatMap(s=>s.structures.map(r=>Number(r.id)))}
+ };
+}
+const snapshot=()=>JSON.stringify({form,...serializeSelections(),counterparty:counterpartyName.value,projectType:projectTypeName.value});
 const initial=snapshot(),dirty=computed(()=>snapshot()!==initial);
 const incomeContracts=computed(()=>props.catalog.incomeContracts.filter(r=>r.id!==c?.id));
 const auxiliary=ref<'documents'|'summary'|null>(null);
@@ -99,7 +115,7 @@ async function save(){
  if(!form.number.trim()||!form.date||!counterpartyName.value.trim()||!form.direction){tab.value=0;error.value='Укажите номер, дату заключения, контрагента и тип договора.';return;}
  if(form.finish&&(form.finish<form.date||(form.start&&form.finish<form.start))){tab.value=0;error.value='Окончание работ не может быть раньше заключения договора или начала работ.';return;}
  saving.value=true;
- try{await resolveNames();const saved=await $fetch<ContractRecord>('/api/diagnostic/contracts'+(c?'/'+c.id:''),{method:c?'PUT':'POST',headers:{'x-space-diagnostic':'1'},body:{...form,version:c?.version,templates:pendingTemplates.value.map(({templateId,structureIds})=>({templateId,structureIds}))}});emit('save',saved);}
+ try{await resolveNames();const saved=await $fetch<ContractRecord>('/api/diagnostic/contracts'+(c?'/'+c.id:''),{method:c?'PUT':'POST',headers:{'x-space-diagnostic':'1'},body:{...form,version:c?.version,...serializeSelections()}});emit('save',saved);}
  catch(e){error.value=message(e);tab.value=0;}finally{saving.value=false;}
 }
 function moveTab(event:KeyboardEvent,index:number,step:number){tab.value=(index+step+tabs.length)%tabs.length;const buttons=(event.currentTarget as HTMLElement).closest('[role=tablist]')?.querySelectorAll<HTMLButtonElement>('[role=tab]');buttons?.[tab.value]?.focus();}
@@ -117,7 +133,7 @@ const summaryColumns=[
   <template #body>
    <div class="contract-editor-tabs" role="tablist" aria-label="Карточка договора">
     <div v-for="(label,i) in tabs" :key="label" class="contract-editor-tab" :class="{'is-active':tab===i}" role="presentation">
-     <button :id="`contract-editor-tab-${i}`" type="button" role="tab" :aria-selected="tab===i" :tabindex="tab===i?0:-1" aria-controls="contract-editor-panel" @click="tab=i" @keydown.right.prevent="moveTab($event,i,1)" @keydown.left.prevent="moveTab($event,i,-1)"><span>{{ label }}</span><small v-if="i===1" class="contract-tab-count">Всего работ: {{ counts.works ?? (countsError ? '—' : '…') }}</small><small v-if="i===2" class="contract-tab-count">Всего сооружений: {{ counts.structures ?? (countsError ? '—' : '…') }}</small></button>
+     <button :id="`contract-editor-tab-${i}`" type="button" role="tab" :aria-selected="tab===i" :tabindex="tab===i?0:-1" aria-controls="contract-editor-panel" @click="tab=i" @keydown.right.prevent="moveTab($event,i,1)" @keydown.left.prevent="moveTab($event,i,-1)"><span>{{ label }}</span><small v-if="i===1" class="contract-tab-count">Всего работ: {{ contract?(counts.works ?? (countsError ? '—' : '…')):draftWorks.length }}</small><small v-if="i===2" class="contract-tab-count">Всего сооружений: {{ contract?(counts.structures ?? (countsError ? '—' : '…')):draftStructures.length }}</small></button>
      <button v-if="contract&&readOnly&&i<3" v-show="tab===i" type="button" class="contract-tab-pin" :class="{'is-pinned':pinnedTab===i}" :aria-pressed="pinnedTab===i" :aria-label="pinnedTab===i?'Открепить стартовую вкладку':'Открывать эту вкладку при просмотре договора'" :title="pinnedTab===i?'Открепить стартовую вкладку':'Открывать эту вкладку при просмотре договора'" @click="pinStartTab"><svg class="iconify odis-local-pin" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><g transform="rotate(45 12 12)"><path d="M8 2h8v2l-1 1v5l3 3v2h-5l-.6 6.5-.4 1-.4-1L11 15H6v-2l3-3V5L8 4z"/></g></svg></button>
     </div>
    </div>
@@ -143,7 +159,7 @@ const summaryColumns=[
      </fieldset>
      <div class="contract-related"><label>Доходный договор<select v-model="form.relatedContractId" :disabled="readOnly||saving"><option :value="null">Не связан</option><option v-for="item in incomeContracts" :key="item.id" :value="item.id">{{ item.number }} · {{ item.counterparty }}</option></select></label></div>
      <h2>Дополнительная информация по договору</h2>
-     <fieldset class="contract-extra" :disabled="readOnly||saving"><label>Количество этапов<input v-model.number="form.stages" type="number" min="0" step="1" /></label><label>Количество сооружений<input :value="contract?.buildings??0" readonly title="Рассчитывается по связанным сооружениям" /></label><label>Количество чел./часов<input v-model="form.hours" type="number" min="0" step="0.01" /></label></fieldset>
+     <fieldset class="contract-extra" :disabled="readOnly||saving"><label>Количество этапов<input v-model.number="form.stages" type="number" min="0" step="1" /></label><label>Количество сооружений<input :value="contract?.buildings??draftStructures.length" readonly title="Рассчитывается по связанным сооружениям" /></label><label>Количество чел./часов<input v-model="form.hours" type="number" min="0" step="0.01" /></label></fieldset>
      <label class="contract-note">Примечание<textarea v-model="form.note" :disabled="readOnly||saving" maxlength="10000" rows="4" /></label>
      <p v-if="catalog.supervisorWarning" role="status">{{ catalog.supervisorWarning }}</p>
 
@@ -160,12 +176,36 @@ const summaryColumns=[
       </tr></tbody></table>
      <TripFromList v-if="tripOpen" :id="trip.id" :contract-id="trip.contractId" @close="tripOpen=false"/>
     </div>
-    <div v-if="!readOnly && (tab===1||tab===2)" class="odis-template-actions">
-     <button class="template-pick-button" type="button" @click="templatePicker=true">Использовать шаблон</button>
-     <p v-if="pendingTemplates.some(t=>!!t.structureIds.length===(tab===2))">Будут добавлены при сохранении договора</p>
-     <p v-for="t in pendingTemplates.filter(t=>!!t.structureIds.length===(tab===2))" :key="t.templateId">{{t.name}} <span v-if="t.structureIds.length">· сооружений: {{t.structureIds.length}}</span> <button type="button" @click="pendingTemplates=pendingTemplates.filter(x=>x!==t)">Убрать</button></p>
-    </div>
-    <TemplatePicker v-if="templatePicker" :structure="tab===2" @close="templatePicker=false" @apply="stageTemplate"/>
+    <template v-if="!readOnly && (tab===1||tab===2)">
+     <header class="contract-section-head draft-toolbar">
+      <h2 v-if="!contract">{{tab===1?'Перечень работ с договором':'Перечень сооружений'}}</h2>
+      <div class="draft-buttons">
+       <button type="button" :disabled="saving" @click="picker='manual'"><Icon name="lucide:plus"/>{{tab===1?'Добавить работы':'Добавить сооружения'}}</button>
+       <button type="button" :disabled="saving" @click="picker='template'"><Icon name="lucide:list-tree"/>Использовать шаблон</button>
+      </div>
+     </header>
+     <div v-if="!contract && tab===1" class="contract-detail-table contract-compact-table draft-table">
+      <table aria-label="Перечень работ с договором"><thead><tr><th rowspan="2">Статус</th><th rowspan="2">№</th><th rowspan="2">Работа</th><th colspan="3">План</th><th colspan="3">Факт</th><th rowspan="2">Примечания</th></tr>
+       <tr><template v-for="part in ['plan','fact']" :key="part"><th>Дата начала</th><th>Дата окончания</th><th>Исполнитель</th></template></tr></thead>
+       <tbody><tr v-for="(w,i) in draftWorks" :key="w.id"><td><span title="Нераспределённая" aria-label="Нераспределённая"><Icon name="lucide:file"/></span></td><td>{{i+1}}</td><td>{{w.name}}</td><td v-for="n in 6" :key="n">—</td><td>{{w.note||'—'}}</td></tr>
+        <tr v-if="!draftWorks.length"><td colspan="10" class="draft-empty">Работы с договором пока не добавлены.</td></tr></tbody>
+      </table>
+     </div>
+     <div v-if="!contract && tab===2" class="contract-detail-table contract-compact-table draft-table">
+      <table aria-label="Перечень сооружений"><thead><tr><th>№</th><th>Код ИССО</th><th>Сооружение</th><th>Название автодороги</th><th>Место, км</th></tr></thead>
+       <tbody><tr v-for="(r,i) in draftStructures" :key="r.id"><td>{{i+1}}</td><td>{{r.issoCode}}</td><td>{{r.structureName}}</td><td>{{r.roadName}}</td><td>{{r.location}}</td></tr>
+        <tr v-if="!draftStructures.length"><td colspan="5" class="draft-empty">Сооружения пока не добавлены.</td></tr></tbody>
+      </table>
+     </div>
+     <div v-if="(tab===1?workSelections:structureSelections).length" class="draft-summary">
+      <span>Будут добавлены при сохранении договора</span>
+      <div v-for="s in (tab===1?workSelections:structureSelections)" :key="s.template?.id??'manual'">
+       {{s.template?.name||'Ручной выбор'}} · {{tab===1?'работ: '+s.works.length:'сооружений: '+s.structures.length}}
+       <button type="button" :disabled="saving" :aria-label="'Убрать: '+(s.template?.name||'ручной выбор')" @click="selections=selections.filter(item=>item!==s)">Убрать</button>
+      </div>
+     </div>
+    </template>
+    <TemplatePicker v-if="picker" :structure="tab===2" :manual="picker==='manual'" :number="form.number" @close="picker=null" @apply="stage"/>
     <ContractWorks v-if="tab===1 && contract" :focus-id="focusWork?.kind==='contract'?focusWork.id:undefined" :contract-id="contract?.id??null" :contract-number="contract?.number??''" :employees="catalog.supervisors" :can-edit="canEditWorks??canEdit" @count="counts.works=$event" />
     <ContractStructures v-if="tab===2 && contract" :focus-id="focusWork?.kind==='structure'?focusWork.id:undefined" :focus-link="focusWork?.kind==='structure'?focusWork.linkId:undefined" :contract-id="contract?.id??null" :contract-number="contract?.number??''" :employees="catalog.supervisors" :can-edit="canEditWorks??canEdit" @count="counts.structures=$event" />
    </div>
@@ -188,6 +228,9 @@ const summaryColumns=[
 </template>
 
 <style>
+.draft-toolbar,.draft-buttons,.draft-summary,.draft-summary>div{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.draft-buttons{margin-left:auto}.draft-buttons button,.draft-summary button{display:inline-flex;align-items:center;gap:5px;color:var(--contract-text);background:var(--contract-bg);border:1px solid var(--contract-line);border-radius:4px;padding:4px 9px}
+.draft-table{flex:1}.draft-table table{width:100%;min-width:640px}.draft-table .draft-empty{padding:15px;color:#53697b;font-style:italic}.draft-summary{padding:6px 10px;max-height:20vh;overflow:auto;border-top:1px solid var(--contract-line);font-size:12px}
 /* Contract chrome matches the UPTS work card. */
 .diagnostic-contract-modal.odis-contract-editor{--odis-contract-chrome:#e8e8ea;--odis-contract-body:#fff;background:var(--odis-contract-body)!important}
 html.dark .diagnostic-contract-modal.odis-contract-editor{--odis-contract-chrome:#465765;--odis-contract-body:#293b4a}

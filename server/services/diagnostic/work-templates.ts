@@ -4,13 +4,13 @@ import {prisma} from '../../utils/prisma';
 import {writeAuditEvent} from '../../utils/auditLog';
 import {id,invalid} from './input';
 import {categoryNames,type Category} from '../../../shared/utils/diagnostic-planning';
-import type {TemplateUse,WorkTemplate} from '../../../shared/types/diagnostic-templates';
+import type {ContractAdditions,TemplateUse,WorkTemplate} from '../../../shared/types/diagnostic-templates';
 
 export async function listTemplates(db:Prisma.TransactionClient=prisma,ids?:number[]){
   const usable=Prisma.sql`w."deletedAt" IS NULL AND cat.name=CASE t.category WHEN 'contract' THEN ${categoryNames.contract} WHEN 'structure' THEN ${categoryNames.structure} ELSE ${categoryNames.other} END`;
   return db.$queryRaw<WorkTemplate[]>`SELECT t.id,t.name,t.category,coalesce(nullif(u."fullName",''),u.login,'#'||u.id) author,
     count(*) FILTER(WHERE NOT (${usable}))::int unavailable,
-    coalesce(jsonb_agg(jsonb_build_object('id',w.id,'name',w.name,'code',w.code) ORDER BY w.code) FILTER(WHERE ${usable}),'[]'::jsonb) items
+    coalesce(jsonb_agg(jsonb_build_object('id',w.id,'name',w.name,'code',w.code,'note',w.note) ORDER BY w.code) FILTER(WHERE ${usable}),'[]'::jsonb) items
     FROM odis.template t JOIN app_users u ON u.id=t.creator JOIN odis.template_item i ON i.template_id=t.id
     JOIN diagnostic_works w ON w.id=i.work_id JOIN diagnostic_work_categories cat ON cat.id=w."categoryId"
     ${ids?Prisma.sql`WHERE t.id IN (${Prisma.join(ids)})`:Prisma.empty} GROUP BY t.id,u.id ORDER BY t.name,t.id`;
@@ -41,11 +41,23 @@ export function templateUses(raw:unknown):TemplateUse[]{
   if(!Array.isArray(raw))return invalid('Некорректный выбор шаблонов.');
   return raw.map(x=>({templateId:id(x?.templateId),structureIds:identifiers(x?.structureIds)}));
 }
-export async function applyTemplates(tx:Prisma.TransactionClient,contractId:number,actor:number,uses:TemplateUse[]){
-  if(!uses.length)return;
-  const templates=await listTemplates(tx,[...new Set(uses.map(u=>u.templateId))]);
+export function contractAdditions(raw:unknown):ContractAdditions {
+  if(raw===undefined)return {workIds:[],structureIds:[]};
+  if(!raw||typeof raw!=='object'||!('workIds' in raw)||!('structureIds' in raw))
+    return invalid('Некорректный состав договора.');
+  return {workIds:identifiers(raw.workIds),structureIds:identifiers(raw.structureIds)};
+}
+export async function applyTemplates(tx:Prisma.TransactionClient,contractId:number,actor:number,uses:TemplateUse[],manual:ContractAdditions={workIds:[],structureIds:[]}){
+  if(!uses.length&&!manual.workIds.length&&!manual.structureIds.length)return;
+  const templates=uses.length?await listTemplates(tx,[...new Set(uses.map(u=>u.templateId))]):[];
   const index=new Map(templates.map(t=>[t.id,t]));
   const byStructure=new Map<number,Set<number>>();
+  if(manual.workIds.length){
+    const available=await tx.diagnosticWork.count({where:{id:{in:manual.workIds},deletedAt:null,category:{name:{in:[categoryNames.contract,categoryNames.other]}}}});
+    if(available!==manual.workIds.length)return invalid('Работа недоступна или относится к другой категории.');
+    byStructure.set(0,new Set(manual.workIds));
+  }
+  for(const sid of manual.structureIds)byStructure.set(sid,new Set());
   for(const use of uses){
     const t=index.get(use.templateId);
     if(!t || (t.category==='structure')!==!!use.structureIds.length)return invalid('Категория шаблона не соответствует выбранному разделу.');

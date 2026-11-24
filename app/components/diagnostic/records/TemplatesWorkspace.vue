@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import DiagnosticModuleTabs from '../DiagnosticModuleTabs.vue';
 import {categoryNames,type Category} from '~~/shared/utils/diagnostic-planning';
 import type {WorkTemplate} from '~~/shared/types/diagnostic-templates';
 const templates=ref<WorkTemplate[]>([]),library=ref<{id:number;name:string;code:string;category:Category}[]>([]);
@@ -18,7 +17,7 @@ async function save(){
  catch(e:any){error.value=e.data?.message||'Не удалось сохранить шаблон.';}finally{pending.value=false;}
 }
 </script>
-<template><section class="odis-records"><DiagnosticModuleTabs active="templates"/><header><h1>Шаблоны работ</h1><button :disabled="!canCreate" @click="open">Создать шаблон</button></header>
+<template><section class="odis-records"><header><h1>Шаблоны работ</h1><button :disabled="!canCreate" @click="open">Создать шаблон</button></header>
 <p v-if="error&&!creating" role="alert">{{error}}</p>
 <div class="records-scroll"><table><thead><tr><th>Шаблон</th><th>Категория</th><th>Состав</th><th>Автор</th></tr></thead><tbody><tr v-for="t in templates" :key="t.id"><td>{{t.name}}</td><td>{{categoryNames[t.category]}}</td><td><details><summary>Работ: {{t.items.length}} <span v-if="t.unavailable">· недоступно: {{t.unavailable}}</span></summary><p v-for="w in t.items" :key="w.id">{{w.code}} · {{w.name}}</p></details></td><td>{{t.author}}</td></tr></tbody></table></div>
 <UModal v-if="creating" open title="Новый шаблон работ" @update:open="v=>{if(!pending)creating=v}"><template #body><form id="odis-template-form" @submit.prevent="save"><fieldset class="odis-records" :disabled="pending">

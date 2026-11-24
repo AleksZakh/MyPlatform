@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import DiagnosticModuleTabs from '../DiagnosticModuleTabs.vue';
 import { computed, ref } from 'vue';
-import { onBeforeRouteLeave } from 'vue-router';
+import { onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router';
 import { useWorkLibrary, workError } from '~/composables/diagnostic/useWorkLibrary';
 import type { WorkRecord, WorkInput } from '~~/shared/types/diagnostic-works';
 const { rows, catalog, permissions, loading, busy, loadError, search, category, group, filtered, filterCategories,
@@ -47,13 +46,14 @@ async function deleteCurrent() {
   try { await remove(selected.value, deleteReason.value); opened.value = false; notice.value = 'Работа удалена из активного справочника. История сохранена.'; }
   catch (e) { error.value = workError(e); }
 }
-onBeforeRouteLeave(() => !busy.value && (!dirty.value || window.confirm('Уйти без сохранения изменений формы?')));
+const canLeave = () => !busy.value && (!dirty.value || window.confirm('Уйти без сохранения изменений формы?'));
+onBeforeRouteLeave(canLeave);
+onBeforeRouteUpdate((to, from) => to.query.module === from.query.module || canLeave());
 </script>
 <template>
 <section class="work-library">
-  <DiagnosticModuleTabs active="works"/>
+  
   <div class="wl-content">
-    <div class="wl-tabs"><strong>Список работ</strong><button disabled title="Следующий этап">Наборы работ · позже</button></div>
     <div class="wl-toolbar">
       <label class="wl-search"><Icon name="lucide:search"/><input v-model="search" aria-label="Поиск работ" type="search" placeholder="Поиск по шифру, названию и описанию"/></label>
       <select v-model="group" aria-label="Группа"><option :value="0">Все группы</option><option v-for="g in catalog.groups" :key="g.id" :value="g.id">{{ g.name }}</option></select>

@@ -2,6 +2,21 @@
 import DiagnosticModuleTabs from '../DiagnosticModuleTabs.vue';
 import {journalKinds,type JournalRow,type JournalPage} from '~~/shared/types/diagnostic-journal';
 import {diagnosticWorkStatus} from '~~/shared/utils/diagnostic-contract-table';
+const badges = {
+ DiagnosticContract: { icon: 'lucide:file-text', tone: 'blue' },
+ DiagnosticTrip: { icon: 'lucide:briefcase-business', tone: 'amber' },
+ DiagnosticWorkTemplate: { icon: 'lucide:list-tree', tone: 'violet' },
+ DiagnosticContractWork: { icon: 'lucide:clipboard-list', tone: 'blue' },
+ DiagnosticStructureWork: { icon: 'lucide:wrench', tone: 'teal' },
+ DiagnosticStructure: { icon: 'lucide:construction', tone: 'teal' },
+ DiagnosticContractStructure: { icon: 'lucide:link-2', tone: 'teal' },
+ DiagnosticWork: { icon: 'lucide:book-open', tone: 'violet' },
+ DiagnosticWorkPlan: { icon: 'lucide:calendar-days', tone: 'blue' },
+ DiagnosticPlanCompletion: { icon: 'lucide:list-checks', tone: 'green' },
+ DiagnosticCounterparty: { icon: 'lucide:handshake', tone: 'amber' },
+ DiagnosticProjectType: { icon: 'lucide:folders', tone: 'violet' },
+ DiagnosticWorkCategory: { icon: 'lucide:tags', tone: 'violet' },
+} satisfies Record<keyof typeof journalKinds, {icon:string; tone:string}>;
 const kind=ref(''),search=ref(''),person=ref(''),from=ref(''),to=ref(''),page=ref(1);
 const history=ref<JournalRow|null>(null),historyPage=ref(1);
 const searchTerm=ref(''),personTerm=ref('');
@@ -34,9 +49,16 @@ const stamp=(s:string)=>new Date(s).toLocaleString('ru-RU',{timeZone:'Europe/Mos
 <label>С <input v-model="from" type="date"/></label><label>по <input v-model="to" type="date"/></label><button @click="reset">Сбросить</button></div>
 <p v-if="error" role="alert">{{error.message||'Не удалось загрузить журнал.'}} <button @click="refresh()">Повторить</button></p>
 <div class="records-scroll"><table><thead><tr><th>Событие</th><th>Основные данные</th><th>Дата и время, МСК</th><th>Создано</th><th>Автор</th><th>Кто изменил</th><th>История</th></tr></thead>
-<tbody><tr v-for="r in data?.rows" :key="r.id"><td>{{journalKinds[r.kind]}} · {{action(r.action)}}</td><td>{{r.title}}</td><td>{{stamp(r.time)}}</td><td>{{r.created?stamp(r.created):'—'}}</td><td>{{r.author||'—'}}</td><td>{{r.editor||'—'}}</td><td><button title="История записи" aria-label="История записи" @click="historyPage=1;history=r"><Icon name="lucide:history"/></button></td></tr></tbody></table><p v-if="status==='pending'">Загрузка журнала…</p><p v-else-if="!error&&!data?.rows.length">Событий за выбранный период нет.</p></div>
+<tbody><tr v-for="r in data?.rows" :key="r.id"><td><div class="journal-event"><span aria-hidden="true" class="journal-badge" :class="badges[r.kind].tone"><Icon :name="badges[r.kind].icon"/></span><span><strong>{{journalKinds[r.kind]}}</strong><small>{{action(r.action)}}</small></span></div></td><td>{{r.title}}</td><td>{{stamp(r.time)}}</td><td>{{r.created?stamp(r.created):'—'}}</td><td>{{r.author||'—'}}</td><td>{{r.editor||'—'}}</td><td><button title="История записи" aria-label="История записи" @click="historyPage=1;history=r"><Icon name="lucide:history"/></button></td></tr></tbody></table><p v-if="status==='pending'">Загрузка журнала…</p><p v-else-if="!error&&!data?.rows.length">Событий за выбранный период нет.</p></div>
 <footer><button :disabled="page===1" @click="page--">Назад</button>{{page}} / {{Math.ceil((data?.total||0)/25)||1}}<button :disabled="page*25>=(data?.total||0)" @click="page++">Вперёд</button></footer>
 <UModal v-if="history" open title="История записи" :description="history.title" @update:open="v=>{if(!v)history=null}"><template #body><div class="odis-records"><p v-if="issue" role="alert">{{issue}}</p><div v-for="r in events?.rows" :key="r.id"><p>{{stamp(r.time)}} · {{action(r.action)}} · {{r.editor||'—'}} <span v-if="r.status">· {{diagnosticWorkStatus(r.status).title}}</span></p>
  <ul v-if="r.details"><li v-for="(v,k) in r.details" :key="k">{{fieldNames[k]||k}}: {{value(k,v.before)}} → {{value(k,v.after)}}</li></ul></div>
 <footer><button :disabled="historyPage===1" @click="historyPage--">Назад</button>{{historyPage}}<button :disabled="historyPage*25>=(events?.total||0)" @click="historyPage++">Вперёд</button></footer></div></template></UModal>
 </section></template>
+
+<style scoped>
+.journal-event{display:flex;gap:8px;align-items:center}.journal-event small{display:block;color:var(--ui-text-muted)}
+.journal-badge{display:grid;place-items:center;flex:none;width:32px;height:32px;border-radius:8px;color:var(--ink);background:var(--wash)}
+.journal-badge .iconify{font-size:17px}.blue{--ink:#145d8a;--wash:#e0f2fe}.teal{--ink:#126364;--wash:#d7f4ef}.amber{--ink:#874b09;--wash:#fff0c7}.violet{--ink:#594486;--wash:#eee8fb}.green{--ink:#21643d;--wash:#ddf4e4}
+html.dark .journal-badge{color:var(--wash);background:color-mix(in srgb,var(--ink) 60%,#202d36)}
+</style>
