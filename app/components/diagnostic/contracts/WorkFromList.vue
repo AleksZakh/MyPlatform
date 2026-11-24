@@ -5,7 +5,7 @@ import type {ContractWorkRecord} from '~~/shared/types/diagnostic-contract-works
 import type {ContractStructureWorkRecord} from '~~/shared/types/diagnostic-contract-details';
 import WorkCard from './WorkCard.vue';
 import TripFromList from '../trips/TripFromList.vue';
-const props=defineProps<{source:CalendarRow;canEdit:boolean;employees:CalendarEmployee[]}>();
+const props=defineProps<{source:CalendarRow;canEdit:boolean;startEditing?:boolean;employees:CalendarEmployee[]}>();
 const emit=defineEmits<{close:[]}>();
 const detail=ref<{row:ContractWorkRecord|ContractStructureWorkRecord;linkId?:number;isso?:string}>();
 const error=ref('');
@@ -27,9 +27,9 @@ async function load(){
 onMounted(load);
 </script>
 <template>
- <TripFromList v-if="source.kind==='trip'" :id="source.id" :contract-id="source.contractId" @close="emit('close')"/>
+ <TripFromList v-if="source.kind==='trip'" :id="source.id" :edit="startEditing && canEdit" :contract-id="source.contractId" @close="emit('close')"/>
  <WorkCard v-else-if="detail" v-bind="detail" :kind="source.kind" :contract-id="source.contractId" :contract-number="source.contractNumber"
-   :employees="employees" :can-edit="canEdit" @saved="emit('close')" @close="emit('close')"/>
+   :start-editing="startEditing" :employees="employees" :can-edit="canEdit" @saved="emit('close')" @close="emit('close')"/>
  <UModal v-else open title="Карточка работы" @update:open="v=>{if(!v)emit('close')}">
   <template #body><p v-if="error" role="alert">{{error}} <button @click="load">Повторить</button></p><p v-else role="status">Загрузка работы…</p></template>
  </UModal>

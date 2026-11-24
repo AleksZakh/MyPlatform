@@ -1,5 +1,5 @@
 <template>
-  <UFooter class="bg-sky-100">
+  <UFooter class="bg-sky-100" :class="{ 'space-home-footer': $route.path === '/' }">
     <template #left>
       <div>
         <UColorModeButton class="mr-5" />
@@ -108,6 +108,13 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+@media screen {
+  :global(html.dark:not([data-space-contrast="high"]) .layout-wrapper > footer.space-home-footer) {
+    background-color: #1f3245 !important;
+    color: #f2f7fc;
+    border-top: 1px solid #627b90;
+  }
+}
 .about-footer-link { color: inherit; white-space: nowrap; }
 .about-footer-link:focus-visible { outline: 2px solid var(--space-accent, #2563eb); outline-offset: 3px; }
 .max-messenger-fixed {

@@ -15,10 +15,12 @@ const props = defineProps<{
   linkId?: number | null;
   isso?: string;
   canEdit: boolean;
+  startEditing?: boolean;
   employees: { id: number; name: string }[];
 }>();
 const emit = defineEmits<{ close: []; saved: [] }>();
-const editing = ref(false),
+const { user } = useUserSession();
+const editing = ref(!!props.startEditing && props.canEdit && !props.row.tripManaged),
   pending = ref(false),
   error = ref('');
 const groups = [
@@ -66,6 +68,9 @@ const changes = computed(() => {
   if (draft.autoComplete !== props.row.autoComplete) result.autoComplete = draft.autoComplete;
   return result;
 });
+const missingExecutor = computed(() => !!(draft.factStart || draft.factFinish) &&
+  !(draft.factExecutor === 'original' ? props.row.factExecutor.trim() : draft.factExecutor));
+const currentPerson = computed(() => props.employees.find(person => person.id === user.value?.id));
 const dirty = computed(() => Object.keys(changes.value).length > 0);
 function dismiss(close: boolean) {
   if (pending.value || (editing.value && dirty.value && !window.confirm('Отменить изменения работы?')))
@@ -78,7 +83,7 @@ function dismiss(close: boolean) {
   }
 }
 async function save() {
-  if (!dirty.value || pending.value) return;
+  if (!dirty.value || pending.value || missingExecutor.value) return;
   pending.value = true;
   error.value = '';
   try {
@@ -140,6 +145,10 @@ async function save() {
         <p v-else>
           Исполнитель: <strong>{{ row[group.executor] || 'Не назначен' }}</strong>
         </p>
+        <p v-if="editing && group.executor === 'factExecutor' && missingExecutor" role="alert">
+          Для фактических дат выберите исполнителя.
+          <button v-if="currentPerson" type="button" class="underline" @click="draft.factExecutor = String(currentPerson.id)">Указать меня ({{ currentPerson.name }})</button>
+        </p>
         <div class="ow-fields">
           <div v-for="key in [group.start, group.finish] as const" :key="key">
             <span>{{ key === group.start ? 'Начало' : 'Окончание' }}</span>
@@ -178,7 +187,7 @@ async function save() {
     </template>
     <template #footer>
       <template v-if="editing">
-        <button class="ow-primary" :disabled="pending || !dirty" @click="save">
+        <button class="ow-primary" :disabled="pending || !dirty || missingExecutor" @click="save">
           {{ pending ? 'Сохранение…' : 'Сохранить' }}
         </button>
         <button :disabled="pending" @click="dismiss(false)">Отмена</button>

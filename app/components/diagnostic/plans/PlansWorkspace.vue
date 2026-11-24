@@ -2,7 +2,7 @@
 import {ref,computed,watch,onMounted,onBeforeUnmount} from 'vue';
 import TripDateInput from '../trips/TripDateInput.vue';
 import {plansWeek,parsePlansPeriod,type PlansPeriodMode} from '~~/shared/utils/diagnostic-plans-period';
-import {onWorkChange} from '~/composables/diagnostic/workChanges';
+import {onWorkChange,publishWorkChange} from '~/composables/diagnostic/workChanges';
 import WorkFromList from '../contracts/WorkFromList.vue';
 import PlanEditor from './PlanEditor.vue';
 import WorkStatusIcon from '../contracts/WorkStatusIcon.vue';
@@ -10,7 +10,8 @@ import WorkStatusLegend from '../contracts/WorkStatusLegend.vue';
 import {regionalCenterCode} from '~~/shared/utils/diagnostic-regional-center';
 import type {EmployeePlansResult,PlanWorkRow} from '~~/shared/types/diagnostic-plans';
 import {calendarShortName} from '~~/shared/utils/diagnostic-calendar';
-import {tripDateLabel} from '~~/shared/utils/diagnostic-trips';
+import {tripToday} from '~~/shared/utils/diagnostic-trip-lifecycle';
+import {tripDay,tripDateLabel} from '~~/shared/utils/diagnostic-trips';
 import DiagnosticModuleTabs from '../DiagnosticModuleTabs.vue';
 const auditing=ref(false);
 const openedWork=ref<PlanWorkRow|null>(null),canEditWork=ref(false);
@@ -35,7 +36,72 @@ const pages=computed(()=>Math.max(1,Math.ceil((data.value?.total||0)/(data.value
 const summaryReady=computed(()=>!busy.value&&!error.value&&!!data.value);
 const summaryTitle=computed(()=>{const h=data.value?.hoursSummary;if(!h)return 'Итог ещё не загружен';return ['Количество и сумма часов по всем отобранным строкам, включая другие страницы. В сумме используется план; если плановых часов нет — факт.',h.missing?`Без указанных часов: ${h.missing}. Сумма неполная.`:'',h.shared?`Строк с общими часами нескольких исполнителей: ${h.shared}. Эти значения не разделены между участниками.`:'',h.estimated?`Строк с расчётными часами поездок: ${h.estimated}.`:'',h.factOnly?`Строк с фактом вместо плана: ${h.factOnly}.`:''].filter(Boolean).join(' ');});
 const summaryHours=computed(()=>{const h=data.value?.hoursSummary;return h?h.hours.replace('.',',')+(h.missing||h.shared?' *':h.estimated?' ≈':''):'—';});
-function cancelCurrent(){generation++;controller?.abort();clearTimeout(timer);}
+const canDelete=ref(false), editingRow=ref(false), mutating=ref(false), actionError=ref('');
+const selected=ref(new Set<string>()), anchor=ref('');
+const factStart=ref(''), factFinish=ref(''), totalHours=ref('');
+const selectedRows=computed(()=>(data.value?.rows??[]).filter(r=>selected.value.has(r.key)));
+const selectedEmployee=computed(()=>employee.value==='me'?data.value?.currentUser.id:employee.value==='all'?undefined:Number(employee.value));
+const eligible=computed(()=>tab.value==='staff' && !busy.value && !mutating.value && !error.value &&
+  canEditWork.value && !!selectedEmployee.value && selectedRows.value.length>0 &&
+  selectedRows.value.every(r=>r.employeeId===selectedEmployee.value && r.status==='in_progress' && r.kind!=='trip' && !r.tripManaged));
+const manual=computed(()=>!!(factStart.value||factFinish.value||totalHours.value));
+const completionHint=computed(()=>{
+  if (!selected.value.size) return '';
+  if (!selectedEmployee.value) return 'Для завершения выберите сотрудника над таблицей.';
+  if (!eligible.value) return 'Завершить можно работы выбранного сотрудника со статусом «Выполняется».';
+  if (!manual.value) return 'Будут использованы плановые даты и часы каждой работы.';
+  return 'Общее время будет разделено поровну между выбранными работами.';
+});
+function resetSelection(){
+  selected.value=new Set();anchor.value='';factStart.value='';factFinish.value='';totalHours.value='';actionError.value='';
+}
+function selectRow(row:PlanWorkRow,event:MouseEvent|KeyboardEvent){
+  if(mutating.value)return;
+  const additive=event.ctrlKey||event.metaKey;
+  const next=additive?new Set(selected.value):new Set<string>();
+  const rows=data.value?.rows??[];
+  const first=rows.findIndex(r=>r.key===anchor.value);
+  if(event.shiftKey && first>=0){
+    const end=rows.findIndex(r=>r.key===row.key);
+    rows.slice(Math.min(first,end),Math.max(first,end)+1).forEach(r=>next.add(r.key));
+  }else{
+    if(additive&&next.has(row.key))next.delete(row.key);else next.add(row.key);
+    anchor.value=row.key;
+  }
+  selected.value=next;actionError.value='';planNotice.value='';
+}
+function openRow(row:PlanWorkRow,edit=false){if(mutating.value)return;editingRow.value=edit;openedWork.value=row;}
+const writeOptions={headers:{'x-space-diagnostic':'1'},retry:0 as const};
+async function complete(){
+  if(!eligible.value)return;
+  if(manual.value && (!tripDay(factStart.value)||!tripDay(factFinish.value)||factStart.value>factFinish.value||factFinish.value>tripToday()||!/^\d{1,10}([.,]\d{1,4})?$/.test(totalHours.value.trim()))){
+    actionError.value='Заполните обе фактические даты по порядку, не позднее сегодняшнего дня, и общее время. Для закрытия по плану очистите все три поля.'; return;
+  }
+  const rows=selectedRows.value.map(({kind,id,contractId,version})=>({kind,id,contractId,version}));
+  actionError.value='';mutating.value=true;
+  try{
+    const result=await $fetch<{count:number}>('/api/diagnostic/plans/complete',{...writeOptions,method:'POST',
+      body:{rows,employeeId:selectedEmployee.value,start:factStart.value,finish:factFinish.value,hours:totalHours.value.trim()}});
+    planNotice.value='Завершено работ: '+result.count+'.';publishWorkChange();
+  }catch(e:any){actionError.value=e?.data?.message||'Не удалось завершить выбранные работы.';}
+  finally{mutating.value=false;}
+}
+async function removeRow(row:PlanWorkRow){
+  if(!canDelete.value || row.tripManaged || mutating.value)return;
+  const trip=row.kind==='trip';
+  const prompt=trip?'Удалить командировку и связанные с ней работы для всех участников?':'Удалить эту работу из договора и списков всех её исполнителей?';
+  if(!window.confirm(prompt+'\n'+row.contractNumber+' · '+row.name))return;
+  mutating.value=true;actionError.value='';
+  try{
+    await $fetch(trip?'/api/diagnostic/trips/'+row.id:`/api/diagnostic/contracts/${row.contractId}/assignments/${row.kind}/${row.id}`,
+      {...writeOptions,method:'DELETE',body:{version:row.version,confirmed:true}});
+    planNotice.value=trip?'Командировка удалена.':'Работа удалена.';publishWorkChange();
+  }catch(e:any){actionError.value=e?.data?.message||'Не удалось удалить запись.';}
+  finally{mutating.value=false;}
+}
+onMounted(async()=>{try{canDelete.value=(await $fetch<{allowed:boolean}>('/api/access/check',{query:{resource:'diagnostic.contracts',action:'DELETE'}})).allowed;}catch{canDelete.value=false;}});
+
+function cancelCurrent(){resetSelection();generation++;controller?.abort();clearTimeout(timer);}
 function pause(signal:AbortSignal){return new Promise<void>((resolve,reject)=>{const abort=()=>{clearTimeout(t);reject(new Error('Отменено'));};const t=setTimeout(()=>{signal.removeEventListener('abort',abort);resolve();},1000);signal.addEventListener('abort',abort,{once:true});if(signal.aborted)abort();});}
 async function load(){
  if(tab.value!=='staff')return;cancelCurrent();const g=generation,c=new AbortController();controller=c;busy.value=true;error.value='';
@@ -69,7 +135,7 @@ function moveTab(event:KeyboardEvent){tab.value=tab.value==='staff'?'external':'
 </script>
 <template>
  <section class="odis-plans">
-  <WorkFromList v-if="openedWork" :key="openedWork.key" :source="openedWork" :can-edit="canEditWork" :employees="data?.employees??[]" @close="openedWork=null"/>
+  <WorkFromList v-if="openedWork" :key="openedWork.key" :source="openedWork" :start-editing="editingRow" :can-edit="canEditWork" :employees="data?.employees??[]" @close="openedWork=null"/>
   <PlanEditor v-if="planning" @close="planning=false" @saved="planSaved"/><p v-if="planNotice" role="status">{{planNotice}}</p>
   <DiagnosticModuleTabs active="plans"><label class="opr-search"><Icon name="lucide:search" aria-hidden="true"/><input v-model="search" type="search" placeholder="Работа, договор, ФИО, ИССО" aria-label="Поиск работ" :disabled="tab!=='staff'"/></label></DiagnosticModuleTabs>
   <header class="opr-title"><h1>Планы и отчёты</h1></header>
@@ -92,12 +158,14 @@ function moveTab(event:KeyboardEvent){tab.value=tab.value==='staff'?'external':'
       <label class="opr-employee"><span>{{tab==='staff'?'Сотрудник':'Исполнитель'}}</span><select v-if="tab==='staff'" v-model="employee" aria-label="Сотрудник" :title="data?.warning||''"><option value="me">Мои работы{{data?.currentUser.name?' · '+calendarShortName(data.currentUser.name):''}}</option><option value="all">Все сотрудники</option><option v-for="person in data?.employees" :key="person.id" :value="String(person.id)">{{person.name}}</option></select><select v-else disabled aria-label="Внешний исполнитель"><option>Не выбран</option></select></label>
       <div class="opr-completion">
        <span>Факт. даты</span>
-       <div class="opr-date"><input type="text" placeholder="дд.мм.гггг" aria-label="Фактическая дата начала" disabled/><Icon name="lucide:calendar-days" aria-hidden="true"/></div>
-       <div class="opr-date"><input type="text" placeholder="дд.мм.гггг" aria-label="Фактическая дата окончания" disabled/><Icon name="lucide:calendar-days" aria-hidden="true"/></div>
-       <label class="opr-hours">Затр. время, чел·ч<input type="text" inputmode="decimal" aria-label="Фактические человеко-часы" disabled/></label>
-       <button class="opr-button" type="button" disabled title="Завершение работ станет доступно на следующем этапе"><Icon name="lucide:clipboard-check" aria-hidden="true"/>Завершить</button>
+       <TripDateInput v-model="factStart" label="Фактическая дата начала" :disabled="!eligible"/>
+       <TripDateInput v-model="factFinish" label="Фактическая дата окончания" :disabled="!eligible"/>
+       <label class="opr-hours">Затр. время, чел·ч<input v-model="totalHours" type="text" inputmode="decimal" aria-label="Общее фактическое время" :disabled="!eligible"/></label>
+       <button class="opr-button" type="button" :disabled="!eligible" @click="complete"><Icon name="lucide:clipboard-check" aria-hidden="true"/>Завершить</button>
       </div>
      </div>
+     <p v-if="selected.size" class="opr-selection-info" role="status">Выбрано: {{selected.size}}. {{completionHint}}</p>
+     <p v-if="actionError" class="opr-error" role="alert">{{actionError}}</p>
      <form v-if="tab==='staff'&&filtersOpen" id="odis-plans-date-filters" class="opr-date-filters" @submit.prevent="applyPeriod">
       <label>Период<select v-model="draftMode" aria-label="Режим периода"><option value="worklist">Текущая неделя, будущие и незакрытые</option><option value="period">Выбранный период</option><option value="all">Все даты</option></select></label>
       <label v-if="draftMode==='period'">С<TripDateInput v-model="draftFrom" label="Начало периода"/></label><label v-if="draftMode==='period'">По<TripDateInput v-model="draftTo" label="Конец периода"/></label>
@@ -117,21 +185,25 @@ function moveTab(event:KeyboardEvent){tab.value=tab.value==='staff'?'external':'
      <p v-if="tab==='staff'&&error" class="opr-error" role="alert">{{error}} <button class="opr-button" @click="load">Повторить</button></p>
      <div class="opr-table-scroll" role="region" aria-label="Таблица планов" :aria-busy="busy" tabindex="0">
       <table>
-       <caption class="opr-sr-only">{{tab==='staff'?'Планы сотрудников':'Планы внешних исполнителей'}}</caption>
-       <colgroup><col class="opr-col-status"/><col class="opr-col-regional"/><col class="opr-col-person"/><col class="opr-col-contract"/><col class="opr-col-type"/><col class="opr-col-code"/><col class="opr-col-location"/><col class="opr-col-work"/><col class="opr-col-time"/><col class="opr-col-period"/><col class="opr-col-note"/><col class="opr-col-marker"/></colgroup>
-       <thead><tr><th scope="col" class="opr-center">Статус</th><th scope="col">Р/Ц</th><th scope="col">{{tab==='staff'?'ФИО':'Исполнитель'}}</th><th scope="col">№ договора</th><th scope="col">Тип</th><th scope="col">Код ИССО</th><th scope="col">км+м</th><th scope="col">Название работ</th><th scope="col" aria-label="Трудоёмкость, человеко-часы" title="Трудоёмкость, чел·ч"><Icon name="lucide:timer" aria-hidden="true"/></th><th scope="col">Срок выполнения</th><th scope="col">Примечания</th><th scope="col" aria-label="Отметка" title="Отметка"><svg class="opr-marker-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="m12 3 9 9-9 9-9-9 9-9Z"/><path d="M12 8v5m0 3h.01"/></svg></th></tr></thead>
+       <caption class="opr-sr-only">{{tab==='staff'?'Планы сотрудников. Ctrl — выбрать отдельные работы, Shift — диапазон.':'Планы внешних исполнителей'}}</caption>
+       <colgroup><col class="opr-col-status"/><col class="opr-col-regional"/><col class="opr-col-person"/><col class="opr-col-contract"/><col class="opr-col-type"/><col class="opr-col-code"/><col class="opr-col-location"/><col class="opr-col-work"/><col class="opr-col-time"/><col class="opr-col-period"/><col class="opr-col-note"/><col class="opr-col-marker"/><col class="opr-col-actions"/></colgroup>
+       <thead><tr><th scope="col" class="opr-center">Статус</th><th scope="col">Р/Ц</th><th scope="col">{{tab==='staff'?'ФИО':'Исполнитель'}}</th><th scope="col">№ договора</th><th scope="col">Тип</th><th scope="col">Код ИССО</th><th scope="col">км+м</th><th scope="col">Название работ</th><th scope="col" aria-label="Трудоёмкость, человеко-часы" title="Трудоёмкость, чел·ч"><Icon name="lucide:timer" aria-hidden="true"/></th><th scope="col">Срок выполнения</th><th scope="col">Примечания</th><th scope="col" aria-label="Отметка" title="Отметка"><svg class="opr-marker-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="m12 3 9 9-9 9-9-9 9-9Z"/><path d="M12 8v5m0 3h.01"/></svg></th><th scope="col" class="opr-center" aria-label="Действия">Действия</th></tr></thead>
        <tbody>
-        <tr v-if="tab==='external'"><td colspan="12" class="opr-empty"><p>Список внешних исполнителей пока недоступен.</p></td></tr>
-        <tr v-else-if="busy"><td colspan="12" class="opr-empty" role="status">Загрузка работ…</td></tr>
-        <tr v-else-if="error"><td colspan="12" class="opr-empty">Не удалось загрузить список работ.</td></tr>
+        <tr v-if="tab==='external'"><td colspan="13" class="opr-empty"><p>Список внешних исполнителей пока недоступен.</p></td></tr>
+        <tr v-else-if="busy"><td colspan="13" class="opr-empty" role="status">Загрузка работ…</td></tr>
+        <tr v-else-if="error"><td colspan="13" class="opr-empty">Не удалось загрузить список работ.</td></tr>
         <template v-else>
-         <tr v-for="row in data?.rows" :key="row.key" class="opr-work-row" tabindex="0" @dblclick="openedWork=row" @keydown.enter.self.prevent="openedWork=row">
+         <tr v-for="row in data?.rows" :key="row.key" class="opr-work-row" tabindex="0" :class="{'opr-selected':selected.has(row.key)}" :aria-selected="selected.has(row.key)" @click="selectRow(row,$event)" @keydown.space.self.prevent="selectRow(row,$event)" @dblclick="openRow(row)" @keydown.enter.self.prevent="openRow(row)">
           <td class="opr-center"><WorkStatusIcon :status="row.status"/></td><td :title="centerTitle(row)">{{regionalCenterCode(row.regionalCenter)}}</td><td :title="row.employeeName">{{calendarShortName(row.employeeName)}}</td><td>{{row.contractNumber}}</td><td>{{row.documentType}}</td><td>{{row.structureCode||'—'}}</td><td>{{row.location||'—'}}</td><td class="opr-work-name" :title="row.name">{{row.name}}</td>
           <td :title="hourTitle(row)">{{row.planHours===null&&row.factHours!==null?'Ф: ':''}}{{row.planHours??row.factHours??'—'}}{{row.planShared||row.planHours===null&&row.factShared?' *':row.planEstimated?' ≈':''}}</td>
           <td :title="periodTitle(row)">{{row.planStart||row.planFinish?'':row.factStart||row.factFinish?'Ф: ':''}}{{rowPeriod(row)}}</td><td class="opr-work-note" :title="row.note">{{row.note||'—'}}</td>
           <td class="opr-center"><span v-if="row.warning" class="opr-data-warning" :title="row.warning" aria-label="Есть замечание к работе">!</span><span v-else>—</span></td>
+          <td class="opr-center opr-actions" @click.stop @dblclick.stop>
+           <button type="button" title="Редактировать" :aria-label="'Редактировать: '+row.name" :disabled="mutating||!canEditWork||row.tripManaged||(row.kind==='trip'&&row.status==='completed')" @click="openRow(row,true)"><Icon name="lucide:square-pen"/></button>
+           <button type="button" title="Удалить" :aria-label="'Удалить: '+row.name" :disabled="mutating||!canDelete||row.tripManaged" @click="removeRow(row)"><Icon name="lucide:trash-2"/></button>
+          </td>
          </tr>
-         <tr v-if="data && !data.rows.length"><td colspan="12" class="opr-empty"><p>{{search?'По вашему запросу ничего не найдено.':'Для выбранного сотрудника работы не найдены.'}}</p></td></tr>
+         <tr v-if="data && !data.rows.length"><td colspan="13" class="opr-empty"><p>{{search?'По вашему запросу ничего не найдено.':'Для выбранного сотрудника работы не найдены.'}}</p></td></tr>
         </template>
        </tbody>
       </table>

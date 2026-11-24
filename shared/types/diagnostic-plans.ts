@@ -1,7 +1,7 @@
 import type {PlansPeriod} from '../utils/diagnostic-plans-period';
 import type {PlansHoursSummary} from '../utils/diagnostic-plans-totals';
 import type {CalendarEmployee,CalendarRow} from './diagnostic-calendar';
-export interface PlanWorkRow extends CalendarRow {location:string;note:string;warning:string;documentType:string;regionalCenter:string;regionalCenterSource:'database'|'ad'|'missing'|'unavailable'}
+export interface PlanWorkRow extends CalendarRow {version:number;tripManaged:boolean;location:string;note:string;warning:string;documentType:string;regionalCenter:string;regionalCenterSource:'database'|'ad'|'missing'|'unavailable'}
 export interface EmployeePlansResult {
  audit?: {
   controls: ReturnType<typeof import('../utils/diagnostic-plans-control').komovControls>

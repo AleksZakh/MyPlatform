@@ -157,11 +157,15 @@ export async function updateAssignment(
       !next.planExecutor
     )
       return invalid('Для работы с плановыми датами выберите исполнителя.');
+    if ((next.factStart || next.factFinish) && !next.factExecutor.trim())
+      return invalid('Для фактических дат выберите фактического исполнителя.');
     if (
       ['factStart', 'factFinish', 'factHours', 'factExecutor'].some((k) => k in patch) &&
       (next.factStart || next.factFinish || next.factHours !== null)
     ) {
-      if (!next.factExecutor && !('factExecutor' in patch)) next.factExecutor = next.planExecutor;
+
+      if (!next.factStart && !next.factFinish && !next.factExecutor && !('factExecutor' in patch))
+        next.factExecutor = next.planExecutor;
       if (!next.factExecutor) return invalid('Укажите фактического исполнителя.');
       if (next.factFinish && next.factHours === null)
         return invalid('Для завершения укажите фактические трудозатраты.');

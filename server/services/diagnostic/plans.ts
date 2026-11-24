@@ -117,13 +117,13 @@ export async function readEmployeePlans(event:H3Event,q:Record<string,unknown>):
   enter('pageDetails');
   check();const result=collector.finish();
   // Fetch free text/location only for visible records, never for the whole register.
-  const info=new Map<string,{note:string;location:string;warning:string}>();
+  const info=new Map<string,{version:number;tripManaged:boolean;note:string;location:string;warning:string}>();
   const ids=(kind:string)=>[...new Set(result.rows.filter(r=>r.kind===kind).map(r=>r.id))];
   const contractIds=ids('contract'),structureIds=ids('structure'),tripIds=ids('trip');
-  if(contractIds.length)for(const w of await tx.diagnosticContractWork.findMany({where:{id:{in:contractIds}},take:PLAN_PAGE,select:{id:true,note:true}}))info.set('contract:'+w.id,{note:w.note,location:'',warning:''});
-  check();if(structureIds.length)for(const w of await tx.diagnosticStructureWork.findMany({where:{id:{in:structureIds}},take:PLAN_PAGE,select:{id:true,note:true,warning:true,contractStructure:{select:{structure:{select:{location:true}}}}}}))info.set('structure:'+w.id,{note:w.note,location:w.contractStructure.structure.location,warning:w.warning});
-  check();if(tripIds.length)for(const t of await tx.diagnosticTrip.findMany({where:{id:{in:tripIds}},take:PLAN_PAGE,select:{id:true,note:true}}))info.set('trip:'+t.id,{note:t.note,location:'',warning:''});
-  check();const rows:PlanWorkRow[]=result.rows.map(r=>({...r,documentType:'Договор',regionalCenter:'',regionalCenterSource:'missing',...(info.get(r.kind+':'+r.id)??{note:'',location:'',warning:''})}));
+  if(contractIds.length)for(const w of await tx.diagnosticContractWork.findMany({where:{id:{in:contractIds}},take:PLAN_PAGE,select:{id:true,note:true,version:true,tripCompletion:{select:{tripId:true}}}}))info.set('contract:'+w.id,{version:w.version,tripManaged:!!w.tripCompletion,note:w.note,location:'',warning:''});
+  check();if(structureIds.length)for(const w of await tx.diagnosticStructureWork.findMany({where:{id:{in:structureIds}},take:PLAN_PAGE,select:{id:true,note:true,warning:true,version:true,tripCompletion:{select:{tripId:true}},contractStructure:{select:{structure:{select:{location:true}}}}}}))info.set('structure:'+w.id,{version:w.version,tripManaged:!!w.tripCompletion,note:w.note,location:w.contractStructure.structure.location,warning:w.warning});
+  check();if(tripIds.length)for(const t of await tx.diagnosticTrip.findMany({where:{id:{in:tripIds}},take:PLAN_PAGE,select:{id:true,note:true,version:true}}))info.set('trip:'+t.id,{version:t.version,tripManaged:false,note:t.note,location:'',warning:''});
+  check();const rows:PlanWorkRow[]=result.rows.map(r=>({...r,documentType:'Договор',regionalCenter:'',regionalCenterSource:'missing',...info.get(r.kind+':'+r.id)!}));
   return {audit,period,currentUser,employees:roster.employees,selection,rows,total:result.total,hoursSummary:result.hoursSummary,page,pageSize,warning,unresolvedWorks:0,unlinkedTravelWorks:0,nextCursor:result.hasMore?writePlanCursor(result.rows[result.rows.length-1]!,context):null};
  },{isolationLevel:'RepeatableRead',maxWait:2000,timeout:75000});
  enter('regionalCenters');
