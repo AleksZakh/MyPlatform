@@ -230,17 +230,21 @@
                       <template #empty>Нет материалов по остальным условиям</template>
                     </USelectMenu>
                   </UFormField>
-                  <ul v-if="selectedMaterials.length" class="selected-materials" aria-label="Выбранные материалы">
-                    <li v-for="material in selectedMaterials" :key="material">
-                      <span>{{ material }}</span>
-                      <button type="button" class="filter-clear" :aria-label="`Убрать материал ${material}`"
-                        @click="selectedMaterials = selectedMaterials.filter(value => value !== material)">×</button>
-                    </li>
-                  </ul>
-                  <p v-else class="text-xs mt-2 opacity-70">Без ограничения по материалам</p>
-                  <p v-if="legacyMaterial" class="text-xs mt-2 opacity-70">Из старого шаблона: поиск по части названия. При изменении выбора будут использоваться точные названия.</p>
-                  <button v-if="selectedMaterials.length" type="button" class="text-xs mt-2 underline"
-                    @click="selectedMaterials = []">Очистить материалы</button>
+                  <div class="selected-materials-viewport">
+                    <ul v-if="selectedMaterials.length" class="selected-materials" aria-label="Выбранные материалы">
+                      <li v-for="material in selectedMaterials" :key="material">
+                        <span>{{ material }}</span>
+                        <button type="button" class="filter-clear" :aria-label="`Убрать материал ${material}`"
+                          @click="selectedMaterials = selectedMaterials.filter(value => value !== material)">×</button>
+                      </li>
+                    </ul>
+                    <p v-else class="text-xs opacity-70">Без ограничения по материалам</p>
+                    <p v-if="legacyMaterial" class="text-xs mt-2 opacity-70">Из старого шаблона: поиск по части названия. При изменении выбора будут использоваться точные названия.</p>
+                  </div>
+                  <div class="material-selection-actions">
+                    <button v-if="selectedMaterials.length" type="button" class="text-xs underline"
+                      @click="selectedMaterials = []">Очистить материалы</button>
+                  </div>
                 </div>
 
                 
@@ -498,9 +502,12 @@ function resetFilters() {
 
 <style scoped>
 .material-selection { border-block: 2px solid var(--space-border, #cbd5e1); padding-block: 12px; }
-.selected-materials { margin-top: 8px; max-height: 160px; overflow-y: auto; padding: 0; list-style: none; }
-.selected-materials li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 0; font-size: 13px; border-bottom: 1px solid var(--space-border, #e2e8f0); }
+.selected-materials-viewport { height: 104px; min-height: 104px; max-height: 104px; margin-top: 6px; overflow-y: auto; scrollbar-gutter: stable; }
+.selected-materials { margin: 0; padding: 0; list-style: none; }
+.material-selection-actions { height: 24px; display: flex; align-items: center; }
+.selected-materials li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 0; font-size: 13px; line-height: 20px; border-bottom: 1px solid var(--space-border, #e2e8f0); }
 .selected-materials li span { overflow-wrap: anywhere; }
+.selected-materials .filter-clear { padding: 0 4px; font-size: 18px; line-height: 20px; }
 .filter-clear { flex-shrink: 0; padding: 2px 7px; font-size: 20px; cursor: pointer; opacity: .8; }
 .filter-clear:hover { opacity: 1; }
 .material-checkbox { display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; border: 1px solid currentColor; border-radius: 3px; flex-shrink: 0; }
