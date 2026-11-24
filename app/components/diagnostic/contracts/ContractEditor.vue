@@ -87,7 +87,7 @@ function stage(selection:ContractSelection){
 function serializeSelections(){
  const manual=selections.value.filter(s=>!s.template);
  return {
-  templates:selections.value.flatMap(s=>s.template?[{templateId:s.template.id,structureIds:s.structures.map(r=>Number(r.id))}]:[]),
+  templates:selections.value.flatMap(s=>s.template?[{templateId:s.template.id,version:s.template.version,structureIds:s.structures.map(r=>Number(r.id))}]:[]),
   additions:{workIds:manual.flatMap(s=>s.works.map(w=>w.id)),structureIds:manual.flatMap(s=>s.structures.map(r=>Number(r.id)))}
  };
 }

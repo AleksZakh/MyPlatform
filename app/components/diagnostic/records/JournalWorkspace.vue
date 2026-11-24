@@ -23,7 +23,7 @@ const searchTerm=ref(''),personTerm=ref('');
 let timer:ReturnType<typeof setTimeout>;
 watch([search,person],()=>{clearTimeout(timer);timer=setTimeout(()=>{searchTerm.value=search.value;personTerm.value=person.value;},300);});
 onBeforeUnmount(()=>clearTimeout(timer));
-const fieldNames:Record<string,string>={name:'Название',number:'Номер',status:'Статус',planStart:'Плановое начало',planFinish:'Плановое окончание',planHours:'План, чел·ч',planExecutor:'Плановый исполнитель',factStart:'Фактическое начало',factFinish:'Фактическое окончание',factHours:'Факт, чел·ч',factExecutor:'Фактический исполнитель',note:'Примечание',start:'Начало',finish:'Окончание',category:'Категория',deletedAt:'Удаление'};
+const fieldNames:Record<string,string>={name:'Название',number:'Номер',status:'Статус',planStart:'Плановое начало',planFinish:'Плановое окончание',planHours:'План, чел·ч',planExecutor:'Плановый исполнитель',factStart:'Фактическое начало',factFinish:'Фактическое окончание',factHours:'Факт, чел·ч',factExecutor:'Фактический исполнитель',note:'Примечание',start:'Начало',finish:'Окончание',category:'Категория',items:'Работы (ID)',deletedAt:'Удаление'};
 function value(field:string,v:unknown){
  if(v===null||v===undefined||v==='')return '—';
  if(field==='status')return diagnosticWorkStatus(String(v)).title;

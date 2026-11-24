@@ -1,45 +1,99 @@
 import {Prisma} from '@prisma/client';
-import type {H3Event} from 'h3';
+import {createError,type H3Event} from 'h3';
 import {prisma} from '../../utils/prisma';
-import {writeAuditEvent} from '../../utils/auditLog';
+import {computeAuditDelta,writeAuditEvent} from '../../utils/auditLog';
 import {id,invalid} from './input';
 import {categoryNames,type Category} from '../../../shared/utils/diagnostic-planning';
 import type {ContractAdditions,TemplateUse,WorkTemplate} from '../../../shared/types/diagnostic-templates';
 
 export async function listTemplates(db:Prisma.TransactionClient=prisma,ids?:number[]){
   const usable=Prisma.sql`w."deletedAt" IS NULL AND cat.name=CASE t.category WHEN 'contract' THEN ${categoryNames.contract} WHEN 'structure' THEN ${categoryNames.structure} ELSE ${categoryNames.other} END`;
-  return db.$queryRaw<WorkTemplate[]>`SELECT t.id,t.name,t.category,coalesce(nullif(u."fullName",''),u.login,'#'||u.id) author,
+  return db.$queryRaw<WorkTemplate[]>`SELECT t.id,t.version,t.name,t.category,coalesce(nullif(u."fullName",''),u.login,'#'||u.id) author,
     count(*) FILTER(WHERE NOT (${usable}))::int unavailable,
     coalesce(jsonb_agg(jsonb_build_object('id',w.id,'name',w.name,'code',w.code,'note',w.note) ORDER BY w.code) FILTER(WHERE ${usable}),'[]'::jsonb) items
     FROM odis.template t JOIN app_users u ON u.id=t.creator JOIN odis.template_item i ON i.template_id=t.id
     JOIN diagnostic_works w ON w.id=i.work_id JOIN diagnostic_work_categories cat ON cat.id=w."categoryId"
-    ${ids?Prisma.sql`WHERE t.id IN (${Prisma.join(ids)})`:Prisma.empty} GROUP BY t.id,u.id ORDER BY t.name,t.id`;
+    WHERE t.deleted_at IS NULL ${ids?Prisma.sql`AND t.id IN (${Prisma.join(ids)})`:Prisma.empty} GROUP BY t.id,u.id ORDER BY t.name,t.id`;
 }
 function identifiers(raw:unknown):number[]{
   if(!Array.isArray(raw))return invalid('Некорректный список записей.');
   return [...new Set(raw.map(id))];
 }
-export async function createTemplate(event:H3Event,actor:number,body:any){
+function parseTemplate(body:any){
   const category:Category=body?.category;
   const name=typeof body?.name==='string'?body.name.trim():'';
   if(typeof category!=='string'||!Object.hasOwn(categoryNames,category)||!name||name.length>150)return invalid('Укажите название и категорию шаблона.');
-  const ids=identifiers(body.items);
-  if(!ids.length)return invalid('Выберите хотя бы одну работу.');
-  return prisma.$transaction(async tx=>{
-    const count=await tx.diagnosticWork.count({where:{id:{in:ids},deletedAt:null,category:{name:categoryNames[category]}}});
-    if(count!==ids.length)return invalid('Все работы должны быть доступны в выбранной категории.');
-    const [t]=await tx.$queryRaw<{id:number}[]>`INSERT INTO odis.template(name,category,creator) VALUES(${name},${category},${actor})
-      ON CONFLICT(category,name) DO NOTHING RETURNING id`;
-    if(!t)return invalid('В этой категории уже есть шаблон с таким названием.');
-    await tx.$executeRaw`INSERT INTO odis.template_item(template_id,work_id) SELECT ${t.id},id FROM diagnostic_works WHERE id IN (${Prisma.join(ids)})`;
-    await writeAuditEvent({event,db:tx,category:'DATA',result:'SUCCESS',action:'CREATE',resourceKey:'diagnostic.contracts',entityType:'DiagnosticWorkTemplate',entityId:t.id,actorUserId:actor,note:name,afterData:{category,items:ids}});
-    return t;
-  },{isolationLevel:'Serializable'});
+  const items=identifiers(body.items).sort((a,b)=>a-b);
+  if(!items.length)return invalid('Выберите хотя бы одну работу.');
+  return {category,name,items};
+}
+
+function conflict(){
+  return createError({statusCode:409,message:'Шаблон изменён или удалён другим пользователем. Откройте актуальную версию.'});
+}
+
+async function templateTransaction<T>(write:(tx:Prisma.TransactionClient)=>Promise<T>){
+  try{return await prisma.$transaction(write,{isolationLevel:'Serializable'});}
+  catch(e){
+    if(e instanceof Prisma.PrismaClientKnownRequestError){
+      if(e.code==='P2034'||e.meta?.code==='40001')throw conflict();
+      if(e.meta?.code==='23505')return invalid('В этой категории уже есть шаблон с таким названием.');
+    }
+    throw e;
+  }
+}
+
+async function currentTemplate(tx:Prisma.TransactionClient,templateId:number,version:number){
+  const [before]=await listTemplates(tx,[templateId]);
+  if(!before||before.version!==version)throw conflict();
+  return before;
+}
+
+export async function saveTemplate(event:H3Event,actor:number,body:any,templateId?:number){
+  const next=parseTemplate(body);
+  const version=templateId?id(body.version):undefined;
+  return templateTransaction(async tx=>{
+    const count=await tx.diagnosticWork.count({where:{id:{in:next.items},deletedAt:null,category:{name:categoryNames[next.category]}}});
+    if(count!==next.items.length)return invalid('Все работы должны быть доступны в выбранной категории.');
+    const before=templateId?await currentTemplate(tx,templateId,version!):null;
+    let savedId:number;
+    if(before){
+      const duplicate=await tx.$queryRaw<{id:number}[]>`SELECT id FROM odis.template WHERE deleted_at IS NULL AND category=${next.category} AND name=${next.name} AND id<>${before.id}`;
+      if(duplicate.length)return invalid('В этой категории уже есть шаблон с таким названием.');
+      const updated=await tx.$executeRaw`UPDATE odis.template SET name=${next.name},category=${next.category},version=version+1
+        WHERE id=${before.id} AND version=${before.version} AND deleted_at IS NULL`;
+      if(updated!==1)throw conflict();
+      savedId=before.id;
+    }else{
+      const [created]=await tx.$queryRaw<{id:number}[]>`INSERT INTO odis.template(name,category,creator) VALUES(${next.name},${next.category},${actor})
+        ON CONFLICT DO NOTHING RETURNING id`;
+      if(!created)return invalid('В этой категории уже есть шаблон с таким названием.');
+      savedId=created.id;
+    }
+    const prior=before?await tx.$queryRaw<{work_id:number}[]>`SELECT work_id FROM odis.template_item WHERE template_id=${savedId} ORDER BY work_id`:[];
+    if(before)await tx.$executeRaw`DELETE FROM odis.template_item WHERE template_id=${savedId}`;
+    await tx.$executeRaw`INSERT INTO odis.template_item(template_id,work_id) SELECT ${savedId},id FROM diagnostic_works WHERE id IN (${Prisma.join(next.items)})`;
+    const changes=before?computeAuditDelta({name:before.name,category:before.category,items:prior.map(w=>w.work_id)},next):undefined;
+    await writeAuditEvent({event,db:tx,category:'DATA',result:'SUCCESS',action:before?'UPDATE':'CREATE',resourceKey:'diagnostic.contracts',
+      entityType:'DiagnosticWorkTemplate',entityId:savedId,actorUserId:actor,note:next.name,afterData:next,changes});
+    return {id:savedId};
+  });
+}
+
+export async function removeTemplate(event:H3Event,actor:number,templateId:number,version:number){
+  return templateTransaction(async tx=>{
+    const before=await currentTemplate(tx,templateId,version);
+    const removed=await tx.$executeRaw`UPDATE odis.template SET deleted_at=now(),version=version+1 WHERE id=${templateId} AND version=${version} AND deleted_at IS NULL`;
+    if(removed!==1)throw conflict();
+    await writeAuditEvent({event,db:tx,category:'DATA',result:'SUCCESS',action:'DELETE',resourceKey:'diagnostic.contracts',
+      entityType:'DiagnosticWorkTemplate',entityId:templateId,actorUserId:actor,note:before.name});
+    return {id:templateId};
+  });
 }
 export function templateUses(raw:unknown):TemplateUse[]{
   if(raw===undefined)return [];
   if(!Array.isArray(raw))return invalid('Некорректный выбор шаблонов.');
-  return raw.map(x=>({templateId:id(x?.templateId),structureIds:identifiers(x?.structureIds)}));
+  return raw.map(x=>({templateId:id(x?.templateId),version:x?.version===undefined?undefined:id(x.version),structureIds:identifiers(x?.structureIds)}));
 }
 export function contractAdditions(raw:unknown):ContractAdditions {
   if(raw===undefined)return {workIds:[],structureIds:[]};
@@ -60,9 +114,10 @@ export async function applyTemplates(tx:Prisma.TransactionClient,contractId:numb
   for(const sid of manual.structureIds)byStructure.set(sid,new Set());
   for(const use of uses){
     const t=index.get(use.templateId);
-    if(!t || (t.category==='structure')!==!!use.structureIds.length)return invalid('Категория шаблона не соответствует выбранному разделу.');
+    if(!t||(use.version!==undefined&&use.version!==t.version))throw createError({statusCode:409,message:'Шаблон изменён или удалён. Уберите его из состава договора и выберите заново.'});
+    if((t.category==='structure')!==!!use.structureIds.length)return invalid('Категория шаблона не соответствует выбранному разделу.');
     const ids=t.items.map(w=>w.id);
-    if(t.unavailable||!ids.length)return invalid('Состав библиотеки изменился. Создайте актуальный шаблон вместо «'+t.name+'».');
+    if(t.unavailable||!ids.length)return invalid('Состав библиотеки изменился. Обновите состав шаблона «'+t.name+'».');
     for(const sid of (use.structureIds.length?use.structureIds:[0])){
       const selected=byStructure.get(sid)??new Set<number>();ids.forEach(w=>selected.add(w));byStructure.set(sid,selected);
     }

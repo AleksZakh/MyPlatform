@@ -43,7 +43,7 @@ function toggle(s:StructureListRow){
 function apply(){
  if(!ready.value)return;
  emit('apply',{
-  template:active.value?{id:active.value.id,name:active.value.name}:undefined,
+  template:active.value?{id:active.value.id,version:active.value.version,name:active.value.name}:undefined,
   works:active.value?.items??library.value.filter(w=>workIds.value.includes(w.id)),
   structures:[...selected.value.values()]
  });

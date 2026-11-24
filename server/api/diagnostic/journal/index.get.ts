@@ -47,7 +47,7 @@ export default defineEventHandler(async event=>{
  WHERE ${Prisma.join(conditions,' AND ')}`;
  const details=q.entry||q.entity?Prisma.sql`(SELECT jsonb_object_agg(field.key,field.value) FROM jsonb_each(
    CASE WHEN jsonb_typeof(e.changes)='object' THEN e.changes ELSE '{}'::jsonb END) field
-   WHERE field.key IN ('name','number','status','planStart','planFinish','planHours','planExecutor','factStart','factFinish','factHours','factExecutor','note','start','finish','category','deletedAt'))`:Prisma.sql`NULL::jsonb`;
+   WHERE field.key IN ('name','number','status','planStart','planFinish','planHours','planExecutor','factStart','factFinish','factHours','factExecutor','note','start','finish','category','deletedAt') OR (e."entityType"='DiagnosticWorkTemplate' AND field.key='items'))`:Prisma.sql`NULL::jsonb`;
  const [count,rows]=await prisma.$transaction([
    prisma.$queryRaw<{n:number}[]>`SELECT count(*)::int n ${from}`,
    prisma.$queryRaw<JournalRow[]>`SELECT e.id,e."entityType" kind,e."entityId" entity,${title} title,
