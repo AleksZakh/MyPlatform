@@ -49,6 +49,7 @@ export async function advanceDueWorks() {
   return prisma.$transaction(async (tx) => {
     const [gate] = await tx.$queryRaw<{ locked: boolean }[]>`SELECT pg_try_advisory_xact_lock(71924, -48210) AS locked`;
     if (!gate?.locked) return false;
+    await tx.$executeRaw`SELECT set_config('odis.system', '1', true)`;
     const contracts = await tx.$executeRaw(dueWorkBatch('contract'));
     const structures = await tx.$executeRaw(dueWorkBatch('structure'));
     return contracts === batchSize || structures === batchSize;

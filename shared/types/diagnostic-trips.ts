@@ -4,7 +4,7 @@ export interface TripInput {
  assignment:string;equipment:string;transport:string;accommodation:string;note:string;participantIds:number[];structureIds:number[];
 }
 export interface TripStructureItem {id:number;code:string;structureName:string;roadName:string;location:string;additionalId:string;region:string;locationMetres:number|null}
-export interface TripRecord extends TripInput {
+export interface TripRecord extends TripInput {author?:string;
  id:number;number:string;version:number;status:TripStatus;contractNumber:string;executor:string;
  participants:{id:number;name:string;factHours?:string|null}[];previousNumber?:string|null;emails?:{userId:number;status:string;error:string|null}[];linkedWorkCount?:number;structures:TripStructureItem[];legacyIds:number[];closedAt:string|null;
 }

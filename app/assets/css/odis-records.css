@@ -1,0 +1,11 @@
+.odis-records{color:var(--space-text,inherit);display:flex;flex-direction:column;gap:8px;min-height:0}
+section.odis-records{height:100%;padding:0 12px 10px}
+.odis-records header,.odis-records footer,.journal-filters{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.odis-records header{justify-content:space-between;padding:10px 0}.odis-records h1{font-size:20px;font-weight:600}
+.odis-records :is(input:not([type=checkbox]),select,button),.template-pick-button{padding:4px 9px;border-radius:4px;border:1px solid var(--space-line,#c9d6e2);background:var(--space-field,#fff);color:inherit}
+.odis-records button:disabled{opacity:.5}.records-scroll{overflow:auto;flex:1;min-height:0}
+.odis-records table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
+.odis-records :is(td,th){text-align:left;padding:6px 9px;border-bottom:1px solid var(--space-line,#d5dee6)}
+.odis-records th{position:sticky;top:0;background:var(--space-panel,#edf4fa)}
+.odis-records footer{justify-content:flex-end}.template-work{display:block;font-size:13px}
+.odis-records [role=alert]{color:var(--ui-error)}

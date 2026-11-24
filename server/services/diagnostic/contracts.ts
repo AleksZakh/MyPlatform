@@ -6,9 +6,11 @@ import {writeAuditEvent,computeAuditDelta} from '../../utils/auditLog';
 import {contractStatus} from '../../../shared/utils/diagnostic-contracts';
 import type {ContractInput,ContractRecord} from '../../../shared/types/diagnostic-contracts';
 import {diagnosticSupervisors} from './supervisors';
+import {applyTemplates,templateUses} from './work-templates';
+import {structureAccess} from './structure-access';
 import {CONTRACT_RESOURCE} from './access';
-async function atomic<T>(fn:(tx:Prisma.TransactionClient)=>Promise<T>):Promise<T>{
- try{return await prisma.$transaction(fn,{isolationLevel:Prisma.TransactionIsolationLevel.Serializable,timeout:10000});}
+async function atomic<T>(fn:(tx:Prisma.TransactionClient)=>Promise<T>,timeout=10000):Promise<T>{
+ try{return await prisma.$transaction(fn,{isolationLevel:Prisma.TransactionIsolationLevel.Serializable,timeout});}
  catch(e){if(e instanceof Prisma.PrismaClientKnownRequestError && ['P2034','P2002'].includes(e.code))throw createError({statusCode:409,message:'Данные изменены параллельно. Обновите список и повторите действие.'});throw e;}
 }
 const include={relatedContract:{select:{number:true}},counterparty:true,projectType:true,supervisor:{select:{id:true,fullName:true,login:true,deletedAt:true}},_count:{select:{structures:{where:{deletedAt:null}}}}} satisfies Prisma.DiagnosticContractInclude;
@@ -36,7 +38,9 @@ export async function readContract(id:number){
  if(!row)throw createError({statusCode:404,message:'Договор не найден.'});
  return (await withAuthors([serializeContract(row)]))[0]!;
 }
-export async function saveContract(event:H3Event,actorId:number,input:ContractInput,contractId?:number,version?:number){
+export async function saveContract(event:H3Event,actorId:number,input:ContractInput,contractId?:number,version?:number,uses?:unknown){
+ const templates=templateUses(uses);
+ if(templates.some(t=>t.structureIds.length))await structureAccess(event);
  // AD queries run outside transactions.
  if(input.supervisorId!=null){
   const allowed=await diagnosticSupervisors(event);
@@ -64,10 +68,12 @@ export async function saveContract(event:H3Event,actorId:number,input:ContractIn
    if(result.count!==1)throw createError({statusCode:409,message:'Договор изменился. Обновите карточку.'});
    row=await tx.diagnosticContract.findUniqueOrThrow({where:{id:before.id},include});
   }else row=await tx.diagnosticContract.create({data:{...data,createdById:actorId},include});
+  await applyTemplates(tx,row.id,actorId,templates);
+  if(templates.some(t=>t.structureIds.length))row=await tx.diagnosticContract.findUniqueOrThrow({where:{id:row.id},include});
   const after=serializeContract(row);
   await writeAuditEvent({event,db:tx,category:'DATA',result:'SUCCESS',action:before?'UPDATE':'CREATE',resourceKey:CONTRACT_RESOURCE,entityType:'DiagnosticContract',entityId:row.id,actorUserId:actorId,note:'Договор '+row.number,changes:computeAuditDelta(before?{...serializeContract(before)}:{},{...after})});
   return (await withAuthors([after],tx))[0]!;
- });
+ },templates.length?60000:10000);
 }
 export async function deleteContract(event:H3Event,actorId:number,id:number,version:number,restore=false){
  return atomic(async tx=>{

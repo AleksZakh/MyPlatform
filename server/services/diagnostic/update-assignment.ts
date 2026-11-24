@@ -36,7 +36,7 @@ export async function updateAssignment(
   )
     return invalid('Проверьте изменённые поля работы.');
   const assignees: Partial<Record<(typeof people)[number], string>> = {};
-  const roster = people.some((k) => k in patch && patch[k] !== null) ? await calendarRoster(event) : null;
+  const roster = people.some((k) => k in patch && patch[k] !== null) || patch.planStart ? await calendarRoster(event) : null;
   for (const key of people) {
     if (!(key in patch)) continue;
     if (patch[key] === null) {
@@ -210,6 +210,11 @@ export async function updateAssignment(
       updatedById: actorId,
       version: { increment: 1 },
     };
+    if (next.planExecutor && (next.planExecutor !== before.planExecutor || !before.planStart && next.planStart)) {
+      const match = calendarResolver(roster?.users??[])(next.planExecutor);
+      if (!match.unresolved && match.ids.length===1)
+        await tx.$executeRaw`SELECT set_config('odis.employee', ${String(match.ids[0])}, true)`;
+    }
     const updated =
       kind === 'contract'
         ? await tx.diagnosticContractWork.updateMany({

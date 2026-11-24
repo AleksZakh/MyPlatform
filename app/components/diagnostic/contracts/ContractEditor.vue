@@ -6,6 +6,8 @@ import type {CalendarRow} from '~~/shared/types/diagnostic-calendar';
 import TripFromList from '../trips/TripFromList.vue';
 import {vRevealWorkRow} from './revealWorkRow';
 import {tripDateLabel} from '~~/shared/utils/diagnostic-trips';
+import TemplatePicker from '../records/TemplatePicker.vue';
+import type {TemplateUse} from '~~/shared/types/diagnostic-templates';
 import ContractWorks from './ContractWorks.vue';
 import ContractStructures from './ContractStructures.vue';
 import {contractDateTime} from '~~/shared/utils/diagnostic-contract-search';
@@ -65,7 +67,15 @@ function chooseName(kind:'counterparties'|'project-types',value:string){
  else{projectTypeName.value=item?.name||value;form.projectTypeId=item?.id??null;}
 }
 
-const snapshot=()=>JSON.stringify({form,counterparty:counterpartyName.value,projectType:projectTypeName.value});
+const templatePicker=ref(false);
+const pendingTemplates=ref<(TemplateUse & {name:string})[]>([]);
+function stageTemplate(use:TemplateUse,name:string){
+ const existing=pendingTemplates.value.find(t=>t.templateId===use.templateId);
+ if(existing)existing.structureIds=[...new Set([...existing.structureIds,...use.structureIds])];
+ else pendingTemplates.value.push({...use,name});
+ templatePicker.value=false;
+}
+const snapshot=()=>JSON.stringify({form,templates:pendingTemplates.value,counterparty:counterpartyName.value,projectType:projectTypeName.value});
 const initial=snapshot(),dirty=computed(()=>snapshot()!==initial);
 const incomeContracts=computed(()=>props.catalog.incomeContracts.filter(r=>r.id!==c?.id));
 const auxiliary=ref<'documents'|'summary'|null>(null);
@@ -89,7 +99,7 @@ async function save(){
  if(!form.number.trim()||!form.date||!counterpartyName.value.trim()||!form.direction){tab.value=0;error.value='Укажите номер, дату заключения, контрагента и тип договора.';return;}
  if(form.finish&&(form.finish<form.date||(form.start&&form.finish<form.start))){tab.value=0;error.value='Окончание работ не может быть раньше заключения договора или начала работ.';return;}
  saving.value=true;
- try{await resolveNames();const saved=await $fetch<ContractRecord>('/api/diagnostic/contracts'+(c?'/'+c.id:''),{method:c?'PUT':'POST',headers:{'x-space-diagnostic':'1'},body:{...form,version:c?.version}});emit('save',saved);}
+ try{await resolveNames();const saved=await $fetch<ContractRecord>('/api/diagnostic/contracts'+(c?'/'+c.id:''),{method:c?'PUT':'POST',headers:{'x-space-diagnostic':'1'},body:{...form,version:c?.version,templates:pendingTemplates.value.map(({templateId,structureIds})=>({templateId,structureIds}))}});emit('save',saved);}
  catch(e){error.value=message(e);tab.value=0;}finally{saving.value=false;}
 }
 function moveTab(event:KeyboardEvent,index:number,step:number){tab.value=(index+step+tabs.length)%tabs.length;const buttons=(event.currentTarget as HTMLElement).closest('[role=tablist]')?.querySelectorAll<HTMLButtonElement>('[role=tab]');buttons?.[tab.value]?.focus();}
@@ -150,8 +160,14 @@ const summaryColumns=[
       </tr></tbody></table>
      <TripFromList v-if="tripOpen" :id="trip.id" :contract-id="trip.contractId" @close="tripOpen=false"/>
     </div>
-    <ContractWorks v-if="tab===1" :focus-id="focusWork?.kind==='contract'?focusWork.id:undefined" :contract-id="contract?.id??null" :contract-number="contract?.number??''" :employees="catalog.supervisors" :can-edit="canEditWorks??canEdit" @count="counts.works=$event" />
-    <ContractStructures v-if="tab===2" :focus-id="focusWork?.kind==='structure'?focusWork.id:undefined" :focus-link="focusWork?.kind==='structure'?focusWork.linkId:undefined" :contract-id="contract?.id??null" :contract-number="contract?.number??''" :employees="catalog.supervisors" :can-edit="canEditWorks??canEdit" @count="counts.structures=$event" />
+    <div v-if="!readOnly && (tab===1||tab===2)" class="odis-template-actions">
+     <button class="template-pick-button" type="button" @click="templatePicker=true">Использовать шаблон</button>
+     <p v-if="pendingTemplates.some(t=>!!t.structureIds.length===(tab===2))">Будут добавлены при сохранении договора</p>
+     <p v-for="t in pendingTemplates.filter(t=>!!t.structureIds.length===(tab===2))" :key="t.templateId">{{t.name}} <span v-if="t.structureIds.length">· сооружений: {{t.structureIds.length}}</span> <button type="button" @click="pendingTemplates=pendingTemplates.filter(x=>x!==t)">Убрать</button></p>
+    </div>
+    <TemplatePicker v-if="templatePicker" :structure="tab===2" @close="templatePicker=false" @apply="stageTemplate"/>
+    <ContractWorks v-if="tab===1 && contract" :focus-id="focusWork?.kind==='contract'?focusWork.id:undefined" :contract-id="contract?.id??null" :contract-number="contract?.number??''" :employees="catalog.supervisors" :can-edit="canEditWorks??canEdit" @count="counts.works=$event" />
+    <ContractStructures v-if="tab===2 && contract" :focus-id="focusWork?.kind==='structure'?focusWork.id:undefined" :focus-link="focusWork?.kind==='structure'?focusWork.linkId:undefined" :contract-id="contract?.id??null" :contract-number="contract?.number??''" :employees="catalog.supervisors" :can-edit="canEditWorks??canEdit" @count="counts.structures=$event" />
    </div>
   </template>
   <template #footer><div class="contract-footer-content"><div class="contract-secondary-actions"><button type="button" @click="auxiliary='documents'"><Icon name="lucide:folder-open" />Документы к договору</button><button type="button" @click="auxiliary='summary'"><Icon name="lucide:table-2" />Сводная таблица работ</button></div><small>{{ readOnly?'Режим просмотра':'Поля со звёздочкой обязательны. Остальные можно заполнить позже.' }}</small><div v-if="confirmClose" class="contract-discard" role="alert">Отменить несохранённые изменения?<button :disabled="saving" @click="emit('close')">Да, закрыть</button><button @click="confirmClose=false">Продолжить</button></div><div class="contract-footer-actions"><button v-if="contract&&readOnly&&canEdit" type="button" @click="emit('edit')"><Icon name="lucide:pencil" />Редактировать</button><button v-if="!readOnly" :disabled="saving||catalogBusy" class="contract-save" type="submit" form="diagnostic-contract-form">{{ saving?'Сохранение…':'Сохранить' }}</button><button @click="close">{{ readOnly?'Закрыть':'Отменить' }}</button></div></div></template>

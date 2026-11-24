@@ -297,6 +297,7 @@ export async function savePlanning(event: H3Event, actorId: number, body: unknow
           },
         });
         const catalog = new Map(works.map((w) => [w.id, w]));
+        await tx.$executeRaw`SELECT set_config('odis.employee', ${String(input.employeeId)}, true)`;
         const data = {
           planStart: new Date(input.start),
           planFinish: new Date(input.finish),

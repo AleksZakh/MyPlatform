@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive, ref, onMounted } from 'vue';
 import type { ContractWorkRecord } from '~~/shared/types/diagnostic-contract-works';
 import { diagnosticWorkStatus } from '~~/shared/utils/diagnostic-contract-table';
 import { tripDateLabel } from '~~/shared/utils/diagnostic-trips';
@@ -18,6 +18,8 @@ const props = defineProps<{
   startEditing?: boolean;
   employees: { id: number; name: string }[];
 }>();
+const planner=ref('');
+onMounted(async()=>{try{const info=await $fetch<{author:string|null}>(`/api/diagnostic/contracts/${props.contractId}/assignments/author`,{query:{kind:props.kind,workId:props.row.id}});planner.value=info.author??'';}catch{/* The work remains available during a directory outage. */}});
 const emit = defineEmits<{ close: []; saved: [] }>();
 const { user } = useUserSession();
 const editing = ref(!!props.startEditing && props.canEdit && !props.row.tripManaged),
@@ -125,6 +127,7 @@ async function save() {
         <WorkStatusIcon :status="row.status" />
         <h3>{{ row.name }}</h3>
       </div>
+      <p v-if="planner" class="ow-meta">Работу назначил: {{planner}}</p>
       <p class="ow-meta">
         {{ diagnosticWorkStatus(row.status).title }} · Шифр: {{ row.code
         }}<template v-if="isso"> · Код ИССО: {{ isso }}</template>
