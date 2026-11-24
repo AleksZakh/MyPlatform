@@ -15,7 +15,7 @@ const listError=ref(''),issue=ref(''),libraryError=ref(''),stale=ref(false);
 const visibleWorks=computed(()=>library.value.filter(w=>w.category===category.value));
 const title=computed(()=>dialog.value==='delete'?'Удалить шаблон работ':dialog.value==='edit'?'Редактировать шаблон работ':'Новый шаблон работ');
 const canSave=computed(()=>!!name.value.trim()&&ids.value.length>0&&!loadingWorks.value&&!libraryError.value&&!stale.value&&!pending.value);
-const modalUi={header:'template-modal-header',body:'template-modal-body',footer:'template-modal-footer'};
+const modalUi={header:'ow-chrome',description:'ow-number',body:'ow-body',footer:'ow-chrome ow-footer'};
 const headers={'x-space-diagnostic':'1','Content-Type':'application/json'};
 let request=0;
 
@@ -88,61 +88,80 @@ async function submit(){
    <p v-if="!templates.length&&!listError">{{loading?'Загрузка шаблонов…':'Шаблонов работ пока нет.'}}</p>
   </div>
   <UModal v-if="dialog" open :title="title" :description="dialog==='create'?undefined:selected?.name"
-    :dismissible="!pending" :close="!pending" :ui="{...modalUi,content:'odis-template-modal '+(dialog==='delete'?'template-confirm':'template-wide')}"
+    :dismissible="!pending" :close="!pending" :ui="{...modalUi,content:'diagnostic-contract-modal odis-work-card odis-template-modal '+(dialog==='delete'?'template-confirm':'template-wide')}"
     @update:open="v=>{if(!v)close()}">
    <template #body>
     <template v-if="dialog==='delete'"><p>Удалить шаблон «{{selected?.name}}» из библиотеки?</p><p class="template-hint">Работы, уже добавленные в договоры, сохранятся.</p></template>
     <form v-else id="odis-template-form" @submit.prevent="submit">
-     <fieldset :disabled="pending||stale">
-      <div class="template-fields">
-       <label>Название<input v-model="name" maxlength="150" required/></label>
-       <label>Категория<select v-model="category" @change="ids=[]"><option v-for="(label,key) in categoryNames" :key="key" :value="key">{{label}}</option></select></label>
+     <fieldset class="template-content" :disabled="pending||stale">
+      <div class="ow-fields template-fields">
+       <label>Название<input class="ow-value" v-model="name" maxlength="150" required/></label>
+       <label>Категория<select class="ow-value" v-model="category" @change="ids=[]"><option v-for="(label,key) in categoryNames" :key="key" :value="key">{{label}}</option></select></label>
       </div>
       <p v-if="selected?.unavailable" class="template-hint">Недоступных работ: {{selected.unavailable}}. При сохранении в шаблон войдут только отмеченные работы.</p>
-      <div class="template-list-heading"><strong>Работы из библиотеки</strong><span>Выбрано: {{ids.length}}</span></div>
+      <fieldset class="ow-section template-library">
+       <legend>Работы из библиотеки <small>Выбрано: {{ids.length}}</small></legend>
       <p v-if="loadingWorks" role="status">Загрузка работ…</p>
       <p v-else-if="libraryError" role="alert">{{libraryError}} <button type="button" @click="loadWorks">Повторить</button></p>
       <p v-else-if="!visibleWorks.length">В этой категории пока нет работ.</p>
       <div v-else class="template-grid" role="group" aria-label="Работы из библиотеки">
        <label v-for="w in visibleWorks" :key="w.id"><input v-model="ids" type="checkbox" :value="w.id"/><span><b>{{w.code}}</b> · {{w.name}}</span></label>
       </div>
+      </fieldset>
      </fieldset>
     </form>
     <p v-if="issue" role="alert">{{issue}}</p>
    </template>
-   <template #footer><div class="template-modal-actions">
-    <button type="button" :disabled="pending" @click="close">Отмена</button>
+   <template #footer>
     <button v-if="dialog==='delete'" type="button" class="template-delete" :disabled="pending||stale" @click="submit">Удалить</button>
-    <button v-else form="odis-template-form" type="submit" class="template-save" :disabled="!canSave">Сохранить</button>
-   </div></template>
+    <button v-else form="odis-template-form" type="submit" class="ow-primary" :disabled="!canSave">Сохранить</button>
+    <button type="button" :disabled="pending" @click="close">Отмена</button>
+   </template>
   </UModal>
  </section>
 </template>
 
+<style src="~/assets/css/diagnostic-work-card.css"></style>
 <style>
-.odis-template-modal{--tm-bg:#fff;--tm-text:#253647;--tm-chrome:#485a69;--tm-field:#fff;--tm-soft:#edf4fa;--tm-line:#c7d3df;--tm-muted:#506478;--tm-error:#a32626;display:flex;flex-direction:column;max-height:90dvh;background:var(--tm-bg)!important;color:var(--tm-text)}
-html.dark .odis-template-modal{--tm-bg:#293b4a;--tm-text:#edf3f8;--tm-chrome:#344553;--tm-field:#20313f;--tm-soft:#344b5e;--tm-line:#61778b;--tm-muted:#c0d1dd;--tm-error:#ffc1b8;color-scheme:dark}
-.odis-template-modal.template-wide{width:min(960px,calc(100vw - 32px));max-width:960px}
-.odis-template-modal.template-confirm{width:min(460px,calc(100vw - 32px));max-width:460px}
-.odis-template-modal .template-modal-header,.odis-template-modal .template-modal-footer{flex:none;padding:12px 20px;background:var(--tm-chrome);color:#fff;border-color:var(--tm-line)}
-.odis-template-modal .template-modal-header :is(h2,p,button){color:inherit}
-.odis-template-modal .template-modal-header button:hover{background:#ffffff24}
-.odis-template-modal .template-modal-body{padding:16px 20px;min-height:0;overflow:auto}
-.odis-template-modal form,.odis-template-modal fieldset{margin:0;min-width:0;border:0;padding:0}
-.template-fields{display:grid;grid-template-columns:3fr 2fr;gap:14px}
-.template-fields label{display:grid;gap:5px;font-size:14px;font-weight:600}
-.template-fields :is(select,input){width:100%;min-width:0;min-height:34px;padding:5px 9px;font:inherit;font-weight:400;background:var(--tm-field);color:var(--tm-text);border:1px solid var(--tm-line);border-radius:4px}
-.template-list-heading,.template-modal-actions,.template-row-actions{display:flex;align-items:center;gap:8px}
-.template-list-heading{justify-content:space-between;margin:14px 0 6px;font-size:14px}.template-list-heading span,.template-hint{font-size:13px;color:var(--tm-muted)}.template-hint{padding-top:6px}
-.template-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;max-height:48dvh;overflow:auto;overscroll-behavior:contain;border:1px solid var(--tm-line);border-radius:4px}
-.template-grid label{display:flex;gap:8px;align-items:baseline;padding:6px 10px;font-size:13px;line-height:1.35;border-bottom:1px solid var(--tm-line);overflow-wrap:anywhere;cursor:pointer}
-.template-grid label:nth-child(odd){border-right:1px solid var(--tm-line)}.template-grid label:hover,.template-grid label:has(:checked){background:var(--tm-soft)}
-.template-grid input{flex:none;accent-color:#176b88}
-.template-modal-actions{width:100%;justify-content:flex-end}.template-modal-actions button,.odis-template-modal [role=alert] button{border:1px solid var(--tm-line);border-radius:4px;padding:5px 12px;min-height:32px;background:var(--tm-field);color:var(--tm-text)}
-.template-modal-actions .template-save{background:#176b88;color:#fff}.template-modal-actions .template-delete{background:#953d3d;color:#fff}
-.odis-template-modal button:disabled{opacity:.55}.odis-template-modal :focus-visible{outline:2px solid #319ac1;outline-offset:1px}.odis-template-modal [role=alert]{color:var(--tm-error);margin-top:8px}
+.diagnostic-contract-modal.odis-template-modal.template-wide { width: min(95vw, 960px); }
+.diagnostic-contract-modal.odis-template-modal.template-confirm { width: min(95vw, 460px); }
+.odis-template-modal form, .template-content { width: 100%; min-width: 0; margin: 0; padding: 0; border: 0; }
+.odis-template-modal .template-fields { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); margin-top: 0; }
+.template-library { margin-top: 14px; }
+.template-library small, .template-hint { font-size: 12px; font-weight: 400; }
+.template-library small { margin-left: 8px; white-space: nowrap; }
+.template-hint { margin-top: 6px; }
+.template-grid {
+ display: grid;
+ grid-template-columns: repeat(2, minmax(0, 1fr));
+ align-content: start;
+ max-height: 48dvh;
+ overflow: auto;
+ overscroll-behavior: contain;
+ border: 1px solid var(--contract-line);
+ border-radius: 3px;
+ background: var(--contract-field);
+}
+.template-grid label {
+ display: flex;
+ align-items: baseline;
+ gap: 8px;
+ padding: 4px 7px;
+ border-bottom: 1px solid var(--contract-line);
+ overflow-wrap: anywhere;
+ cursor: pointer;
+}
+.template-grid label:nth-child(odd) { border-right: 1px solid var(--contract-line); }
+.template-grid label:hover, .template-grid label:has(:checked) { background: var(--contract-panel); }
+.template-grid input { flex: none; accent-color: #176b88; }
+.odis-template-modal .template-delete { background: #953d3d; color: white; }
+.odis-template-modal [role=alert] button { text-decoration: underline; }
+.template-row-actions { display: flex; align-items: center; }
 .odis-template-register .template-action-cell{width:1%;text-align:center;white-space:nowrap}.template-row-actions{justify-content:center;gap:4px}
 .odis-template-register .template-row-actions button{display:inline-grid;place-items:center;width:29px;height:28px;padding:0;background:var(--ui-bg);color:var(--ui-text);border-color:var(--ui-border)}.template-row-actions .iconify{width:15px;height:15px}
 html.dark .odis-template-register{--space-line:#506579;--space-panel:#344b5e;--space-field:#20313f;--space-text:#edf3f8}
-@media (max-width:640px){.template-grid,.template-fields{grid-template-columns:1fr}.template-grid label:nth-child(odd){border-right:0}.odis-template-modal .template-modal-body{padding:12px 14px}}
+@media (max-width: 640px) {
+ .template-grid, .odis-template-modal .template-fields { grid-template-columns: 1fr; }
+ .template-grid label:nth-child(odd) { border-right: 0; }
+}
 </style>
