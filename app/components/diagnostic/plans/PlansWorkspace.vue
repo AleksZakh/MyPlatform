@@ -5,6 +5,7 @@ import {plansWeek,parsePlansPeriod,type PlansPeriodMode} from '~~/shared/utils/d
 import {onWorkChange,publishWorkChange} from '~/composables/diagnostic/workChanges';
 import WorkFromList from '../contracts/WorkFromList.vue';
 import PlanEditor from './PlanEditor.vue';
+import ReportsPanel from './ReportsPanel.vue';
 import WorkStatusIcon from '../contracts/WorkStatusIcon.vue';
 import WorkStatusLegend from '../contracts/WorkStatusLegend.vue';
 import {regionalCenterCode} from '~~/shared/utils/diagnostic-regional-center';
@@ -13,6 +14,7 @@ import {calendarShortName} from '~~/shared/utils/diagnostic-calendar';
 import {tripToday} from '~~/shared/utils/diagnostic-trip-lifecycle';
 import {tripDay,tripDateLabel} from '~~/shared/utils/diagnostic-trips';
 import DiagnosticModuleTabs from '../DiagnosticModuleTabs.vue';
+const section=ref<'plans'|'reports'>('plans');
 const auditing=ref(false);
 const openedWork=ref<PlanWorkRow|null>(null),canEditWork=ref(false);
 onMounted(async()=>{try{canEditWork.value=(await $fetch<{allowed:boolean}>('/api/access/check',{query:{resource:'diagnostic.contracts',action:'UPDATE'}})).allowed;}catch{canEditWork.value=false;}});
@@ -104,7 +106,7 @@ onMounted(async()=>{try{canDelete.value=(await $fetch<{allowed:boolean}>('/api/a
 function cancelCurrent(){resetSelection();generation++;controller?.abort();clearTimeout(timer);}
 function pause(signal:AbortSignal){return new Promise<void>((resolve,reject)=>{const abort=()=>{clearTimeout(t);reject(new Error('Отменено'));};const t=setTimeout(()=>{signal.removeEventListener('abort',abort);resolve();},1000);signal.addEventListener('abort',abort,{once:true});if(signal.aborted)abort();});}
 async function load(){
- if(tab.value!=='staff')return;cancelCurrent();const g=generation,c=new AbortController();controller=c;busy.value=true;error.value='';
+ if(section.value!=='plans'||tab.value!=='staff')return;cancelCurrent();const g=generation,c=new AbortController();controller=c;busy.value=true;error.value='';
  const query={...(auditing.value?{audit:"1"}:{}),employee:employee.value,search:search.value,page:page.value,periodMode:periodMode.value,...(periodMode.value==='period'?{from:dateFrom.value,to:dateTo.value}:{}),...(cursors.value[page.value-1]?{cursor:cursors.value[page.value-1]}:{})};
  try{let result:EmployeePlansResult|undefined;for(let attempt=0;attempt<16;attempt++){try{result=await $fetch<EmployeePlansResult>('/api/diagnostic/plans',{query,signal:c.signal,retry:0});break;}catch(e:any){if(c.signal.aborted)throw e;if(e?.data?.data?.code!=='PLANS_BUSY'||attempt===15)throw e;await pause(c.signal);}}
   if(g!==generation)return;
@@ -123,6 +125,7 @@ function nextPage(){if(!data.value?.nextCursor||busy.value)return;cursors.value[
 function previousPage(){if(page.value<=1||busy.value)return;page.value--;void load();}
 watch(employee,()=>{resetPage();schedule();});watch(search,()=>{resetPage();schedule(300);});
 watch(tab,()=>{cancelCurrent();busy.value=false;if(tab.value==='staff')refresh();});
+watch(section,()=>{cancelCurrent();busy.value=false;if(section.value==='plans')refresh();});
 onWorkChange(refresh);
 onMounted(load);onBeforeUnmount(cancelCurrent);
 const period=(a:string|null,b:string|null)=>a||b?`${tripDateLabel(a)} — ${tripDateLabel(b)}`:'—';
@@ -136,16 +139,17 @@ function moveTab(event:KeyboardEvent){tab.value=tab.value==='staff'?'external':'
 <template>
  <section class="odis-plans">
   <WorkFromList v-if="openedWork" :key="openedWork.key" :source="openedWork" :start-editing="editingRow" :can-edit="canEditWork" :employees="data?.employees??[]" @close="openedWork=null"/>
-  <PlanEditor v-if="planning" @close="planning=false" @saved="planSaved"/><p v-if="planNotice" role="status">{{planNotice}}</p>
-  <DiagnosticModuleTabs active="plans"><label class="opr-search"><Icon name="lucide:search" aria-hidden="true"/><input v-model="search" type="search" placeholder="Работа, договор, ФИО, ИССО" aria-label="Поиск работ" :disabled="tab!=='staff'"/></label></DiagnosticModuleTabs>
+  <PlanEditor v-if="planning" @close="planning=false" @saved="planSaved"/><p v-if="planNotice && section==='plans'" role="status">{{planNotice}}</p>
+  <DiagnosticModuleTabs active="plans"><label v-if="section==='plans'" class="opr-search"><Icon name="lucide:search" aria-hidden="true"/><input v-model="search" type="search" placeholder="Работа, договор, ФИО, ИССО" aria-label="Поиск работ" :disabled="tab!=='staff'"/></label></DiagnosticModuleTabs>
   <header class="opr-title"><h1>Планы и отчёты</h1></header>
   <div class="opr-layout">
    <nav class="opr-sections" aria-label="Подразделы планов и отчётов">
-    <button type="button" aria-current="page"><Icon name="lucide:calendar-days" aria-hidden="true"/>Планы</button>
-    <button type="button" disabled title="Раздел будет доступен позже"><Icon name="lucide:file-chart-column" aria-hidden="true"/>Отчёты</button>
+    <button type="button" :aria-current="section==='plans'?'page':undefined" @click="section='plans'"><Icon name="lucide:calendar-days" aria-hidden="true"/>Планы</button>
+    <button type="button" :aria-current="section==='reports'?'page':undefined" @click="section='reports'"><Icon name="lucide:file-chart-column" aria-hidden="true"/>Отчёты</button>
     <button type="button" disabled title="Раздел будет доступен позже"><Icon name="lucide:chart-no-axes-combined" aria-hidden="true"/>Ход работ</button>
    </nav>
-   <div class="opr-content">
+   <ReportsPanel v-if="section==='reports'"/>
+   <div v-else class="opr-content">
     <div class="opr-topline">
      <div class="opr-tabs" role="tablist" aria-label="Планы работ">
       <button v-for="item in tabs" :id="`odis-plans-tab-${item.id}`" :key="item.id" type="button" role="tab" :aria-selected="tab===item.id" aria-controls="odis-plans-panel" :tabindex="tab===item.id?0:-1" @click="tab=item.id" @keydown.right.prevent="moveTab" @keydown.left.prevent="moveTab">{{item.label}}</button>
