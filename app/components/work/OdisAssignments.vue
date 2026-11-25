@@ -38,4 +38,6 @@ function next(){if(!rows.value?.nextCursor)return;cursors.value[page.value]=rows
 .work-odis table{width:100%;text-align:left;font-size:13px}.work-odis :is(th,td){padding:3px 8px}.work-odis td button{text-align:left;text-decoration:underline}
 </style>
 
-<style src="~/assets/css/diagnostic-contracts.css"></style>
+<style>
+@import "~/assets/css/diagnostic-contracts.css";
+</style>

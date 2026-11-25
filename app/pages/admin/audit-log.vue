@@ -1599,5 +1599,7 @@ onMounted(
 </script>
 
 <!-- Reuse the exact contract palette (--diag-*) in both themes. -->
-<style src="~/assets/css/diagnostic-contracts.css"></style>
+<style>
+@import "~/assets/css/diagnostic-contracts.css";
+</style>
 <style src="~/assets/css/audit-log.css"></style>

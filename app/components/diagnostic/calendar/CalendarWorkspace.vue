@@ -52,4 +52,6 @@ function closeContract(){++contractGeneration;focusWork.value=null;contract.valu
  <ContractEditor v-if="contract&&catalog" :contract="contract" :catalog="catalog" read-only :can-create="false" :can-edit="false" :can-edit-works="canEditWork" :focus-work="focusWork" @close="closeContract"/>
 </section></template>
 <style src="~/assets/css/diagnostic-calendar.css"></style>
-<style src="~/assets/css/diagnostic-contracts.css"></style>
+<style>
+@import "~/assets/css/diagnostic-contracts.css";
+</style>

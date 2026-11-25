@@ -71,4 +71,6 @@ async function remove(){const row=selected.value;if(!row||!rights.value.DELETE)r
   <ContractEditor v-if="editorOpen" :contract="editing" :catalog="catalog" :read-only="editing ? (!editMode||!rights.UPDATE) : !rights.CREATE" :can-edit="rights.UPDATE" @edit="editMode=true" :can-create="rights.CREATE" @close="editorOpen=false" @save="saved"/>
  </section>
 </template>
-<style src="~/assets/css/diagnostic-contracts.css"></style>
+<style>
+@import "~/assets/css/diagnostic-contracts.css";
+</style>

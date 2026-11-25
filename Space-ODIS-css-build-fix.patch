@@ -1,0 +1,41 @@
+--- a/app/components/diagnostic/calendar/CalendarWorkspace.vue
++++ b/app/components/diagnostic/calendar/CalendarWorkspace.vue
+@@ -52,4 +52,6 @@
+  <ContractEditor v-if="contract&&catalog" :contract="contract" :catalog="catalog" read-only :can-create="false" :can-edit="false" :can-edit-works="canEditWork" :focus-work="focusWork" @close="closeContract"/>
+ </section></template>
+ <style src="~/assets/css/diagnostic-calendar.css"></style>
+-<style src="~/assets/css/diagnostic-contracts.css"></style>
++<style>
++@import "~/assets/css/diagnostic-contracts.css";
++</style>
+--- a/app/components/diagnostic/contracts/ContractsWorkspace.vue
++++ b/app/components/diagnostic/contracts/ContractsWorkspace.vue
+@@ -71,4 +71,6 @@
+   <ContractEditor v-if="editorOpen" :contract="editing" :catalog="catalog" :read-only="editing ? (!editMode||!rights.UPDATE) : !rights.CREATE" :can-edit="rights.UPDATE" @edit="editMode=true" :can-create="rights.CREATE" @close="editorOpen=false" @save="saved"/>
+  </section>
+ </template>
+-<style src="~/assets/css/diagnostic-contracts.css"></style>
++<style>
++@import "~/assets/css/diagnostic-contracts.css";
++</style>
+--- a/app/components/work/OdisAssignments.vue
++++ b/app/components/work/OdisAssignments.vue
+@@ -38,4 +38,6 @@
+ .work-odis table{width:100%;text-align:left;font-size:13px}.work-odis :is(th,td){padding:3px 8px}.work-odis td button{text-align:left;text-decoration:underline}
+ </style>
+ 
+-<style src="~/assets/css/diagnostic-contracts.css"></style>
++<style>
++@import "~/assets/css/diagnostic-contracts.css";
++</style>
+--- a/app/pages/admin/audit-log.vue
++++ b/app/pages/admin/audit-log.vue
+@@ -1599,5 +1599,7 @@
+ </script>
+ 
+ <!-- Reuse the exact contract palette (--diag-*) in both themes. -->
+-<style src="~/assets/css/diagnostic-contracts.css"></style>
++<style>
++@import "~/assets/css/diagnostic-contracts.css";
++</style>
+ <style src="~/assets/css/audit-log.css"></style>
