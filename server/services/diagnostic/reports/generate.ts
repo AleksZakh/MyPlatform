@@ -2,7 +2,8 @@ import {randomUUID} from 'node:crypto';
 import {createError,type H3Event} from 'h3';
 import {prisma} from '../../../utils/prisma';
 import {tripDateLabel,tripDay} from '../../../../shared/utils/diagnostic-trips';
-import {reportIntervals,reportTypes,type ReportParams,type SavedReport} from '../../../../shared/utils/diagnostic-reports';
+import {tripToday} from '../../../../shared/utils/diagnostic-trip-lifecycle';
+import {earliestPlannedStart,reportIntervals,reportPeriod,reportWeek,reportTypes,type ReportParams,type SavedReport} from '../../../../shared/utils/diagnostic-reports';
 import {reportRoster} from './roster';
 import {workSourcePeriod,tripSourcePeriod} from '../plans-source-period';
 import {reportTable,type Work} from './table';
@@ -13,6 +14,12 @@ export function parseParams(v:Partial<ReportParams>|null):ReportParams{
      (v.employeeIds!==null&&(!Array.isArray(v.employeeIds)||!v.employeeIds.length||
       !v.employeeIds.every(id=>Number.isSafeInteger(id)&&id>0&&id<=2147483647)))){
     throw createError({statusCode:400,message:'Проверьте вид отчёта, период и сотрудников.'});
+  }
+  if(v.kind==='planned'){
+    const period=reportPeriod(v.interval,v.from,reportWeek(v.from),v.from.slice(0,7),v.from,v.to);
+    if(!period||period.from!==v.from||period.to!==v.to||v.from<earliestPlannedStart(v.interval,tripToday())){
+      throw createError({statusCode:400,message:'Для запланированных работ выберите текущий или будущий период.'});
+    }
   }
   return {kind:v.kind!,interval:v.interval!,from:v.from,to:v.to,employeeIds:v.employeeIds?[...new Set(v.employeeIds)]:null};
 }

@@ -2,16 +2,30 @@
 import {ref,shallowRef,computed,watch,onMounted,onBeforeUnmount} from 'vue';
 import ReportMailDialog from './ReportMailDialog.vue';
 import TripDateInput from '../trips/TripDateInput.vue';
+import {tripDay} from '~~/shared/utils/diagnostic-trips';
 import {tripToday} from '~~/shared/utils/diagnostic-trip-lifecycle';
 import {plansWeek} from '~~/shared/utils/diagnostic-plans-period';
 import {calendarShortName} from '~~/shared/utils/diagnostic-calendar';
-import {reportTypes,reportIntervals,reportCenters,reportWeek,reportPeriod,centerColors,type ReportRoster,type SavedReport,type ReportInfo,type ReportParams} from '~~/shared/utils/diagnostic-reports';
+import {reportTypes,reportIntervals,reportCenters,earliestPlannedStart,reportWeek,reportPeriod,centerColors,type ReportRoster,type SavedReport,type ReportInfo,type ReportParams} from '~~/shared/utils/diagnostic-reports';
 
 const today=tripToday(),currentWeek=plansWeek(today);
 const interval=ref<keyof typeof reportIntervals>('week'),kind=ref<keyof typeof reportTypes>('timesheet');
 const day=ref(today),week=ref(reportWeek(today)),month=ref(today.slice(0,7));
 const from=ref(currentWeek.from),to=ref(currentWeek.to);
 const period=computed(()=>reportPeriod(interval.value,day.value,week.value,month.value,from.value,to.value));
+const moscowDay=ref(today);
+const planned=computed(()=>kind.value==='planned');
+const minimum=computed(()=>planned.value?earliestPlannedStart(interval.value,moscowDay.value):undefined);
+const pastPeriod=computed(()=>!!minimum.value&&!!period.value&&period.value.from<minimum.value);
+let clock:ReturnType<typeof setTimeout>|undefined;
+function refreshDay(){
+  clearTimeout(clock);
+  moscowDay.value=tripToday();
+  const midnight=Date.parse(moscowDay.value+'T00:00:00+03:00')+86400000;
+  clock=setTimeout(refreshDay,Math.max(1,midnight-Date.now()));
+}
+onMounted(()=>{refreshDay();window.addEventListener('focus',refreshDay);});
+onBeforeUnmount(()=>{clearTimeout(clock);window.removeEventListener('focus',refreshDay);});
 const roster=ref<ReportRoster>({employees:[],warning:null}),busy=ref(false),error=ref('');
 const selection=ref<Set<number>|null>(null); // null includes every employee, even before the roster loads.
 const groups=computed(()=>[...reportCenters,null].map(center=>({
@@ -55,7 +69,7 @@ const visible=computed(()=>{
   return rows.map((row,i)=>({row,span:spans[i]!}));
 });
 const grouped=computed(()=>!report.value||report.value.params.kind==='timesheet'?0:report.value.params.kind==='external'?2:3);
-const params=computed<ReportParams|null>(()=>period.value?{kind:kind.value,interval:interval.value,...period.value,employeeIds:selection.value?[...selection.value].sort((a,b)=>a-b):null}:null);
+const params=computed<ReportParams|null>(()=>period.value&&!pastPeriod.value?{kind:kind.value,interval:interval.value,...period.value,employeeIds:selection.value?[...selection.value].sort((a,b)=>a-b):null}:null);
 let revision=0,restoring=false;
 watch([interval,day,week,month,from,to,selection,kind],(now,old)=>{
   if(restoring)return;
@@ -63,11 +77,23 @@ watch([interval,day,week,month,from,to,selection,kind],(now,old)=>{
   if(now[7]!==old[7]){report.value=null;historyId.value='';stale.value=false;}
   else if(report.value){stale.value=true;historyId.value='';}
 },{flush:'sync'});
+watch([kind,interval,moscowDay],()=>{
+  if(restoring||!planned.value)return;
+  const now=moscowDay.value;
+  if(interval.value==='day'&&day.value<now)day.value=now;
+  if(interval.value==='week'&&week.value<reportWeek(now))week.value=reportWeek(now);
+  if(interval.value==='month'&&month.value<now.slice(0,7))month.value=now.slice(0,7);
+  if(interval.value==='custom'){
+    if(from.value<now)from.value=now;
+    if(to.value<from.value)to.value=from.value;
+  }
+},{flush:'sync'});
 async function loadHistory(){
   try{archives.value=await $fetch<ReportInfo[]>('/api/diagnostic/reports');historyError.value=false;}
   catch{historyError.value=true;}
 }
 async function generate(){
+  refreshDay();
   if(!params.value||params.value.employeeIds?.length===0||running.value)return;
   const at=revision;running.value=true;notice.value='';
   try{
@@ -116,10 +142,10 @@ onMounted(()=>{
    <label>Интервал<select v-model="interval"><option v-for="(label,key) in reportIntervals" :key="key" :value="key">{{label}}</option></select></label>
    <label>Выберите отчёт<select v-model="kind"><option v-for="(label,key) in reportTypes" :key="key" :value="key">{{label}}</option></select></label>
    <div class="report-period">
-    <label v-if="interval==='week'">Выберите неделю<input v-model="week" type="week" lang="ru" placeholder="2026-W48"/></label>
-    <label v-else-if="interval==='month'">Выберите месяц<input v-model="month" type="month" lang="ru" placeholder="гггг-мм"/></label>
-    <label v-else-if="interval==='day'">Выберите день<TripDateInput v-model="day" label="День отчёта"/></label>
-    <template v-else><label>С<TripDateInput v-model="from" label="Начало интервала"/></label><label>По<TripDateInput v-model="to" label="Окончание интервала"/></label></template>
+    <label v-if="interval==='week'">Выберите неделю<input v-model="week" type="week" :min="planned?reportWeek(moscowDay):undefined" lang="ru" placeholder="2026-W48"/></label>
+    <label v-else-if="interval==='month'">Выберите месяц<input v-model="month" type="month" :min="planned?moscowDay.slice(0,7):undefined" lang="ru" placeholder="гггг-мм"/></label>
+    <label v-else-if="interval==='day'">Выберите день<TripDateInput v-model="day" :min="minimum" label="День отчёта"/></label>
+    <template v-else><label>С<TripDateInput v-model="from" :min="minimum" label="Начало интервала"/></label><label>По<TripDateInput v-model="to" :min="planned && tripDay(from) && from >= moscowDay ? from : minimum" label="Окончание интервала"/></label></template>
    </div>
    <div ref="menu" class="report-people" @keydown.esc.stop="escape" @focusout="e=>{if(e.relatedTarget && !menu?.contains(e.relatedTarget as Node))opened=false}">
     <span id="report-people-label">Сотрудники</span>
@@ -143,6 +169,7 @@ onMounted(()=>{
    </select></label>
   </div>
   <p v-if="!period" role="alert" class="report-message">{{interval==='custom'?'Укажите обе даты. Начало интервала должно быть не позже окончания.':'Укажите корректный период.'}}</p>
+  <p v-if="pastPeriod" class="report-message" role="status">Для формирования запланированных работ выберите текущий или будущий период.</p>
   <div class="report-actions">
    <button type="button" class="opr-button" :disabled="running||!params||selection?.size===0" @click="generate">{{running?'Загрузка…':'Сформировать'}}</button>
    <button type="button" class="opr-button" :disabled="!report||stale||running" title="Сохранить отчёт в Excel" @click="save"><Icon name="lucide:file-spreadsheet"/>Сохранить отчёт</button>

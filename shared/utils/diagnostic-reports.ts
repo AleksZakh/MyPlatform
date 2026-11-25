@@ -28,6 +28,12 @@ export function reportCenter(department:string, name=''):Center|null {
   return null;
 }
 
+export function earliestPlannedStart(interval:keyof typeof reportIntervals,today:string){
+  if(interval==='week')return plansWeek(today).from;
+  if(interval==='month')return today.slice(0,7)+'-01';
+  return today;
+}
+
 const weekMs=7*86400000;
 export function reportWeek(day:string):string {
   const monday=Date.parse(plansWeek(day).from);

@@ -5,6 +5,7 @@ import {plansWeek,parsePlansPeriod,type PlansPeriodMode} from '~~/shared/utils/d
 import {onWorkChange,publishWorkChange} from '~/composables/diagnostic/workChanges';
 import WorkFromList from '../contracts/WorkFromList.vue';
 import PlanEditor from './PlanEditor.vue';
+import ProgressPanel from './ProgressPanel.vue';
 import ReportsPanel from './ReportsPanel.vue';
 import WorkStatusIcon from '../contracts/WorkStatusIcon.vue';
 import WorkStatusLegend from '../contracts/WorkStatusLegend.vue';
@@ -14,7 +15,7 @@ import {calendarShortName} from '~~/shared/utils/diagnostic-calendar';
 import {tripToday} from '~~/shared/utils/diagnostic-trip-lifecycle';
 import {tripDay,tripDateLabel} from '~~/shared/utils/diagnostic-trips';
 import DiagnosticModuleTabs from '../DiagnosticModuleTabs.vue';
-const section=ref<'plans'|'reports'>('plans');
+const section=ref<'plans'|'reports'|'progress'>('plans');
 const auditing=ref(false);
 const openedWork=ref<PlanWorkRow|null>(null),canEditWork=ref(false);
 onMounted(async()=>{try{canEditWork.value=(await $fetch<{allowed:boolean}>('/api/access/check',{query:{resource:'diagnostic.contracts',action:'UPDATE'}})).allowed;}catch{canEditWork.value=false;}});
@@ -146,9 +147,10 @@ function moveTab(event:KeyboardEvent){tab.value=tab.value==='staff'?'external':'
    <nav class="opr-sections" aria-label="Подразделы планов и отчётов">
     <button type="button" :aria-current="section==='plans'?'page':undefined" @click="section='plans'"><Icon name="lucide:calendar-days" aria-hidden="true"/>Планы</button>
     <button type="button" :aria-current="section==='reports'?'page':undefined" @click="section='reports'"><Icon name="lucide:file-chart-column" aria-hidden="true"/>Отчёты</button>
-    <button type="button" disabled title="Раздел будет доступен позже"><Icon name="lucide:chart-no-axes-combined" aria-hidden="true"/>Ход работ</button>
+    <button type="button" :aria-current="section==='progress'?'page':undefined" @click="section='progress'" ><Icon name="lucide:chart-no-axes-combined" aria-hidden="true"/>Ход работ</button>
    </nav>
    <ReportsPanel v-if="section==='reports'"/>
+   <ProgressPanel v-else-if="section==='progress'"/>
    <div v-else class="opr-content">
     <div class="opr-topline">
      <div class="opr-tabs" role="tablist" aria-label="Планы работ">
