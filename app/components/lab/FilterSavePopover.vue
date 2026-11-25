@@ -1,12 +1,14 @@
 <template>
-  <UPopover :dismissible="false" @update:open="onPopoverToggle" :ui="{ content: 'py-2 pl-1 pr-2 shadow-lg bg-blue-50' }" :content="{ side: 'top' } ">
-    <UButton icon="streamline-freehand-color:floppy-disk" color="neutral" variant="subtle" class="px-4" title="Сохранение шаблон фильтра"/>
+  <UPopover :dismissible="false" @update:open="onPopoverToggle" :ui="{ content: 'lab-filter-save-popover py-2 pl-1 pr-2 shadow-lg bg-blue-50' }" :content="{ side: 'top' } ">
+    <UButton color="neutral" variant="subtle" class="lab-filter-action px-4" title="Сохранить шаблон фильтра" aria-label="Сохранить шаблон фильтра">
+      <span class="lab-filter-pictogram" aria-hidden="true"><Icon name="streamline-freehand-color:floppy-disk" size="24" /></span>
+    </UButton>
 
     <template #content="{ close }">
         
         <div class="flex items-center justify-start gap-4  relative">
             <span class="text-md font-medium "></span>
-            <UButton color="neutral" variant="link" size="sm" icon="i-lucide-x" @click="close" class="absolute -right-3 -top-2 text-red-600"/>
+            <UButton color="neutral" variant="link" size="sm" icon="i-lucide-x" aria-label="Закрыть сохранение шаблона" @click="close" class="absolute -right-3 -top-2 text-red-600"/>
         </div>
         <UForm>
             <fieldset class="border-2 border-gray-200 mx-2 p-3 rounded-md ">
@@ -14,14 +16,14 @@
                 <UFormField name="plp" >
                   <template #label>
                     <label class="font-normal flex items-center gap-2 min-w-32 text-gray-700 text-sm" >
-                    <Icon name="streamline-freehand-color:content-paper-edit" size="18" /> Укажите имя шаблона:</label>
+                    <span class="lab-filter-pictogram" aria-hidden="true"><Icon name="streamline-freehand-color:content-paper-edit" size="18" /></span> Укажите имя шаблона:</label>
                   </template>
                   <UInput v-model="filterTmpName" class="w-full mb-1"  size="sm" :ui="{ base: isMatch ? 'text-red-500' : 'text-gray-900'}"/>
                   <UCheckbox size="sm"color="info" v-model="useAsDefault" label="Использовать по умолчанию" />
                 </UFormField>
                 
                 <div class="flex justify-center mt-2">
-                    <UButton variant="outline" size="sm" color="info" type="submit" @click="saveFilterTemplite(close)">Сохранить</UButton>
+                    <UButton class="lab-filter-action" variant="outline" size="sm" color="info" type="submit" @click="saveFilterTemplite(close)">Сохранить</UButton>
                 </div>            
             </fieldset>
             <!-- <Placeholder class="size-5 m-4 inline-flex" /> -->

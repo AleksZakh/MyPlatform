@@ -5,7 +5,8 @@
     description="Выбор условий для реестра входного контроля"
     @update:open="value => { if (!value) emit('close') }"
     :ui="{
-      content: 'sm:max-w-4xl md:max-w-5xl lg:max-w-6xl xl:max-w-8xl w-full bg-gray-100'
+      header: 'lab-filter-header', body: 'lab-filter-body', footer: 'lab-filter-footer',
+      content: 'lab-filter-modal sm:max-w-4xl md:max-w-5xl lg:max-w-6xl xl:max-w-8xl w-full bg-gray-100'
     }"
   >
     
@@ -13,7 +14,7 @@
       <div class="flex items-center justify-between w-full">
         <div class="flex items-center gap-3">
           <div class="text-2xl text-blue-500">
-            <Icon name="streamline-freehand-color:book-bookmark" size="28" />
+            <span class="lab-filter-pictogram" aria-hidden="true"><Icon name="streamline-freehand-color:book-bookmark" size="28" /></span>
           </div>
           <div>
             <DialogTitle class="text-lg font-semibold text-gray-900 dark:text-white">
@@ -29,7 +30,7 @@
             color="neutral"
             icon="i-heroicons-x-mark-20-solid"
             aria-label="Закрыть фильтр"
-            class="rounded-full hover:bg-gray-100 transition-colors"
+            class="lab-filter-close rounded-full hover:bg-gray-100 transition-colors"
             @click="emit('close')"
         />
       </div>
@@ -40,7 +41,7 @@
       <div class="panel-wrapper shadow-md">
         <form
           @submit.prevent="applyFilters"
-          class="bg-white rounded-md gap-4 px-5 md:px-6 pt-6 md:pt-6 pb-6 md:pb-7 relative"
+          class="lab-filter-form bg-white rounded-md gap-4 px-5 md:px-6 pt-6 md:pt-6 pb-6 md:pb-7 relative"
         >
           <div class="filter-status mb-4 text-sm" aria-live="polite">
             <span v-if="facetsLoading">Уточняем списки…</span>
@@ -52,9 +53,9 @@
           </div>
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
             
-            <fieldset class="border-2 border-gray-200 min-w-0 p-3 rounded-md bg-white/80">
+            <fieldset class="lab-filter-section border-2 border-gray-200 min-w-0 p-3 rounded-md bg-white/80">
               <legend class="text-xl font-normal px-2 flex items-center gap-2 bg-transparent">
-                <span><Icon name="streamline-freehand-color:business-product-supplier-1" size="24"/> Отбор проб</span>
+                <span><span class="lab-filter-pictogram" aria-hidden="true"><Icon name="streamline-freehand-color:business-product-supplier-1" size="24"/></span> Отбор проб</span>
               </legend>
               <div class="flex flex-col gap-3">
   
@@ -62,10 +63,11 @@
                 <UFormField name="plp" >
                   <template #label>
                     <label class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm" >
-                    <Icon name="streamline-freehand-color:content-paper-edit" size="24" /> ПЛП:</label>
+                    <span class="lab-filter-pictogram" aria-hidden="true"><Icon name="streamline-freehand-color:content-paper-edit" size="24" /></span> ПЛП:</label>
                   </template>
                   <div class="flex items-center gap-1">
                     <USelectMenu
+                    :ui="{ base: 'lab-filter-select', content: 'lab-filter-menu' }"
                       aria-label="ПЛП" :model-value="localFilters.plp ?? undefined"
                       @update:model-value="setFacet('plp', $event)"
                       :items="facetOptions.plp"
@@ -87,10 +89,11 @@
                 <UFormField name="objName">
                   <template #label>
                     <label class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm" >
-                    <Icon name="streamline-freehand-color:tags-double" size="24" />Наименование объекта:</label>
+                    <span class="lab-filter-pictogram" aria-hidden="true"><Icon name="streamline-freehand-color:tags-double" size="24" /></span>Наименование объекта:</label>
                   </template>
                   <div class="flex items-center gap-1">
                     <USelectMenu
+                    :ui="{ base: 'lab-filter-select', content: 'lab-filter-menu' }"
                       aria-label="Наименование объекта" :model-value="localFilters.objName ?? undefined"
                       @update:model-value="setFacet('objName', $event)"
                       :items="facetOptions.objName"
@@ -113,7 +116,7 @@
                 
                 <div class="flex flex-col items-start gap-1">
                   <label class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm" >
-                    <Icon name="streamline-flex-color:number-sign-flat" size="24" /> Номер акта:</label >
+                    <span class="lab-filter-pictogram" aria-hidden="true"><Icon name="streamline-flex-color:number-sign-flat" size="24" /></span> Номер акта:</label >
                   <input
                     v-model="localFilters.samplActNumber"
                     type="text"
@@ -125,7 +128,7 @@
                 
                 <div class="flex flex-col items-start gap-1">
                   <label class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm" >
-                    <Icon name="streamline-freehand-color:calendar-grid" size="24" /> Дата отбора:</label >
+                    <span class="lab-filter-pictogram" aria-hidden="true"><Icon name="streamline-freehand-color:calendar-grid" size="24" /></span> Дата отбора:</label >
                   <div class="flex flex-1 flex-wrap items-center gap-2">
                     <input
                       v-model="localFilters.sDateStart" aria-label="Дата отбора с"
@@ -146,14 +149,14 @@
                   <UFormField name="sPlace">
                     <template #label>
                       <label class="font-semibold flex items-center gap-2 text-sm">
-                        <Icon name="streamline-freehand-color:gps-location-rectangle" size="24" /> Место отбора:
+                        <span class="lab-filter-pictogram" aria-hidden="true"><Icon name="streamline-freehand-color:gps-location-rectangle" size="24" /></span> Место отбора:
                       </label>
                     </template>
                     <USelectMenu v-model="selectedPlaces" multiple aria-label="Место отбора"
                       :items="facetOptions.sPlace" :loading="facetsLoading" :disabled="facetsLoading"
                       :content="{ side: 'bottom', align: 'start' }"
                       :search-input="{ placeholder: 'Найти место отбора...' }"
-                      :ui="{ itemTrailing: 'hidden' }" class="shadow-sm w-full">
+                      :ui="{ base: 'lab-filter-select', content: 'lab-filter-menu', itemTrailing: 'hidden' }" class="shadow-sm w-full">
                       <template #default>
                         <span class="truncate">{{ selectedPlaces.length ? `Выбрано мест: ${selectedPlaces.length}` : 'Выберите места отбора' }}</span>
                       </template>
@@ -185,10 +188,11 @@
                 <UFormField name="sPerson" >
                   <template #label>
                     <label class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 " >
-                    <Icon name="streamline-freehand-color:job-profile-search" size="24" />Кто предоставил:</label>
+                    <span class="lab-filter-pictogram" aria-hidden="true"><Icon name="streamline-freehand-color:job-profile-search" size="24" /></span>Кто предоставил:</label>
                   </template>
                   <div class="flex items-center gap-1">
                     <USelectMenu
+                    :ui="{ base: 'lab-filter-select', content: 'lab-filter-menu' }"
                       aria-label="Кто предоставил пробу" :model-value="localFilters.sProvaider ?? undefined"
                       @update:model-value="setFacet('sProvaider', $event)"
                       :items="facetOptions.sProvaider"
@@ -206,15 +210,15 @@
               </div>
             </fieldset>
   
-            <fieldset class="border-2 border-gray-200 min-w-0 p-3 rounded-md bg-white/80">
+            <fieldset class="lab-filter-section border-2 border-gray-200 min-w-0 p-3 rounded-md bg-white/80">
               <legend class="text-xl font-normal px-2 flex items-center gap-2 bg-transparent">
-                <span> <Icon name="streamline-freehand-color:module-building-blocks" /> Материалы </span>
+                <span> <span class="lab-filter-pictogram" aria-hidden="true"><Icon name="streamline-freehand-color:module-building-blocks" size="24" /></span> Материалы </span>
               </legend>
               <div class="flex flex-col gap-4">
                 
                 <div class="flex flex-col items-start gap-1">
                   <label class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm" >
-                    <Icon name="streamline-freehand-color:calendar-grid" size="24" />Дата поступления:</label>
+                    <span class="lab-filter-pictogram" aria-hidden="true"><Icon name="streamline-freehand-color:calendar-grid" size="24" /></span>Дата поступления:</label>
                   <div class="flex flex-1 flex-wrap items-center gap-2">
                     <input
                       v-model="localFilters.receiveDateStart" aria-label="Дата поступления с"
@@ -235,14 +239,14 @@
                   <UFormField name="material">
                     <template #label>
                       <label class="font-semibold flex items-center gap-2 text-sm">
-                        <Icon name="streamline-ultimate-color:road-straight" size="24" /> Материалы:
+                        <span class="lab-filter-pictogram" aria-hidden="true"><Icon name="streamline-ultimate-color:road-straight" size="24" /></span> Материалы:
                       </label>
                     </template>
                     <USelectMenu v-model="selectedMaterials" multiple aria-label="Материалы"
                       :items="facetOptions.materialName" :loading="facetsLoading" :disabled="facetsLoading"
                       :content="{ side: 'bottom', align: 'start' }"
                       :search-input="{ placeholder: 'Найти материал...' }"
-                      :ui="{ itemTrailing: 'hidden' }" class="shadow-sm w-full">
+                      :ui="{ base: 'lab-filter-select', content: 'lab-filter-menu', itemTrailing: 'hidden' }" class="shadow-sm w-full">
                       <template #default>
                         <span class="truncate">{{ selectedMaterials.length ? `Выбрано материалов: ${selectedMaterials.length}` : 'Выберите материалы' }}</span>
                       </template>
@@ -276,7 +280,7 @@
                 
                 <div class="flex flex-col items-start gap-1">
                   <label class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm" >
-                    <Icon name="streamline-freehand-color:calendar-grid" size="24" /> Дата документа о качестве:</label>
+                    <span class="lab-filter-pictogram" aria-hidden="true"><Icon name="streamline-freehand-color:calendar-grid" size="24" /></span> Дата документа о качестве:</label>
                   <div class="flex flex-1 flex-wrap items-center gap-2">
                     <input
                       v-model="localFilters.qualiDateStart" aria-label="Дата документа о качестве с"
@@ -294,7 +298,7 @@
                 
                 <div class="flex flex-wrap items-center gap-1">
                   <label class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm" >
-                    <Icon name="streamline-flex-color:number-sign-flat" size="24" /> Номер документа о качестве:</label >
+                    <span class="lab-filter-pictogram" aria-hidden="true"><Icon name="streamline-flex-color:number-sign-flat" size="24" /></span> Номер документа о качестве:</label >
                   <input
                     v-model="localFilters.qualiDocNumber"
                     type="text"
@@ -307,10 +311,11 @@
                 <UFormField name="manufacturer">
                   <template #label>
                     <label class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm" >
-                    <Icon name="streamline-cyber-color:factory" size="24" /> Изготовитель:</label >
+                    <span class="lab-filter-pictogram" aria-hidden="true"><Icon name="streamline-cyber-color:factory" size="24" /></span> Изготовитель:</label >
                   </template>
                   <div class="flex items-center gap-1">
                     <USelectMenu
+                    :ui="{ base: 'lab-filter-select', content: 'lab-filter-menu' }"
                       aria-label="Изготовитель" :model-value="localFilters.manufacturer ?? undefined"
                       @update:model-value="setFacet('manufacturer', $event)"
                       :items="facetOptions.manufacturer"
@@ -328,15 +333,15 @@
               </div>
             </fieldset>
 
-            <fieldset class="border-2 border-gray-200 min-w-0 p-3 rounded-md bg-white/80">
+            <fieldset class="lab-filter-section border-2 border-gray-200 min-w-0 p-3 rounded-md bg-white/80">
               <legend class="text-xl font-normal px-2 flex items-center gap-2 bg-transparent">
-                <span> <Icon name="streamline-freehand-color:task-list-pen" /> Испытания </span>
+                <span> <span class="lab-filter-pictogram" aria-hidden="true"><Icon name="streamline-freehand-color:task-list-pen" size="24" /></span> Испытания </span>
               </legend>
               <div class="flex flex-col gap-4">
                 
                 <div class="flex flex-col items-start gap-3">
                   <label class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm" >
-                    <Icon name="streamline-flex-color:number-sign-flat" size="24" /> Номер протокола:</label >
+                    <span class="lab-filter-pictogram" aria-hidden="true"><Icon name="streamline-flex-color:number-sign-flat" size="24" /></span> Номер протокола:</label >
                   <input
                     v-model="localFilters.testProtocolNumber"
                     type="text"
@@ -348,7 +353,7 @@
                 
                 <div class="flex flex-col items-start gap-3">
                   <label class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm" >
-                    <Icon name="streamline-freehand-color:calendar-grid" size="24" />  Дата протокола:</label >
+                    <span class="lab-filter-pictogram" aria-hidden="true"><Icon name="streamline-freehand-color:calendar-grid" size="24" /></span>  Дата протокола:</label >
                   <div class="flex flex-1 flex-wrap items-center gap-2">
                     <input
                       v-model="localFilters.testReportDataStart" aria-label="Дата протокола с"
@@ -367,7 +372,7 @@
                 
                 <div class="flex flex-col items-start gap-3">
                   <label class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm" >
-                    <Icon name="streamline-freehand-color:mobilephone-action-voice-approved" size=""/>Результат испытания:</label >
+                    <span class="lab-filter-pictogram" aria-hidden="true"><Icon name="streamline-freehand-color:mobilephone-action-voice-approved" size="24"/></span>Результат испытания:</label >
                   <select
                     v-model="localFilters.testResult"
                     class="flex-1 shadow-sm px-4 py-2 rounded-md border w-full border-gray-200 bg-white focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none text-sm"
@@ -394,11 +399,12 @@
           >
             <template #label>
               <span class="flex gap-1 mt-1">
-                <UIcon name="octicon:repo-template-24" size="24" class="text-blue-600" />
+                <UIcon name="octicon:repo-template-24" size="24" class="lab-filter-symbol size-6 shrink-0 text-blue-600" />
                 Выбрать шаблон
               </span>
             </template>
             <USelectMenu
+                    :ui="{ base: 'lab-filter-select', content: 'lab-filter-menu' }"
               v-model="filterTemplate"
               aria-label="Шаблон фильтра"
               :items="filterTemplatesNameList"
@@ -415,9 +421,9 @@
             @click="resetFilters"
             color="neutral"
             variant="outline"
-            class="font-medium py-2 px-6 rounded-md transition text-sm"
+            class="lab-filter-action font-medium py-2 px-6 rounded-md transition text-sm"
           >
-            <Icon name="system-uicons:reset" size="24" /> Сбросить всё
+            <Icon class="lab-filter-symbol" name="system-uicons:reset" size="24" /> Сбросить всё
           </UButton>
           <LabFilterSavePopover 
             :filters="localFilters"
@@ -432,9 +438,9 @@
             type="button"
             color="secondary"
             variant="outline"
-            class="font-semibold py-2 px-7 rounded-md transition shadow-sm text-sm"
+            class="lab-filter-action lab-filter-apply font-semibold py-2 px-7 rounded-md transition shadow-sm text-sm"
           >
-            <Icon name="streamline-freehand-color:form-edition-clipboard-check" size="24" />
+            <span class="lab-filter-pictogram" aria-hidden="true"><Icon name="streamline-freehand-color:form-edition-clipboard-check" size="24" /></span>
             Применить фильтр
           </UButton>
         </div>
@@ -445,6 +451,7 @@
 </template>
 
 <script setup lang="ts">
+import '~/assets/css/lab-filter.css'
 import { computed, reactive, ref, onMounted, nextTick } from 'vue'
 import { DialogTitle, DialogDescription } from 'reka-ui'
 import { storeToRefs } from 'pinia'

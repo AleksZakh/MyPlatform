@@ -1,0 +1,73 @@
+/* The laboratory filter uses the ODIS contract-dialog palette.
+   Named portal classes also cover SelectMenu and the save-template popover. */
+.lab-filter-pictogram { display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; vertical-align:middle; border-radius:4px; line-height:1; }
+.lab-filter-pictogram > * { flex-shrink:0; }
+@media screen {
+  html.dark:not([data-space-contrast="high"]) :is(.lab-filter-modal, .lab-filter-menu, .lab-filter-save-popover) {
+    color-scheme:dark;
+    --lab-filter-bg:#293b4a;
+    --lab-filter-panel:#344b5e;
+    --lab-filter-field:#20313f;
+    --lab-filter-line:#61778b;
+    --lab-filter-text:#edf3f8;
+    --lab-filter-muted:#becddd;
+    --lab-filter-hover:#425f76;
+    --lab-filter-accent:#93c5fd;
+    --space-field:var(--lab-filter-field);
+    --space-text:var(--lab-filter-text);
+    --space-muted:var(--lab-filter-muted);
+    --space-border:var(--lab-filter-line);
+    --space-field-border:var(--lab-filter-line);
+    --space-line:var(--lab-filter-line);
+    /* Legacy laboratory portal rules consume these tokens on teleported menus. */
+    --space-graphite-raised:var(--lab-filter-panel);
+    --space-graphite-field:var(--lab-filter-field);
+    --space-graphite-field-line:var(--lab-filter-line);
+    --space-graphite-text:var(--lab-filter-text);
+    --space-graphite-muted:var(--lab-filter-muted);
+    --space-graphite-selected:var(--lab-filter-hover);
+    --space-graphite-accent:var(--lab-filter-accent);
+    --ui-bg:var(--lab-filter-field);
+    --ui-bg-elevated:var(--lab-filter-panel);
+    --ui-bg-accented:var(--lab-filter-hover);
+    --ui-text:var(--lab-filter-text);
+    --ui-text-highlighted:var(--lab-filter-text);
+    --ui-text-muted:var(--lab-filter-muted);
+    --ui-text-dimmed:var(--lab-filter-muted);
+    --ui-border:var(--lab-filter-line);
+    --ui-border-accented:var(--lab-filter-line);
+    color:var(--lab-filter-text)!important;
+    border-color:var(--lab-filter-line)!important;
+  }
+  html.dark:not([data-space-contrast="high"]) .lab-filter-modal[role="dialog"] { background:var(--lab-filter-bg)!important; box-shadow:0 24px 80px #0008; }
+  html.dark:not([data-space-contrast="high"]) .lab-filter-modal :is(.lab-filter-header,.lab-filter-footer) { background:var(--lab-filter-panel)!important; border-color:var(--lab-filter-line)!important; }
+  html.dark:not([data-space-contrast="high"]) .lab-filter-modal :is(.lab-filter-body,.lab-filter-form,.panel-wrapper) { background:transparent!important; box-shadow:none; }
+  html.dark:not([data-space-contrast="high"]) .lab-filter-modal .lab-filter-section { background:var(--lab-filter-panel)!important; border:1px solid var(--lab-filter-line)!important; }
+  html.dark:not([data-space-contrast="high"]) :is(.lab-filter-modal,.lab-filter-save-popover) :is(label,legend,[data-slot="label"],[data-slot="title"]) { color:var(--lab-filter-text)!important; }
+  html.dark:not([data-space-contrast="high"]) .lab-filter-modal .opacity-70 { color:var(--lab-filter-muted); opacity:1; }
+  html.dark:not([data-space-contrast="high"]) :is(.lab-filter-modal,.lab-filter-save-popover) :is(input:not([type="checkbox"]):not([type="radio"]),select,.lab-filter-select) {
+    background:var(--lab-filter-field)!important; color:var(--lab-filter-text)!important;
+    border-color:var(--lab-filter-line)!important; --tw-ring-color:var(--lab-filter-line);
+  }
+  html.dark:not([data-space-contrast="high"]) :is(.lab-filter-modal,.lab-filter-menu,.lab-filter-save-popover) input::placeholder { color:var(--lab-filter-muted)!important; opacity:1; }
+  html.dark:not([data-space-contrast="high"]) :is(.lab-filter-modal,.lab-filter-menu,.lab-filter-save-popover) :is([data-slot="trailingIcon"],[data-slot="leadingIcon"],.lab-filter-symbol) { color:var(--lab-filter-accent)!important; opacity:1; }
+  html.dark:not([data-space-contrast="high"]) :is(.lab-filter-modal,.lab-filter-save-popover) .lab-filter-pictogram { background:#e7eff6; color:#17324d; box-shadow:0 0 0 2px #e7eff6; }
+  html.dark:not([data-space-contrast="high"]) .lab-filter-modal input[type="date"]::-webkit-calendar-picker-indicator { color-scheme:dark; opacity:1; cursor:pointer; }
+  html.dark:not([data-space-contrast="high"]) :is(.lab-filter-modal,.lab-filter-save-popover) :is(.lab-filter-action,.lab-filter-close) {
+    background:var(--lab-filter-panel)!important; color:var(--lab-filter-text)!important;
+    border-color:var(--lab-filter-line)!important; --tw-ring-color:var(--lab-filter-line);
+  }
+  html.dark:not([data-space-contrast="high"]) :is(.lab-filter-modal,.lab-filter-save-popover) :is(.lab-filter-action,.lab-filter-close):hover:not(:disabled) { background:var(--lab-filter-hover)!important; }
+  html.dark:not([data-space-contrast="high"]) .lab-filter-modal .lab-filter-apply { background:#176b88!important; color:#fff!important; --tw-ring-color:#78b9ca; }
+  html.dark:not([data-space-contrast="high"]) .lab-filter-modal .lab-filter-apply:hover:not(:disabled) { background:#1c7b9b!important; }
+  html.dark:not([data-space-contrast="high"]) .lab-filter-modal .filter-clear { color:#dceafa; opacity:1; }
+  html.dark:not([data-space-contrast="high"]) .lab-filter-modal .filter-clear:hover { background:var(--lab-filter-hover); border-radius:4px; }
+  html.dark:not([data-space-contrast="high"]) :is(.lab-filter-modal,.lab-filter-menu,.lab-filter-save-popover) :is(button,input,select,[tabindex]):focus-visible { outline:2px solid var(--lab-filter-accent); outline-offset:2px; }
+  html.dark:not([data-space-contrast="high"]) :is(.lab-filter-menu[role="listbox"],.lab-filter-save-popover[role="dialog"]) { background:var(--lab-filter-panel)!important; border:1px solid var(--lab-filter-line)!important; box-shadow:0 12px 32px #0006; }
+  html.dark:not([data-space-contrast="high"]) .lab-filter-menu [role="listbox"] { background:var(--lab-filter-panel)!important; color:var(--lab-filter-text); }
+  html.dark:not([data-space-contrast="high"]) .lab-filter-menu [role="option"] { color:var(--lab-filter-text); }
+  html.dark:not([data-space-contrast="high"]) .lab-filter-menu [role="option"]:is([data-highlighted],[data-state="checked"],[aria-selected="true"]) { background:var(--lab-filter-hover)!important; color:var(--lab-filter-text)!important; }
+  html.dark:not([data-space-contrast="high"]) .lab-filter-menu .material-checkbox { border-color:#b9cde0; }
+  html.dark:not([data-space-contrast="high"]) .lab-filter-menu .material-checkbox.is-checked { background:#2563eb; border-color:#93c5fd; color:#fff; }
+  html.dark:not([data-space-contrast="high"]) .lab-filter-modal .selected-materials-viewport { scrollbar-color:#8299ad var(--lab-filter-field); }
+}
