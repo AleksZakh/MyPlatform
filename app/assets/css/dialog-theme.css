@@ -1,0 +1,233 @@
+/* Space dialogs: the palette of the ODIS contract editor.
+ * Loaded by dialog-theme.ts, including on direct page loads and SSR.
+ * Semantic dialog roots cover UModal, USlideover, native dialog and custom
+ * dialogs. The old ConfirmDialog needs an explicit class.
+ * Only colours change: no sizing, scrolling, positioning or focus handling.
+ * Light, high-contrast and print modes retain their existing styles.
+ */
+@media screen {
+  html.dark:not([data-space-contrast="high"]) :is([role="dialog"], [role="alertdialog"], dialog, .space-confirm-dialog) {
+    color-scheme: dark;
+    --dialog-bg: #293b4a;
+    --dialog-panel: #344b5e;
+    --dialog-field: #20313f;
+    --dialog-line: #61778b;
+    --dialog-text: #edf3f8;
+    --dialog-muted: #becddd;
+    --dialog-hover: #425f76;
+    --dialog-accent: #93c5fd;
+    --space-bg: var(--dialog-bg);
+    --space-panel: var(--dialog-panel);
+    --space-raised: var(--dialog-panel);
+    --space-field: var(--dialog-field);
+    --space-line: var(--dialog-line);
+    --space-field-border: var(--dialog-line);
+    --space-text: var(--dialog-text);
+    --space-muted: var(--dialog-muted);
+    --space-hover: var(--dialog-hover);
+    --space-selection: var(--dialog-hover);
+    --space-accent: var(--dialog-accent);
+    --space-danger: #fda4af;
+    --space-danger-bg: #44262c;
+    --space-graphite-bg: var(--dialog-bg);
+    --space-graphite-panel: var(--dialog-panel);
+    --space-graphite-raised: var(--dialog-panel);
+    --space-graphite-field: var(--dialog-field);
+    --space-graphite-field-line: var(--dialog-line);
+    --space-graphite-text: var(--dialog-text);
+    --space-graphite-muted: var(--dialog-muted);
+    --ui-bg: var(--dialog-field);
+    --ui-bg-muted: var(--dialog-bg);
+    --ui-bg-elevated: var(--dialog-panel);
+    --ui-bg-accented: var(--dialog-hover);
+    --ui-text: var(--dialog-text);
+    --ui-text-highlighted: var(--dialog-text);
+    --ui-text-toned: var(--dialog-text);
+    --ui-text-muted: var(--dialog-muted);
+    --ui-text-dimmed: var(--dialog-muted);
+    --ui-border: var(--dialog-line);
+    --ui-border-muted: var(--dialog-line);
+    --ui-border-accented: var(--dialog-line);
+    /* Local palettes used by custom library, administration and ODIS dialogs. */
+    --lib-bg: var(--dialog-bg);
+    --lib-panel: var(--dialog-panel);
+    --lib-text: var(--dialog-text);
+    --lib-border: var(--dialog-line);
+    --rp-bg: var(--dialog-bg);
+    --rp-card: var(--dialog-panel);
+    --rp-input: var(--dialog-field);
+    --rp-text: var(--dialog-text);
+    --rp-muted: var(--dialog-muted);
+    --rp-line: var(--dialog-line);
+    --rp-soft: var(--dialog-hover);
+    --st-bg: var(--dialog-bg);
+    --st-panel: var(--dialog-panel);
+    --st-field: var(--dialog-field);
+    --st-text: var(--dialog-text);
+    --st-muted: var(--dialog-muted);
+    --st-line: var(--dialog-line);
+    --wl-bg: var(--dialog-bg);
+    --wl-card: var(--dialog-panel);
+    --wl-text: var(--dialog-text);
+    --wl-muted: var(--dialog-muted);
+    --wl-line: var(--dialog-line);
+    --wl-soft: var(--dialog-panel);
+    background-color: var(--dialog-bg) !important;
+    color: var(--dialog-text) !important;
+    border-color: var(--dialog-line) !important;
+  }
+
+  /* Work/UPTS can declare a palette on an inner work-root as well. */
+  html.dark:not([data-space-contrast="high"]) :is([role="dialog"], [role="alertdialog"], dialog, .space-confirm-dialog),
+  html.dark:not([data-space-contrast="high"]) :is([role="dialog"], dialog) .work-root {
+    --work-bg: var(--dialog-bg) !important;
+    --work-panel: var(--dialog-panel) !important;
+    --work-text: var(--dialog-text) !important;
+    --work-muted: var(--dialog-muted) !important;
+    --work-line: var(--dialog-line) !important;
+    --work-accent: var(--dialog-accent) !important;
+  }
+  html.dark:not([data-space-contrast="high"]) :is([role="dialog"], dialog) .work-root {
+    color: var(--dialog-text) !important;
+  }
+  html.dark:not([data-space-contrast="high"]) :is([role="dialog"], dialog) .work-danger {
+    color: var(--space-danger) !important;
+  }
+
+  /* Include translucent white utilities (the table-settings regression).
+   * Do not blanket-recolour descendants: status badges, colour swatches and
+   * document/image/video contents must keep their own colours. */
+  html.dark:not([data-space-contrast="high"]) :is([role="dialog"], [role="alertdialog"], dialog, .space-confirm-dialog)
+  :is(fieldset, [class~="bg-white"], [class*="bg-white/"], .bg-gray-50, .bg-gray-100, .bg-slate-50, .bg-slate-100) {
+    background-color: var(--dialog-panel) !important;
+    border-color: var(--dialog-line) !important;
+  }
+
+  html.dark:not([data-space-contrast="high"]) :is([role="dialog"], [role="alertdialog"], dialog, .space-confirm-dialog)
+  > :is(header, footer),
+  html.dark:not([data-space-contrast="high"]) :is([role="dialog"], [role="alertdialog"], dialog, .space-confirm-dialog)
+  :is([data-slot="header"], [data-slot="footer"], .work-modal-head, .modal-header, .modal-actions, .history-header, .history-footer) {
+    background-color: var(--dialog-panel) !important;
+    border-color: var(--dialog-line) !important;
+  }
+  /* Nuxt UI 4.1 renders slot classes without data-slot attributes. Its direct
+   * flex header/footer are separated by divide-y; flex-1 is the scroll body. */
+  html.dark:not([data-space-contrast="high"]) :is([role="dialog"], [role="alertdialog"]).divide-y
+  > .flex:not(.flex-1):is(:first-child, :last-child) {
+    background-color: var(--dialog-panel) !important;
+    border-color: var(--dialog-line) !important;
+  }
+
+  html.dark:not([data-space-contrast="high"]) :is([role="dialog"], [role="alertdialog"], dialog, .space-confirm-dialog)
+  :is(legend, [data-slot="title"], .text-gray-700, .text-gray-800, .text-gray-900, .text-slate-700, .text-slate-800, .text-slate-900, .\!text-slate-900) {
+    color: var(--dialog-text) !important;
+  }
+  html.dark:not([data-space-contrast="high"]) :is([role="dialog"], [role="alertdialog"], dialog, .space-confirm-dialog)
+  :is([data-slot="description"], .text-gray-400, .text-gray-500, .text-gray-600, .text-slate-400, .text-slate-500, .text-slate-600, .\!text-slate-600) {
+    color: var(--dialog-muted) !important;
+  }
+
+  html.dark:not([data-space-contrast="high"]) :is([role="dialog"], [role="alertdialog"], dialog, .space-confirm-dialog)
+  :is(input:not([type="checkbox"]):not([type="radio"]):where(:not([type="range"]):not([type="color"]):not([type="image"])), textarea, select, [role="combobox"]) {
+    background-color: var(--dialog-field) !important;
+    color: var(--dialog-text) !important;
+    border-color: var(--dialog-line) !important;
+    --tw-ring-color: var(--dialog-line);
+    color-scheme: dark;
+  }
+  html.dark:not([data-space-contrast="high"]) :is([role="dialog"], [role="alertdialog"], dialog, .space-confirm-dialog)
+  :is(input, textarea)::placeholder {
+    color: var(--dialog-muted) !important;
+    opacity: 1;
+  }
+  html.dark:not([data-space-contrast="high"]) :is([role="dialog"], [role="alertdialog"], dialog, .space-confirm-dialog)
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    color-scheme: dark;
+    opacity: 1;
+  }
+  html.dark:not([data-space-contrast="high"]) :is([role="dialog"], [role="alertdialog"], dialog, .space-confirm-dialog)
+  :is(input[type="checkbox"], input[type="radio"]) {
+    accent-color: #3b82f6;
+  }
+
+  html.dark:not([data-space-contrast="high"]) :is([role="dialog"], [role="alertdialog"], dialog, .space-confirm-dialog)
+  :is(.hover\:bg-gray-50, .hover\:bg-gray-100, .hover\:bg-slate-50, .hover\:bg-slate-100, label:has(input[type="checkbox"])):hover {
+    background-color: var(--dialog-hover) !important;
+  }
+  html.dark:not([data-space-contrast="high"]) :is([role="dialog"], [role="alertdialog"], dialog, .space-confirm-dialog)
+  :is(button, a, input, textarea, select, [tabindex]):focus-visible {
+    outline-color: var(--dialog-accent);
+  }
+  html.dark:not([data-space-contrast="high"]) :is([role="dialog"], [role="alertdialog"], dialog, .space-confirm-dialog)
+  :is(input, textarea, select, [role="combobox"]):focus-visible {
+    --tw-ring-color: var(--dialog-accent);
+  }
+  html.dark:not([data-space-contrast="high"]) :is([role="dialog"], [role="alertdialog"], dialog, .space-confirm-dialog)
+  :is(input, textarea, select, [role="combobox"]):is([aria-invalid="true"], .border-error, .ring-error, .border-red-500):not(:disabled) {
+    /* Legacy lab rules are more specific and consume this field-local token. */
+    --space-graphite-field-line: var(--space-danger);
+    --space-field-border: var(--space-danger);
+    border-color: var(--space-danger) !important;
+    --tw-ring-color: var(--space-danger);
+  }
+
+  /* Standard primary actions match ODIS. Destructive actions and state/status
+   * colours are intentionally separate; do not match bg-primary checkboxes. */
+  html.dark:not([data-space-contrast="high"]) :is([role="dialog"], [role="alertdialog"], dialog, .space-confirm-dialog)
+  :is(.work-primary, .library-primary, .rp-primary, .st-primary, .wl-primary, .contract-save,
+      button.bg-primary:not([role="checkbox"]):not([role="radio"]):not([role="switch"]), a.bg-primary) {
+    background-color: #176b88 !important;
+    border-color: #176b88 !important;
+    color: #fff !important;
+  }
+
+  /* Colour icons contain black strokes. A pale tile keeps them legible without
+   * changing their artwork or adding padding that shifts form alignment.
+   * Mono mask icons must NOT get a background: it is their ink colour. */
+  html.dark:not([data-space-contrast="high"]) :is([role="dialog"], [role="alertdialog"], dialog, .space-confirm-dialog)
+  .iconify[class*="-color"]:not(.lab-filter-pictogram *) {
+    background-color: #e7eff6 !important;
+    color: #17324d;
+    border-radius: 4px;
+    box-shadow: 0 0 0 2px #e7eff6;
+  }
+  html.dark:not([data-space-contrast="high"]) :is([role="dialog"], [role="alertdialog"], dialog, .space-confirm-dialog)
+  :is([data-slot="close"], .modal-close, .work-icon-btn) {
+    color: var(--dialog-text) !important;
+  }
+  html.dark:not([data-space-contrast="high"]) :is([role="dialog"], [role="alertdialog"], dialog, .space-confirm-dialog)
+  [role="combobox"] :is([data-slot="trailingIcon"], [data-slot="leadingIcon"]) {
+    color: var(--dialog-accent) !important;
+    opacity: 1;
+  }
+
+  /* Reka teleports select menus next to the modal, not inside it. Limit these
+   * tokens to the lifetime of a visible dialog; regular page menus keep theirs. */
+  html.dark:not([data-space-contrast="high"]):has(:is([role="dialog"], [role="alertdialog"], dialog[open]))
+  :is([role="listbox"], [role="menu"]) {
+    --space-panel: #344b5e;
+    --space-raised: #344b5e;
+    --space-field: #20313f;
+    --space-line: #61778b;
+    --space-text: #edf3f8;
+    --space-muted: #becddd;
+    --space-hover: #425f76;
+    --space-selection: #425f76;
+    --space-graphite-raised: #344b5e;
+    --space-graphite-field: #20313f;
+    --space-graphite-field-line: #61778b;
+    --space-graphite-text: #edf3f8;
+    --space-graphite-muted: #becddd;
+    --space-graphite-selected: #425f76;
+    --ui-bg: #344b5e;
+    --ui-bg-elevated: #344b5e;
+    --ui-bg-accented: #425f76;
+    --ui-text: #edf3f8;
+    --ui-text-highlighted: #edf3f8;
+    --ui-text-muted: #becddd;
+    --ui-border: #61778b;
+    background-color: #344b5e !important;
+    color: #edf3f8 !important;
+    border-color: #61778b !important;
+  }
+}

@@ -4,7 +4,7 @@
   <!-- <div class="fixed inset-0 bg-gray-500 bg-opacity-10 z-40"> -->
   <div
     v-if="isOpen"
-    class="p-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg w-full max-w-md"
+    class="space-confirm-dialog p-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg w-full max-w-md"
   >
     <div class="flex items-center gap-3 mb-4">
       <div class="text-red-500 text-2xl">🗑️</div>
