@@ -1,5 +1,5 @@
 import { serializeLabFilterState, deserializeLabFilterState } from '~~/shared/utils/lab-filter-storage'
-import { normalizeLabFilters, hasLabFilterValue, materialFilterValues } from '~~/shared/utils/lab-filter-values'
+import { normalizeLabFilters, hasLabFilterValue, materialFilterValues, filterSelectionValues } from '~~/shared/utils/lab-filter-values'
 import { defineStore,createPinia } from 'pinia'
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 import type { ITableFilter } from '@@/types/tableFilter'
@@ -74,7 +74,7 @@ export const useTableFilterStore = defineStore('tableFilter', {
             if (filter.plp) descriptions.push(`ПЛП: ${filter.plp}`);
             if (filter.objName) descriptions.push(`Объект: ${filter.objName}`);
             if (filter.samplActNumber) descriptions.push(`№ акта: ${filter.samplActNumber}`);
-            if (filter.sPlace) descriptions.push(`Место: ${filter.sPlace}`);
+            if (filterSelectionValues(filter.sPlace).length) descriptions.push(`Места: ${filterSelectionValues(filter.sPlace).join('; ')}`);
             if (filter.sProvaider) descriptions.push(`Инспектор: ${filter.sProvaider}`);
             if (materialFilterValues(filter.materialName).length) descriptions.push(`Материалы: ${materialFilterValues(filter.materialName).join('; ')}`);
             if (filter.manufacturer) descriptions.push(`Производитель: ${filter.manufacturer}`);
@@ -129,7 +129,7 @@ export const useTableFilterStore = defineStore('tableFilter', {
             // The server consumes this persisted cookie for the registry and exports.
             // Do not silently keep an older cookie when a large selection exceeds browser limits.
             if (JSON.stringify(next).length > 60000 || encodeURIComponent(serializeLabFilterState({ filter: next, isLoaded: this.isLoaded })).length > 3800) {
-                throw new Error('Слишком большой набор условий для сохранения в браузере. Уменьшите число выбранных материалов или длину текстовых условий.')
+                throw new Error('Слишком большой набор условий для сохранения в браузере. Уменьшите число выбранных мест и материалов или длину текстовых условий.')
             }
             this.filter = next
             // this.saveToStorage()

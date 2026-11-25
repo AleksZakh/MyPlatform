@@ -6,7 +6,7 @@ export interface ITableFilter {
     samplActNumber: string | null;
     sDateStart: string | null;
     sDateEnd: string | null;
-    sPlace: string | null;
+    sPlace: string | string[] | null;
     sProvaider: string | null;
     //----------------------------
     receiveDateStart: string | null;

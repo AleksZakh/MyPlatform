@@ -1,5 +1,5 @@
 import { deserializeLabFilterState } from '../../shared/utils/lab-filter-storage';
-import { materialFilterValues } from '../../shared/utils/lab-filter-values';
+import { materialFilterValues, filterSelectionValues } from '../../shared/utils/lab-filter-values';
 import type { Prisma } from '@prisma/client';
 import { getCookie, type H3Event } from 'h3';
 
@@ -68,10 +68,13 @@ export function buildRegistryFilter(cookieFilters: Record<string, unknown>): Pri
 
 
     // Место отбора
-    if (cookieFilters.sPlace) {
+    const places = filterSelectionValues(cookieFilters.sPlace);
+    if (places.length) {
       AND.push({
         testLocation: {
-          name: catalogName('sPlace'),
+          name: Array.isArray(cookieFilters.sPlace)
+            ? { in: places, mode: 'insensitive' }
+            : catalogName('sPlace'),
         },
       });
     }
@@ -258,7 +261,8 @@ export function describeRegistryFilters(filters: Record<string, unknown>): strin
     testReportDataStart: 'Дата протокола с', testReportDataEnd: 'Дата протокола по',
   };
   return Object.entries(labels).flatMap(([key, label]) => {
-    const value = key === 'materialName' ? materialFilterValues(filters[key]).join('; ') : filters[key];
+    const value = key === 'materialName' || key === 'sPlace'
+      ? filterSelectionValues(filters[key]).join('; ') : filters[key];
     return value ? [`${label}: ${String(value)}`] : [];
   });
 }

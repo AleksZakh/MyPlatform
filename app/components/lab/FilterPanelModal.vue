@@ -142,22 +142,46 @@
                 </div>
           
                 
-                <div class="flex flex-col items-start gap-1">
-                  <label class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 text-sm" >
-                    <Icon name="streamline-freehand-color:gps-location-rectangle" size="24" /> Место отбора:</label >
-                  <div class="flex items-center gap-1 w-full">
-                    <USelectMenu aria-label="Место отбора" :model-value="localFilters.sPlace ?? undefined"
-                      @update:model-value="setFacet('sPlace', $event)" :items="facetOptions.sPlace"
-                      :loading="facetsLoading" :disabled="facetsLoading"
-                      :search-input="{ placeholder: 'Поиск места отбора...' }" class="w-full min-w-0 shadow-sm">
-                      <template #empty>Нет подходящих значений</template>
+                <div class="place-selection">
+                  <UFormField name="sPlace">
+                    <template #label>
+                      <label class="font-semibold flex items-center gap-2 text-sm">
+                        <Icon name="streamline-freehand-color:gps-location-rectangle" size="24" /> Место отбора:
+                      </label>
+                    </template>
+                    <USelectMenu v-model="selectedPlaces" multiple aria-label="Место отбора"
+                      :items="facetOptions.sPlace" :loading="facetsLoading" :disabled="facetsLoading"
+                      :content="{ side: 'bottom', align: 'start' }"
+                      :search-input="{ placeholder: 'Найти место отбора...' }"
+                      :ui="{ itemTrailing: 'hidden' }" class="shadow-sm w-full">
+                      <template #default>
+                        <span class="truncate">{{ selectedPlaces.length ? `Выбрано мест: ${selectedPlaces.length}` : 'Выберите места отбора' }}</span>
+                      </template>
+                      <template #item-leading="{ item }">
+                        <span class="material-checkbox" :class="{ 'is-checked': selectedPlaces.includes(String(item)) }" aria-hidden="true">
+                          {{ selectedPlaces.includes(String(item)) ? '✓' : '' }}
+                        </span>
+                      </template>
+                      <template #empty>Нет мест отбора по остальным условиям</template>
                     </USelectMenu>
-                    <button v-if="localFilters.sPlace" type="button" class="filter-clear"
-                      aria-label="Очистить место отбора" @click="setFacet('sPlace', null)">×</button>
+                  </UFormField>
+                  <div class="selected-materials-viewport">
+                    <ul v-if="selectedPlaces.length" class="selected-materials" aria-label="Выбранные места отбора">
+                      <li v-for="place in selectedPlaces" :key="place">
+                        <span>{{ place }}</span>
+                        <button type="button" class="filter-clear" :aria-label="`Убрать место отбора ${place}`"
+                          @click="selectedPlaces = selectedPlaces.filter(value => value !== place)">×</button>
+                      </li>
+                    </ul>
+                    <p v-else class="text-xs opacity-70">Без ограничения по местам отбора</p>
+                    <p v-if="legacyPlace" class="text-xs mt-2 opacity-70">Из старого шаблона: поиск по части названия. При изменении выбора будут использоваться точные названия.</p>
+                  </div>
+                  <div class="material-selection-actions">
+                    <button v-if="selectedPlaces.length" type="button" class="text-xs underline"
+                      @click="selectedPlaces = []">Очистить места отбора</button>
                   </div>
                 </div>
-          
-                
+
                 <UFormField name="sPerson" >
                   <template #label>
                     <label class="font-semibold flex items-center gap-2 min-w-32 text-gray-700 " >
@@ -427,7 +451,7 @@ import { storeToRefs } from 'pinia'
 import type { ITableFilter } from '@@/types/tableFilter'
 import { useTableFilterStore } from '~/stores/tableFilter'
 import { useLabFilterFacets } from '~/composables/useLabFilterFacets'
-import { normalizeLabFilters, materialFilterValues, labFilterDateError, type LabFacetKey } from '~~/shared/utils/lab-filter-values'
+import { normalizeLabFilters, materialFilterValues, filterSelectionValues, labFilterDateError, type LabFacetKey } from '~~/shared/utils/lab-filter-values'
 
 interface FilterTemplate {
   id: number
@@ -450,7 +474,12 @@ const selectedMaterials = computed<string[]>({
   get: () => materialFilterValues(localFilters.materialName),
   set: values => { localFilters.materialName = materialFilterValues(values) },
 })
-function setFacet(key: Exclude<LabFacetKey, 'materialName'>, value: unknown) {
+const legacyPlace = computed(() => typeof localFilters.sPlace === 'string' && !localFilters.exactFields?.includes('sPlace'))
+const selectedPlaces = computed<string[]>({
+  get: () => filterSelectionValues(localFilters.sPlace),
+  set: values => { localFilters.sPlace = filterSelectionValues(values) },
+})
+function setFacet(key: Exclude<LabFacetKey, 'materialName' | 'sPlace'>, value: unknown) {
   localFilters[key] = typeof value === 'string' ? value : null
   localFilters.exactFields = [...new Set([...(localFilters.exactFields || []), key])]
 }
@@ -501,7 +530,7 @@ function resetFilters() {
 
 
 <style scoped>
-.material-selection { border-block: 2px solid var(--space-border, #cbd5e1); padding-block: 12px; }
+.material-selection, .place-selection { border-block: 2px solid var(--space-border, #cbd5e1); padding-block: 12px; }
 .selected-materials-viewport { height: 104px; min-height: 104px; max-height: 104px; margin-top: 6px; overflow-y: auto; scrollbar-gutter: stable; }
 .selected-materials { margin: 0; padding: 0; list-style: none; }
 .material-selection-actions { height: 24px; display: flex; align-items: center; }

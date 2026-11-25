@@ -4,7 +4,7 @@ export const LAB_FACET_KEYS = ['plp', 'objName', 'sPlace', 'sProvaider', 'materi
 export type LabFacetKey = typeof LAB_FACET_KEYS[number]
 export type LabFacetOptions = Record<LabFacetKey, string[]>
 export const LAB_FILTER_TEXT_KEYS = [
-  'plp', 'objName', 'samplActNumber', 'sDateStart', 'sDateEnd', 'sPlace', 'sProvaider',
+  'plp', 'objName', 'samplActNumber', 'sDateStart', 'sDateEnd', 'sProvaider',
   'receiveDateStart', 'receiveDateEnd', 'qualiDateStart', 'qualiDateEnd', 'qualiDocNumber',
   'manufacturer', 'testReportDataStart', 'testReportDataEnd', 'testResult', 'testProtocolNumber',
 ] as const
@@ -15,10 +15,13 @@ export const LAB_FILTER_DATE_PAIRS = [
   ['testReportDataStart', 'testReportDataEnd', 'Дата протокола'],
 ] as const
 
-export function materialFilterValues(value: unknown): string[] {
+export function filterSelectionValues(value: unknown): string[] {
   const source = Array.isArray(value) ? value : typeof value === 'string' ? [value] : []
   return [...new Set(source.filter((v): v is string => typeof v === 'string').map(v => v.trim()).filter(Boolean))]
 }
+
+// Compatibility alias for existing material consumers.
+export const materialFilterValues = filterSelectionValues
 
 /** Clone templates/drafts; retain legacy substring filters until the user reselects a value. */
 export function normalizeLabFilters(value: unknown = {}): ITableFilter {
@@ -26,10 +29,12 @@ export function normalizeLabFilters(value: unknown = {}): ITableFilter {
   const result = Object.fromEntries(LAB_FILTER_TEXT_KEYS.map(key => [key,
     typeof source[key] === 'string' ? source[key].trim() || null : null,
   ])) as Record<typeof LAB_FILTER_TEXT_KEYS[number], string | null>
-  const materials = materialFilterValues(source.materialName)
+  const materials = filterSelectionValues(source.materialName)
+  const places = filterSelectionValues(source.sPlace)
   const exact = Array.isArray(source.exactFields) ? source.exactFields : []
   return {
     ...result,
+    sPlace: places.length ? (Array.isArray(source.sPlace) ? places : places[0]!) : null,
     materialName: materials.length ? (Array.isArray(source.materialName) ? materials : materials[0]!) : null,
     exactFields: LAB_FACET_KEYS.filter(key => key !== 'materialName' && exact.includes(key)),
   }
