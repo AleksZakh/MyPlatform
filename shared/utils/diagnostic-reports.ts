@@ -1,6 +1,6 @@
 import {plansWeek} from './diagnostic-plans-period';
 import {regionalCenterCode} from './diagnostic-regional-center';
-import {tripDay} from './diagnostic-trips';
+import {tripDay,tripInitials} from './diagnostic-trips';
 
 export const reportTypes = {
   completed:'Выполнение заданий',
@@ -10,17 +10,19 @@ export const reportTypes = {
   external:'Отчёт по внешним исполнителям',
 } as const;
 export const reportIntervals = {day:'День',week:'Неделя',month:'Месяц',custom:'Произвольный интервал'} as const;
-export const reportCenters = ['МСК','ВРЦ','РСТ','КРЦ'] as const;
-type Center = typeof reportCenters[number];
+export const reportCenters = ['МСК','ВРЦ','РРЦ','КРЦ'] as const;
+export type Center = typeof reportCenters[number];
 export type ReportEmployee = {id:number;name:string;center:Center|null};
 export type ReportRoster = {employees:ReportEmployee[];warning:string|null};
 
-export function reportCenter(department:string):Center|null {
-  if (/(?:^|[^А-ЯЁ])РСТ(?:$|[^А-ЯЁ])/iu.test(department)) return 'РСТ';
+export function reportCenter(department:string, name=''):Center|null {
+  if (tripInitials(name)===tripInitials('Дубовиков И.А.')) return 'МСК';
+  if (/(?:^|[^А-ЯЁ])РСТ(?:$|[^А-ЯЁ])/iu.test(department)) return 'РРЦ';
+  if(/казанск|(?:^|[^А-ЯЁ])КЗЦ(?:$|[^А-ЯЁ])/iu.test(department))return null;
   const code=regionalCenterCode(department);
-  if (code==='РРЦ') return 'РСТ';
+  if (code==='РРЦ') return 'РРЦ';
   if (code==='МСК'||code==='ВРЦ'||code==='КРЦ') return code;
-  if (/ростовский филиал/iu.test(department)) return 'РСТ';
+  if (/ростовский филиал/iu.test(department)) return 'РРЦ';
   if (/воронежский филиал/iu.test(department)) return 'ВРЦ';
   if (/краснодарский филиал/iu.test(department)) return 'КРЦ';
   return null;
@@ -51,3 +53,15 @@ export function reportPeriod(interval:keyof typeof reportIntervals,day:string,we
   if(!tripDay(monday)||reportWeek(monday)!==week)return null;
   return plansWeek(monday);
 }
+
+export const centerColors:Record<Center,string> = {МСК:'#FCCFAE',ВРЦ:'#BAE8FE',РРЦ:'#E4D7F5',КРЦ:'#BCFBE0'};
+export interface ReportParams {
+  kind:keyof typeof reportTypes;
+  interval:keyof typeof reportIntervals;
+  from:string;
+  to:string;
+  employeeIds:number[]|null;
+}
+export interface ReportLine {center:Center|null;cells:(string|number)[];group:string}
+export interface ReportInfo {id:string;title:string;createdAt:string;params:ReportParams}
+export interface SavedReport extends ReportInfo {columns:string[];lines:ReportLine[];totals:(number|string)[]|null;warnings:string[]}
