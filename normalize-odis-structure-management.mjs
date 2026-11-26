@@ -3,25 +3,31 @@ import {PrismaClient} from '@prisma/client';
 
 const args = process.argv.slice(2);
 if (args.includes('--help') || args.some(arg => arg !== '--apply') || args.length > 1) {
-  console.log('Использование: node scripts/normalize-odis-structure-management.mjs [--apply]');
+  console.log('Использование: node --env-file=/etc/space/space.env ' + process.argv[1] + ' [--apply]');
   console.log('Без параметров выводится список замен. --apply применяет их одной транзакцией.');
   process.exit(args.length === 1 && args[0] === '--help' ? 0 : 2);
 }
 
 const apply = args[0] === '--apply';
-const prisma = new PrismaClient();
+if (!process.env.DATABASE_URL) {
+  console.error('Не задан DATABASE_URL. Укажите файл окружения Space через --env-file.');
+  process.exit(1);
+}
+const prisma = new PrismaClient({datasourceUrl:process.env.DATABASE_URL});
 const leadingQuotes = /^\s*["'«»“”„‟‘’‚]["'«»“”„‟‘’‚\s]*/u;
 
 async function collectReplacements(db) {
-  const names = await db.diagnosticStructure.groupBy({
-    by:['management'], _count:{_all:true}, orderBy:{management:'asc'},
-  });
+  const names = await db.$queryRaw`
+    SELECT management, COUNT(*)::integer AS count
+    FROM diagnostic_structures
+    GROUP BY management
+    ORDER BY management`;
   const groups = new Map();
-  for (const {management, _count} of names) {
+  for (const {management, count} of names) {
     const key = management.replace(leadingQuotes, '');
     if (!key.trim()) continue;
     if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push({name:management, count:_count._all});
+    groups.get(key).push({name:management, count});
   }
 
   const replacements = [];
@@ -39,14 +45,20 @@ async function collectReplacements(db) {
 }
 
 try {
+  const schema = new URL(process.env.DATABASE_URL).searchParams.get('schema');
   const changes = await prisma.$transaction(async db => {
+    if (!apply) await db.$executeRaw`SET TRANSACTION READ ONLY`;
+    if (schema) {
+      await db.$queryRaw`SELECT pg_catalog.set_config('search_path', pg_catalog.quote_ident(${schema}), true)`;
+    }
     const plan = await collectReplacements(db);
     if (apply) {
       for (const {from, to, count} of plan) {
-        const result = await db.diagnosticStructure.updateMany({
-          where:{management:from}, data:{management:to, version:{increment:1}},
-        });
-        if (result.count !== count) throw new Error('Состав записей изменился. Повторите проверку.');
+        const updated = await db.$executeRaw`
+          UPDATE diagnostic_structures
+          SET management = ${to}, version = version + 1, "updatedAt" = CURRENT_TIMESTAMP
+          WHERE management = ${from}`;
+        if (updated !== count) throw new Error('Состав записей изменился. Повторите проверку.');
       }
     }
     return plan;
@@ -58,7 +70,10 @@ try {
   const count = changes.reduce((sum, item) => sum + item.count, 0);
   console.log(apply ? 'Исправлено записей:' : 'К исправлению записей:', count);
 } catch (error) {
-  console.error('Не удалось завершить обработку:', error.message);
+  const detail = error.meta?.code === '42P01'
+    ? 'В выбранной БД или схеме отсутствует таблица diagnostic_structures. Проверьте подключение к БД Space и применённые миграции ОДИС.'
+    : error.message;
+  console.error('Не удалось завершить обработку:', detail);
   process.exitCode = 1;
 } finally {
   await prisma.$disconnect();
