@@ -8,6 +8,7 @@ export function structureWhere(input:StructureQuery):Prisma.DiagnosticStructureW
   const f=input.filters,AND:Prisma.DiagnosticStructureWhereInput[]=[];
   if(f.road)AND.push({roadName:f.road});
   if(f.code)AND.push({code:contains(f.code)});
+  if(f.note)AND.push({note:contains(f.note)});
   if(f.kind)AND.push({structureName:f.kind});
   if(f.issoType)AND.push({issoType:f.issoType});
   if(f.management.length)AND.push({management:{in:f.management}});

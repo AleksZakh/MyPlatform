@@ -34,7 +34,7 @@ async function loadOptions() {
 }
 onMounted(loadOptions);
 
-const emptyFilters = () => ({road:'', locationFrom:'', locationTo:'', kind:'', code:'', management:'', regions:''});
+const emptyFilters = () => ({road:'', locationFrom:'', locationTo:'', kind:'', code:'', management:'', regions:'', note:''});
 const filters = reactive(emptyFilters());
 const query = computed(() => {
   const end = filters.locationTo.trim();
@@ -206,6 +206,7 @@ function groupStages(group:ContractSelection) {
             <label class="sp-field">Код ИССО<input v-model="filters.code" type="search" maxlength="200" placeholder="Код или его часть"/></label>
             <label class="sp-field">Управление<select v-model="filters.management"><option value="">Все управления</option><option v-for="name in catalog.management" :key="name">{{ name }}</option></select></label>
             <label class="sp-field">Регион расположения<select v-model="filters.regions"><option value="">Все регионы</option><option v-for="region in catalog.regions" :key="region">{{ region }}</option></select></label>
+            <label class="sp-field sp-note-filter">Примечание<input v-model="filters.note" type="search" maxlength="2000" placeholder="Кодовая фраза импорта или часть примечания"/></label>
           </div>
           <div class="sp-toolbar">
             <span role="status">Найдено: {{ result?.matched ?? '…' }} · Выбрано: {{ selected.size }}</span>
@@ -274,6 +275,7 @@ function groupStages(group:ContractSelection) {
 .structure-picker .structure-picker-body{display:flex;flex-direction:column;gap:10px;padding:14px 18px!important;overflow:auto;min-height:0}
 .structure-picker .sp-filters{display:grid;grid-template-columns:2fr minmax(10rem,1fr) 1.4fr;gap:8px 16px}
 .structure-picker .sp-field{display:grid;gap:3px;min-width:0}
+.structure-picker .sp-note-filter{grid-column:1 / -1}
 .structure-picker .sp-range{min-width:0;display:flex;align-items:center;gap:5px;margin:0;padding:0;border:0}
 .structure-picker .sp-range legend{padding:0;margin-bottom:3px}
 .structure-picker :is(.sp-field,.sp-range,.sp-stage){font-size:.85rem;font-weight:500}

@@ -52,7 +52,7 @@ export const structureGroups: { key: string; label: string; fields: StructureFie
   ]},
 ];
 export interface StructureFilters {
-  search: string; road: string; code: string; locationFrom: string; locationTo: string;
+  search: string; road: string; code: string; note: string; locationFrom: string; locationTo: string;
   management: string[]; regions: string[]; kind: string; issoType: string; withWorks: boolean;
 }
 export type StructureSortKey = 'roadName'|'structureName'|'issoCode'|'location'|'region'|'management';

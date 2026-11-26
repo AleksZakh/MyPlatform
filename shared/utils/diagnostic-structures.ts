@@ -3,7 +3,7 @@ import type { StructureRecord, StructureFilters, StructureSortKey, StructureFiel
 const collator = new Intl.Collator('ru', {numeric:true, sensitivity:'base'});
 export const normalizeStructureText = (value: string) => value.trim().toLocaleLowerCase('ru-RU').replace(/ё/g, 'е');
 export function blankStructureFilters(): StructureFilters {
-  return {search:'',road:'',code:'',locationFrom:'',locationTo:'',management:[],regions:[],kind:'',issoType:'',withWorks:false};
+  return {search:'',road:'',code:'',note:'',locationFrom:'',locationTo:'',management:[],regions:[],kind:'',issoType:'',withWorks:false};
 }
 /** A plain integer denotes kilometres. Metres after '+' must be in 0..999. */
 export function structureLocationMetres(value: string): number | null {
@@ -21,9 +21,11 @@ export function filterStructures(rows: readonly StructureRecord[], filters: Stru
   const tokens = normalizeStructureText(filters.search).split(/\s+/).filter(Boolean);
   const from = structureLocationMetres(filters.locationFrom), to = structureLocationMetres(filters.locationTo);
   const code = normalizeStructureText(filters.code);
+  const note = filters.note.trim().toLocaleLowerCase('ru-RU');
   return rows.filter(row => {
     if (filters.road && row.roadName !== filters.road) return false;
     if (code && !normalizeStructureText(row.issoCode).includes(code)) return false;
+    if (note && !row.note.toLocaleLowerCase('ru-RU').includes(note)) return false;
     if (filters.management.length && !filters.management.includes(row.management)) return false;
     if (filters.regions.length && !filters.regions.includes(row.region)) return false;
     if (filters.kind && row.structureName !== filters.kind) return false;

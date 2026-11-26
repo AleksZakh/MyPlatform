@@ -11,7 +11,7 @@ export function parseStructureQuery(query:Record<string,unknown>):StructureQuery
   function flag(key:string){const value=text(key,5);if(!['','true','false','1','0'].includes(value))throw Error('Некорректный параметр: '+key);return value==='true'||value==='1';}
   const page=integer('page',1),pageSize=integer('pageSize',25),sortKey=(text('sortKey',30)||'roadName') as StructureSortKey;
   if(page>1000000||![25,50,100].includes(pageSize)||!sortKeys.includes(sortKey))throw Error('Некорректные параметры страниц или сортировки.');
-  const filters={search:text('search',300),road:exact('road'),code:text('code',200),locationFrom:text('locationFrom',30),locationTo:text('locationTo',30),management:list('management'),regions:list('regions'),kind:exact('kind'),issoType:exact('issoType'),withWorks:flag('withWorks')};
+  const filters={search:text('search',300),road:exact('road'),code:text('code',200),note:text('note',2000),locationFrom:text('locationFrom',30),locationTo:text('locationTo',30),management:list('management'),regions:list('regions'),kind:exact('kind'),issoType:exact('issoType'),withWorks:flag('withWorks')};
   const error=structureRangeError(filters);if(error)throw Error(error);
   if(filters.search.split(/\s+/).filter(Boolean).length>12)throw Error('В поисковом запросе должно быть не больше 12 слов.');
   return {filters,page,pageSize,sortKey,descending:flag('descending')};
