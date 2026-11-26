@@ -11,10 +11,11 @@ export default defineEventHandler(async event=>{
  if(!contract)throw createError({statusCode:404,message:'Договор не найден.'});
  const rows=await prisma.diagnosticContractStructure.findMany({
   where:{contractId,deletedAt:null,structure:{deletedAt:null}},
-  select:{id:true,structureId:true,structure:{select:{
+  select:{id:true,structureId:true,stage:true,structure:{select:{
+   locationMetres:true,
    code:true,structureName:true,roadName:true,location:true,additionalId:true,obstacleName:true,district:true,
   }}},
   orderBy:[{structure:{roadName:'asc'}},{structure:{locationMetres:'asc'}},{id:'asc'}],
  });
- return rows.map(({id,structureId,structure})=>({id,structureId,...structure})) satisfies ContractStructureListItem[];
+ return rows.map(({id,structureId,stage,structure})=>({id,structureId,stage,...structure,locationMetres:structure.locationMetres===null?null:Number(structure.locationMetres)})) satisfies ContractStructureListItem[];
 });

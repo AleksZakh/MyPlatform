@@ -7,6 +7,7 @@ import {contractStatus} from '../../../shared/utils/diagnostic-contracts';
 import type {ContractInput,ContractRecord} from '../../../shared/types/diagnostic-contracts';
 import {diagnosticSupervisors} from './supervisors';
 import {applyTemplates,templateUses,contractAdditions} from './work-templates';
+import {parseStructureStages,saveStructureStages} from './structure-stages';
 import {structureAccess} from './structure-access';
 import {CONTRACT_RESOURCE} from './access';
 async function atomic<T>(fn:(tx:Prisma.TransactionClient)=>Promise<T>,timeout=10000):Promise<T>{
@@ -38,7 +39,8 @@ export async function readContract(id:number){
  if(!row)throw createError({statusCode:404,message:'Договор не найден.'});
  return (await withAuthors([serializeContract(row)]))[0]!;
 }
-export async function saveContract(event:H3Event,actorId:number,input:ContractInput,contractId?:number,version?:number,uses?:unknown,additions?:unknown){
+export async function saveContract(event:H3Event,actorId:number,input:ContractInput,contractId?:number,version?:number,uses?:unknown,additions?:unknown,structureStages?:unknown){
+ const stageChanges=parseStructureStages(structureStages,input.stages);
  const templates=templateUses(uses),manual=contractAdditions(additions);
  const hasStructures=manual.structureIds.length>0||templates.some(t=>t.structureIds.length);
  if(hasStructures)await structureAccess(event);
@@ -70,9 +72,12 @@ export async function saveContract(event:H3Event,actorId:number,input:ContractIn
    row=await tx.diagnosticContract.findUniqueOrThrow({where:{id:before.id},include});
   }else row=await tx.diagnosticContract.create({data:{...data,createdById:actorId},include});
   await applyTemplates(tx,row.id,actorId,templates,manual);
+  if(stageChanges.length || (before && before.stages>input.stages)){
+   await saveStructureStages(tx,row.id,input.stages,stageChanges);
+  }
   if(hasStructures)row=await tx.diagnosticContract.findUniqueOrThrow({where:{id:row.id},include});
   const after=serializeContract(row);
-  await writeAuditEvent({event,db:tx,category:'DATA',result:'SUCCESS',action:before?'UPDATE':'CREATE',resourceKey:CONTRACT_RESOURCE,entityType:'DiagnosticContract',entityId:row.id,actorUserId:actorId,note:'Договор '+row.number,changes:computeAuditDelta(before?{...serializeContract(before)}:{},{...after})});
+  await writeAuditEvent({event,db:tx,category:'DATA',result:'SUCCESS',action:before?'UPDATE':'CREATE',resourceKey:CONTRACT_RESOURCE,entityType:'DiagnosticContract',entityId:row.id,actorUserId:actorId,note:'Договор '+row.number,...(stageChanges.length?{afterData:{structureStages:stageChanges}}:{}),changes:computeAuditDelta(before?{...serializeContract(before)}:{},{...after})});
   return (await withAuthors([after],tx))[0]!;
  },(hasStructures||manual.workIds.length||templates.length)?60000:10000);
 }

@@ -3,7 +3,7 @@ export type ContractStatus='PLANNED'|'ACTIVE'|'COMPLETED';
 export type ContractDirection='INCOME'|'EXPENSE'|'INTERNAL';
 export interface ContractInput {
  number:string; date:string; counterpartyId:number; direction:ContractDirection;
- executor:string|null; start:string|null; finish:string|null; stages:number|null;
+ executor:string|null; start:string|null; finish:string|null; stages:number;
  hours:string|null; amount:string|null; note:string|null; projectTypeId:number|null;
  supervisorId:number|null; relatedContractId:number|null;
 }

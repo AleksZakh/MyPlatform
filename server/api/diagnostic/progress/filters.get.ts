@@ -12,7 +12,7 @@ export default defineEventHandler(async event=>{
   const ids=[...new Set(selection.split(',').map(positive))];
   return prisma.diagnosticContractStructure.findMany({
     where:{contractId:{in:ids},deletedAt:null,contract:{deletedAt:null},structure:{deletedAt:null}},
-    select:{id:true,contractId:true,structure:{select:{code:true,location:true,structureName:true,roadName:true}}},
+    select:{id:true,contractId:true,stage:true,structure:{select:{code:true,location:true,structureName:true,roadName:true}}},
     orderBy:[{contract:{number:'asc'}},{structure:{locationMetres:'asc'}},{id:'asc'}],
   });
 });

@@ -10,7 +10,7 @@ export function structureLocationMetres(value: string): number | null {
   const match = /^(\d{1,7})(?:\s*\+\s*(\d{1,3}))?$/.exec(value.trim());
   return match ? Number(match[1]) * 1000 + Number(match[2] || 0) : null;
 }
-export function structureRangeError(filters: StructureFilters): string {
+export function structureRangeError(filters: Pick<StructureFilters, 'locationFrom'|'locationTo'>): string {
   const from = structureLocationMetres(filters.locationFrom), to = structureLocationMetres(filters.locationTo);
   if ((filters.locationFrom.trim() && from === null) || (filters.locationTo.trim() && to === null)) return 'Укажите километры или км+м: например, 16 или 16+550.';
   if (from !== null && to !== null && from > to) return 'Начало диапазона должно быть не больше конца.';

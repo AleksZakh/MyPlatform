@@ -30,8 +30,7 @@ export function parseContract(value:unknown):ContractInput{
  const executor=text(v.executor,255);if(executor&&!['ОДИС','Автодор Инжиниринг'].includes(executor))invalid('Выберите исполнителя: ОДИС или организация в целом.');
  const d=date(v.date,true)!;const start=date(v.start),finish=date(v.finish);
  if(finish&&(finish<d||(start&&finish<start)))invalid('Окончание работ не может быть раньше заключения договора или начала работ.');
- const stages=v.stages==null||v.stages===''?null:Number(v.stages);
- if(stages!==null&&(!['string','number'].includes(typeof v.stages)||!Number.isInteger(stages)||stages<0||stages>2147483647))invalid('Количество этапов должно быть целым неотрицательным числом.');
+ const stages=v.stages==null||v.stages===''?1:id(v.stages);
  return {number:text(v.number,150,true)!,date:d,counterpartyId:id(v.counterpartyId),direction:direction as ContractInput['direction'],
  executor,start,finish,stages,hours:decimal(v.hours,12),amount:decimal(v.amount,16),
  note:text(v.note,10000),projectTypeId:v.projectTypeId==null||v.projectTypeId===''?null:id(v.projectTypeId),
