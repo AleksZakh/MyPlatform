@@ -9,4 +9,5 @@ export interface ContractSelection {
  template?:{id:number;version:number;name:string};
  works:DraftWork[];
  structures:StructureListRow[];
+ structureStages?:Record<number,number>;
 }

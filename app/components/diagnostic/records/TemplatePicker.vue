@@ -1,51 +1,31 @@
 <script setup lang="ts">
-import {computed,ref,watch} from 'vue';
+import {computed,onMounted,ref} from 'vue';
 import type {ContractSelection,DraftWork,WorkTemplate} from '~~/shared/types/diagnostic-templates';
 import {categoryNames} from '~~/shared/utils/diagnostic-planning';
-import type {StructureListResponse,StructureListRow} from '~~/shared/types/diagnostic-structures-api';
-const props=defineProps<{structure:boolean;manual:boolean;number:string}>();
+const props=defineProps<{manual:boolean;number:string}>();
 const emit=defineEmits<{close:[];apply:[ContractSelection]}>();
 const templates=ref<WorkTemplate[]>([]),library=ref<DraftWork[]>([]);
-const choice=ref<number|null>(null),workIds=ref<number[]>([]),search=ref(''),page=ref(1);
-const selected=ref(new Map<string,StructureListRow>());
-const result=ref<StructureListResponse>(),error=ref(''),loadError=ref(''),busy=ref(true),paging=ref(false);
+const choice=ref<number|null>(null),workIds=ref<number[]>([]),search=ref('');
+const error=ref(''),busy=ref(true);
 const active=computed(()=>templates.value.find(t=>t.id===choice.value));
-const title=computed(()=>props.manual?(props.structure?'Добавить сооружения':'Добавить работы'):'Применить шаблон работ');
+const title=computed(()=>props.manual?'Добавить работы':'Применить шаблон работ');
 const visibleWorks=computed(()=>library.value.filter(w=>(w.code+' '+w.name).toLocaleLowerCase('ru').includes(search.value.trim().toLocaleLowerCase('ru'))));
-const ready=computed(()=>!busy.value&&!error.value&&(props.manual||!!active.value&&!active.value.unavailable)&&(props.structure?selected.value.size>0:!props.manual||workIds.value.length>0));
+const ready=computed(()=>!busy.value&&!error.value&&(props.manual||!!active.value&&!active.value.unavailable)&&(!props.manual||workIds.value.length>0));
 async function loadOptions(){
  busy.value=true;error.value='';
  try{
-  if(!props.manual)templates.value=(await $fetch<WorkTemplate[]>('/api/diagnostic/templates')).filter(t=>(t.category==='structure')===props.structure);
-  else if(!props.structure)library.value=await $fetch<DraftWork[]>('/api/diagnostic/contracts/library');
+  if(!props.manual)templates.value=(await $fetch<WorkTemplate[]>('/api/diagnostic/templates')).filter(t=>t.category!=='structure');
+  else library.value=await $fetch<DraftWork[]>('/api/diagnostic/contracts/library');
  }catch(e:any){error.value=e?.data?.message||'Не удалось загрузить список.';}
  finally{busy.value=false;}
 }
 onMounted(loadOptions);
-const retry=ref(0);
-watch(search,()=>{page.value=1;},{flush:'sync'});
-watch([page,search,retry],([p,q],_,cleanup)=>{
- if(!props.structure)return;
- let stale=false;
- paging.value=true;loadError.value='';result.value=undefined;
- const timer=setTimeout(async()=>{
-  try{
-   const data=await $fetch<StructureListResponse>('/api/diagnostic/structures',{query:{page:p,search:q,pageSize:25}});
-   if(!stale)result.value=data;
-  }catch(e:any){if(!stale)loadError.value=e?.data?.message||'Не удалось загрузить сооружения.';}
-  finally{if(!stale)paging.value=false;}
- },q?220:0);
- cleanup(()=>{stale=true;clearTimeout(timer);});
-},{immediate:true});
-function toggle(s:StructureListRow){
- if(selected.value.has(s.id))selected.value.delete(s.id);else selected.value.set(s.id,s);
-}
 function apply(){
  if(!ready.value)return;
  emit('apply',{
   template:active.value?{id:active.value.id,version:active.value.version,name:active.value.name}:undefined,
   works:active.value?.items??library.value.filter(w=>workIds.value.includes(w.id)),
-  structures:[...selected.value.values()]
+  structures:[]
  });
 }
 </script>
@@ -62,14 +42,7 @@ function apply(){
      <p v-if="!templates.length" class="picker-empty" role="status">Для этого раздела пока нет шаблонов.</p>
      <ul v-if="active" class="picker-preview"><li v-for="w in active.items" :key="w.id">{{w.code}} · {{w.name}}</li></ul>
     </template>
-    <template v-if="structure&&(manual||active)">
-     <label class="picker-field">Найти сооружение <input v-model="search" type="search" placeholder="Код ИССО, дорога, км"/></label>
-     <p v-if="paging" role="status">Загрузка сооружений…</p>
-     <p v-else-if="loadError" role="alert">{{loadError}} <button @click="retry++">Повторить</button></p>
-     <div v-else class="picker-list"><label v-for="s in result?.items" :key="s.id"><input type="checkbox" :checked="selected.has(s.id)" @change="toggle(s)"/><span><b>{{s.issoCode}}</b> · {{s.structureName}} · {{s.roadName}} · {{s.location}}</span></label><p v-if="!result?.items.length" class="picker-empty">Сооружения не найдены.</p></div>
-     <div class="picker-pages"><span>Выбрано: {{selected.size}}</span><button :disabled="paging||page===1" @click="page--">Назад</button><span>{{page}} / {{result?.pageCount||1}}</span><button :disabled="paging||page>=(result?.pageCount||1)" @click="page++">Далее</button></div>
-    </template>
-    <template v-if="manual&&!structure">
+    <template v-if="manual">
      <label class="picker-field">Найти работу <input v-model="search" type="search" placeholder="Шифр или название работы"/></label>
      <div class="picker-list"><label v-for="w in visibleWorks" :key="w.id"><input v-model="workIds" type="checkbox" :value="w.id"/><span>{{w.code}} · {{w.name}}</span></label><p v-if="!visibleWorks.length" class="picker-empty">Работы не найдены.</p></div>
     </template>

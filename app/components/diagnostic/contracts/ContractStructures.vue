@@ -13,17 +13,17 @@ import WorkStatusIcon from './WorkStatusIcon.vue';
 import WorkStatusLegend from './WorkStatusLegend.vue';
 import {structureFilterColumns,emptyStructureFilters,structureMatches,filterText,diagnosticWorkStatus,type StructureFilterKey} from '~~/shared/utils/diagnostic-contract-table';
 const props=defineProps<{contractId:number|null;contractNumber:string;focusId?:number;focusLink?:number;canEdit:boolean;
- pending:StructureListRow[];stageCount:number;editStages:boolean;showSelection:boolean;saving:boolean;
+ pending:StructureListRow[];pendingStages:ReadonlyMap<number,number>;stageCount:number;editStages:boolean;showSelection:boolean;saving:boolean;
  stageEdits:ReadonlyMap<number,{stage:number}>;employees:{id:number;name:string}[]}>();
 const highlight=ref(props.focusId);
 const focusNotice=ref('');
-const emit=defineEmits<{count:[number];changeStages:[rows:ContractStructureListItem[],value:number]}>();
+const emit=defineEmits<{count:[number];linked:[rows:ContractStructureListItem[]];changeStages:[rows:ContractStructureListItem[],value:number]}>();
 const persisted=ref<ContractStructureListItem[]>([]),busy=ref(false),error=ref('');
 const filters=ref(emptyStructureFilters()),filterResetKey=ref(0),filterPortal=ref<HTMLElement|null>(null);
 const rows=computed<ContractStructureListItem[]>(()=>{
  const ids=new Set(persisted.value.map(row=>row.structureId));
  const added=props.pending.filter(row=>!ids.has(Number(row.id))).map(row=>({
-  id:-Number(row.id),structureId:Number(row.id),stage:1,code:row.issoCode,structureName:row.structureName,
+  id:-Number(row.id),structureId:Number(row.id),stage:props.pendingStages.get(Number(row.id))??1,code:row.issoCode,structureName:row.structureName,
   roadName:row.roadName,location:row.location,locationMetres:structureLocationMetres(row.location),
   additionalId:row.additionalId,obstacleName:'',district:''
  }));
@@ -89,7 +89,7 @@ async function load(){
  try{
   const data=await $fetch<ContractStructureListItem[]>(`/api/diagnostic/contracts/${contractId}/structures`);
   if(request!==listGeneration)return;
-  persisted.value=data;emit('count',data.length);const target=props.focusId?data.find(r=>r.id===props.focusLink):undefined;
+  persisted.value=data;emit('linked',data);emit('count',data.length);const target=props.focusId?data.find(r=>r.id===props.focusLink):undefined;
   focusNotice.value=props.focusId&&!target?'Сооружение выбранной работы больше недоступно.':'';
   selectedId.value=props.focusId?target?.id??null:visibleRows.value[0]?.id??null;
  }catch(e:any){if(request===listGeneration)error.value=e?.data?.message||'Не удалось загрузить сооружения.';}

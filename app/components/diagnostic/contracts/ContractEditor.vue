@@ -7,6 +7,7 @@ import type {CalendarRow} from '~~/shared/types/diagnostic-calendar';
 import TripFromList from '../trips/TripFromList.vue';
 import {vRevealWorkRow} from './revealWorkRow';
 import {tripDateLabel} from '~~/shared/utils/diagnostic-trips';
+import ContractStructurePicker from './ContractStructurePicker.vue';
 import TemplatePicker from '../records/TemplatePicker.vue';
 import type {ContractSelection} from '~~/shared/types/diagnostic-templates';
 import ContractWorks from './ContractWorks.vue';
@@ -77,6 +78,22 @@ function uniqueById<T extends {id:number|string}>(rows:T[]):T[]{
 }
 const draftWorks=computed(()=>uniqueById(workSelections.value.flatMap(s=>s.works)));
 const draftStructures=computed(()=>uniqueById(structureSelections.value.flatMap(s=>s.structures)));
+const fixedStageCount=ref(Boolean(c?.stages));
+const linkedStages=ref<Map<number,number>|null>(c?null:new Map());
+function rememberLinks(rows:ContractStructureListItem[]){
+ linkedStages.value=new Map(rows.map(row=>[row.structureId,row.stage]));
+}
+const pendingStages=computed(()=>{
+ const stages=new Map<number,number>();
+ for(const selection of structureSelections.value){
+  for(const row of selection.structures){
+   const id=Number(row.id);
+   if(!linkedStages.value?.has(id)&&!stages.has(id))stages.set(id,selection.structureStages?.[id]??1);
+  }
+ }
+ return stages;
+});
+const structureCount=computed(()=>linkedStages.value?(linkedStages.value.size+pendingStages.value.size):counts.structures);
 const stageEdits=reactive(new Map<number,{stage:number;draft:boolean}>());
 function changeStages(rows:ContractStructureListItem[],value:number){
  for(const row of rows){
@@ -85,15 +102,44 @@ function changeStages(rows:ContractStructureListItem[],value:number){
  }
 }
 const structureStages=computed(()=>{
- const pending=new Set(draftStructures.value.map(row=>Number(row.id)));
- return Array.from(stageEdits,([structureId,edit])=>({structureId,...edit})).filter(edit=>!edit.draft||pending.has(edit.structureId))
-   .map(({structureId,stage})=>({structureId,stage}));
+ const values=new Map(pendingStages.value);
+ for(const [id,edit] of stageEdits){
+  if(!edit.draft||values.has(id))values.set(id,edit.stage);
+ }
+ return Array.from(values,([structureId,stage])=>({structureId,stage}));
 });
-function stage(selection:ContractSelection){
- const previous=selections.value.find(s=>s.template?.id===selection.template?.id&&!!s.structures.length===!!selection.structures.length);
+const assignedStages=computed(()=>{
+ const stages=new Map(linkedStages.value);
+ for(const {structureId,stage} of structureStages.value)stages.set(structureId,stage);
+ return stages;
+});
+const inferredStageCount=computed(()=>{
+ let count=linkedStages.value?1:(c?.stages??1);
+ for(const value of assignedStages.value.values())count=Math.max(count,value);
+ return count;
+});
+function openPicker(mode:'manual'|'template'){
+ if(tab.value===2&&fixedStageCount.value&&(!Number.isInteger(form.stages)||form.stages<1||form.stages>2147483647)){
+  tab.value=0;
+  error.value='Введите целое количество этапов от 1 до 2147483647.';
+  return;
+ }
+ picker.value=mode;
+}
+function applyGroups(groups:ContractSelection[]){
+ selections.value.push(...groups);
+ if(!fixedStageCount.value)form.stages=inferredStageCount.value;
+ picker.value=null;
+}
+function removeSelection(selection:ContractSelection){
+ selections.value=selections.value.filter(item=>item!==selection);
+ for(const [id,edit] of stageEdits)if(edit.draft&&!pendingStages.value.has(id))stageEdits.delete(id);
+ if(!fixedStageCount.value)form.stages=inferredStageCount.value;
+}
+function addContractWorks(selection:ContractSelection){
+ const previous=workSelections.value.find(s=>s.template?.id===selection.template?.id);
  if(previous){
   previous.works=uniqueById([...previous.works,...selection.works]);
-  previous.structures=uniqueById([...previous.structures,...selection.structures]);
  }else selections.value.push(selection);
  picker.value=null;
 }
@@ -126,6 +172,7 @@ async function resolveNames(){
 }
 async function save(){
  if(props.readOnly||saving.value)return;error.value='';
+ if(!fixedStageCount.value)form.stages=inferredStageCount.value;
  if(!Number.isInteger(form.stages)||form.stages<1||form.stages>2147483647){tab.value=0;error.value='Введите целое количество этапов от 1.';return;}
  if(structureStages.value.some(edit=>edit.stage>form.stages)){tab.value=0;error.value='В перечне сооружений есть этап выше '+form.stages+'. Измените этап сооружения или увеличьте количество этапов.';return;}
  if(!form.number.trim()||!form.date||!counterpartyName.value.trim()||!form.direction){tab.value=0;error.value='Укажите номер, дату заключения, контрагента и тип договора.';return;}
@@ -149,7 +196,7 @@ const summaryColumns=[
   <template #body>
    <div class="contract-editor-tabs" role="tablist" aria-label="Карточка договора">
     <div v-for="(label,i) in tabs" :key="label" class="contract-editor-tab" :class="{'is-active':tab===i}" role="presentation">
-     <button :id="`contract-editor-tab-${i}`" type="button" role="tab" :aria-selected="tab===i" :tabindex="tab===i?0:-1" aria-controls="contract-editor-panel" @click="tab=i" @keydown.right.prevent="moveTab($event,i,1)" @keydown.left.prevent="moveTab($event,i,-1)"><span>{{ label }}</span><small v-if="i===1" class="contract-tab-count">Всего работ: {{ contract?(counts.works ?? (countsError ? '—' : '…')):draftWorks.length }}</small><small v-if="i===2" class="contract-tab-count">Всего сооружений: {{ contract?(counts.structures ?? (countsError ? '—' : '…')):draftStructures.length }}</small></button>
+     <button :id="`contract-editor-tab-${i}`" type="button" role="tab" :aria-selected="tab===i" :tabindex="tab===i?0:-1" aria-controls="contract-editor-panel" @click="tab=i" @keydown.right.prevent="moveTab($event,i,1)" @keydown.left.prevent="moveTab($event,i,-1)"><span>{{ label }}</span><small v-if="i===1" class="contract-tab-count">Всего работ: {{ contract?(counts.works ?? (countsError ? '—' : '…')):draftWorks.length }}</small><small v-if="i===2" class="contract-tab-count">Всего сооружений: {{ structureCount ?? (countsError ? '—' : '…') }}</small></button>
      <button v-if="contract&&readOnly&&i<3" v-show="tab===i" type="button" class="contract-tab-pin" :class="{'is-pinned':pinnedTab===i}" :aria-pressed="pinnedTab===i" :aria-label="pinnedTab===i?'Открепить стартовую вкладку':'Открывать эту вкладку при просмотре договора'" :title="pinnedTab===i?'Открепить стартовую вкладку':'Открывать эту вкладку при просмотре договора'" @click="pinStartTab"><svg class="iconify odis-local-pin" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><g transform="rotate(45 12 12)"><path d="M8 2h8v2l-1 1v5l3 3v2h-5l-.6 6.5-.4 1-.4-1L11 15H6v-2l3-3V5L8 4z"/></g></svg></button>
     </div>
    </div>
@@ -175,7 +222,7 @@ const summaryColumns=[
      </fieldset>
      <div class="contract-related"><label>Доходный договор<select v-model="form.relatedContractId" :disabled="readOnly||saving"><option :value="null">Не связан</option><option v-for="item in incomeContracts" :key="item.id" :value="item.id">{{ item.number }} · {{ item.counterparty }}</option></select></label></div>
      <h2>Дополнительная информация по договору</h2>
-     <fieldset class="contract-extra" :disabled="readOnly||saving"><label>Количество этапов<input v-model.number="form.stages" type="number" min="1" max="2147483647" required step="1" /></label><label>Количество сооружений<input :value="contract?.buildings??draftStructures.length" readonly title="Рассчитывается по связанным сооружениям" /></label><label>Количество чел./часов<input v-model="form.hours" type="number" min="0" step="0.01" /></label></fieldset>
+     <fieldset class="contract-extra" :disabled="readOnly||saving"><label>Количество этапов<input v-model.number="form.stages" @input="fixedStageCount=($event.target as HTMLInputElement).value!==''" type="number" min="1" max="2147483647" required step="1" /></label><label>Количество сооружений<input :value="structureCount??contract?.buildings??0" readonly title="Рассчитывается по связанным сооружениям" /></label><label>Количество чел./часов<input v-model="form.hours" type="number" min="0" step="0.01" /></label></fieldset>
      <label class="contract-note">Примечание<textarea v-model="form.note" :disabled="readOnly||saving" maxlength="10000" rows="4" /></label>
      <p v-if="catalog.supervisorWarning" role="status">{{ catalog.supervisorWarning }}</p>
 
@@ -196,8 +243,8 @@ const summaryColumns=[
      <header class="contract-section-head draft-toolbar">
       <h2 v-if="!contract && tab===1">Перечень работ с договором</h2>
       <div class="draft-buttons">
-       <button type="button" :disabled="saving" @click="picker='manual'"><Icon name="lucide:plus"/>{{tab===1?'Добавить работы':'Добавить сооружения'}}</button>
-       <button type="button" :disabled="saving" @click="picker='template'"><Icon name="lucide:list-tree"/>Использовать шаблон</button>
+       <button type="button" :disabled="saving||(tab===2&&!linkedStages)" @click="openPicker('manual')"><Icon name="lucide:plus"/>{{tab===1?'Добавить работы':'Добавить сооружения'}}</button>
+       <button type="button" :disabled="saving||(tab===2&&!linkedStages)" @click="openPicker('template')"><Icon name="lucide:list-tree"/>Использовать шаблон</button>
       </div>
      </header>
      <div v-if="!contract && tab===1" class="contract-detail-table contract-compact-table draft-table">
@@ -209,15 +256,18 @@ const summaryColumns=[
      </div>
      <div v-if="(tab===1?workSelections:structureSelections).length" class="draft-summary">
       <span>Будут добавлены при сохранении договора</span>
-      <div v-for="s in (tab===1?workSelections:structureSelections)" :key="s.template?.id??'manual'">
+      <div v-for="(s,index) in (tab===1?workSelections:structureSelections)" :key="index">
        {{s.template?.name||'Ручной выбор'}} · {{tab===1?'работ: '+s.works.length:'сооружений: '+s.structures.length}}
-       <button type="button" :disabled="saving" :aria-label="'Убрать: '+(s.template?.name||'ручной выбор')" @click="selections=selections.filter(item=>item!==s)">Убрать</button>
+       <button type="button" :disabled="saving" :aria-label="'Убрать: '+(s.template?.name||'ручной выбор')" @click="removeSelection(s)">Убрать</button>
       </div>
      </div>
     </template>
-    <TemplatePicker v-if="picker" :structure="tab===2" :manual="picker==='manual'" :number="form.number" @close="picker=null" @apply="stage"/>
+    <ContractStructurePicker v-if="picker && tab===2" :manual="picker==='manual'" :number="form.number"
+     :stage-limit="fixedStageCount?Number(form.stages):null" :assigned="assignedStages" :existing="linkedStages!"
+     :applied="structureSelections" @close="picker=null" @apply="applyGroups"/>
+    <TemplatePicker v-if="picker && tab===1" :manual="picker==='manual'" :number="form.number" @close="picker=null" @apply="addContractWorks"/>
     <ContractWorks v-if="tab===1 && contract" :focus-id="focusWork?.kind==='contract'?focusWork.id:undefined" :contract-id="contract?.id??null" :contract-number="contract?.number??''" :employees="catalog.supervisors" :can-edit="canEditWorks??canEdit" @count="counts.works=$event" />
-    <ContractStructures v-if="tab===2" :pending="draftStructures" :stage-count="form.stages" :stage-edits="stageEdits"
+    <ContractStructures v-if="tab===2" :pending="draftStructures" :pending-stages="pendingStages" :stage-count="form.stages || inferredStageCount" @linked="rememberLinks" :stage-edits="stageEdits"
      :edit-stages="!readOnly" :show-selection="canEdit || !readOnly" :saving="saving" @change-stages="changeStages" :focus-id="focusWork?.kind==='structure'?focusWork.id:undefined" :focus-link="focusWork?.kind==='structure'?focusWork.linkId:undefined" :contract-id="contract?.id??null" :contract-number="contract?.number??''" :employees="catalog.supervisors" :can-edit="canEditWorks??canEdit" @count="counts.structures=$event" />
    </div>
   </template>
