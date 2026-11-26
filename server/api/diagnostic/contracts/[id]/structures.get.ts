@@ -12,10 +12,10 @@ export default defineEventHandler(async event=>{
  const rows=await prisma.diagnosticContractStructure.findMany({
   where:{contractId,deletedAt:null,structure:{deletedAt:null}},
   select:{id:true,structureId:true,stage:true,structure:{select:{
-   locationMetres:true,
+   locationMetres:true,decommissionedAt:true,
    code:true,structureName:true,roadName:true,location:true,additionalId:true,obstacleName:true,district:true,
   }}},
   orderBy:[{structure:{roadName:'asc'}},{structure:{locationMetres:'asc'}},{id:'asc'}],
  });
- return rows.map(({id,structureId,stage,structure})=>({id,structureId,stage,...structure,locationMetres:structure.locationMetres===null?null:Number(structure.locationMetres)})) satisfies ContractStructureListItem[];
+ return rows.map(({id,structureId,stage,structure:{decommissionedAt,...structure}})=>({id,structureId,stage,decommissioned:decommissionedAt!==null,...structure,locationMetres:structure.locationMetres===null?null:Number(structure.locationMetres)})) satisfies ContractStructureListItem[];
 });

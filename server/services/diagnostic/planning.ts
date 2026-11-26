@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { createError, type H3Event } from 'h3';
 import { prisma } from '../../utils/prisma';
+import { lockStructuresForAssignment } from './structure-availability';
 import { calendarRoster } from './calendar-roster';
 import { calendarResolver } from '../../../shared/utils/diagnostic-calendar';
 import { contractStatus } from '../../../shared/utils/diagnostic-contracts';
@@ -26,7 +27,7 @@ export function positive(v: unknown): number {
   return n;
 }
 const day = (v: Date | null) => v?.toISOString().slice(0, 10) ?? null;
-const scope = { deletedAt: null, contract: { deletedAt: null }, structure: { deletedAt: null } };
+const scope = { deletedAt: null, contract: { deletedAt: null }, structure: { deletedAt: null, decommissionedAt: null } };
 const groupSelect = { group: { select: { name: true } }, category: { select: { name: true } } };
 const assignmentSelect = {
   id: true,
@@ -281,6 +282,7 @@ export async function savePlanning(event: H3Event, actorId: number, body: unknow
           select: { id: true, structureId: true },
         });
         if (links.length !== linkIds.length) return conflict();
+        await lockStructuresForAssignment(tx, links.map(link => link.structureId));
         const structures = new Map(links.map((l) => [l.id, l.structureId]));
         const existing = input.items.filter((i) => i.origin === 'existing'),
           fresh = input.items.filter((i) => i.origin === 'library');

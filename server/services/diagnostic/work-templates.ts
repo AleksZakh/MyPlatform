@@ -2,6 +2,7 @@ import {Prisma} from '@prisma/client';
 import {createError,type H3Event} from 'h3';
 import {prisma} from '../../utils/prisma';
 import {computeAuditDelta,writeAuditEvent} from '../../utils/auditLog';
+import {lockStructuresForAssignment} from './structure-availability';
 import {id,invalid} from './input';
 import {categoryNames,type Category} from '../../../shared/utils/diagnostic-planning';
 import type {ContractAdditions,TemplateUse,WorkTemplate} from '../../../shared/types/diagnostic-templates';
@@ -133,8 +134,7 @@ export async function applyTemplates(tx:Prisma.TransactionClient,contractId:numb
   }
   const sids=[...byStructure.keys()].filter(Boolean);
   if(!sids.length)return;
-  const available=await tx.diagnosticStructure.findMany({where:{id:{in:sids},deletedAt:null},select:{id:true,code:true}});
-  if(available.length!==sids.length)return invalid('Одно из сооружений больше недоступно.');
+  const available=await lockStructuresForAssignment(tx,sids);
   const added=await tx.diagnosticContractStructure.createManyAndReturn({data:sids.map(structureId=>({contractId,structureId})),skipDuplicates:true,select:{id:true,structureId:true}});
   if(added.length){
     const codes=new Map(available.map(s=>[s.id,s.code]));

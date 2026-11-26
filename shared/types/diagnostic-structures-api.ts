@@ -15,3 +15,12 @@ export interface StructureDetail extends StructureRecord {
   legacyContracts:{customer:string;number:string;dateText:string}[];
   legacyExecutors:string[];
 }
+
+export type StructureRemovalMode = 'decommission'|'permanent';
+export interface StructureRemovalInfo {
+  version:number;
+  contracts:number;
+  trips:number;
+  legacyContracts:number;
+  canDeletePermanently:boolean;
+}

@@ -1580,6 +1580,7 @@ model DiagnosticStructure {
   deletedAt DateTime?
   deletedById Int?
   deleteReason String? @db.Text
+  decommissionedAt DateTime?
   legacyRows DiagnosticStructureLegacyRow[]
   legacyContracts DiagnosticStructureLegacyContract[]
   legacyExecutors DiagnosticStructureLegacyExecutor[]

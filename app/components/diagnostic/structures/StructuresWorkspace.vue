@@ -1,16 +1,31 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import DiagnosticModuleTabs from '../DiagnosticModuleTabs.vue';
+import StructureRemovalDialog from './StructureRemovalDialog.vue';
 import StructureFields from './StructureFields.vue';
 import StructuresImportPreview from './StructuresImportPreview.vue';
 import { useStructures,structureRequestError } from '~/composables/diagnostic/useStructures';
-import type {StructureListRow} from '~~/shared/types/diagnostic-structures-api';
+import type {StructureListRow,StructureRemovalMode} from '~~/shared/types/diagnostic-structures-api';
 import { structureColumns, structureGroups, type StructureRecord } from '~~/shared/types/diagnostic-structures';
 import '~/assets/css/diagnostic-structures.css';
 const {filters,sortKey,descending,page,pageSize,pageCount,pageRows,selectedId,selected,options,rangeError,matched,total,activeFilters,loading,loadError,catalogError,detailLoading,detailError,sort,reset,refresh,retryDetail}=useStructures();
 const managementSearch=ref(''),regionSearch=ref(''),detailTab=ref('main'),detailsOpen=ref(true),filtersOpen=ref(false),importOpen=ref(false),cardOpen=ref(false),importLoading=ref(false),notice=ref('');
 const managementOptions=computed(()=>options.value.management.filter(value=>value.toLocaleLowerCase('ru-RU').includes(managementSearch.value.trim().toLocaleLowerCase('ru-RU'))));
 const regionOptions=computed(()=>options.value.regions.filter(value=>value.toLocaleLowerCase('ru-RU').includes(regionSearch.value.trim().toLocaleLowerCase('ru-RU'))));
+const canRemove=ref(false), removal=ref<StructureListRow|null>(null);
+onMounted(async()=>{
+  try {
+    const permission=await $fetch<{allowed:boolean}>('/api/access/check',{query:{resource:'diagnostic.structures',action:'DELETE'}});
+    canRemove.value=permission.allowed;
+  } catch {canRemove.value=false;}
+});
+async function removed(mode:StructureRemovalMode){
+  const code=removal.value?.issoCode;
+  removal.value=null;
+  cardOpen.value=false;
+  notice.value='Сооружение '+code+(mode==='decommission'?' выведено из эксплуатации.':' удалено.');
+  await refresh();
+}
 const existingCodes=ref<Pick<StructureRecord,'issoCode'>[]>([]);
 const first=computed(()=>pageRows.value.length?(page.value-1)*pageSize.value+1:0);
 const last=computed(()=>pageRows.value.length?first.value+pageRows.value.length-1:0);
@@ -68,7 +83,7 @@ function moveDetailTab(event:KeyboardEvent,index:number){
           <footer><span>{{ first }}–{{ last }} из {{ matched }}</span><nav aria-label="Страницы сооружений"><button :disabled="loading||page<=1" aria-label="Первая страница" @click="page=1">«</button><button :disabled="loading||page<=1" aria-label="Предыдущая страница" @click="page--">‹</button><label>Страница<select v-model.number="page" :disabled="loading"><option v-for="number in pageCount" :key="number" :value="number">{{ number }}</option></select><span>из {{ pageCount }}</span></label><button :disabled="loading||page>=pageCount" aria-label="Следующая страница" @click="page++">›</button><button :disabled="loading||page>=pageCount" aria-label="Последняя страница" @click="page=pageCount">»</button></nav></footer>
         </section>
         <section class="st-details" :class="{'st-details-collapsed':!detailsOpen}" aria-label="Сведения о выбранном сооружении">
-          <header><button class="st-detail-toggle" :aria-expanded="detailsOpen" aria-controls="st-detail-body" @click="detailsOpen=!detailsOpen"><Icon :name="detailsOpen?'lucide:chevron-down':'lucide:chevron-up'"/><strong>{{ selected?'Сооружение '+selected.issoCode:'О сооружении' }}</strong><span v-if="selected">{{ selected.location }}</span></button><button v-if="selected" @click="openCard(selected)"><Icon name="lucide:expand"/>Карточка</button></header>
+          <header><button class="st-detail-toggle" :aria-expanded="detailsOpen" aria-controls="st-detail-body" @click="detailsOpen=!detailsOpen"><Icon :name="detailsOpen?'lucide:chevron-down':'lucide:chevron-up'"/><strong>{{ selected?'Сооружение '+selected.issoCode:'О сооружении' }}</strong><span v-if="selected">{{ selected.location }}</span></button><div v-if="selected" class="st-selection-actions"><button v-if="canRemove" type="button" @click="removal=selected"><Icon name="lucide:trash-2"/>Удалить</button><button @click="openCard(selected)"><Icon name="lucide:expand"/>Карточка</button></div></header>
           <div v-if="detailsOpen" id="st-detail-body" class="st-detail-body" :aria-busy="detailLoading"><p v-if="detailLoading" role="status">Загрузка карточки…</p><div v-else-if="detailError" class="st-error" role="alert">{{ detailError }} <button @click="retryDetail">Повторить</button></div><template v-else-if="selected">
             <div class="st-detail-tabs" role="tablist" aria-label="Сведения о сооружении"><button v-for="(group,index) in structureGroups" :id="'st-tab-'+group.key" :key="group.key" role="tab" :aria-selected="detailTab===group.key" :tabindex="detailTab===group.key?0:-1" aria-controls="st-tab-panel" @click="detailTab=group.key" @keydown="moveDetailTab($event,index)">{{ group.label }}</button></div>
             <div id="st-tab-panel" role="tabpanel" :aria-labelledby="'st-tab-'+detailTab" tabindex="0"><StructureFields :record="selected" :group="detailTab" legacy/><p v-if="detailTab==='work'" class="st-source">Договоры и исполнители приведены из старой базы. Их перечни не задают соответствие исполнителей отдельным договорам.</p></div>
@@ -84,8 +99,13 @@ function moveDetailTab(event:KeyboardEvent,index:number){
         <div class="st-source"><p v-if="selected.legacyIds.length">Источник: dis_build · ID старых записей: {{ selected.legacyIds.join(', ') }}.<br/>Первоначальный автор неизвестен. Перенос выполнили: {{ selected.importers.join(', ') }}<template v-if="selected.importedAt"> · {{ dateLabel(selected.importedAt) }}</template>.</p><p v-else>Создал: {{ selected.creator }} · {{ dateLabel(selected.createdAt) }}.</p><p>Последнее изменение: {{ selected.editor }} · {{ dateLabel(selected.updatedAt) }}.</p><p>Договоры и исполнители показаны по истории старой базы. Это не подтверждение связи с договорами Space. Прочерк означает, что значение не задано.</p></div>
       </template>
     </div></template>
-    <template #footer><span class="st-muted">Просмотр сведений</span><button @click="cardOpen=false">Закрыть</button></template>
+    <template #footer><span class="st-muted">Просмотр сведений</span><button v-if="canRemove && selected" type="button" @click="removal=selected"><Icon name="lucide:trash-2"/>Удалить</button><button @click="cardOpen=false">Закрыть</button></template>
   </USlideover>
+  <StructureRemovalDialog v-if="removal" :key="removal.id" :structure="removal" @close="removal=null" @removed="removed"/>
   <StructuresImportPreview v-model:open="importOpen" :existing="existingCodes" @imported="refresh"/>
 </section>
 </template>
+
+<style scoped>
+.st-selection-actions{display:flex;align-items:center;gap:8px}
+</style>

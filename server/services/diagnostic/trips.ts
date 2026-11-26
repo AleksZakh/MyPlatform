@@ -3,6 +3,7 @@ import {Prisma} from '@prisma/client';
 import {createError,type H3Event} from 'h3';
 import {prisma} from '../../utils/prisma';
 import {writeAuditEvent} from '../../utils/auditLog';
+import {lockStructuresForAssignment} from './structure-availability';
 import {tripParticipants} from './trip-participants';
 import {syncTripStructureWorks,type PlanningTripSource} from './trip-structure-works';
 import {queueTripEmails} from './trip-email';
@@ -17,11 +18,11 @@ async function atomic<T>(fn:(tx:Prisma.TransactionClient)=>Promise<T>){try{retur
 export async function tripCatalog(event:H3Event){const [contracts,executors,users]=await Promise.all([prisma.diagnosticContract.findMany({where:{deletedAt:null},select:{id:true,number:true},orderBy:{number:'asc'}}),prisma.diagnosticTripExecutor.findMany({select:{id:true,name:true},orderBy:{name:'asc'}}),tripParticipants(event)]);return {contracts,executors,participants:users.items,directoryParticipants:users.directoryParticipants,warning:users.warning};}
 export async function listTrips(){return (await prisma.diagnosticTrip.findMany({where:{deletedAt:null},include:tripInclude,orderBy:[{start:'desc'},{id:'desc'}]})).map(serializeTrip);}
 export async function getTrip(id:number){const row=await prisma.diagnosticTrip.findUnique({where:{id},include:tripInclude});if(!row||row.deletedAt)fail('Командировка не найдена.',404);const creator=await prisma.user.findUnique({where:{id:row!.createdById},select:{fullName:true,login:true}});return {...serializeTrip(row!),author:creator?.fullName||creator?.login||'#'+row!.createdById};}
-async function references(tx:Prisma.TransactionClient,input:TripInput){
+async function references(tx:Prisma.TransactionClient,input:TripInput,retained:ReadonlySet<number>){
  if(!await tx.diagnosticContract.findFirst({where:{id:input.contractId,deletedAt:null}}))fail('Договор недоступен.');
  if(!await tx.diagnosticTripExecutor.findUnique({where:{id:input.executorId}}))fail('Выберите организацию-исполнителя.');
  if(await tx.user.count({where:{id:{in:input.participantIds},deletedAt:null,OR:[{status:'ACTIVE'},{authType:'DOMAIN',status:'PENDING_ACTIVATION'}]}})!==input.participantIds.length)fail('Участник недоступен.');
- if(await tx.diagnosticStructure.count({where:{id:{in:input.structureIds},deletedAt:null}})!==input.structureIds.length)fail('Одно из сооружений недоступно.');
+ await lockStructuresForAssignment(tx,input.structureIds,retained);
 }
 export async function saveTrip(event:H3Event,actorId:number,input:TripInput,id?:number,version?:number,backdatedConfirmed=false,sources:PlanningTripSource[]=[]){
  const allowed=await tripParticipants(event);
@@ -31,7 +32,8 @@ export async function saveTrip(event:H3Event,actorId:number,input:TripInput,id?:
   if(id&&(!before||before.deletedAt))fail('Командировка не найдена.',404);
   if(before&&(before.version!==version||before.status==='COMPLETED'))fail('Командировка изменена или уже закрыта. Обновите карточку.',409);
   if((!before||before.start.toISOString().slice(0,10)!==input.start)&&input.start<tripToday()&&!backdatedConfirmed)fail('Подтвердите планирование командировки в прошлом (задним числом).');
-  await references(tx,input);
+  const retained = new Set(before?.contractId===input.contractId ? before.structures.map(link=>link.structureId) : []);
+  await references(tx,input,retained);
   if(await tx.diagnosticTrip.findFirst({where:{deletedAt:null,contentKey:{in:[tripHash(input,'PLANNED'),tripHash(input,'COMPLETED')]},...(id?{id:{not:id}}:{})}}))fail('Такая командировка уже существует.',409);
   const data={...tripWriteData(input),contentKey:tripHash(input,'PLANNED'),updatedById:actorId};
   let row;

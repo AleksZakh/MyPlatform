@@ -144,7 +144,7 @@ onBeforeUnmount(()=>{listGeneration++;worksGeneration++;});
      <template v-else><tr v-for="(row,index) in visibleRows" :key="row.id" v-reveal-work-row="props.focusLink===row.id?'scroll':false" :class="{'is-selected':selectedId===row.id}" @click="selectedId=row.id">
       <td v-if="showSelection" class="cs-check" @click.stop><input type="checkbox" :aria-label="'Выбрать '+row.code" :checked="checked.has(row.structureId)" :disabled="saving" @change="selectRows([row],$event)"/></td>
       <td>{{ index+1 }}</td><td><button type="button" class="cs-code" :aria-pressed="selectedId===row.id" :aria-label="`Работы сооружения ${row.code}`" @click.stop="selectedId=row.id">{{ row.code }}</button></td>
-      <td>{{ row.structureName }}</td><td><span class="contract-cell-ellipsis cs-road" :title="row.roadName">{{ row.roadName }}</span></td>
+      <td>{{ row.structureName }} <small v-if="row.decommissioned">· Выведено из эксплуатации</small></td><td><span class="contract-cell-ellipsis cs-road" :title="row.roadName">{{ row.roadName }}</span></td>
       <td>{{ row.location }}</td><td>{{ row.additionalId }}</td><td>{{ row.obstacleName }}</td><td>{{ row.district }}</td>
       <td @click.stop><StructureStageSelect v-if="editStages" :count="stageCount" :value="stageEdits.get(row.structureId)?.stage??row.stage" :label="'Этап сооружения '+row.code" :disabled="saving" @change="assign([row],$event)"/><span v-else>{{row.stage}}</span></td>
      </tr></template>

@@ -5,7 +5,7 @@ export default defineEventHandler(async event=>{
  await contractAccess(event,'VIEW');const q=getQuery(event);
  const contractId=Number(q.contractId);if(!Number.isSafeInteger(contractId)||contractId<1)throw createError({statusCode:400,message:'Сначала выберите договор.'});
  if(!await prisma.diagnosticContract.findFirst({where:{id:contractId,deletedAt:null},select:{id:true}}))throw createError({statusCode:404,message:'Договор недоступен.'});
- const contractScope:Prisma.DiagnosticStructureWhereInput={deletedAt:null,contracts:{some:{contractId,deletedAt:null}}};
+ const contractScope:Prisma.DiagnosticStructureWhereInput={deletedAt:null,decommissionedAt:null,contracts:{some:{contractId,deletedAt:null}}};
  const text=(x:unknown)=>typeof x==='string'?x.trim().slice(0,255):'';
  const search=text(q.search),road=text(q.road),page=Math.max(1,Math.min(10000,Number(q.page)||1));
  const km=(x:unknown)=>{const s=text(x);if(!s)return undefined;if(!/^\d{1,6}(?:[.,]\d{1,3}|\+\d{1,3})?$/.test(s))throw createError({statusCode:400,message:'Интервал: число км или км+м.'});return s.includes('+')?Number(s.split('+')[0])*1000+Number(s.split('+')[1]):Math.round(Number(s.replace(',','.'))*1000);};
