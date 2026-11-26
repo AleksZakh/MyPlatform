@@ -48,40 +48,46 @@ async function confirm(mode:StructureRemovalMode){
 </script>
 
 <template>
-  <UModal open title="Удаление сооружения" :description="'Код ИССО '+structure.issoCode" :dismissible="!busy" :close="busy ? false : undefined"
-    :ui="{content:'st-card-panel sm:max-w-lg',header:'st-remove-header',body:'st-remove-body',footer:'st-card-footer st-remove-footer'}"
+  <UModal open title="Удаление сооружения" :description="structure.issoCode"
+    :dismissible="!busy" :close="!busy"
+    :ui="{content:'diagnostic-contract-modal odis-work-card odis-structure-removal', header:'ow-chrome',
+      description:'ow-number', body:'ow-body', footer:'ow-chrome ow-footer'}"
     @update:open="v=>{if(!v && !busy)emit('close')}">
     <template #body>
-      <strong>{{ structure.structureName }} · {{ structure.roadName }} · {{ structure.location }}</strong>
+      <div class="ow-title"><h3>{{ structure.structureName }}</h3></div>
+      <p class="ow-meta">{{ structure.roadName }} · {{ structure.location }}</p>
       <p v-if="checking" role="status">Проверяем связи с договорами и командировками…</p>
-      <div v-if="error" role="alert">{{ error }} <button v-if="!info && !checking" @click="inspect">Повторить проверку</button></div>
+      <div v-if="error" role="alert">{{ error }} <button v-if="!info && !checking" type="button" @click="inspect">Повторить проверку</button></div>
       <template v-if="info">
         <template v-if="!info.canDeletePermanently">
-          <ul>
-            <li v-if="info.contracts">Договоры Space, включая архивные: {{ info.contracts }}</li>
-            <li v-if="info.legacyContracts">Дополнительные ссылки на договоры в старой базе: {{ info.legacyContracts }}</li>
-            <li v-if="info.trips">Командировки: {{ info.trips }}</li>
+          <ul class="removal-usage">
+            <li v-if="info.contracts">Договоры Space, включая архивные: <strong>{{ info.contracts }}</strong></li>
+            <li v-if="info.legacyContracts">Дополнительные ссылки на договоры в старой базе: <strong>{{ info.legacyContracts }}</strong></li>
+            <li v-if="info.trips">Командировки: <strong>{{ info.trips }}</strong></li>
           </ul>
-          <p><strong>Это вывод сооружения из эксплуатации?</strong></p>
+          <h4>Это вывод сооружения из эксплуатации?</h4>
           <p>Сооружение исчезнет из действующего справочника. Договоры, работы и отчёты сохранят историю.</p>
         </template>
         <template v-else>
-          <p>Связей с договорами и командировками не найдено.</p>
+          <p class="removal-usage">Связей с договорами и командировками не найдено.</p>
           <p>Если сооружение выведено из эксплуатации, его карточку можно сохранить в архиве. При полном удалении запись будет удалена без возможности восстановления.</p>
         </template>
       </template>
     </template>
     <template #footer>
+      <button v-if="info" type="button" class="ow-primary" :disabled="busy" @click="confirm('decommission')">Вывести из эксплуатации</button>
+      <button v-if="info?.canDeletePermanently" type="button" class="removal-delete" :disabled="busy" @click="confirm('permanent')">Удалить полностью</button>
       <button type="button" :disabled="busy" @click="emit('close')">Отмена</button>
-      <button v-if="info" type="button" :disabled="busy" @click="confirm('decommission')">Вывести из эксплуатации</button>
-      <button v-if="info?.canDeletePermanently" type="button" class="st-remove-permanent" :disabled="busy" @click="confirm('permanent')">Удалить полностью</button>
     </template>
   </UModal>
 </template>
 
+<style src="~/assets/css/diagnostic-work-card.css"></style>
 <style>
-.st-remove-body{display:grid;gap:10px}
-.st-remove-header,.st-remove-footer{background:var(--st-panel)}
-.st-card-panel .st-remove-permanent{background:#a52b27;color:#fff;border-color:#a52b27}
-.st-card-panel .st-remove-permanent:hover:not(:disabled){background:#83221f}
+.diagnostic-contract-modal.odis-structure-removal { width: min(95vw, 36rem); }
+.odis-structure-removal .ow-body { overflow-wrap: anywhere; }
+.odis-structure-removal .removal-usage { border-top: 1px solid var(--contract-line); padding: 8px 0; }
+.odis-structure-removal .ow-footer { flex-wrap: wrap; }
+.odis-structure-removal .removal-delete { background: #953d3d; color: #fff; }
+.odis-structure-removal [role=alert] button { text-decoration: underline; }
 </style>
