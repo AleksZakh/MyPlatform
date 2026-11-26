@@ -1478,6 +1478,7 @@ model DiagnosticContractStructure {
   legacyContractReferences DiagnosticStructureLegacyContract[]
   workAssignments DiagnosticStructureWork[]
   deletedAt DateTime?
+  @@index([structureId,deletedAt])
   @@index([legacyStructureId])
   @@unique([contractId,structureId])
   @@unique([id,structureId])

@@ -2,7 +2,7 @@ import type {Prisma} from '@prisma/client';
 import {createError} from 'h3';
 import {prisma} from '../../utils/prisma';
 import {structureLocationMetres} from '../../../shared/utils/diagnostic-structures';
-import type {StructureQuery,StructureListResponse,StructureCatalog,StructureDetail} from '../../../shared/types/diagnostic-structures-api';
+import type {StructureQuery,StructureListResponse,StructureCatalog,StructureDetail,StructureContractUsage} from '../../../shared/types/diagnostic-structures-api';
 const inService = {deletedAt:null, decommissionedAt:null};
 const contains=(value:string)=>({contains:value.replace(/[\\%_]/g,'\\$&'),mode:'insensitive' as const});
 export function structureWhere(input:StructureQuery):Prisma.DiagnosticStructureWhereInput {
@@ -50,7 +50,15 @@ export async function structureCatalog():Promise<StructureCatalog>{
   return {roads:roads.map(r=>r.roadName).filter(Boolean),management:management.map(r=>r.management).filter(Boolean),regions:regions.map(r=>r.region).filter(Boolean),kinds:kinds.map(r=>r.structureName).filter(Boolean),types:types.map(r=>r.issoType).filter(Boolean)};
 }
 export async function structureCodes(){return (await prisma.diagnosticStructure.findMany({where:{deletedAt:null},select:{code:true},orderBy:{code:'asc'}})).map(r=>r.code);}
-export async function readStructure(id:number):Promise<StructureDetail>{
+export function structureContractUsage(id:number) {
+  return prisma.$queryRaw<StructureContractUsage[]>`
+    SELECT c.id, c.number, to_char(c.date, 'YYYY-MM-DD') AS date, link.stage
+    FROM diagnostic_contract_structures AS link
+    JOIN diagnostic_contracts AS c ON c.id = link."contractId"
+    WHERE link."structureId" = ${id} AND link."deletedAt" IS NULL AND c."deletedAt" IS NULL
+    ORDER BY c.date DESC, c.number, c.id`;
+}
+export async function readStructure(id:number):Promise<Omit<StructureDetail,'contracts'>>{
   const row=await prisma.diagnosticStructure.findFirst({where:{id,...inService},include:{
     legacyRows:{select:{legacyId:true,importedAt:true,importedById:true},orderBy:{legacyId:'asc'}},
     legacyContracts:{select:{customer:true,number:true,dateText:true},orderBy:[{date:'asc'},{id:'asc'}]},

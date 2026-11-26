@@ -3,7 +3,14 @@ export interface StructureListRow {id:string;issoCode:string;roadName:string;str
 export interface StructureListResponse {items:StructureListRow[];total:number;matched:number;page:number;pageSize:number;pageCount:number;}
 export interface StructureCatalog {roads:string[];management:string[];regions:string[];kinds:string[];types:string[];}
 export interface StructureQuery {filters:StructureFilters;page:number;pageSize:number;sortKey:StructureSortKey;descending:boolean;}
+export interface StructureContractUsage {
+  id:number;
+  number:string;
+  date:string;
+  stage:number;
+}
 export interface StructureDetail extends StructureRecord {
+  contracts:StructureContractUsage[]|null;
   lengthRaw:string;
   legacyIds:number[];
   importedAt:string|null;
