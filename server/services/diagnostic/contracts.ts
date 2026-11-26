@@ -9,7 +9,8 @@ import {diagnosticSupervisors} from './supervisors';
 import {applyTemplates,templateUses,contractAdditions} from './work-templates';
 import {parseStructureStages,saveStructureStages} from './structure-stages';
 import {structureAccess} from './structure-access';
-import {CONTRACT_RESOURCE} from './access';
+import {contractRemovals,excludeStructures,removeAssignment} from './contract-removals';
+import {CONTRACT_RESOURCE,contractAccess} from './access';
 async function atomic<T>(fn:(tx:Prisma.TransactionClient)=>Promise<T>,timeout=10000):Promise<T>{
  try{return await prisma.$transaction(fn,{isolationLevel:Prisma.TransactionIsolationLevel.Serializable,timeout});}
  catch(e){if(e instanceof Prisma.PrismaClientKnownRequestError && ['P2034','P2002'].includes(e.code))throw createError({statusCode:409,message:'Данные изменены параллельно. Обновите список и повторите действие.'});throw e;}
@@ -39,7 +40,13 @@ export async function readContract(id:number){
  if(!row)throw createError({statusCode:404,message:'Договор не найден.'});
  return (await withAuthors([serializeContract(row)]))[0]!;
 }
-export async function saveContract(event:H3Event,actorId:number,input:ContractInput,contractId?:number,version?:number,uses?:unknown,additions?:unknown,structureStages?:unknown){
+export async function saveContract(event:H3Event,actorId:number,input:ContractInput,contractId?:number,version?:number,uses?:unknown,additions?:unknown,structureStages?:unknown,removals?:unknown){
+ const removed=contractRemovals(removals);
+ const removing=Boolean(removed.links.length||removed.contractWorks.length||removed.structureWorks.length);
+ if(removing){
+  if(!contractId)throw createError({statusCode:400,message:'Удалять сохранённые записи можно только при редактировании договора.'});
+  await contractAccess(event,'DELETE');
+ }
  const stageChanges=parseStructureStages(structureStages,input.stages);
  const templates=templateUses(uses),manual=contractAdditions(additions);
  const hasStructures=manual.structureIds.length>0||templates.some(t=>t.structureIds.length);
@@ -72,14 +79,17 @@ export async function saveContract(event:H3Event,actorId:number,input:ContractIn
    row=await tx.diagnosticContract.findUniqueOrThrow({where:{id:before.id},include});
   }else row=await tx.diagnosticContract.create({data:{...data,createdById:actorId},include});
   await applyTemplates(tx,row.id,actorId,templates,manual);
+  await excludeStructures(tx,actorId,row.id,removed.links);
+  for(const work of removed.contractWorks)await removeAssignment(tx,event,actorId,row.id,'contract',work);
+  for(const work of removed.structureWorks)await removeAssignment(tx,event,actorId,row.id,'structure',work);
   if(stageChanges.length || (before && before.stages>input.stages)){
    await saveStructureStages(tx,row.id,input.stages,stageChanges);
   }
-  if(hasStructures)row=await tx.diagnosticContract.findUniqueOrThrow({where:{id:row.id},include});
+  if(hasStructures||removed.links.length)row=await tx.diagnosticContract.findUniqueOrThrow({where:{id:row.id},include});
   const after=serializeContract(row);
   await writeAuditEvent({event,db:tx,category:'DATA',result:'SUCCESS',action:before?'UPDATE':'CREATE',resourceKey:CONTRACT_RESOURCE,entityType:'DiagnosticContract',entityId:row.id,actorUserId:actorId,note:'Договор '+row.number,...(stageChanges.length?{afterData:{structureStages:stageChanges}}:{}),changes:computeAuditDelta(before?{...serializeContract(before)}:{},{...after})});
   return (await withAuthors([after],tx))[0]!;
- },(hasStructures||manual.workIds.length||templates.length)?60000:10000);
+ },(removing||hasStructures||manual.workIds.length||templates.length)?60000:10000);
 }
 export async function deleteContract(event:H3Event,actorId:number,id:number,version:number,restore=false){
  return atomic(async tx=>{

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {computed,ref,watch,onBeforeUnmount} from 'vue';
+import type {DraftWork} from '~~/shared/types/diagnostic-templates';
 import type {ContractStructureListItem} from '~~/shared/types/diagnostic-contract-structures';
 import type {ContractStructureWorkRecord,ContractStructureWorksResponse} from '~~/shared/types/diagnostic-contract-details';
 import type {StructureListRow} from '~~/shared/types/diagnostic-structures-api';
@@ -13,11 +14,12 @@ import WorkStatusIcon from './WorkStatusIcon.vue';
 import WorkStatusLegend from './WorkStatusLegend.vue';
 import {structureFilterColumns,emptyStructureFilters,structureMatches,filterText,diagnosticWorkStatus,type StructureFilterKey} from '~~/shared/utils/diagnostic-contract-table';
 const props=defineProps<{contractId:number|null;contractNumber:string;focusId?:number;focusLink?:number;canEdit:boolean;
+ excluded?:ReadonlyMap<number,number>;removedWorks?:ReadonlyMap<number,number>;draftWorks?:ReadonlyMap<number,DraftWork[]>;canRemove?:boolean;
  pending:StructureListRow[];pendingStages:ReadonlyMap<number,number>;stageCount:number;editStages:boolean;showSelection:boolean;saving:boolean;
  stageEdits:ReadonlyMap<number,{stage:number}>;employees:{id:number;name:string}[]}>();
 const highlight=ref(props.focusId);
 const focusNotice=ref('');
-const emit=defineEmits<{count:[number];linked:[rows:ContractStructureListItem[]];changeStages:[rows:ContractStructureListItem[],value:number]}>();
+const emit=defineEmits<{count:[number];linked:[rows:ContractStructureListItem[]];changeStages:[rows:ContractStructureListItem[],value:number];exclude:[ContractStructureListItem[]];removeWork:[ContractStructureWorkRecord];removeDraft:[workId:number,structureId:number]}>();
 const persisted=ref<ContractStructureListItem[]>([]),busy=ref(false),error=ref('');
 const filters=ref(emptyStructureFilters()),filterResetKey=ref(0),filterPortal=ref<HTMLElement|null>(null);
 const rows=computed<ContractStructureListItem[]>(()=>{
@@ -27,7 +29,7 @@ const rows=computed<ContractStructureListItem[]>(()=>{
   roadName:row.roadName,location:row.location,locationMetres:structureLocationMetres(row.location),
   additionalId:row.additionalId,obstacleName:'',district:''
  }));
- return [...persisted.value,...added];
+ return [...persisted.value.filter(row=>!props.excluded?.has(row.structureId)),...added];
 });
 const from=ref(''),to=ref('');
 const rangeError=computed(()=>structureRangeError({locationFrom:from.value,locationTo:to.value}));
@@ -61,9 +63,15 @@ function assign(list:ContractStructureListItem[],value:number){
 const selectedId=ref<number|null>(null);
 const selected=computed(()=>rows.value.find(row=>row.id===selectedId.value)??null);
 const works=ref<ContractStructureWorkRecord[]>([]),worksBusy=ref(false),worksError=ref('');
+const visibleWorks=computed(()=>works.value.filter(work=>!props.removedWorks?.has(work.id)));
+const pendingWorks=computed(()=>{
+ const existing=new Set(works.value.map(work=>work.workId));
+ return (props.draftWorks?.get(selected.value?.structureId??0)??[]).filter(work=>!existing.has(work.id));
+});
+const workActions=computed(()=>props.editStages&&(props.canRemove||pendingWorks.value.length>0));
 const detail=ref<ContractStructureWorkRecord|null>(null);
 const date=(s:string|null)=>s?s.split('-').reverse().join('.'):'—';
-const hasUnknownStatus=computed(()=>works.value.some(work=>diagnosticWorkStatus(work.status).key==='unknown'));
+const hasUnknownStatus=computed(()=>visibleWorks.value.some(work=>diagnosticWorkStatus(work.status).key==='unknown'));
 let listGeneration=0,worksGeneration=0;
 
 function clearWorks(){worksGeneration++;works.value=[];worksError.value='';worksBusy.value=false;detail.value=null;}
@@ -76,6 +84,8 @@ async function loadWorks(){
   const data=await $fetch<ContractStructureWorksResponse>(`/api/diagnostic/contracts/${contractId}/structures/${linkId}/works`);
   if(request===worksGeneration&&data.linkId===linkId){
     works.value=data.works;
+    const link=persisted.value.find(item=>item.id===linkId);
+    if(link)link.workCount=data.works.length;
     focusNotice.value=linkId===props.focusLink && !data.works.some(w=>w.id===props.focusId)?'Выбранная в календаре работа больше недоступна.':'';
   }
  }catch(e:any){if(request===worksGeneration)worksError.value=e?.data?.message||'Не удалось загрузить работы сооружения.';}
@@ -126,6 +136,7 @@ onBeforeUnmount(()=>{listGeneration++;worksGeneration++;});
     <label>Этап для выбранных <StructureStageSelect :count="stageCount" :value="bulkStage" label="Этап для выбранных сооружений" :disabled="saving" @change="n=>bulkStage=n"/></label>
     <button type="button" :disabled="saving||!marked.length||bulkStage>stageCount" @click="assign(marked,bulkStage)">Назначить ({{marked.length}})</button>
    </div>
+   <button v-if="editStages && (canRemove || marked.some(row=>row.id<0))" type="button" :disabled="saving||!marked.length" @click="emit('exclude',marked)"><Icon name="lucide:unlink"/>Исключить из договора ({{marked.length}})</button>
    <button type="button" :disabled="!hasFilters" @click="clearFilters">Очистить фильтры</button>
    <button type="button" :disabled="busy||!contractId" @click="load">Обновить</button>
    <small v-if="!editStages && marked.length" class="cs-hint">Выбрано: {{marked.length}}. Для назначения этапа нажмите «Редактировать».</small>
@@ -151,23 +162,26 @@ onBeforeUnmount(()=>{listGeneration++;worksGeneration++;});
     </tbody>
    </table>
   </div>
-  <section v-if="contractId" class="cs-work-panel" aria-label="Работы выбранного сооружения">
+  <section v-if="contractId || pending.length" class="cs-work-panel" aria-label="Работы выбранного сооружения">
    <div class="cs-selected" aria-live="polite">
     <template v-if="selected"><p><strong>{{ selected.structureName||'Сооружение' }}</strong> · Код ИССО: <strong>{{ selected.code }}</strong> · {{ selected.location||'Место не указано' }}</p><p class="contract-cell-ellipsis cs-address" :title="[selected.roadName,selected.district].filter(Boolean).join(' · ')">{{ [selected.roadName,selected.district].filter(Boolean).join(' · ') }}</p></template>
     <p v-else>{{ busy?'Загрузка сооружений…':'Выберите сооружение в верхней таблице.' }}</p>
    </div>
-   <header class="cs-work-heading"><h3>Работы по сооружению <small v-if="selected&&!worksBusy&&!worksError">· Всего: {{ works.length }}</small></h3><div class="odis-work-heading-tools"><WorkStatusLegend :unknown="hasUnknownStatus"/><button type="button" :disabled="!selected||worksBusy" @click="loadWorks">Обновить работы</button></div></header>
+   <header class="cs-work-heading"><h3>Работы по сооружению <small v-if="selected&&!worksBusy&&!worksError">· Всего: {{ visibleWorks.length+pendingWorks.length }}</small></h3><div class="odis-work-heading-tools"><WorkStatusLegend :unknown="hasUnknownStatus"/><button type="button" :disabled="!selected||worksBusy" @click="loadWorks">Обновить работы</button></div></header>
    <div class="contract-detail-table contract-compact-table cs-works" :aria-busy="worksBusy">
-    <table><thead><tr><th class="odis-status-cell">Статус</th><th>№</th><th>Работа</th><th>Начало, план</th><th>Окончание, план</th><th>План, чел·ч</th><th>Исполнитель, план</th><th>Примечания</th></tr></thead>
+    <table><thead><tr><th class="odis-status-cell">Статус</th><th>№</th><th>Работа</th><th>Начало, план</th><th>Окончание, план</th><th>План, чел·ч</th><th>Исполнитель, план</th><th>Примечания</th><th v-if="workActions">Действия</th></tr></thead>
      <tbody>
-      <tr v-if="!selected"><td colspan="8">Выберите сооружение для просмотра работ.</td></tr>
-      <tr v-else-if="worksBusy"><td colspan="8" role="status">Загрузка работ…</td></tr>
-      <tr v-else-if="worksError"><td colspan="8" role="alert">{{ worksError }} <button type="button" @click="loadWorks">Повторить</button></td></tr>
-      <tr v-else-if="!works.length"><td colspan="8">В этом договоре у выбранного сооружения пока нет сохранённых работ.</td></tr>
-      <template v-else><tr v-for="(work,index) in works" :key="work.id" tabindex="-1" v-reveal-work-row="highlight===work.id?'focus':false" :class="{'odis-work-highlight':highlight===work.id}" @click="highlight=work.id" @keydown.enter.self.prevent="detail=work" @dblclick="detail=work">
+      <tr v-if="!selected"><td :colspan="workActions?9:8">Выберите сооружение для просмотра работ.</td></tr>
+      <tr v-else-if="worksBusy"><td :colspan="workActions?9:8" role="status">Загрузка работ…</td></tr>
+      <tr v-else-if="worksError"><td :colspan="workActions?9:8" role="alert">{{ worksError }} <button type="button" @click="loadWorks">Повторить</button></td></tr>
+      <tr v-else-if="!visibleWorks.length&&!pendingWorks.length"><td :colspan="workActions?9:8">В этом договоре у выбранного сооружения пока нет сохранённых работ.</td></tr>
+      <template v-else><tr v-for="(work,index) in visibleWorks" :key="work.id" tabindex="-1" v-reveal-work-row="highlight===work.id?'focus':false" :class="{'odis-work-highlight':highlight===work.id}" @click="highlight=work.id" @keydown.enter.self.prevent="detail=work" @dblclick="detail=work">
        <td class="odis-status-cell"><WorkStatusIcon :status="work.status"/></td><td>{{ index+1 }}</td><td><button type="button" class="cw-name contract-cell-ellipsis" :title="work.name" @click="detail=work">{{ work.name }}</button></td>
        <td>{{ date(work.planStart) }}</td><td>{{ date(work.planFinish) }}</td><td class="cs-hours">{{ work.planHours??'—' }}</td><td>{{ work.planExecutor||'—' }}</td><td><span class="contract-cell-ellipsis cs-note" :title="work.note">{{ work.note||'—' }}</span></td>
-      </tr></template>
+       <td v-if="workActions"><button v-if="canRemove" type="button" class="odis-remove-row" :disabled="saving||work.tripManaged" :aria-label="'Удалить работу '+work.name" :title="work.tripManaged?'Работа связана с командировкой':'Удалить работу по сооружению'" @click.stop="emit('removeWork',work)" @dblclick.stop><Icon name="lucide:trash-2"/></button></td>
+      </tr>
+      <tr v-for="(work,index) in pendingWorks" :key="'draft-'+work.id"><td><WorkStatusIcon status="unplanned"/></td><td>{{visibleWorks.length+index+1}}</td><td>{{work.name}}</td><td colspan="4">Добавляется при сохранении</td><td>{{work.note||'—'}}</td>
+       <td v-if="workActions"><button type="button" class="odis-remove-row" :disabled="saving" :aria-label="'Убрать работу '+work.name" title="Убрать из добавляемых" @click="selected && emit('removeDraft',work.id,selected.structureId)"><Icon name="lucide:trash-2"/></button></td></tr></template>
      </tbody>
     </table>
    </div>
@@ -178,7 +192,7 @@ onBeforeUnmount(()=>{listGeneration++;worksGeneration++;});
 </template>
 
 <style>
-.contract-structures-workspace.cs-draft{grid-template-rows:auto minmax(86px,1fr)}
+.contract-structures-workspace.cs-draft:not(:has(.cs-work-panel)){grid-template-rows:auto minmax(86px,1fr)}
 .contract-structures-workspace .contract-section-head{flex-wrap:wrap;align-items:center}
 .contract-structures-workspace .cs-range,.contract-structures-workspace .cs-bulk,.cs-bulk label{display:inline-flex;align-items:center;gap:5px}
 .contract-structures-workspace .cs-range input,.contract-structures-workspace .cs-stage-control{background:var(--contract-bg);color:var(--contract-text);border:1px solid var(--contract-line);border-radius:3px;padding:2px 5px;font:inherit}

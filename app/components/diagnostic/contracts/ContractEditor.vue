@@ -9,13 +9,15 @@ import {vRevealWorkRow} from './revealWorkRow';
 import {tripDateLabel} from '~~/shared/utils/diagnostic-trips';
 import ContractStructurePicker from './ContractStructurePicker.vue';
 import TemplatePicker from '../records/TemplatePicker.vue';
-import type {ContractSelection} from '~~/shared/types/diagnostic-templates';
+import {publishWorkChange} from '~/composables/diagnostic/workChanges';
+import type {ContractWorkRecord} from '~~/shared/types/diagnostic-contract-works';
+import type {ContractSelection,DraftWork} from '~~/shared/types/diagnostic-templates';
 import ContractWorks from './ContractWorks.vue';
 import ContractStructures from './ContractStructures.vue';
 import {contractDateTime} from '~~/shared/utils/diagnostic-contract-search';
 import type {ContractRecord,ContractInput,DiagnosticCatalog} from '~~/shared/types/diagnostic-contracts';
 import {contractStatus} from '~~/shared/utils/diagnostic-contracts';
-const props=defineProps<{contract:ContractRecord|null;catalog:DiagnosticCatalog;readOnly:boolean;canCreate:boolean;canEdit:boolean;canEditWorks?:boolean;focusWork?:CalendarRow|null}>();
+const props=defineProps<{contract:ContractRecord|null;catalog:DiagnosticCatalog;readOnly:boolean;canCreate:boolean;canEdit:boolean;canEditWorks?:boolean;canRemove?:boolean;focusWork?:CalendarRow|null}>();
 const emit=defineEmits<{close:[];edit:[];save:[ContractRecord]}>();
 const trip=props.focusWork?.kind==='trip'?props.focusWork:null;
 const tripOpen=ref(false);
@@ -78,11 +80,69 @@ function uniqueById<T extends {id:number|string}>(rows:T[]):T[]{
 }
 const draftWorks=computed(()=>uniqueById(workSelections.value.flatMap(s=>s.works)));
 const draftStructures=computed(()=>uniqueById(structureSelections.value.flatMap(s=>s.structures)));
+const removedLinks=reactive(new Map<number,number>()); // structure ID -> link ID
+const removedContractWorks=reactive(new Map<number,number>());
+const removedStructureWorks=reactive(new Map<number,number>());
+const removalNotice=ref('');
+const structureRevision=ref(0);
+const pendingByStructure=computed(()=>{
+ const groups=new Map<number,DraftWork[]>();
+ for(const selection of structureSelections.value)for(const row of selection.structures){
+  const id=Number(row.id);
+  groups.set(id,uniqueById([...(groups.get(id)??[]),...selection.works]));
+ }
+ return groups;
+});
+const savedCatalogIds=ref(new Set<number>());
+const workCount=computed(()=>counts.works===null?null:counts.works-removedContractWorks.size+
+ draftWorks.value.filter(w=>!savedCatalogIds.value.has(w.id)).length);
+function markWork(kind:'contract'|'structure',row:ContractWorkRecord){
+ if(props.readOnly||!props.canRemove||saving.value||row.tripManaged)return;
+ (kind==='contract'?removedContractWorks:removedStructureWorks).set(row.id,row.version);
+}
+function undoRemovals(){
+ removedLinks.clear();removedContractWorks.clear();removedStructureWorks.clear();removalNotice.value='';
+}
+function removeDraftWork(workId:number,structureId?:number){
+ if(props.readOnly||saving.value)return;
+ selections.value=selections.value.flatMap(s=>{
+  if(!s.works.some(w=>w.id===workId))return [s];
+  const works=s.works.filter(w=>w.id!==workId);
+  if(structureId===undefined)return s.structures.length?[s]:works.length?[{...s,works,workSubset:true}]:[];
+  const target=s.structures.filter(row=>Number(row.id)===structureId);
+  if(!target.length)return [s];
+  const other=s.structures.filter(row=>Number(row.id)!==structureId);
+  const split={...s,structures:target,works,workSubset:true,template:works.length?s.template:undefined};
+  return other.length?[{...s,structures:other},split]:[split];
+ });
+}
+function excludeRows(rows:ContractStructureListItem[]){
+ if(props.readOnly||saving.value)return;
+ const excluded=new Set<number>();
+ const blocked:string[]=[];
+ for(const row of rows){
+  if((row.workCount??0)>0||pendingByStructure.value.get(row.structureId)?.length){
+   blocked.push(row.code);continue;
+  }
+  if(row.id>0&&!props.canRemove)continue;
+  excluded.add(row.structureId);
+  if(row.id>0)removedLinks.set(row.structureId,row.id);
+  if(row.id<0)stageEdits.delete(row.structureId);
+ }
+ removalNotice.value=blocked.length?'Есть работы по этому договору. Оставлено сооружений: '+blocked.length+' (ИССО '+blocked.slice(0,4).join(', ')+(blocked.length>4?'…':'')+').':'';
+ selections.value=selections.value.flatMap(s=>{
+  if(!s.structures.length)return [s];
+  const structures=s.structures.filter(row=>!excluded.has(Number(row.id)));
+  return structures.length?[{...s,structures}]:[];
+ });
+ if(!fixedStageCount.value)form.stages=inferredStageCount.value;
+}
 const fixedStageCount=ref(Boolean(c?.stages));
 const linkedStages=ref<Map<number,number>|null>(c?null:new Map());
 function rememberLinks(rows:ContractStructureListItem[]){
  linkedStages.value=new Map(rows.map(row=>[row.structureId,row.stage]));
 }
+const activeLinks=computed(()=>new Map([...(linkedStages.value??[])].filter(([id])=>!removedLinks.has(id))));
 const pendingStages=computed(()=>{
  const stages=new Map<number,number>();
  for(const selection of structureSelections.value){
@@ -93,7 +153,7 @@ const pendingStages=computed(()=>{
  }
  return stages;
 });
-const structureCount=computed(()=>linkedStages.value?(linkedStages.value.size+pendingStages.value.size):counts.structures);
+const structureCount=computed(()=>linkedStages.value?(activeLinks.value.size+pendingStages.value.size):counts.structures);
 const stageEdits=reactive(new Map<number,{stage:number;draft:boolean}>());
 function changeStages(rows:ContractStructureListItem[],value:number){
  for(const row of rows){
@@ -104,12 +164,12 @@ function changeStages(rows:ContractStructureListItem[],value:number){
 const structureStages=computed(()=>{
  const values=new Map(pendingStages.value);
  for(const [id,edit] of stageEdits){
-  if(!edit.draft||values.has(id))values.set(id,edit.stage);
+  if(!removedLinks.has(id)&&(!edit.draft||values.has(id)))values.set(id,edit.stage);
  }
  return Array.from(values,([structureId,stage])=>({structureId,stage}));
 });
 const assignedStages=computed(()=>{
- const stages=new Map(linkedStages.value);
+ const stages=new Map(activeLinks.value);
  for(const {structureId,stage} of structureStages.value)stages.set(structureId,stage);
  return stages;
 });
@@ -127,6 +187,12 @@ function openPicker(mode:'manual'|'template'){
  picker.value=mode;
 }
 function applyGroups(groups:ContractSelection[]){
+ for(const group of groups)for(const row of group.structures){
+  const id=Number(row.id);
+  if(removedLinks.delete(id) && group.structureStages?.[id]!==undefined){
+   stageEdits.set(id,{stage:group.structureStages[id]!,draft:false});
+  }
+ }
  selections.value.push(...groups);
  if(!fixedStageCount.value)form.stages=inferredStageCount.value;
  picker.value=null;
@@ -139,6 +205,7 @@ function removeSelection(selection:ContractSelection){
 function addContractWorks(selection:ContractSelection){
  const previous=workSelections.value.find(s=>s.template?.id===selection.template?.id);
  if(previous){
+  previous.workSubset=false;
   previous.works=uniqueById([...previous.works,...selection.works]);
  }else selections.value.push(selection);
  picker.value=null;
@@ -146,8 +213,13 @@ function addContractWorks(selection:ContractSelection){
 function serializeSelections(){
  const manual=selections.value.filter(s=>!s.template);
  return {
+  ...(removedLinks.size||removedContractWorks.size||removedStructureWorks.size?{removals:{
+   links:[...removedLinks.values()],
+   contractWorks:Array.from(removedContractWorks,([id,version])=>({id,version})),
+   structureWorks:Array.from(removedStructureWorks,([id,version])=>({id,version}))
+  }}:{}),
   structureStages:structureStages.value,
-  templates:selections.value.flatMap(s=>s.template?[{templateId:s.template.id,version:s.template.version,structureIds:s.structures.map(r=>Number(r.id))}]:[]),
+  templates:selections.value.flatMap(s=>s.template?[{templateId:s.template.id,version:s.template.version,...(s.workSubset?{workIds:s.works.map(w=>w.id)}:{}),structureIds:s.structures.map(r=>Number(r.id))}]:[]),
   additions:{workIds:manual.flatMap(s=>s.works.map(w=>w.id)),structureIds:manual.flatMap(s=>s.structures.map(r=>Number(r.id)))}
  };
 }
@@ -178,8 +250,17 @@ async function save(){
  if(!form.number.trim()||!form.date||!counterpartyName.value.trim()||!form.direction){tab.value=0;error.value='Укажите номер, дату заключения, контрагента и тип договора.';return;}
  if(form.finish&&(form.finish<form.date||(form.start&&form.finish<form.start))){tab.value=0;error.value='Окончание работ не может быть раньше заключения договора или начала работ.';return;}
  saving.value=true;
- try{await resolveNames();const saved=await $fetch<ContractRecord>('/api/diagnostic/contracts'+(c?'/'+c.id:''),{method:c?'PUT':'POST',headers:{'x-space-diagnostic':'1'},body:{...form,version:c?.version,...serializeSelections()}});emit('save',saved);}
- catch(e){error.value=message(e);tab.value=0;}finally{saving.value=false;}
+ try{await resolveNames();const saved=await $fetch<ContractRecord>('/api/diagnostic/contracts'+(c?'/'+c.id:''),{method:c?'PUT':'POST',headers:{'x-space-diagnostic':'1'},body:{...form,version:c?.version,...serializeSelections()}});emit('save',saved);if(removedLinks.size||removedContractWorks.size||removedStructureWorks.size||selections.value.length)publishWorkChange([...removedLinks.keys(),...pendingStages.value.keys()]);}
+ catch(e){
+  const conflict=(e as {data?:{data?:{code?:string;linkIds?:number[]}}}).data?.data;
+  if(conflict?.code==='STRUCTURE_HAS_WORKS' && Array.isArray(conflict.linkIds)){
+   const blocked=new Set(conflict.linkIds);
+   for(const [sid,linkId] of removedLinks)if(blocked.has(linkId))removedLinks.delete(sid);
+   removalNotice.value=message(e)+' Договор не сохранён.';
+   structureRevision.value++;
+   tab.value=2;
+  }else{error.value=message(e);tab.value=0;}
+ }finally{saving.value=false;}
 }
 function moveTab(event:KeyboardEvent,index:number,step:number){tab.value=(index+step+tabs.length)%tabs.length;const buttons=(event.currentTarget as HTMLElement).closest('[role=tablist]')?.querySelectorAll<HTMLButtonElement>('[role=tab]');buttons?.[tab.value]?.focus();}
 const summaryColumns=[
@@ -196,7 +277,7 @@ const summaryColumns=[
   <template #body>
    <div class="contract-editor-tabs" role="tablist" aria-label="Карточка договора">
     <div v-for="(label,i) in tabs" :key="label" class="contract-editor-tab" :class="{'is-active':tab===i}" role="presentation">
-     <button :id="`contract-editor-tab-${i}`" type="button" role="tab" :aria-selected="tab===i" :tabindex="tab===i?0:-1" aria-controls="contract-editor-panel" @click="tab=i" @keydown.right.prevent="moveTab($event,i,1)" @keydown.left.prevent="moveTab($event,i,-1)"><span>{{ label }}</span><small v-if="i===1" class="contract-tab-count">Всего работ: {{ contract?(counts.works ?? (countsError ? '—' : '…')):draftWorks.length }}</small><small v-if="i===2" class="contract-tab-count">Всего сооружений: {{ structureCount ?? (countsError ? '—' : '…') }}</small></button>
+     <button :id="`contract-editor-tab-${i}`" type="button" role="tab" :aria-selected="tab===i" :tabindex="tab===i?0:-1" aria-controls="contract-editor-panel" @click="tab=i" @keydown.right.prevent="moveTab($event,i,1)" @keydown.left.prevent="moveTab($event,i,-1)"><span>{{ label }}</span><small v-if="i===1" class="contract-tab-count">Всего работ: {{ contract?(workCount ?? (countsError ? '—' : '…')):draftWorks.length }}</small><small v-if="i===2" class="contract-tab-count">Всего сооружений: {{ structureCount ?? (countsError ? '—' : '…') }}</small></button>
      <button v-if="contract&&readOnly&&i<3" v-show="tab===i" type="button" class="contract-tab-pin" :class="{'is-pinned':pinnedTab===i}" :aria-pressed="pinnedTab===i" :aria-label="pinnedTab===i?'Открепить стартовую вкладку':'Открывать эту вкладку при просмотре договора'" :title="pinnedTab===i?'Открепить стартовую вкладку':'Открывать эту вкладку при просмотре договора'" @click="pinStartTab"><svg class="iconify odis-local-pin" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><g transform="rotate(45 12 12)"><path d="M8 2h8v2l-1 1v5l3 3v2h-5l-.6 6.5-.4 1-.4-1L11 15H6v-2l3-3V5L8 4z"/></g></svg></button>
     </div>
    </div>
@@ -247,13 +328,6 @@ const summaryColumns=[
        <button type="button" :disabled="saving||(tab===2&&!linkedStages)" @click="openPicker('template')"><Icon name="lucide:list-tree"/>Использовать шаблон</button>
       </div>
      </header>
-     <div v-if="!contract && tab===1" class="contract-detail-table contract-compact-table draft-table">
-      <table aria-label="Перечень работ с договором"><thead><tr><th rowspan="2">Статус</th><th rowspan="2">№</th><th rowspan="2">Работа</th><th colspan="3">План</th><th colspan="3">Факт</th><th rowspan="2">Примечания</th></tr>
-       <tr><template v-for="part in ['plan','fact']" :key="part"><th>Дата начала</th><th>Дата окончания</th><th>Исполнитель</th></template></tr></thead>
-       <tbody><tr v-for="(w,i) in draftWorks" :key="w.id"><td><span title="Нераспределённая" aria-label="Нераспределённая"><Icon name="lucide:file"/></span></td><td>{{i+1}}</td><td>{{w.name}}</td><td v-for="n in 6" :key="n">—</td><td>{{w.note||'—'}}</td></tr>
-        <tr v-if="!draftWorks.length"><td colspan="10" class="draft-empty">Работы с договором пока не добавлены.</td></tr></tbody>
-      </table>
-     </div>
      <div v-if="(tab===1?workSelections:structureSelections).length" class="draft-summary">
       <span>Будут добавлены при сохранении договора</span>
       <div v-for="(s,index) in (tab===1?workSelections:structureSelections)" :key="index">
@@ -262,12 +336,19 @@ const summaryColumns=[
       </div>
      </div>
     </template>
+    <p v-if="removalNotice && tab===2" class="composition-message" role="alert">{{ removalNotice }} <button type="button" @click="removalNotice=''">Закрыть</button></p>
+    <p v-if="removedLinks.size||removedContractWorks.size||removedStructureWorks.size" class="composition-message" role="status">
+     Будут исключены при сохранении: сооружений — {{removedLinks.size}}, работ — {{removedContractWorks.size+removedStructureWorks.size}}.
+     <button type="button" :disabled="saving" @click="undoRemovals">Отменить исключения</button>
+    </p>
     <ContractStructurePicker v-if="picker && tab===2" :manual="picker==='manual'" :number="form.number"
-     :stage-limit="fixedStageCount?Number(form.stages):null" :assigned="assignedStages" :existing="linkedStages!"
+     :stage-limit="fixedStageCount?Number(form.stages):null" :assigned="assignedStages" :existing="activeLinks"
      :applied="structureSelections" @close="picker=null" @apply="applyGroups"/>
     <TemplatePicker v-if="picker && tab===1" :manual="picker==='manual'" :number="form.number" @close="picker=null" @apply="addContractWorks"/>
-    <ContractWorks v-if="tab===1 && contract" :focus-id="focusWork?.kind==='contract'?focusWork.id:undefined" :contract-id="contract?.id??null" :contract-number="contract?.number??''" :employees="catalog.supervisors" :can-edit="canEditWorks??canEdit" @count="counts.works=$event" />
-    <ContractStructures v-if="tab===2" :pending="draftStructures" :pending-stages="pendingStages" :stage-count="form.stages || inferredStageCount" @linked="rememberLinks" :stage-edits="stageEdits"
+    <ContractWorks v-if="tab===1" :draft="draftWorks" :removed="removedContractWorks" :edit-mode="!readOnly" :can-remove="!!canRemove" :saving="saving"
+     @remove="row=>markWork('contract',row)" @remove-draft="removeDraftWork" @catalog-ids="savedCatalogIds=new Set($event)" :focus-id="focusWork?.kind==='contract'?focusWork.id:undefined" :contract-id="contract?.id??null" :contract-number="contract?.number??''" :employees="catalog.supervisors" :can-edit="canEditWorks??canEdit" @count="counts.works=$event" />
+    <ContractStructures v-if="tab===2" :key="structureRevision" :excluded="removedLinks" :removed-works="removedStructureWorks" :draft-works="pendingByStructure" :can-remove="!!canRemove"
+     @exclude="excludeRows" @remove-work="row=>markWork('structure',row)" @remove-draft="removeDraftWork" :pending="draftStructures" :pending-stages="pendingStages" :stage-count="form.stages || inferredStageCount" @linked="rememberLinks" :stage-edits="stageEdits"
      :edit-stages="!readOnly" :show-selection="canEdit || !readOnly" :saving="saving" @change-stages="changeStages" :focus-id="focusWork?.kind==='structure'?focusWork.id:undefined" :focus-link="focusWork?.kind==='structure'?focusWork.linkId:undefined" :contract-id="contract?.id??null" :contract-number="contract?.number??''" :employees="catalog.supervisors" :can-edit="canEditWorks??canEdit" @count="counts.structures=$event" />
    </div>
   </template>
@@ -289,6 +370,8 @@ const summaryColumns=[
 </template>
 
 <style>
+.composition-message{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:5px 10px;background:var(--contract-panel);font-size:13px}
+.composition-message button{text-decoration:underline}.odis-remove-row{display:inline-flex;align-items:center;justify-content:center;min-width:28px;min-height:24px;cursor:pointer}
 .draft-toolbar,.draft-buttons,.draft-summary,.draft-summary>div{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .draft-buttons{margin-left:auto}.draft-buttons button,.draft-summary button{display:inline-flex;align-items:center;gap:5px;color:var(--contract-text);background:var(--contract-bg);border:1px solid var(--contract-line);border-radius:4px;padding:4px 9px}
 .draft-table{flex:1}.draft-table table{width:100%;min-width:640px}.draft-table .draft-empty{padding:15px;color:#53697b;font-style:italic}.draft-summary{padding:6px 10px;max-height:20vh;overflow:auto;border-top:1px solid var(--contract-line);font-size:12px}

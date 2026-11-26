@@ -68,7 +68,7 @@ async function remove(){const row=selected.value;if(!row||!rights.value.DELETE)r
     <aside class="diagnostic-actions" aria-label="Действия с договором"><button :disabled="loading||!rights.CREATE||trash" @click="create"><Icon name="lucide:file-plus-2"/>Новый договор</button><button :disabled="loading||!selected||trash" @click="open(false)"><Icon name="lucide:eye"/>Просмотр договора</button><button :disabled="loading||!selected||trash||!rights.UPDATE" @click="open(true)"><Icon name="lucide:pencil"/>Редактировать</button><button :disabled="loading||!selected||!rights.DELETE" @click="remove"><Icon name="lucide:trash-2"/>{{ trash?'Восстановить':'Удалить договор' }}</button><button :disabled="loading" @click="load">Обновить</button><button v-if="catalog.canManageTrash||trash" :disabled="loading" @click="trash=!trash">{{ trash?'Вернуться к договорам':'Корзина' }}</button></aside>
    </div>
   </div>
-  <ContractEditor v-if="editorOpen" :contract="editing" :catalog="catalog" :read-only="editing ? (!editMode||!rights.UPDATE) : !rights.CREATE" :can-edit="rights.UPDATE" @edit="editMode=true" :can-create="rights.CREATE" @close="editorOpen=false" @save="saved"/>
+  <ContractEditor v-if="editorOpen" :contract="editing" :catalog="catalog" :read-only="editing ? (!editMode||!rights.UPDATE) : !rights.CREATE" :can-edit="rights.UPDATE" :can-remove="rights.DELETE" @edit="editMode=true" :can-create="rights.CREATE" @close="editorOpen=false" @save="saved"/>
  </section>
 </template>
 <style>

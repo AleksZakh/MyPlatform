@@ -2,6 +2,7 @@ export interface ContractStructureListItem {
  id:number;
  structureId:number;
  stage:number;
+ workCount?:number;
  decommissioned?:boolean;
  locationMetres:number|null;
  code:string;

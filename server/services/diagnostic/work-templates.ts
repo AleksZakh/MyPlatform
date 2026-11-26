@@ -94,7 +94,7 @@ export async function removeTemplate(event:H3Event,actor:number,templateId:numbe
 export function templateUses(raw:unknown):TemplateUse[]{
   if(raw===undefined)return [];
   if(!Array.isArray(raw))return invalid('Некорректный выбор шаблонов.');
-  return raw.map(x=>({templateId:id(x?.templateId),version:x?.version===undefined?undefined:id(x.version),structureIds:identifiers(x?.structureIds)}));
+  return raw.map(x=>({templateId:id(x?.templateId),version:x?.version===undefined?undefined:id(x.version),workIds:x?.workIds===undefined?undefined:identifiers(x.workIds),structureIds:identifiers(x?.structureIds)}));
 }
 export function contractAdditions(raw:unknown):ContractAdditions {
   if(raw===undefined)return {workIds:[],structureIds:[]};
@@ -117,7 +117,9 @@ export async function applyTemplates(tx:Prisma.TransactionClient,contractId:numb
     const t=index.get(use.templateId);
     if(!t||(use.version!==undefined&&use.version!==t.version))throw createError({statusCode:409,message:'Шаблон изменён или удалён. Уберите его из состава договора и выберите заново.'});
     if((t.category==='structure')!==!!use.structureIds.length)return invalid('Категория шаблона не соответствует выбранному разделу.');
-    const ids=t.items.map(w=>w.id);
+    const availableIds=new Set(t.items.map(w=>w.id));
+    const ids=use.workIds??[...availableIds];
+    if(ids.some(workId=>!availableIds.has(workId)))return invalid('Работа отсутствует в выбранном шаблоне.');
     if(t.unavailable||!ids.length)return invalid('Состав библиотеки изменился. Обновите состав шаблона «'+t.name+'».');
     for(const sid of (use.structureIds.length?use.structureIds:[0])){
       const selected=byStructure.get(sid)??new Set<number>();ids.forEach(w=>selected.add(w));byStructure.set(sid,selected);
@@ -136,6 +138,9 @@ export async function applyTemplates(tx:Prisma.TransactionClient,contractId:numb
   if(!sids.length)return;
   const available=await lockStructuresForAssignment(tx,sids);
   const added=await tx.diagnosticContractStructure.createManyAndReturn({data:sids.map(structureId=>({contractId,structureId})),skipDuplicates:true,select:{id:true,structureId:true}});
+  const restored=await tx.diagnosticContractStructure.updateManyAndReturn({where:{contractId,structureId:{in:sids},deletedAt:{not:null}},
+    data:{deletedAt:null,stage:1},select:{id:true,structureId:true}});
+  added.push(...restored);
   if(added.length){
     const codes=new Map(available.map(s=>[s.id,s.code]));
     await tx.auditLog.createMany({data:added.map(l=>({category:'DATA',result:'SUCCESS',action:'CREATE',resourceKey:'diagnostic.contracts',

@@ -1,4 +1,5 @@
 import {computed,onMounted,onBeforeUnmount,ref,watch} from 'vue';
+import {onWorkChange} from './workChanges';
 import type {StructureSortKey} from '~~/shared/types/diagnostic-structures';
 import type {StructureCatalog,StructureDetail,StructureListResponse,StructureListRow} from '~~/shared/types/diagnostic-structures-api';
 import {blankStructureFilters,structureRangeError} from '~~/shared/utils/diagnostic-structures';
@@ -53,6 +54,7 @@ export function useStructures(){
   }
   watch([filters,pageSize,sortKey,descending],()=>{page.value=1;schedule();},{deep:true,flush:'sync'});
   watch(page,()=>{if(!acceptingPage)schedule();},{flush:'sync'});
+  onWorkChange(ids=>{if(ids?.includes(Number(selectedId.value)))void fetchDetail();});
   watch(selectedId,()=>void fetchDetail(),{flush:'sync'});
   function sort(key:StructureSortKey){if(sortKey.value===key)descending.value=!descending.value;else{sortKey.value=key;descending.value=false;}}
   function reset(){filters.value=blankStructureFilters();page.value=1;}
