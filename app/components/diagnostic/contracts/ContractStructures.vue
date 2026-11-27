@@ -8,6 +8,8 @@ import {structureLocationMetres,structureRangeError} from '~~/shared/utils/diagn
 import StructureStageSelect from './StructureStageSelect.vue';
 import ContractColumnFilter from './ContractColumnFilter.vue';
 import {vRevealWorkRow} from './revealWorkRow';
+import StructureEditor from '../structures/StructureEditor.vue';
+import type {SavedStructure} from '~~/shared/types/diagnostic-structures-api';
 import WorkCard from './WorkCard.vue';
 import {onWorkChange} from '~/composables/diagnostic/workChanges';
 import WorkStatusIcon from './WorkStatusIcon.vue';
@@ -19,7 +21,7 @@ const props=defineProps<{contractId:number|null;contractNumber:string;focusId?:n
  stageEdits:ReadonlyMap<number,{stage:number}>;employees:{id:number;name:string}[]}>();
 const highlight=ref(props.focusId);
 const focusNotice=ref('');
-const emit=defineEmits<{count:[number];linked:[rows:ContractStructureListItem[]];changeStages:[rows:ContractStructureListItem[],value:number];exclude:[ContractStructureListItem[]];removeWork:[ContractStructureWorkRecord];removeDraft:[workId:number,structureId:number]}>();
+const emit=defineEmits<{structureSaved:[row:SavedStructure];count:[number];linked:[rows:ContractStructureListItem[]];changeStages:[rows:ContractStructureListItem[],value:number];exclude:[ContractStructureListItem[]];removeWork:[ContractStructureWorkRecord];removeDraft:[workId:number,structureId:number]}>();
 const persisted=ref<ContractStructureListItem[]>([]),busy=ref(false),error=ref('');
 const filters=ref(emptyStructureFilters()),filterResetKey=ref(0),filterPortal=ref<HTMLElement|null>(null);
 const rows=computed<ContractStructureListItem[]>(()=>{
@@ -27,7 +29,7 @@ const rows=computed<ContractStructureListItem[]>(()=>{
  const added=props.pending.filter(row=>!ids.has(Number(row.id))).map(row=>({
   id:-Number(row.id),structureId:Number(row.id),stage:props.pendingStages.get(Number(row.id))??1,code:row.issoCode,structureName:row.structureName,
   roadName:row.roadName,location:row.location,locationMetres:structureLocationMetres(row.location),
-  additionalId:row.additionalId,obstacleName:'',district:''
+  additionalId:row.additionalId,obstacleName:row.obstacleName || '',district:row.district || ''
  }));
  return [...persisted.value.filter(row=>!props.excluded?.has(row.structureId)),...added];
 });
@@ -59,6 +61,17 @@ function selectRows(list:ContractStructureListItem[],event:Event){
 }
 function assign(list:ContractStructureListItem[],value:number){
  if(props.editStages&&!props.saving&&Number.isInteger(value)&&value>=1&&value<=props.stageCount)emit('changeStages',list,value);
+}
+const openStructureId=ref<number|null>(null);
+function openStructure(row:ContractStructureListItem){
+ selectedId.value=row.id;
+ openStructureId.value=row.structureId;
+}
+function savedStructure(row:SavedStructure){
+ const item=persisted.value.find(r=>r.structureId===Number(row.id));
+ if(item)Object.assign(item,{code:row.issoCode,roadName:row.roadName,structureName:row.structureName,
+  additionalId:row.additionalId,location:row.location,locationMetres:row.locationMetres,obstacleName:row.obstacleName,district:row.district});
+ emit('structureSaved',row);
 }
 const selectedId=ref<number|null>(null);
 const selected=computed(()=>rows.value.find(row=>row.id===selectedId.value)??null);
@@ -157,19 +170,19 @@ onBeforeUnmount(()=>{listGeneration++;worksGeneration++;});
      <tr v-else-if="error"><td :colspan="showSelection?10:9" role="alert">{{ error }} <button type="button" @click="load">Повторить</button></td></tr>
      <tr v-else-if="!rows.length"><td :colspan="showSelection?10:9">{{ contractId?'К этому договору пока не привязаны сооружения.':'Сооружения пока не добавлены.' }}</td></tr>
      <tr v-else-if="!visibleRows.length"><td :colspan="showSelection?10:9">По заданным фильтрам сооружения не найдены. <button type="button" @click="clearFilters">Очистить фильтры</button></td></tr>
-     <template v-else><tr v-for="(row,index) in visibleRows" :key="row.id" v-reveal-work-row="props.focusLink===row.id?'scroll':false" :class="{'is-selected':selectedId===row.id}" @click="selectedId=row.id">
-      <td v-if="showSelection" class="cs-check" @click.stop><input type="checkbox" :aria-label="'Выбрать '+row.code" :checked="checked.has(row.structureId)" :disabled="saving" @change="selectRows([row],$event)"/></td>
+     <template v-else><tr v-for="(row,index) in visibleRows" :key="row.id" v-reveal-work-row="props.focusLink===row.id?'scroll':false" :class="{'is-selected':selectedId===row.id}" @click="selectedId=row.id" @dblclick="openStructure(row)">
+      <td v-if="showSelection" class="cs-check" @dblclick.stop @click.stop><input type="checkbox" :aria-label="'Выбрать '+row.code" :checked="checked.has(row.structureId)" :disabled="saving" @change="selectRows([row],$event)"/></td>
       <td data-label="№">{{ index+1 }}</td><td data-label="Код ИССО"><button type="button" class="cs-code" :aria-pressed="selectedId===row.id" :aria-label="`Работы сооружения ${row.code}`" @click.stop="selectedId=row.id">{{ row.code || 'Без ИССО' }}</button></td>
       <td data-label="Сооружение">{{ row.structureName }} <small v-if="row.worklogActive!=null" :title="row.worklogActive?'По черновику работы ведутся или завершены':'По черновику работы предстоят'" :class="{'cs-worklog-active':row.worklogActive}">· {{row.worklogActive?'Работы начаты':'Работы предстоят'}}</small> <small v-if="row.decommissioned">· Выведено из эксплуатации</small></td><td data-label="Название А/Д"><span class="contract-cell-ellipsis cs-road" :title="row.roadName">{{ row.roadName }}</span></td>
       <td data-label="Место, км">{{ row.location }}</td><td data-label="Доп. инф."><span class="contract-cell-ellipsis" :title="row.additionalId">{{ row.additionalId }}</span></td><td data-label="Основное препятствие">{{ row.obstacleName }}</td><td data-label="Район расположения">{{ row.district }}</td>
-      <td data-label="Этап" @click.stop><StructureStageSelect v-if="editStages" :count="stageCount" :value="stageEdits.get(row.structureId)?.stage??row.stage" :label="'Этап сооружения '+row.code" :disabled="saving" @change="assign([row],$event)"/><span v-else>{{row.stage}}</span></td>
+      <td data-label="Этап"><StructureStageSelect v-if="editStages" @click.stop @dblclick.stop :count="stageCount" :value="stageEdits.get(row.structureId)?.stage??row.stage" :label="'Этап сооружения '+row.code" :disabled="saving" @change="assign([row],$event)"/><span v-else>{{row.stage}}</span></td>
      </tr></template>
     </tbody>
    </table>
   </div>
   <section v-if="contractId || pending.length" class="cs-work-panel" aria-label="Работы выбранного сооружения">
    <div class="cs-selected" aria-live="polite">
-    <template v-if="selected"><p><strong>{{ selected.structureName||'Сооружение' }}</strong> · Код ИССО: <strong>{{ selected.code || 'Без ИССО' }}</strong> · {{ selected.location||'Место не указано' }}</p><p class="contract-cell-ellipsis cs-address" :title="[selected.roadName,selected.district].filter(Boolean).join(' · ')">{{ [selected.roadName,selected.district].filter(Boolean).join(' · ') }}</p></template>
+    <template v-if="selected"><button type="button" class="cs-open-card" @click="openStructure(selected)">Карточка сооружения</button><p><strong>{{ selected.structureName||'Сооружение' }}</strong> · Код ИССО: <strong>{{ selected.code || 'Без ИССО' }}</strong> · {{ selected.location||'Место не указано' }}</p><p class="contract-cell-ellipsis cs-address" :title="[selected.roadName,selected.district].filter(Boolean).join(' · ')">{{ [selected.roadName,selected.district].filter(Boolean).join(' · ') }}</p></template>
     <p v-else>{{ busy?'Загрузка сооружений…':'Выберите сооружение в верхней таблице.' }}</p>
    </div>
    <header class="cs-work-heading"><h3>Работы по сооружению <small v-if="selected&&!worksBusy&&!worksError">· Всего: {{ visibleWorks.length+pendingWorks.length }}</small></h3><div class="odis-work-heading-tools"><WorkStatusLegend :unknown="hasUnknownStatus"/><button type="button" :disabled="!selected||worksBusy" @click="loadWorks">Обновить работы</button></div></header>
@@ -192,6 +205,8 @@ onBeforeUnmount(()=>{listGeneration++;worksGeneration++;});
    </div>
   </section>
  </section>
+ <StructureEditor v-if="openStructureId" :key="openStructureId" :structure-id="openStructureId" :contract-id="contractId || undefined"
+   @close="openStructureId=null" @saved="savedStructure"/>
  <WorkCard v-if="detail && contractId" :row="detail" kind="structure" :contract-id="contractId"
    :contract-number="contractNumber" :employees="employees" :can-edit="canEdit" :isso="selected?.code" :link-id="selectedId" @close="closeDetail" @saved="reloadAfterSave" />
 </template>
@@ -244,4 +259,5 @@ onBeforeUnmount(()=>{listGeneration++;worksGeneration++;});
  .cs-works th:nth-child(2) { width: 2em; }
 
 }
+.cs-selected .cs-open-card{float:right;border:1px solid var(--contract-line);border-radius:4px;padding:3px 8px;margin:0 0 4px 8px;background:var(--contract-field);color:var(--contract-text)}
 </style>

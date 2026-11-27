@@ -1,7 +1,8 @@
-import {createError,getRouterParam,type H3Event} from 'h3';
+import {readStructureHistory} from '../../../services/diagnostic/structure-history';
+import {getQuery,type H3Event} from 'h3';
 import {requirePermission} from '../../../services/access-control.service';
 import {CONTRACT_RESOURCE} from '../../../services/diagnostic/access';
-import {structureAccess} from '../../../services/diagnostic/structure-access';
+import {structureCardScope} from '../../../services/diagnostic/structure-access';
 import {readStructure,structureContractUsage} from '../../../services/diagnostic/structures';
 
 async function visibleContracts(event:H3Event, id:number) {
@@ -15,9 +16,10 @@ async function visibleContracts(event:H3Event, id:number) {
 }
 
 export default defineEventHandler(async event=>{
-  await structureAccess(event);
-  const raw=getRouterParam(event,'id')||'',id=Number(raw);
-  if(!/^\d+$/.test(raw)||!Number.isSafeInteger(id)||id<1||id>2147483647)throw createError({statusCode:400,message:'Некорректный ID сооружения.'});
-  const [structure,contracts]=await Promise.all([readStructure(id),visibleContracts(event,id)]);
+  const {structureId,contractId} = await structureCardScope(event);
+  const query=getQuery(event);
+  if(query.section==='history')return readStructureHistory(structureId,contractId,query.before);
+  const [structure,contracts]=await Promise.all([readStructure(structureId,contractId),
+    contractId ? structureContractUsage(structureId) : visibleContracts(event,structureId)]);
   return {...structure,contracts};
 });

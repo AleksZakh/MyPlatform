@@ -58,8 +58,13 @@ export function structureContractUsage(id:number) {
     WHERE link."structureId" = ${id} AND link."deletedAt" IS NULL AND c."deletedAt" IS NULL
     ORDER BY c.date DESC, c.number, c.id`;
 }
-export async function readStructure(id:number):Promise<Omit<StructureDetail,'contracts'>>{
-  const row=await prisma.diagnosticStructure.findFirst({where:{id,...inService},include:{
+export function readableStructure(id:number, contractId?:number):Prisma.DiagnosticStructureWhereInput {
+  if (!contractId) return {id,...inService};
+  return {id,deletedAt:null,OR:[{decommissionedAt:null},
+    {contracts:{some:{contractId,deletedAt:null,contract:{deletedAt:null}}}}]};
+}
+export async function readStructure(id:number, contractId?:number):Promise<Omit<StructureDetail,'contracts'>>{
+  const row=await prisma.diagnosticStructure.findFirst({where:readableStructure(id,contractId),include:{
     legacyRows:{select:{legacyId:true,importedAt:true,importedById:true},orderBy:{legacyId:'asc'}},
     legacyContracts:{select:{customer:true,number:true,dateText:true},orderBy:[{date:'asc'},{id:'asc'}]},
     legacyExecutors:{select:{name:true},orderBy:{name:'asc'}},
@@ -68,7 +73,7 @@ export async function readStructure(id:number):Promise<Omit<StructureDetail,'con
   const authors=await prisma.user.findMany({where:{id:{in:[...new Set([row.createdById,row.updatedById,...(row.lastImportedById?[row.lastImportedById]:[]),...row.legacyRows.map(r=>r.importedById)])]}},select:{id:true,fullName:true,login:true,deletedAt:true}});
   const names=new Map(authors.map(u=>[u.id,u.deletedAt?'Удалённый аккаунт':u.fullName||u.login||('Сотрудник #'+u.id)]));
   names.set(0, 'Обновление ОДИС');
-  return {id:String(row.id),version:row.version,issoCode:row.code??'',sourceFile:row.lastImportFile|| (row.legacyRows.length?'dis_build':'Space'),sourceRow:0,sourceOrdinal:'',
+  return {id:String(row.id),decommissionedAt:row.decommissionedAt?.toISOString()??null,version:row.version,issoCode:row.code??'',sourceFile:row.lastImportFile|| (row.legacyRows.length?'dis_build':'Space'),sourceRow:0,sourceOrdinal:'',
     management:row.management,structureName:row.structureName,issoType:row.issoType,additionalId:row.additionalId,
     roadName:row.roadName,location:row.location,placementType:row.placementType,obstacleType:row.obstacleType,obstacleName:row.obstacleName,
     region:row.region,district:row.district,conditionRating:row.conditionRating,classAk:row.classAk,classNk:row.classNk,classEnz:row.classEnz,

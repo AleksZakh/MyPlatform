@@ -1551,7 +1551,22 @@ model DiagnosticWork {
 
 
 // Structures are shared between contracts; work effort belongs to an assignment.
+model DiagnosticStructureHistory {
+  id Int @id @default(autoincrement())
+  structureId Int
+  structure DiagnosticStructure @relation(fields:[structureId],references:[id],onDelete:Cascade,onUpdate:Cascade)
+  occurredAt DateTime @db.Timestamp(3)
+  actorId Int?
+  actorLabel String? @db.Text
+  action String @db.Text
+  source String? @db.Text
+  changes Json @default("{}")
+  @@index([structureId,id], map:"diagnostic_structure_history_lookup")
+  @@map("diagnostic_structure_history")
+}
+
 model DiagnosticStructure {
+  history DiagnosticStructureHistory[]
   trips DiagnosticTripStructure[]
   id Int @id @default(autoincrement())
   code String? @unique @db.VarChar(200)

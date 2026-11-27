@@ -79,6 +79,12 @@ function uniqueById<T extends {id:number|string}>(rows:T[]):T[]{
  return [...new Map(rows.map(r=>[r.id,r])).values()];
 }
 const draftWorks=computed(()=>uniqueById(workSelections.value.flatMap(s=>s.works)));
+function updateDraftStructure(row:import('~~/shared/types/diagnostic-structures-api').SavedStructure) {
+ for(const group of structureSelections.value) {
+  const draft=group.structures.find(item=>Number(item.id)===Number(row.id));
+  if(draft)Object.assign(draft,row);
+ }
+}
 const draftStructures=computed(()=>uniqueById(structureSelections.value.flatMap(s=>s.structures)));
 const removedLinks=reactive(new Map<number,number>()); // structure ID -> link ID
 const removedContractWorks=reactive(new Map<number,number>());
@@ -348,7 +354,7 @@ const summaryColumns=[
     <ContractWorks v-if="tab===1" :draft="draftWorks" :removed="removedContractWorks" :edit-mode="!readOnly" :can-remove="!!canRemove" :saving="saving"
      @remove="row=>markWork('contract',row)" @remove-draft="removeDraftWork" @catalog-ids="savedCatalogIds=new Set($event)" :focus-id="focusWork?.kind==='contract'?focusWork.id:undefined" :contract-id="contract?.id??null" :contract-number="contract?.number??''" :employees="catalog.supervisors" :can-edit="canEditWorks??canEdit" @count="counts.works=$event" />
     <ContractStructures v-if="tab===2" :key="structureRevision" :excluded="removedLinks" :removed-works="removedStructureWorks" :draft-works="pendingByStructure" :can-remove="!!canRemove"
-     @exclude="excludeRows" @remove-work="row=>markWork('structure',row)" @remove-draft="removeDraftWork" :pending="draftStructures" :pending-stages="pendingStages" :stage-count="form.stages || inferredStageCount" @linked="rememberLinks" :stage-edits="stageEdits"
+     @structure-saved="updateDraftStructure" @exclude="excludeRows" @remove-work="row=>markWork('structure',row)" @remove-draft="removeDraftWork" :pending="draftStructures" :pending-stages="pendingStages" :stage-count="form.stages || inferredStageCount" @linked="rememberLinks" :stage-edits="stageEdits"
      :edit-stages="!readOnly" :show-selection="canEdit || !readOnly" :saving="saving" @change-stages="changeStages" :focus-id="focusWork?.kind==='structure'?focusWork.id:undefined" :focus-link="focusWork?.kind==='structure'?focusWork.linkId:undefined" :contract-id="contract?.id??null" :contract-number="contract?.number??''" :employees="catalog.supervisors" :can-edit="canEditWorks??canEdit" @count="counts.structures=$event" />
    </div>
   </template>

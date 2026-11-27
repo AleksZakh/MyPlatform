@@ -1,24 +1,28 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import DiagnosticModuleTabs from '../DiagnosticModuleTabs.vue';
 import StructureRemovalDialog from './StructureRemovalDialog.vue';
 import StructureEditor from './StructureEditor.vue';
 import StructureFields from './StructureFields.vue';
 import StructuresImportPreview from './StructuresImportPreview.vue';
 import { useStructures,structureRequestError } from '~/composables/diagnostic/useStructures';
-import type {StructureListRow,StructureRemovalMode} from '~~/shared/types/diagnostic-structures-api';
+import type {StructureListRow,StructureRemovalMode,SavedStructure} from '~~/shared/types/diagnostic-structures-api';
 import { structureColumns, structureGroups, type StructureRecord } from '~~/shared/types/diagnostic-structures';
 import '~/assets/css/diagnostic-structures.css';
 const {filters,sortKey,descending,page,pageSize,pageCount,pageRows,selectedId,selected,options,rangeError,matched,total,activeFilters,loading,loadError,catalogError,detailLoading,detailError,sort,reset,refresh,retryDetail}=useStructures();
-const managementSearch=ref(''),regionSearch=ref(''),detailTab=ref('main'),detailsOpen=ref(true),filtersOpen=ref(false),importOpen=ref(false),cardOpen=ref(false),notice=ref('');
+const managementSearch=ref(''),regionSearch=ref(''),detailTab=ref('main'),detailsOpen=ref(true),filtersOpen=ref(false),importOpen=ref(false),card=ref<{id?:number;edit?:boolean}|null>(null),notice=ref('');
 const managementOptions=computed(()=>options.value.management.filter(value=>value.toLocaleLowerCase('ru-RU').includes(managementSearch.value.trim().toLocaleLowerCase('ru-RU'))));
 const regionOptions=computed(()=>options.value.regions.filter(value=>value.toLocaleLowerCase('ru-RU').includes(regionSearch.value.trim().toLocaleLowerCase('ru-RU'))));
-const editor=ref<'new'|'edit'|null>(null),canEdit=ref(false),canCreate=ref(false);
+const canEdit=ref(false),canCreate=ref(false);
 onMounted(async()=>{
  const grant=async(action:string)=>(await $fetch<{allowed:boolean}>('/api/access/check',{query:{resource:'diagnostic.structures',action}})).allowed;
  const values=await Promise.allSettled([grant('CREATE'),grant('UPDATE')]);canCreate.value=values[0]?.status==='fulfilled'&&values[0].value;canEdit.value=values[1]?.status==='fulfilled'&&values[1].value;
 });
-async function saved(id:number){editor.value=null;await refresh();selectedId.value=String(id);retryDetail();}
+async function saved(row:SavedStructure){
+ await refresh();
+ if(pageRows.value.some(item=>item.id===row.id))selectedId.value=row.id;
+}
+function shortRoad(name:string){return name.match(/^[А-ЯA-Z]+[-–]\d+(?:\s+[«"][^«»"]+[»"])?/iu)?.[0] || name;}
 const canRemove=ref(false), removal=ref<StructureListRow|null>(null);
 onMounted(async()=>{
   try {
@@ -29,7 +33,7 @@ onMounted(async()=>{
 async function removed(mode:StructureRemovalMode){
   const code=removal.value?.issoCode;
   removal.value=null;
-  cardOpen.value=false;
+  card.value=null;
   notice.value='Сооружение '+code+(mode==='decommission'?' выведено из эксплуатации.':' удалено.');
   await refresh();
 }
@@ -37,8 +41,7 @@ async function removed(mode:StructureRemovalMode){
 const first=computed(()=>pageRows.value.length?(page.value-1)*pageSize.value+1:0);
 const last=computed(()=>pageRows.value.length?first.value+pageRows.value.length-1:0);
 function resetFilters(){reset();managementSearch.value='';regionSearch.value='';}
-function openCard(row:StructureListRow){selectedId.value=row.id;cardOpen.value=true;}
-watch(selectedId,id=>{if(!id)cardOpen.value=false;});
+function openCard(row:StructureListRow){selectedId.value=row.id;card.value={id:Number(row.id)};}
 const dateLabel=(value:string)=>new Date(value).toLocaleString('ru-RU');
 function moveDetailTab(event:KeyboardEvent,index:number){
   let next=index;
@@ -55,7 +58,7 @@ function moveDetailTab(event:KeyboardEvent,index:number){
 <section class="structures-workspace">
   <DiagnosticModuleTabs active="structures"/>
   <div class="st-page">
-    <header class="st-heading"><h1>Сооружения</h1><div class="st-heading-actions"><button v-if="canCreate" @click="editor='new'"><Icon name="lucide:plus"/>Создать сооружение</button><button class="st-filters-toggle" :aria-expanded="filtersOpen" aria-controls="st-filters" @click="filtersOpen=!filtersOpen"><Icon name="lucide:sliders-horizontal"/>Фильтры{{ activeFilters?' ('+activeFilters+')':'' }}</button><button :disabled="loading" @click="refresh"><Icon name="lucide:refresh-cw"/>Обновить</button><button class="st-primary" :disabled="loading||!!loadError" @click="importOpen=true"><Icon name="lucide:file-up"/>Импорт Excel</button></div></header>
+    <header class="st-heading"><h1>Сооружения</h1><div class="st-heading-actions"><button v-if="canCreate" @click="card={}"><Icon name="lucide:plus"/>Создать сооружение</button><button class="st-filters-toggle" :aria-expanded="filtersOpen" aria-controls="st-filters" @click="filtersOpen=!filtersOpen"><Icon name="lucide:sliders-horizontal"/>Фильтры{{ activeFilters?' ('+activeFilters+')':'' }}</button><button :disabled="loading" @click="refresh"><Icon name="lucide:refresh-cw"/>Обновить</button><button class="st-primary" :disabled="loading||!!loadError" @click="importOpen=true"><Icon name="lucide:file-up"/>Импорт Excel</button></div></header>
     <div v-if="notice" class="st-notice" role="status"><span>{{ notice }}</span><button aria-label="Закрыть уведомление" @click="notice=''">×</button></div>
     <div v-if="loadError||catalogError" class="st-notice st-error" role="alert"><span>{{ loadError||catalogError }}</span><button :disabled="loading" @click="refresh">Повторить</button></div>
     <div class="st-layout">
@@ -83,7 +86,7 @@ function moveDetailTab(event:KeyboardEvent,index:number){
           <footer><span>{{ first }}–{{ last }} из {{ matched }}</span><nav aria-label="Страницы сооружений"><button :disabled="loading||page<=1" aria-label="Первая страница" @click="page=1">«</button><button :disabled="loading||page<=1" aria-label="Предыдущая страница" @click="page--">‹</button><label>Страница<select v-model.number="page" :disabled="loading"><option v-for="number in pageCount" :key="number" :value="number">{{ number }}</option></select><span>из {{ pageCount }}</span></label><button :disabled="loading||page>=pageCount" aria-label="Следующая страница" @click="page++">›</button><button :disabled="loading||page>=pageCount" aria-label="Последняя страница" @click="page=pageCount">»</button></nav></footer>
         </section>
         <section class="st-details" :class="{'st-details-collapsed':!detailsOpen}" aria-label="Сведения о выбранном сооружении">
-          <header><button class="st-detail-toggle" :aria-expanded="detailsOpen" aria-controls="st-detail-body" @click="detailsOpen=!detailsOpen"><Icon :name="detailsOpen?'lucide:chevron-down':'lucide:chevron-up'"/><strong>{{ selected?'Сооружение '+selected.issoCode:'О сооружении' }}</strong><span v-if="selected">{{ selected.location }}</span></button><div v-if="selected" class="st-selection-actions"><button v-if="canEdit" @click="editor='edit'">Редактировать</button><button v-if="canRemove" type="button" @click="removal=selected"><Icon name="lucide:trash-2"/>Удалить</button><button @click="openCard(selected)"><Icon name="lucide:expand"/>Карточка</button></div></header>
+          <header><button class="st-detail-toggle" :aria-expanded="detailsOpen" aria-controls="st-detail-body" @click="detailsOpen=!detailsOpen"><Icon :name="detailsOpen?'lucide:chevron-down':'lucide:chevron-up'"/><strong>{{ selected?'Сооружение '+(selected.issoCode || 'без ИССО'):'О сооружении' }}</strong><span v-if="selected">{{ selected.location }} (км+м) · <span :title="selected.roadName">а/д {{shortRoad(selected.roadName)}}</span></span></button><div v-if="selected" class="st-selection-actions"><button v-if="canEdit" @click="card={id:Number(selected.id),edit:true}">Редактировать</button><button v-if="canRemove" type="button" @click="removal=selected"><Icon name="lucide:trash-2"/>Удалить</button><button @click="openCard(selected)"><Icon name="lucide:expand"/>Карточка</button></div></header>
           <div v-if="detailsOpen" id="st-detail-body" class="st-detail-body" :aria-busy="detailLoading"><p v-if="detailLoading" role="status">Загрузка карточки…</p><div v-else-if="detailError" class="st-error" role="alert">{{ detailError }} <button @click="retryDetail">Повторить</button></div><template v-else-if="selected">
             <div class="st-detail-tabs" role="tablist" aria-label="Сведения о сооружении"><button v-for="(group,index) in structureGroups" :id="'st-tab-'+group.key" :key="group.key" role="tab" :aria-selected="detailTab===group.key" :tabindex="detailTab===group.key?0:-1" aria-controls="st-tab-panel" @click="detailTab=group.key" @keydown="moveDetailTab($event,index)">{{ group.label }}</button></div>
             <div id="st-tab-panel" role="tabpanel" :aria-labelledby="'st-tab-'+detailTab" tabindex="0"><StructureFields :record="selected" :contracts="selected.contracts" :group="detailTab" legacy/><small class="st-source"><span v-if="selected.importedAt">Импорт · {{selected.importers.join(', ')}} · {{dateLabel(selected.importedAt)}} · {{selected.sourceFile}}<br/></span>Изменено · {{selected.editor}} · {{dateLabel(selected.updatedAt)}}</small><p v-if="detailTab==='work'" class="st-source">Договоры и исполнители приведены из старой базы. Их перечни не задают соответствие исполнителей отдельным договорам.</p></div>
@@ -92,17 +95,9 @@ function moveDetailTab(event:KeyboardEvent,index:number){
       </div>
     </div>
   </div>
-  <USlideover v-model:open="cardOpen" :title="selected?'Сооружение '+selected.issoCode:'Карточка сооружения'" description="Сведения из справочника сооружений" :ui="{content:'st-card-panel w-full sm:max-w-3xl',body:'st-card-body',footer:'st-card-footer'}">
-    <template #body><div class="st-card-content">
-      <p v-if="detailLoading" role="status">Загрузка карточки…</p><div v-else-if="detailError" class="st-error" role="alert">{{ detailError }} <button @click="retryDetail">Повторить</button></div>
-      <template v-else-if="selected"><p class="st-card-caption">{{ selected.roadName }} · {{ selected.location }}</p><StructureFields :record="selected" :contracts="selected.contracts" legacy/>
-        <small class="st-source"><span v-if="selected.importedAt">Импорт · {{selected.importers.join(', ')}} · {{dateLabel(selected.importedAt)}} · {{selected.sourceFile}}<br/></span>Изменено · {{selected.editor}} · {{dateLabel(selected.updatedAt)}}</small><div class="st-source"><p v-if="selected.legacyIds.length">Источник: dis_build · ID старых записей: {{ selected.legacyIds.join(', ') }}.<br/>Первоначальный автор неизвестен. Перенос выполнили: {{ selected.importers.join(', ') }}<template v-if="selected.importedAt"> · {{ dateLabel(selected.importedAt) }}</template>.</p><p v-else>Создал: {{ selected.creator }} · {{ dateLabel(selected.createdAt) }}.</p><p>В разделе «Работы и примечания» приведены исторические сведения о договорах и исполнителях из старой базы.</p></div>
-      </template>
-    </div></template>
-    <template #footer><span class="st-muted">Просмотр сведений</span><button v-if="canRemove && selected" type="button" @click="removal=selected"><Icon name="lucide:trash-2"/>Удалить</button><button @click="cardOpen=false">Закрыть</button></template>
-  </USlideover>
+  <StructureEditor v-if="card" :key="card.id ?? 'new'" :structure-id="card.id" :start-editing="card.edit" :roads="options.roads"
+    :allow-remove="canRemove" @close="card=null" @saved="saved" @remove="row=>removal=row"/>
   <StructureRemovalDialog v-if="removal" :key="removal.id" :structure="removal" @close="removal=null" @removed="removed"/>
-  <StructureEditor v-if="editor" :record="editor==='edit'?selected:null" :roads="options.roads" @close="editor=null" @saved="saved"/>
   <StructuresImportPreview v-model:open="importOpen" @imported="refresh"/>
 </section>
 </template>
