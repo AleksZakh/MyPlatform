@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import {reportParts} from '~~/shared/utils/diagnostic-report-parts';
 import { computed, ref } from 'vue';
 import { onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router';
 import { useWorkLibrary, workError } from '~/composables/diagnostic/useWorkLibrary';
@@ -57,7 +58,7 @@ onBeforeRouteUpdate((to, from) => to.query.module === from.query.module || canLe
     <div class="wl-toolbar">
       <label class="wl-search"><Icon name="lucide:search"/><input v-model="search" aria-label="Поиск работ" type="search" placeholder="Поиск по шифру, названию и описанию"/></label>
       <select v-model="group" aria-label="Группа"><option :value="0">Все группы</option><option v-for="g in catalog.groups" :key="g.id" :value="g.id">{{ g.name }}</option></select>
-      <select v-model="category" aria-label="Категория"><option :value="0">Все категории</option><option v-for="c in filterCategories" :key="c.id" :value="c.id">{{ c.name }}{{ !group ? ' · '+catalog.groups.find(g=>g.id===c.groupId)?.name : '' }}</option></select>
+      <select v-model="category" aria-label="Категория"><option :value="0">Все категории</option><option :value="-1">Полевые работы</option><option v-for="c in filterCategories" :key="c.id" :value="c.id">{{ c.name }}{{ !group ? ' · '+catalog.groups.find(g=>g.id===c.groupId)?.name : '' }}</option></select>
       <button :disabled="loading||busy" @click="refresh">Обновить</button>
       <button v-if="permissions.create" class="wl-primary" :disabled="loading||busy" @click="open()">+ Работа</button>
     </div>
@@ -89,6 +90,8 @@ onBeforeRouteUpdate((to, from) => to.query.module === from.query.module || canLe
         <p class="wl-info">{{ draft.code?'Шифр: '+draft.code:'Шифр будет присвоен при сохранении.' }}</p>
         <fieldset :disabled="mode==='view'||busy">
           <label>Группа *<select v-model="draft.groupId" required :disabled="mode!=='create'" @change="changeGroup"><option v-for="g in catalog.groups" :key="g.id" :value="g.id">{{ g.name }}</option></select></label>
+          <label><span><input v-model="draft.fieldWork" type="checkbox"/> Полевые работы</span></label>
+          <label>Составная часть отчёта «Ход работ»<select v-model="draft.reportPart"><option value="">Не входит</option><optgroup v-for="name in ['Полевые работы','АИС Конструктив']" :key="name" :label="name"><option v-for="part in reportParts.filter(p=>p.group===name)" :key="part.key" :value="part.key">{{part.label}}</option></optgroup></select></label>
           <label>Категория *<select v-model="draft.categoryId" required><option :value="0" disabled>Выберите категорию</option><option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option></select></label>
           <button v-if="mode!=='view'&&permissions.create&&!creatingCategory" type="button" @click="creatingCategory=true">+ Категория в выбранной группе</button>
           <div v-if="creatingCategory" class="wl-category-create">

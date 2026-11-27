@@ -27,7 +27,13 @@ export function parseStructureImportBatch(input:unknown) {
     if(lengthRaw && (!/^\d{1,12}(?:\.\d{1,6})?$/.test(lengthRaw)||Number(lengthRaw)!==length))throw new Error('Некорректная исходная длина: '+code);
     if(!lengthRaw&&length!==null)throw new Error('Не указана исходная длина: '+code);
     if(!Number.isSafeInteger(r.sourceRow)||Number(r.sourceRow)<2||Number(r.sourceRow)>20001)throw new Error('Некорректный номер строки.');
-    return {sourceRow:Number(r.sourceRow),data:{...fields,code,locationMetres,lengthMetres:lengthRaw||null,lengthRaw}};
+    let choice: {id:number;version:number;state:string;confirm:boolean;fields:string[]}|undefined;
+    if(r.choice!=null){
+      const c=r.choice as Record<string,unknown>;
+      if(!Number.isSafeInteger(c.id)||!Number.isSafeInteger(c.version)||typeof c.state!=='string'||!Array.isArray(c.fields)||!c.fields.every(f=>typeof f==='string'))throw new Error('Некорректный выбор обновлений.');
+      choice={id:Number(c.id),version:Number(c.version),state:c.state,confirm:c.confirm===true,fields:c.fields};
+    }
+    return {sourceRow:Number(r.sourceRow),present:Array.isArray(r.present)?r.present.filter((f):f is string=>typeof f==='string'):[],target:Number.isSafeInteger(r.target)&&Number(r.target)>=0?Number(r.target):undefined,choice,data:{...fields,code,locationMetres,lengthMetres:lengthRaw||null,lengthRaw}};
   });
   return {fileName:body.fileName,records};
 }

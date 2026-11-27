@@ -154,8 +154,8 @@ onBeforeUnmount(()=>{listGeneration++;worksGeneration++;});
      <tr v-else-if="!visibleRows.length"><td :colspan="showSelection?10:9">По заданным фильтрам сооружения не найдены. <button type="button" @click="clearFilters">Очистить фильтры</button></td></tr>
      <template v-else><tr v-for="(row,index) in visibleRows" :key="row.id" v-reveal-work-row="props.focusLink===row.id?'scroll':false" :class="{'is-selected':selectedId===row.id}" @click="selectedId=row.id">
       <td v-if="showSelection" class="cs-check" @click.stop><input type="checkbox" :aria-label="'Выбрать '+row.code" :checked="checked.has(row.structureId)" :disabled="saving" @change="selectRows([row],$event)"/></td>
-      <td>{{ index+1 }}</td><td><button type="button" class="cs-code" :aria-pressed="selectedId===row.id" :aria-label="`Работы сооружения ${row.code}`" @click.stop="selectedId=row.id">{{ row.code }}</button></td>
-      <td>{{ row.structureName }} <small v-if="row.decommissioned">· Выведено из эксплуатации</small></td><td><span class="contract-cell-ellipsis cs-road" :title="row.roadName">{{ row.roadName }}</span></td>
+      <td>{{ index+1 }}</td><td><button type="button" class="cs-code" :aria-pressed="selectedId===row.id" :aria-label="`Работы сооружения ${row.code}`" @click.stop="selectedId=row.id">{{ row.code || 'Без ИССО' }}</button></td>
+      <td>{{ row.structureName }} <small v-if="row.worklogActive!=null" :title="row.worklogActive?'По черновику работы ведутся или завершены':'По черновику работы предстоят'" :class="{'cs-worklog-active':row.worklogActive}">· {{row.worklogActive?'Работы начаты':'Работы предстоят'}}</small> <small v-if="row.decommissioned">· Выведено из эксплуатации</small></td><td><span class="contract-cell-ellipsis cs-road" :title="row.roadName">{{ row.roadName }}</span></td>
       <td>{{ row.location }}</td><td>{{ row.additionalId }}</td><td>{{ row.obstacleName }}</td><td>{{ row.district }}</td>
       <td @click.stop><StructureStageSelect v-if="editStages" :count="stageCount" :value="stageEdits.get(row.structureId)?.stage??row.stage" :label="'Этап сооружения '+row.code" :disabled="saving" @change="assign([row],$event)"/><span v-else>{{row.stage}}</span></td>
      </tr></template>
@@ -164,7 +164,7 @@ onBeforeUnmount(()=>{listGeneration++;worksGeneration++;});
   </div>
   <section v-if="contractId || pending.length" class="cs-work-panel" aria-label="Работы выбранного сооружения">
    <div class="cs-selected" aria-live="polite">
-    <template v-if="selected"><p><strong>{{ selected.structureName||'Сооружение' }}</strong> · Код ИССО: <strong>{{ selected.code }}</strong> · {{ selected.location||'Место не указано' }}</p><p class="contract-cell-ellipsis cs-address" :title="[selected.roadName,selected.district].filter(Boolean).join(' · ')">{{ [selected.roadName,selected.district].filter(Boolean).join(' · ') }}</p></template>
+    <template v-if="selected"><p><strong>{{ selected.structureName||'Сооружение' }}</strong> · Код ИССО: <strong>{{ selected.code || 'Без ИССО' }}</strong> · {{ selected.location||'Место не указано' }}</p><p class="contract-cell-ellipsis cs-address" :title="[selected.roadName,selected.district].filter(Boolean).join(' · ')">{{ [selected.roadName,selected.district].filter(Boolean).join(' · ') }}</p></template>
     <p v-else>{{ busy?'Загрузка сооружений…':'Выберите сооружение в верхней таблице.' }}</p>
    </div>
    <header class="cs-work-heading"><h3>Работы по сооружению <small v-if="selected&&!worksBusy&&!worksError">· Всего: {{ visibleWorks.length+pendingWorks.length }}</small></h3><div class="odis-work-heading-tools"><WorkStatusLegend :unknown="hasUnknownStatus"/><button type="button" :disabled="!selected||worksBusy" @click="loadWorks">Обновить работы</button></div></header>

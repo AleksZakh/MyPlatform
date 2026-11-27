@@ -145,7 +145,7 @@ export async function planningRows(contractId: number, category: Category, links
         category,
         linkId: w.contractStructureId,
         version: w.version,
-        isso: w.contractStructure.structure.code,
+        isso: w.contractStructure.structure.code??'',
         code: w.workCodeSnapshot,
         name: w.workNameSnapshot,
         group: w.work.group.name,

@@ -23,7 +23,7 @@ async function atomic<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>): Prom
   }
 }
 function serialize(r: Row): WorkRecord {
-  return { id: r.id, version: r.version, code: r.code, sequence: r.sequence, groupId: r.groupId,
+  return { reportPart:r.reportPart, fieldWork:r.fieldWork, id: r.id, version: r.version, code: r.code, sequence: r.sequence, groupId: r.groupId,
     categoryId: r.categoryId, group: r.group.name, category: r.category.name, name: r.name,
     hours: r.hours.toString(), criteria: r.criteria, note: r.note,
     createdById: r.createdById, updatedById: r.updatedById, creator: '', editor: '',
@@ -33,6 +33,7 @@ async function authors(rows: WorkRecord[], db: Prisma.TransactionClient = prisma
   const ids = [...new Set(rows.flatMap(r => [r.createdById, r.updatedById]))];
   const users = await db.user.findMany({ where: { id: { in: ids } }, select: { id: true, fullName: true, login: true, deletedAt: true } });
   const names = new Map(users.map(u => [u.id, u.deletedAt ? 'Удалённый аккаунт' : u.fullName || u.login || ('Сотрудник #' + u.id)]));
+  names.set(0,'Обновление ОДИС');
   return rows.map(r => ({ ...r, creator: names.get(r.createdById) || 'Удалённый аккаунт', editor: names.get(r.updatedById) || 'Удалённый аккаунт' }));
 }
 export async function listWorks() {

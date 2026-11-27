@@ -51,7 +51,7 @@ export async function generateReport(event:H3Event,params:ReportParams):Promise<
     for(;;){
       const batch=await tx.diagnosticStructureWork.findMany({where:{...base,id:{gt:after},tripId:null,contractStructure:{deletedAt:null,contract:{deletedAt:null},structure:{deletedAt:null}}},orderBy:{id:'asc'},take:500,
         select:{...fields,id:true,workNameSnapshot:true,contractStructure:{select:{contractId:true,contract:{select:{number:true}},structure:{select:{code:true}}}}}});
-      for(const w of batch){const link=w.contractStructure;list.push({...values(w),contractId:link.contractId,contractNumber:link.contract.number,name:w.workNameSnapshot,structure:link.structure.code});}
+      for(const w of batch){const link=w.contractStructure;list.push({...values(w),contractId:link.contractId,contractNumber:link.contract.number,name:w.workNameSnapshot,structure:link.structure.code??''});}
       if(batch.length<500)break;
       after=batch[batch.length-1]!.id;
     }

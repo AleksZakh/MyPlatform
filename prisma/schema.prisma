@@ -1427,6 +1427,7 @@ model DiagnosticProjectType {
 }
 
 model DiagnosticContract {
+  worklogBook DiagnosticWorklogBook?
   trips DiagnosticTrip[]
   legacyImport DiagnosticContractLegacyRow?
   id Int @id @default(autoincrement())
@@ -1468,6 +1469,8 @@ model DiagnosticContract {
 
 // Stable link for the forthcoming structures module; the count is derived, never entered.
 model DiagnosticContractStructure {
+  worklogCrew String?
+  worklogActive Boolean?
   stage Int @default(1)
   id Int @id @default(autoincrement())
   contractId Int
@@ -1517,6 +1520,8 @@ model DiagnosticWorkCategory {
   @@map("diagnostic_work_categories")
 }
 model DiagnosticWork {
+  reportPart String @default("")
+  fieldWork Boolean @default(false)
   id           Int @id @default(autoincrement())
   legacyId     Int? @unique
   code         String @unique @db.VarChar(100)
@@ -1549,7 +1554,11 @@ model DiagnosticWork {
 model DiagnosticStructure {
   trips DiagnosticTripStructure[]
   id Int @id @default(autoincrement())
-  code String @unique @db.VarChar(200)
+  code String? @unique @db.VarChar(200)
+  importKind String @default("reference")
+  lastImportedById Int?
+  lastImportedAt DateTime?
+  lastImportFile String?
   management String @default("") @db.Text
   structureName String @default("") @db.Text
   issoType String @default("") @db.Text
@@ -1630,6 +1639,7 @@ model DiagnosticStructureLegacyExecutor {
   @@map("diagnostic_structure_legacy_executors")
 }
 model DiagnosticStructureWork {
+  worklogCell Json?
   autoCompleteHours Decimal? @db.Decimal(12, 4)
   @@unique([tripId, structureId], map: "diagnostic_structure_works_trip_structure_key")
   trip DiagnosticTrip? @relation(fields:[tripId],references:[id],onDelete:Restrict)
@@ -1944,6 +1954,8 @@ model DiagnosticTripParticipant {
 
 
 model DiagnosticTripStructure {
+ confirmedById Int?
+ confirmedAt DateTime?
  tripId Int
  structureId Int
  trip DiagnosticTrip @relation(fields:[tripId],references:[id],onDelete:Restrict)
@@ -2003,4 +2015,24 @@ model DiagnosticTripEmail {
  @@unique([tripId,tripVersion,userId])
  @@index([status,createdAt])
  @@map("diagnostic_trip_emails")
+}
+
+model DiagnosticWorklogBook {
+  contractId Int @id
+  contract DiagnosticContract @relation(fields:[contractId], references:[id], onDelete:Cascade)
+  sourceName String @unique
+  files DiagnosticWorklogFile[]
+  @@map("diagnostic_worklog_books")
+}
+model DiagnosticWorklogFile {
+  sourceKey String @default("")
+  @@index([contractId,sourceKey,importedAt], map:"diagnostic_worklog_file_source")
+  hash String @id
+  contractId Int
+  book DiagnosticWorklogBook @relation(fields:[contractId], references:[contractId], onDelete:Cascade)
+  fileName String
+  importedAt DateTime @default(now())
+  actorId Int
+  rows Json
+  @@map("diagnostic_worklog_files")
 }

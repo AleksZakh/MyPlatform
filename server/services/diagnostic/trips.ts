@@ -36,6 +36,7 @@ export async function saveTrip(event:H3Event,actorId:number,input:TripInput,id?:
   await references(tx,input,retained);
   if(await tx.diagnosticTrip.findFirst({where:{deletedAt:null,contentKey:{in:[tripHash(input,'PLANNED'),tripHash(input,'COMPLETED')]},...(id?{id:{not:id}}:{})}}))fail('Такая командировка уже существует.',409);
   const data={...tripWriteData(input),contentKey:tripHash(input,'PLANNED'),updatedById:actorId};
+  if(before?.contractId===input.contractId && !input.noStructures && before.structures.some(s=>s.confirmedAt&&input.structureIds.includes(s.structureId)))data.destination=before.destination;
   let row;
   if(before){
    const changed=await tx.diagnosticTrip.updateMany({where:{id:before.id,version,status:'PLANNED'},data:{...data,version:{increment:1}}});if(changed.count!==1)fail('Командировка изменена.',409);
@@ -45,8 +46,9 @@ export async function saveTrip(event:H3Event,actorId:number,input:TripInput,id?:
    row=await tx.diagnosticTrip.create({data:{...data,number:nextTripNumber([...numbers.map(t=>t.number),...origins.map(o=>o.sourceNumber)]),createdById:actorId}});
   }
   await tx.diagnosticTripParticipant.createMany({data:input.participantIds.map(userId=>({tripId:row.id,userId}))});
-  if(input.structureIds.length)await tx.diagnosticTripStructure.createMany({data:input.structureIds.map(structureId=>({tripId:row.id,structureId}))});
-  if(!before?.origins.length)await syncTripStructureWorks(tx,row.id,input,actorId,before,sources);
+  const confirmed=new Map((before?.contractId===input.contractId?before.structures:[]).filter(s=>s.confirmedAt).map(s=>[s.structureId,{confirmedAt:s.confirmedAt,confirmedById:s.confirmedById}]));
+  if(input.structureIds.length)await tx.diagnosticTripStructure.createMany({data:input.structureIds.map(structureId=>({tripId:row.id,structureId,...confirmed.get(structureId)}))});
+  if(!before?.origins.length)await syncTripStructureWorks(tx,row.id,{...input,structureIds:input.structureIds.filter(s=>!confirmed.has(s))},actorId,before,sources);
   const stored=await tx.diagnosticTrip.findUniqueOrThrow({where:{id:row.id},include:tripInclude});
   if(!before||before.contentKey!==stored.contentKey)await queueTripEmails(tx,stored,input);
   const after=serializeTrip(await tx.diagnosticTrip.findUniqueOrThrow({where:{id:row.id},include:tripInclude}));
@@ -57,7 +59,7 @@ export async function saveTrip(event:H3Event,actorId:number,input:TripInput,id?:
 export async function tripWorkCandidates(id:number):Promise<TripWorkCandidate[]>{
  const trip=await getTrip(id),day=(d:Date|null)=>d?.toISOString().slice(0,10)??null;
  const rows=await prisma.diagnosticStructureWork.findMany({where:{tripId:id,deletedAt:null,contractStructure:{contractId:trip.contractId}},include:{contractStructure:{include:{structure:{select:{code:true}}}}},orderBy:{id:'asc'}});
- return rows.map(w=>({id:w.id,kind:'structure',name:w.workNameSnapshot,structureCode:w.contractStructure.structure.code,version:w.version,status:w.status,planStart:day(w.planStart),planFinish:day(w.planFinish),planHours:w.planHours?.toString()??null,planExecutor:w.planExecutor,factStart:day(w.factStart),factFinish:day(w.factFinish),factHours:w.factHours?.toString()??null,factExecutor:w.factExecutor}));
+ return rows.map(w=>({id:w.id,kind:'structure',name:w.workNameSnapshot,structureCode:w.contractStructure.structure.code??'',version:w.version,status:w.status,planStart:day(w.planStart),planFinish:day(w.planFinish),planHours:w.planHours?.toString()??null,planExecutor:w.planExecutor,factStart:day(w.factStart),factFinish:day(w.factFinish),factHours:w.factHours?.toString()??null,factExecutor:w.factExecutor}));
 }
 export function parseTripClose(body:any){
  const version=tripId(body?.version);
@@ -73,7 +75,8 @@ export async function closeTrip(event:H3Event,actorId:number,id:number,version:n
  if(participants.length!==trip.participantIds.length||new Set(participants.map(p=>p.userId)).size!==participants.length||participants.some(p=>!trip.participantIds.includes(p.userId)))fail('В расчёте должны быть все участники этой командировки ровно по одному разу.');
  if(!await tx.diagnosticContract.findFirst({where:{id:trip.contractId,deletedAt:null}}))fail('Договор командировки недоступен.',409);
  const works=await tx.diagnosticStructureWork.findMany({where:{tripId:id,deletedAt:null},include:{tripCompletion:true,contractStructure:{select:{contractId:true,deletedAt:true,structure:{select:{deletedAt:true}}}}},orderBy:{id:'asc'}});
- if(!trip.noStructures&&(works.length!==trip.structureIds.length||works.some(w=>!trip.structureIds.includes(w.structureId))))fail('Не все работы этой командировки связаны с сооружениями. Для импортированной поездки требуется точное сопоставление работ; чужие работы автоматически не закрываются.',409);
+ const workStructureIds=row!.structures.filter(s=>!s.confirmedAt).map(s=>s.structureId);
+ if(!trip.noStructures&&(works.length!==workStructureIds.length||works.some(w=>!workStructureIds.includes(w.structureId))))fail('Не все работы этой командировки связаны с сооружениями. Для импортированной поездки требуется точное сопоставление работ; чужие работы автоматически не закрываются.',409);
  for(const w of works){if(w.contractStructure.contractId!==trip.contractId||w.contractStructure.deletedAt||w.contractStructure.structure.deletedAt||w.tripCompletion||w.status==='completed'||w.factStart||w.factFinish||w.factHours!==null||w.factExecutor)fail('Работа уже изменена, содержит факт или недоступна: '+w.id,409);}
  let allocations;try{allocations=allocateTripHours(participants.map(p=>p.hours),works.map(w=>w.id));}catch(e){return fail((e as Error).message);}
  const peopleByHours=new Map<string,number[]>();for(const p of participants){const ids=peopleByHours.get(p.hours)||[];ids.push(p.userId);peopleByHours.set(p.hours,ids);}

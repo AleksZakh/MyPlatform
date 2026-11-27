@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import {computed,onMounted,ref,watch} from 'vue';
+import WorklogTripReview from './WorklogTripReview.vue';
+const reconcileContract=ref(0);
+import WorklogImport from './WorklogImport.vue';
+const importing=ref(false);
 import ProgressFilter from './ProgressFilter.vue';
 import {workStatusLegend} from '~~/shared/utils/diagnostic-contract-table';
 import {reportCenters,centerColors} from '~~/shared/utils/diagnostic-reports';
@@ -49,7 +53,7 @@ onMounted(loadContracts);
    <ProgressFilter v-model="structureIds" label="Сооружения" :options="structureOptions" :disabled="!contractIds.length||loadingLinks||linkError" :placeholder="loadingLinks?'Загрузка…':!contractIds.length?'Выберите договор':links.length?'Все сооружения':'Нет сооружений'"/>
    <ProgressFilter v-model="statuses" label="Статус работ" :options="statusOptions"/>
    <ProgressFilter v-model="centers" label="Рег. центр" :options="centerOptions"/>
-   <div class="actions"><button class="opr-button" type="button" disabled><Icon name="lucide:table-2"/>Сформировать</button><button class="opr-button" type="button" disabled><Icon name="lucide:download"/>Загрузить</button></div>
+   <div class="actions"><button type="button" class="opr-button" :disabled="contractIds.length!==1" title="Выберите один договор для сверки" @click="reconcileContract=Number(contractIds[0])">Сверка командировок</button><button type="button" class="opr-button" @click="importing=true"><Icon name="lucide:file-up"/>Импорт Excel</button><button class="opr-button" type="button" disabled><Icon name="lucide:table-2"/>Сформировать</button><button class="opr-button" type="button" disabled><Icon name="lucide:download"/>Загрузить</button></div>
   </div>
   <p v-if="contractError||linkError" class="load-error" role="alert">{{contractError?'Не удалось загрузить договоры.':'Не удалось загрузить сооружения.'}} <button type="button" class="opr-button" @click="contractError?loadContracts():retry++">Повторить</button></p>
   <div class="legend" aria-label="Легенда"><strong>Легенда</strong><span v-for="l in legend" :key="l.name" :style="{'--label-color':l.color}">{{l.name}}</span></div>
@@ -57,6 +61,8 @@ onMounted(loadContracts);
    <table><caption class="opr-sr-only">Ход выполнения работ по сооружениям</caption><thead><tr><th v-for="c in headings" :key="c" scope="col">{{c}}</th></tr></thead></table>
    <p>Формирование и загрузка отчёта будут доступны после подключения расчёта.</p>
   </div>
+ <WorklogTripReview v-if="reconcileContract" :contract-id="reconcileContract" @close="reconcileContract=0"/>
+ <WorklogImport v-if="importing" :initial-contract="contractIds.length===1?Number(contractIds[0]):undefined" @close="importing=false" @imported="loadContracts" @reconcile="id=>{importing=false;reconcileContract=id}"/>
  </section>
 </template>
 <style scoped>

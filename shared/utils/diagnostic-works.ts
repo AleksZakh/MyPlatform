@@ -1,3 +1,4 @@
+import {reportParts} from './diagnostic-report-parts';
 export function positiveId(value: unknown): number {
   if ((typeof value !== 'number' && typeof value !== 'string') ||
       !/^[1-9]\d*$/.test(String(value))) throw new Error('Ожидался положительный целый идентификатор.');
@@ -30,7 +31,9 @@ export function parseWork(value: unknown) {
   const b = value as Record<string, unknown>;
   const groupId = positiveId(b.groupId);
   if (groupId > 9) throw new Error('Неизвестная группа.');
-  return { groupId, categoryId: positiveId(b.categoryId), name: textField(b.name, 'Наименование', 300),
+  if(b.reportPart!==undefined && b.reportPart!=='' && !reportParts.some(p=>p.key===b.reportPart))throw new Error('Неизвестная составляющая отчёта.');
+  const fieldRole=reportParts.find(p=>p.key===b.reportPart)?.group==='Полевые работы';
+  return { ...(typeof b.reportPart==='string'?{reportPart:b.reportPart}:{}), ...(fieldRole?{fieldWork:true}:{}), ...(typeof b.fieldWork === "boolean" ? {fieldWork:fieldRole||b.fieldWork} : {}), groupId, categoryId: positiveId(b.categoryId), name: textField(b.name, 'Наименование', 300),
     hours: hoursValue(b.hours), criteria: textField(b.criteria, 'Критерий приёмки', 2000),
     note: textField(b.note, 'Примечание', 4000, true) };
 }

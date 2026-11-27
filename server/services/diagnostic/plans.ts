@@ -103,7 +103,7 @@ export async function readEmployeePlans(event:H3Event,q:Record<string,unknown>):
   const structureWhere={deletedAt:null,tripId:null,contractStructure:{deletedAt:null,contract:{deletedAt:null},structure:{deletedAt:null}},...workFilters};
   const structureTrace=describeSource('DiagnosticStructureWork',structureWhere);
   for(;;){check();const boundary:{id?:{lt:number}}=last===undefined?{}:{id:{lt:last}};const batch=await tx.diagnosticStructureWork.findMany({where:{...structureWhere,...boundary},orderBy:{id:'desc'},take:PLAN_BATCH,select:{...fields,workCodeSnapshot:true,workNameSnapshot:true,contractStructure:{select:{contractId:true,contract:{select:{number:true}},structure:{select:{code:true}}}}}});
-   accept(batch.map(w=>({...values(w),id:w.id,kind:'structure',contractId:w.contractStructure.contractId,contractNumber:w.contractStructure.contract.number,structureCode:w.contractStructure.structure.code,code:w.workCodeSnapshot,name:w.workNameSnapshot})),[],structureTrace);
+   accept(batch.map(w=>({...values(w),id:w.id,kind:'structure',contractId:w.contractStructure.contractId,contractNumber:w.contractStructure.contract.number,structureCode:w.contractStructure.structure.code??'',code:w.workCodeSnapshot,name:w.workNameSnapshot})),[],structureTrace);
    if(batch.length<PLAN_BATCH)break;last=batch[batch.length-1]!.id;
   }
   last=undefined;

@@ -36,7 +36,7 @@ export async function listStructures(input:StructureQuery):Promise<StructureList
   const [matched,total]=await Promise.all([prisma.diagnosticStructure.count({where}),prisma.diagnosticStructure.count({where:inService})]);
   const pageCount=Math.max(1,Math.ceil(matched/input.pageSize)),page=Math.min(input.page,pageCount);
   const rows=await prisma.diagnosticStructure.findMany({where,select:listSelect,orderBy:structureOrder(input),skip:(page-1)*input.pageSize,take:input.pageSize});
-  return {items:rows.map(({id,code,...row})=>({...row,id:String(id),issoCode:code})),matched,total,page,pageSize:input.pageSize,pageCount};
+  return {items:rows.map(({id,code,...row})=>({...row,id:String(id),issoCode:code??''})),matched,total,page,pageSize:input.pageSize,pageCount};
 }
 export async function structureCatalog():Promise<StructureCatalog>{
   const where=inService;
@@ -49,7 +49,7 @@ export async function structureCatalog():Promise<StructureCatalog>{
   ]);
   return {roads:roads.map(r=>r.roadName).filter(Boolean),management:management.map(r=>r.management).filter(Boolean),regions:regions.map(r=>r.region).filter(Boolean),kinds:kinds.map(r=>r.structureName).filter(Boolean),types:types.map(r=>r.issoType).filter(Boolean)};
 }
-export async function structureCodes(){return (await prisma.diagnosticStructure.findMany({where:{deletedAt:null},select:{code:true},orderBy:{code:'asc'}})).map(r=>r.code);}
+export async function structureCodes(){return (await prisma.diagnosticStructure.findMany({where:{deletedAt:null},select:{code:true},orderBy:{code:'asc'}})).flatMap(r=>r.code?[r.code]:[]);}
 export function structureContractUsage(id:number) {
   return prisma.$queryRaw<StructureContractUsage[]>`
     SELECT c.id, c.number, to_char(c.date, 'YYYY-MM-DD') AS date, link.stage
@@ -65,9 +65,9 @@ export async function readStructure(id:number):Promise<Omit<StructureDetail,'con
     legacyExecutors:{select:{name:true},orderBy:{name:'asc'}},
   }});
   if(!row)throw createError({statusCode:404,message:'Сооружение не найдено или удалено.'});
-  const authors=await prisma.user.findMany({where:{id:{in:[...new Set([row.createdById,row.updatedById,...row.legacyRows.map(r=>r.importedById)])]}},select:{id:true,fullName:true,login:true,deletedAt:true}});
+  const authors=await prisma.user.findMany({where:{id:{in:[...new Set([row.createdById,row.updatedById,...(row.lastImportedById?[row.lastImportedById]:[]),...row.legacyRows.map(r=>r.importedById)])]}},select:{id:true,fullName:true,login:true,deletedAt:true}});
   const names=new Map(authors.map(u=>[u.id,u.deletedAt?'Удалённый аккаунт':u.fullName||u.login||('Сотрудник #'+u.id)]));
-  return {id:String(row.id),issoCode:row.code,sourceFile:row.legacyRows.length?'dis_build':'Space',sourceRow:0,sourceOrdinal:'',
+  return {id:String(row.id),version:row.version,issoCode:row.code??'',sourceFile:row.lastImportFile|| (row.legacyRows.length?'dis_build':'Space'),sourceRow:0,sourceOrdinal:'',
     management:row.management,structureName:row.structureName,issoType:row.issoType,additionalId:row.additionalId,
     roadName:row.roadName,location:row.location,placementType:row.placementType,obstacleType:row.obstacleType,obstacleName:row.obstacleName,
     region:row.region,district:row.district,conditionRating:row.conditionRating,classAk:row.classAk,classNk:row.classNk,classEnz:row.classEnz,
@@ -75,8 +75,8 @@ export async function readStructure(id:number):Promise<Omit<StructureDetail,'con
     operator:row.operator,commissionedYear:row.commissionedYear,expertOpinion:row.expertOpinion,note:row.note,
     contractNumber:row.legacyContracts.map(c=>[c.customer,c.number,c.dateText].join(' · ')).join('\n'),
     executor:row.legacyExecutors.map(e=>e.name).join('\n'),
-    legacyIds:row.legacyRows.map(r=>r.legacyId),importedAt:row.legacyRows[0]?.importedAt.toISOString()||null,
-    importers:[...new Set(row.legacyRows.map(r=>names.get(r.importedById)||'Неизвестный сотрудник'))],
+    legacyIds:row.legacyRows.map(r=>r.legacyId),importedAt:row.lastImportedAt?.toISOString()||row.legacyRows[0]?.importedAt.toISOString()||null,
+    importers:row.lastImportedById?[names.get(row.lastImportedById)||'Неизвестный сотрудник']:[...new Set(row.legacyRows.map(r=>names.get(r.importedById)||'Неизвестный сотрудник'))],
     creator:names.get(row.createdById)||'Неизвестный сотрудник',editor:names.get(row.updatedById)||'Неизвестный сотрудник',
     createdAt:row.createdAt.toISOString(),updatedAt:row.updatedAt.toISOString(),legacyContracts:row.legacyContracts,legacyExecutors:row.legacyExecutors.map(e=>e.name)};
 }

@@ -10,6 +10,7 @@ export interface StructureContractUsage {
   stage:number;
 }
 export interface StructureDetail extends StructureRecord {
+  version:number;
   contracts:StructureContractUsage[]|null;
   lengthRaw:string;
   legacyIds:number[];

@@ -1,4 +1,5 @@
 export interface ContractStructureListItem {
+ worklogActive?:boolean|null;
  id:number;
  structureId:number;
  stage:number;

@@ -17,7 +17,7 @@ export function useWorkLibrary() {
   watch(group, () => { if (!filterCategories.value.some(c => c.id === category.value)) category.value = 0; });
   const filtered = computed(() => {
     const q = search.value.trim().toLocaleLowerCase('ru-RU');
-    return rows.value.filter(r => (!category.value || r.categoryId === category.value) && (!group.value || r.groupId === group.value) &&
+    return rows.value.filter(r => (!category.value || (category.value === -1 ? r.fieldWork : r.categoryId === category.value)) && (!group.value || r.groupId === group.value) &&
       [r.code, r.name, r.group, r.category, r.hours, r.criteria, r.note].join(' ').toLocaleLowerCase('ru-RU').includes(q))
       .sort((a, b) => {
         const n = sortKey.value === 'code' ? a.groupId - b.groupId || a.sequence - b.sequence :
