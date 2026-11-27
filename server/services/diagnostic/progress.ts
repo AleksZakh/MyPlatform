@@ -2,16 +2,17 @@ import { createHash } from 'node:crypto';
 import { createError, type H3Event } from 'h3';
 import { z } from 'zod';
 import { prisma } from '../../utils/prisma';
-import { calendarResolver } from '../../../shared/utils/diagnostic-calendar';
+import { calendarName, calendarResolver } from '../../../shared/utils/diagnostic-calendar';
 import { diagnosticWorkStatus, workStatusLegend } from '../../../shared/utils/diagnostic-contract-table';
 import { reportCenters } from '../../../shared/utils/diagnostic-reports';
-import { workColumns } from '../../../shared/utils/diagnostic-worklog';
+import { crews, workColumns } from '../../../shared/utils/diagnostic-worklog';
 import {
   progressColumns,
   type ProgressReport,
   type ProgressRow,
   type ProgressWork,
 } from '../../../shared/utils/diagnostic-progress';
+import type { CalendarUser } from '../../../shared/types/diagnostic-calendar';
 import { structureAccess } from './structure-access';
 import { calendarRoster } from './calendar-roster';
 import { reportRoster } from './reports/roster';
@@ -23,11 +24,38 @@ const filters = z.object({
   statuses: z.array(z.enum([...workStatusLegend.map((s) => s.key), 'unknown'])),
   centers: z.array(z.enum(reportCenters)),
 });
-export async function progressReport(
-  event: H3Event,
-  input: unknown,
-  forExport = false,
-): Promise<ProgressReport> {
+// Older assignments can retain a name after an employee has left the directory.
+const historicalName =
+  /^(?:\p{Lu}[\p{L}’'-]*\s+(?:\p{L}\.\s*){1,3}|\p{Lu}[\p{L}’'-]*(?:\s+\p{Lu}[\p{L}’'-]*){1,3})$/u;
+
+function progressPerformers(users: CalendarUser[], resolve: ReturnType<typeof calendarResolver>) {
+  const byId = new Map(users.map((person) => [person.id, person]));
+  const surnames = new Map<string, CalendarUser | null>();
+  for (const person of users) {
+    const [family, given] = person.name.trim().split(/\s+/);
+    if (!family || !given) continue;
+    const key = calendarName(family);
+    surnames.set(key, surnames.has(key) ? null : person);
+  }
+
+  return (executors: string) => {
+    const names = new Map<string, string>();
+    for (const raw of executors.split(/[,;+\n]+/)) {
+      const token = raw.trim();
+      if (!token) continue;
+      for (const value of crews[token.toUpperCase()] ?? [token]) {
+        const [id] = resolve(value).ids;
+        const person = id === undefined ? surnames.get(calendarName(value)) : byId.get(id);
+        let name = historicalName.test(value) ? value : '';
+        if (person && person.name !== person.login && person.name !== String(person.id)) name = person.name;
+        if (name) names.set(calendarName(name), name);
+      }
+    }
+    return [...names.values()].join('\n');
+  };
+}
+
+export async function progressReport(event: H3Event, input: unknown): Promise<ProgressReport> {
   await structureAccess(event);
   const parsed = filters.safeParse(input);
   if (!parsed.success)
@@ -35,12 +63,10 @@ export async function progressReport(
   const f = parsed.data;
   const people = f.centers.length
     ? reportRoster(event)
-    : forExport
-      ? { employees: [], users: [], warning: null }
-      : calendarRoster(event).then((r) => ({
-          ...r,
-          employees: r.employees.map((p) => ({ ...p, center: null })),
-        }));
+    : calendarRoster(event).then((r) => ({
+        ...r,
+        employees: r.employees.map((p) => ({ ...p, center: null })),
+      }));
   const [roster, data] = await Promise.all([
     people,
     prisma.$transaction(
@@ -152,6 +178,7 @@ export async function progressReport(
   ]);
   const resolver = calendarResolver(roster.users),
     centers = new Map(roster.employees.map((p) => [p.id, p.center]));
+  const performers = progressPerformers(roster.users, resolver);
   function matches(status: string, names: string) {
     return (
       (!f.statuses.length || f.statuses.includes(diagnosticWorkStatus(status).key)) &&
@@ -185,12 +212,6 @@ export async function progressReport(
       if (tripId && managedIds.has(tripId)) continue;
       if (!matches(a.status, a.factExecutor || a.planExecutor)) continue;
       for (const column of progressColumns(a.work, a.worklogCell)) {
-        const who = a.factExecutor || a.planExecutor;
-        const details = column === 3 ? a.note : [who, a.note].filter(Boolean).join(' · ');
-        const text =
-          column === 0 || column === 4
-            ? [a.workNameSnapshot, details].filter(Boolean).join(' · ')
-            : details || a.workNameSnapshot;
         works[column]!.push({
           kind: 'work',
           id: a.id,
@@ -202,7 +223,7 @@ export async function progressReport(
           note: a.note,
           status: a.status,
           managed: !!tripId,
-          text,
+          text: performers(a.factExecutor.trim() || a.planExecutor),
         });
       }
     }
@@ -234,7 +255,7 @@ export async function progressReport(
           note: '',
           status,
           managed: true,
-          text: [trip.number, names].filter(Boolean).join(' · '),
+          text: performers(names),
         });
     }
     if (link.worklogCrew && !trips.length && matches('', link.worklogCrew))
@@ -249,7 +270,7 @@ export async function progressReport(
         note: '',
         status: '',
         managed: false,
-        text: 'Бригада по листу · ' + link.worklogCrew,
+        text: performers(link.worklogCrew),
       });
     const index = (counts.get(c.id) ?? 0) + 1;
     counts.set(c.id, index);
@@ -289,7 +310,14 @@ export async function progressReport(
         link.picket ?? '',
         s.code ?? '',
         s.lengthRaw,
-        ...works.map((cell) => cell.map((e) => e.text).join('\n')),
+        ...works.map((cell) => {
+          const names = new Map<string, string>();
+          for (const entry of cell)
+            for (const name of entry.text.split('\n')) {
+              if (name) names.set(calendarName(name), name);
+            }
+          return [...names.values()].join('\n');
+        }),
         s.note,
       ],
     });

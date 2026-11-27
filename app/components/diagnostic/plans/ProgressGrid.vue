@@ -170,6 +170,16 @@ thead th {
   font: inherit;
   color: inherit;
 }
+thead th:nth-child(7),
+td:nth-child(7) .value {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+td:nth-child(7) .value {
+  min-width: max-content;
+  max-width: none;
+}
 td:nth-child(4) .value,
 td:nth-child(n + 9) .value {
   min-width: 10rem;

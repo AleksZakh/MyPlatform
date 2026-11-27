@@ -1,5 +1,4 @@
 import ExcelJS from 'exceljs';
-import { randomUUID } from 'node:crypto';
 
 import { archiveProgressFile } from '../reports/archive';
 import { progressReport } from '../progress';
@@ -9,7 +8,7 @@ import { tripToday } from '../../../../shared/utils/diagnostic-trip-lifecycle';
 
 export async function exportProgress(event: import('h3').H3Event) {
   const body = await readBody(event);
-  const report = await progressReport(event, body?.filters, true);
+  const report = await progressReport(event, body?.filters);
   if (report.token !== body?.token)
     throw createError({
       statusCode: 409,
@@ -40,6 +39,7 @@ export async function exportProgress(event: import('h3').H3Event) {
     head.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF196580' } };
     head.height = 34;
     head.alignment = { wrapText: true, vertical: 'middle' };
+    const codeColumn = sheet.getColumn(7);
     for (const row of report.rows.filter((r) => r.contractId === contract.id)) {
       const values: (string | number)[] = [...row.values];
       values[2] = row.stage;
@@ -54,6 +54,10 @@ export async function exportProgress(event: import('h3').H3Event) {
         });
       const line = sheet.addRow(values);
       line.alignment = { wrapText: true, vertical: 'top' };
+      const code = line.getCell(7);
+      code.numFmt = '@';
+      code.alignment = { vertical: 'top', wrapText: false, shrinkToFit: true };
+      codeColumn.width = Math.max(codeColumn.width ?? 15, Math.min(255, row.structure.code.length + 2));
       if (row.active) line.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCF1E4' } };
     }
     sheet.autoFilter = { from: 'A1', to: 'P1' };
@@ -63,8 +67,7 @@ export async function exportProgress(event: import('h3').H3Event) {
     report.contracts.length === 1
       ? Array.from(storageSegment(report.contracts[0]!.number)).slice(0, 35).join('')
       : 'Договоры_' + report.contracts.length;
-  const name =
-    'Ход работ_' + label + '_' + tripToday().split('-').reverse().join('.') + '_' + randomUUID() + '.xlsx';
+  const name = 'Ход работ_' + label + '_' + tripToday().split('-').reverse().join('.') + '.xlsx';
   await archiveProgressFile(name, bytes);
   setHeader(event, 'Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   setHeader(event, 'Content-Disposition', "attachment; filename*=UTF-8''" + encodeURIComponent(name));

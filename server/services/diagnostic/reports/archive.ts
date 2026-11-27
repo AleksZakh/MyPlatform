@@ -1,4 +1,4 @@
-import {mkdir,mkdtemp,readdir,readFile,rename,rm,writeFile,stat} from 'node:fs/promises';
+import {mkdir,mkdtemp,link,readdir,readFile,rename,rm,writeFile,stat} from 'node:fs/promises';
 import {join} from 'node:path';
 import {createError} from 'h3';
 import ExcelJS from 'exceljs';
@@ -88,7 +88,13 @@ export async function reportAttachment(id:string){
 export async function archiveProgressFile(name:string,bytes:Buffer){
   const root=await directory(await reportsFolder()),tmp=await mkdtemp(join(root,'.progress-'));
   try{
-    await writeFile(join(tmp,'report.xlsx'),bytes);
-    await rename(join(tmp,'report.xlsx'),join(root,name));
+    const staged=join(tmp,'report.xlsx'), stem=name.slice(0,-'.xlsx'.length);
+    await writeFile(staged,bytes);
+    // Publish the completed file atomically without replacing a concurrent export.
+    for(let copy=1; ;copy++){
+      const archiveName=copy===1?name:stem+' ('+copy+').xlsx';
+      try{await link(staged,join(root,archiveName));return;}
+      catch(error){if((error as NodeJS.ErrnoException).code!=='EEXIST')throw error;}
+    }
   }finally{await rm(tmp,{recursive:true,force:true});}
 }
