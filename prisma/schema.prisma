@@ -1469,6 +1469,11 @@ model DiagnosticContract {
 
 // Stable link for the forthcoming structures module; the count is derived, never entered.
 model DiagnosticContractStructure {
+  worklogCrewEdited Boolean @default(false)
+  progressOrder Int?
+  sheetOrdinal String?
+  specNumber String?
+  picket String?
   worklogCrew String?
   worklogActive Boolean?
   stage Int @default(1)

@@ -30,6 +30,7 @@ export interface WorklogRow {
   note: string;
   cells: string[];
   origin: string[];
+  reportRefs?: [string,string,string];
 }
 export const normalized = (s: string) => s.normalize('NFC').trim().toLowerCase().replace(/\s+/g, ' ');
 export function locationKey(s: string) {
@@ -64,6 +65,7 @@ export function readWorklogSheet(sheet: Worksheet): WorklogRow[] {
     noteCol = column('Примечание');
   const works = workColumns.map((c) => column(c));
   if (works.every((c) => !c)) throw new Error('Не найдены столбцы работ.');
+  const refs = [column('№ п/п'), column('№ по ТЗ'), column('ПК+')];
   const rows: WorklogRow[] = [];
   for (let r = 2; r <= sheet.rowCount; r++) {
     const nameCell = sheet.getCell(r, nameCol);
@@ -116,6 +118,7 @@ export function readWorklogSheet(sheet: Worksheet): WorklogRow[] {
       note: [val(noteCol), ...extras].filter(Boolean).join('\n'),
       cells: works.map(val),
       origin,
+      ...(refs.some((col,i) => col !== [1,2,6][i]) ? { reportRefs: [val(refs[0]!),val(refs[1]!),val(refs[2]!)] as [string,string,string] } : {}),
     });
   }
   if (!rows.length) throw new Error('На листе нет сооружений.');

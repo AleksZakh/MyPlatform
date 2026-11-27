@@ -45,6 +45,7 @@ const schema = z.object({
         note: text,
         cells: z.array(text).length(workColumns.length),
         origin: z.array(text).max(100),
+        reportRefs: z.tuple([text,text,text]).optional(),
       }),
     )
     .min(1)
@@ -294,6 +295,7 @@ export async function worklogPlan(
         },
       ];
     });
+    if (link?.worklogCrewEdited && assignments.some(a=>a.visit)) warnings.push('Сохранится состав бригады, уточнённый в отчёте.');
     if (new Set(assignments.map((a) => a.workId)).size !== assignments.length)
       errors.push('Строка ' + r.row + ' · разным столбцам назначена одна работа.');
     const differences = old
@@ -348,6 +350,7 @@ export async function worklogPlan(
       linkId: link?.id ?? 0,
       oldStage: link?.stage ?? 0,
       oldCrew: link?.worklogCrew,
+      crewEdited: link?.worklogCrewEdited ?? false,
       oldActive: link?.worklogActive ?? null,
       patch,
       editStructure: Object.keys(patch).length > 0,
@@ -501,11 +504,17 @@ export async function processWorklog(
           });
           marks++;
         }
+        // Once materialised these identifiers belong to the contract, including deliberate blanks.
+        const [sheetOrdinal,specNumber,picket] = r.reportRefs ?? [r.origin[0],r.origin[1],r.origin[5]];
+        await tx.$executeRaw`UPDATE diagnostic_contract_structures
+          SET "progressOrder"=${r.row}, "sheetOrdinal"=coalesce("sheetOrdinal",${sheetOrdinal ?? ''}),
+              "specNumber"=coalesce("specNumber",${specNumber ?? ''}), picket=coalesce(picket,${picket ?? ''})
+          WHERE id=${linkId} AND "progressOrder" IS NULL`;
         for (const a of item.assignments) {
           if (a.visit) {
             const raw = r.cells[0]!;
             const crew = a.people.join(', ') || crews[raw.toUpperCase()]?.join(', ') || raw;
-            if (crew !== item.oldCrew)
+            if (!item.crewEdited && crew !== item.oldCrew)
               await tx.diagnosticContractStructure.update({
                 where: { id: linkId },
                 data: { worklogCrew: crew },

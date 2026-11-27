@@ -21,8 +21,9 @@ export function useStructures(){
   let timer:ReturnType<typeof setTimeout>|undefined,listAbort:AbortController|undefined,detailAbort:AbortController|undefined,catalogAbort:AbortController|undefined;
   function cancelList(){listGeneration++;listAbort?.abort();if(timer)clearTimeout(timer);timer=undefined;}
   function clearList(){pageRows.value=[];matched.value=0;selectedId.value='';selected.value=null;}
-  async function fetchList(){
-    cancelList();clearList();loadError.value='';
+  async function fetchList(keepSelection=false){
+    const previous=keepSelection?selectedId.value:'';
+    cancelList();if(!keepSelection)clearList();loadError.value='';
     if(disposed||rangeError.value){loading.value=false;return;}
     const generation=listGeneration;listAbort=new AbortController();loading.value=true;
     try{
@@ -30,7 +31,8 @@ export function useStructures(){
       if(disposed||generation!==listGeneration)return;
       acceptingPage=true;page.value=result.page;acceptingPage=false;
       pageCount.value=result.pageCount;total.value=result.total;matched.value=result.matched;pageRows.value=result.items;
-      selectedId.value=result.items[0]?.id||'';
+      selectedId.value=result.items.find(r=>r.id===previous)?.id||result.items[0]?.id||'';
+      if(previous&&previous===selectedId.value)void fetchDetail();
     }catch(e){if(!disposed&&generation===listGeneration){clearList();total.value=0;pageCount.value=1;loadError.value=structureRequestError(e);if(Number((e as any)?.statusCode || (e as any)?.response?.status)===403)await navigateTo('/access-denied',{replace:true});}}
     finally{if(generation===listGeneration&&!disposed)loading.value=false;}
   }
@@ -54,7 +56,7 @@ export function useStructures(){
   }
   watch([filters,pageSize,sortKey,descending],()=>{page.value=1;schedule();},{deep:true,flush:'sync'});
   watch(page,()=>{if(!acceptingPage)schedule();},{flush:'sync'});
-  onWorkChange(ids=>{if(ids?.includes(Number(selectedId.value)))void fetchDetail();});
+  onWorkChange(ids=>{if(ids?.length){void fetchList(true);void fetchCatalog();}});
   watch(selectedId,()=>void fetchDetail(),{flush:'sync'});
   function sort(key:StructureSortKey){if(sortKey.value===key)descending.value=!descending.value;else{sortKey.value=key;descending.value=false;}}
   function reset(){filters.value=blankStructureFilters();page.value=1;}

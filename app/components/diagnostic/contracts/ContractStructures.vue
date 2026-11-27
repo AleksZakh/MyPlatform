@@ -123,7 +123,15 @@ watch(visibleRows,list=>{if(!(focusNotice.value && selectedId.value===null) && !
 watch(selectedId,()=>void loadWorks());
 // Keep an open draft intact. Its version is checked at save time.
 let refreshAfterClose=false;
-onWorkChange(()=>{
+onWorkChange(async ids=>{
+ const contractId=props.contractId, generation=listGeneration;
+ if(contractId && ids?.length && persisted.value.some(r=>ids.includes(r.structureId))){
+   try{
+     const data=await $fetch<ContractStructureListItem[]>('/api/diagnostic/contracts/'+contractId+'/structures');
+     if(props.contractId===contractId && generation===listGeneration){persisted.value=data;emit('linked',data);}
+   }catch{error.value='Не удалось обновить перечень сооружений.';}
+ }
+
  if (detail.value) refreshAfterClose=true;
  else void loadWorks();
 });
@@ -182,7 +190,7 @@ onBeforeUnmount(()=>{listGeneration++;worksGeneration++;});
   </div>
   <section v-if="contractId || pending.length" class="cs-work-panel" aria-label="Работы выбранного сооружения">
    <div class="cs-selected" aria-live="polite">
-    <template v-if="selected"><button type="button" class="cs-open-card" @click="openStructure(selected)">Карточка сооружения</button><p><strong>{{ selected.structureName||'Сооружение' }}</strong> · Код ИССО: <strong>{{ selected.code || 'Без ИССО' }}</strong> · {{ selected.location||'Место не указано' }}</p><p class="contract-cell-ellipsis cs-address" :title="[selected.roadName,selected.district].filter(Boolean).join(' · ')">{{ [selected.roadName,selected.district].filter(Boolean).join(' · ') }}</p></template>
+    <template v-if="selected"><button type="button" class="cs-open-card" @click="openStructure(selected)">Карточка сооружения</button><p><strong>{{ selected.structureName||'Сооружение' }}</strong> · Код ИССО: <strong>{{ selected.code || 'Без ИССО' }}</strong> · {{ selected.location||'Место не указано' }} <small v-if="selected.sheetOrdinal"> · № п/п {{selected.sheetOrdinal}}</small><small v-if="selected.specNumber"> · № по ТЗ {{selected.specNumber}}</small><small v-if="selected.picket"> · ПК+ {{selected.picket}}</small></p><p class="contract-cell-ellipsis cs-address" :title="[selected.roadName,selected.district].filter(Boolean).join(' · ')">{{ [selected.roadName,selected.district].filter(Boolean).join(' · ') }}</p></template>
     <p v-else>{{ busy?'Загрузка сооружений…':'Выберите сооружение в верхней таблице.' }}</p>
    </div>
    <header class="cs-work-heading"><h3>Работы по сооружению <small v-if="selected&&!worksBusy&&!worksError">· Всего: {{ visibleWorks.length+pendingWorks.length }}</small></h3><div class="odis-work-heading-tools"><WorkStatusLegend :unknown="hasUnknownStatus"/><button type="button" :disabled="!selected||worksBusy" @click="loadWorks">Обновить работы</button></div></header>

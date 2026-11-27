@@ -84,3 +84,11 @@ export async function reportAttachment(id:string){
   const info:ReportInfo=JSON.parse(await readFile(await stored(folder,id,'info.json'),'utf8'));
   return {filename:filename(info),path:await stored(folder,id,filename(info)),title:info.title};
 }
+
+export async function archiveProgressFile(name:string,bytes:Buffer){
+  const root=await directory(await reportsFolder()),tmp=await mkdtemp(join(root,'.progress-'));
+  try{
+    await writeFile(join(tmp,'report.xlsx'),bytes);
+    await rename(join(tmp,'report.xlsx'),join(root,name));
+  }finally{await rm(tmp,{recursive:true,force:true});}
+}
