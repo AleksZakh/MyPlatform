@@ -91,7 +91,8 @@ onMounted(refresh);
     title="Сверка командировок с сооружениями"
     :description="review ? review.contract + ' от ' + tripDateLabel(review.date) : 'Ход работ'"
     :dismissible="!busy"
-    :ui="{ content: 'max-w-[1150px] w-[96vw]', body: 'overflow-auto' }"
+    :close="!busy"
+    :ui="{content: 'diagnostic-contract-modal odis-work-card odis-worklog-dialog worklog-wide', header: 'ow-chrome', description: 'ow-number', body: 'ow-body', footer: 'ow-chrome ow-footer'}"
     @update:open="
       (v) => {
         if (!v && !busy) emit('close');
@@ -101,7 +102,7 @@ onMounted(refresh);
     <template #body
       ><div class="review">
         <p v-if="error" role="alert">
-          {{ error }} <UButton variant="outline" :disabled="busy" @click="refresh">Обновить</UButton>
+          {{ error }} <button type="button" :disabled="busy" @click="refresh">Обновить</button>
         </p>
         <p v-if="notice" role="status">{{ notice }}</p>
         <p v-if="busy && !review">Загрузка командировок…</p>
@@ -183,14 +184,15 @@ onMounted(refresh);
         >
       </div></template
     >
-    <template #footer
-      ><UButton variant="outline" :disabled="busy" @click="emit('close')">Закрыть</UButton
-      ><UButton :disabled="busy || !selected.length" @click="confirm"
-        >Подтвердить посещение ({{ selected.length }})</UButton
-      ></template
-    >
+    <template #footer>
+      <button type="button" :disabled="busy" @click="emit('close')">Закрыть</button>
+      <button type="button" class="ow-primary" :disabled="busy || !selected.length" @click="confirm">Подтвердить посещение ({{ selected.length }})</button>
+    </template>
   </UModal>
 </template>
+<style>
+@import "~/assets/css/diagnostic-worklog-dialog.css";
+</style>
 <style scoped>
 .review {
   display: grid;
@@ -199,8 +201,8 @@ onMounted(refresh);
 }
 .review select,
 .filters input:not([type='checkbox']) {
-  background: var(--ui-bg);
-  border: 1px solid var(--ui-border);
+  background: var(--contract-field);
+  border: 1px solid var(--contract-line);
   border-radius: 4px;
   padding: 0.4rem;
 }
@@ -227,14 +229,14 @@ onMounted(refresh);
 }
 .scroll td,
 .scroll th {
-  border: 1px solid var(--ui-border);
+  border: 1px solid var(--contract-line);
   padding: 0.3rem;
   text-align: left;
 }
 .scroll th {
   position: sticky;
   top: 0;
-  background: var(--ui-bg-elevated);
+  background: var(--contract-panel);
 }
 .scroll small {
   display: block;

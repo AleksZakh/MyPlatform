@@ -22,7 +22,6 @@ const centerOptions=reportCenters.map(c=>({id:c,label:c}));
 const legend=[...reportCenters.map(c=>({name:c,color:centerColors[c]})),
  {name:'Без расчёта ГП',color:'#a6d9fa'},{name:'Исп. старый',color:'#d3e99c'},
  {name:'Субподряд',color:'#ded8ca'},{name:'Помечен на удаление',color:'#f1b6bd'}];
-const headings=['№','Договор','Этап','Исполнитель','ИССО','Сооружение','АИС Оценка состояния','АИС Проверка','АИС Финиш','АИС Фото','АИС Чертежи'];
 async function loadContracts(){
  loadingContracts.value=true;contractError.value=false;
  try{contracts.value=await $fetch<Contract[]>('/api/diagnostic/progress/filters');}
@@ -57,8 +56,7 @@ onMounted(loadContracts);
   </div>
   <p v-if="contractError||linkError" class="load-error" role="alert">{{contractError?'Не удалось загрузить договоры.':'Не удалось загрузить сооружения.'}} <button type="button" class="opr-button" @click="contractError?loadContracts():retry++">Повторить</button></p>
   <div class="legend" aria-label="Легенда"><strong>Легенда</strong><span v-for="l in legend" :key="l.name" :style="{'--label-color':l.color}">{{l.name}}</span></div>
-  <div class="matrix" tabindex="0" aria-label="Таблица хода работ">
-   <table><caption class="opr-sr-only">Ход выполнения работ по сооружениям</caption><thead><tr><th v-for="c in headings" :key="c" scope="col">{{c}}</th></tr></thead></table>
+  <div class="matrix">
    <p>Формирование и загрузка отчёта будут доступны после подключения расчёта.</p>
   </div>
  <WorklogTripReview v-if="reconcileContract" :contract-id="reconcileContract" @close="reconcileContract=0"/>
@@ -69,7 +67,7 @@ onMounted(loadContracts);
 .progress h2{font-size:19px;font-weight:600;text-align:center;background:var(--opr-panel);padding:8px 12px;border-bottom:1px solid var(--opr-line)}
 .toolbar{display:grid;grid-template-columns:minmax(150px,1.3fr) minmax(145px,1.2fr) minmax(135px,1fr) minmax(115px,.8fr) auto;gap:8px 12px;align-items:end;background:var(--opr-panel);padding:10px 12px;border-bottom:1px solid var(--opr-line)}
 .actions,.legend{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px}.actions{justify-content:flex-end}.legend{padding:8px 12px;border-bottom:1px solid var(--opr-line)}.legend strong{font-size:12px;margin-right:3px}.legend span{border-radius:3px;padding:2px 8px;font-size:12px;color:#243447;background:var(--label-color)}:global(html.dark .odis-plans .progress .legend span){color:#f4f8fc;background:color-mix(in srgb,var(--label-color) 28%,#1a2936)}
-.matrix{min-width:0;overflow:auto;flex:1}.matrix table{width:100%;border-collapse:collapse;font-size:12px}.matrix th{text-align:left;white-space:nowrap;background:var(--opr-panel);padding:6px 9px;border:1px solid var(--opr-line);font-weight:600}.matrix p{position:sticky;left:0;text-align:center;color:var(--opr-muted);padding:24px 12px;font-size:13px}.load-error{padding:6px 12px}
+.matrix{min-width:0;overflow:auto;flex:1}.matrix p{position:sticky;left:0;text-align:center;color:var(--opr-muted);padding:24px 12px;font-size:13px}.load-error{padding:6px 12px}
 @media(max-width:1150px){.toolbar{grid-template-columns:repeat(4,minmax(0,1fr))}.actions{grid-column:1/-1}}
 @media(max-width:750px){.toolbar{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:500px){.toolbar{grid-template-columns:minmax(0,1fr)}}

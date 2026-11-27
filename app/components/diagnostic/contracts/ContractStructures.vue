@@ -146,6 +146,11 @@ onBeforeUnmount(()=>{listGeneration++;worksGeneration++;});
   <div ref="filterPortal" class="cs-filter-layer"></div>
   <div class="contract-detail-table contract-compact-table cs-list" :aria-busy="busy">
    <table><caption class="sr-only">Сооружения договора. Нажмите на код ИССО для просмотра работ.</caption>
+    <colgroup>
+     <col v-if="showSelection" class="cs-col-check"/><col class="cs-col-number"/>
+     <col v-for="column in structureFilterColumns" :key="column.key" :class="'cs-col-'+column.key"/>
+     <col class="cs-col-stage"/>
+    </colgroup>
     <thead><tr><th v-if="showSelection" class="cs-check"><input type="checkbox" aria-label="Выбрать все показанные сооружения" title="Выбрать всё" :checked="!!marked.length&&marked.length===visibleRows.length" :indeterminate="marked.length>0&&marked.length<visibleRows.length" :disabled="saving||!visibleRows.length" @change="selectRows(visibleRows,$event)"/></th><th>№</th><th v-for="column in structureFilterColumns" :key="column.key" class="cs-filter-heading"><ContractColumnFilter v-model="filters[column.key]" :label="column.label" :options="filterOptions[column.key]" :portal="filterPortal" :reset-key="filterResetKey"/></th><th scope="col">Этап</th></tr></thead>
     <tbody>
      <tr v-if="busy"><td :colspan="showSelection?10:9" role="status">Загрузка сооружений…</td></tr>
@@ -154,10 +159,10 @@ onBeforeUnmount(()=>{listGeneration++;worksGeneration++;});
      <tr v-else-if="!visibleRows.length"><td :colspan="showSelection?10:9">По заданным фильтрам сооружения не найдены. <button type="button" @click="clearFilters">Очистить фильтры</button></td></tr>
      <template v-else><tr v-for="(row,index) in visibleRows" :key="row.id" v-reveal-work-row="props.focusLink===row.id?'scroll':false" :class="{'is-selected':selectedId===row.id}" @click="selectedId=row.id">
       <td v-if="showSelection" class="cs-check" @click.stop><input type="checkbox" :aria-label="'Выбрать '+row.code" :checked="checked.has(row.structureId)" :disabled="saving" @change="selectRows([row],$event)"/></td>
-      <td>{{ index+1 }}</td><td><button type="button" class="cs-code" :aria-pressed="selectedId===row.id" :aria-label="`Работы сооружения ${row.code}`" @click.stop="selectedId=row.id">{{ row.code || 'Без ИССО' }}</button></td>
-      <td>{{ row.structureName }} <small v-if="row.worklogActive!=null" :title="row.worklogActive?'По черновику работы ведутся или завершены':'По черновику работы предстоят'" :class="{'cs-worklog-active':row.worklogActive}">· {{row.worklogActive?'Работы начаты':'Работы предстоят'}}</small> <small v-if="row.decommissioned">· Выведено из эксплуатации</small></td><td><span class="contract-cell-ellipsis cs-road" :title="row.roadName">{{ row.roadName }}</span></td>
-      <td>{{ row.location }}</td><td>{{ row.additionalId }}</td><td>{{ row.obstacleName }}</td><td>{{ row.district }}</td>
-      <td @click.stop><StructureStageSelect v-if="editStages" :count="stageCount" :value="stageEdits.get(row.structureId)?.stage??row.stage" :label="'Этап сооружения '+row.code" :disabled="saving" @change="assign([row],$event)"/><span v-else>{{row.stage}}</span></td>
+      <td data-label="№">{{ index+1 }}</td><td data-label="Код ИССО"><button type="button" class="cs-code" :aria-pressed="selectedId===row.id" :aria-label="`Работы сооружения ${row.code}`" @click.stop="selectedId=row.id">{{ row.code || 'Без ИССО' }}</button></td>
+      <td data-label="Сооружение">{{ row.structureName }} <small v-if="row.worklogActive!=null" :title="row.worklogActive?'По черновику работы ведутся или завершены':'По черновику работы предстоят'" :class="{'cs-worklog-active':row.worklogActive}">· {{row.worklogActive?'Работы начаты':'Работы предстоят'}}</small> <small v-if="row.decommissioned">· Выведено из эксплуатации</small></td><td data-label="Название А/Д"><span class="contract-cell-ellipsis cs-road" :title="row.roadName">{{ row.roadName }}</span></td>
+      <td data-label="Место, км">{{ row.location }}</td><td data-label="Доп. инф."><span class="contract-cell-ellipsis" :title="row.additionalId">{{ row.additionalId }}</span></td><td data-label="Основное препятствие">{{ row.obstacleName }}</td><td data-label="Район расположения">{{ row.district }}</td>
+      <td data-label="Этап" @click.stop><StructureStageSelect v-if="editStages" :count="stageCount" :value="stageEdits.get(row.structureId)?.stage??row.stage" :label="'Этап сооружения '+row.code" :disabled="saving" @change="assign([row],$event)"/><span v-else>{{row.stage}}</span></td>
      </tr></template>
     </tbody>
    </table>
@@ -176,7 +181,7 @@ onBeforeUnmount(()=>{listGeneration++;worksGeneration++;});
       <tr v-else-if="worksError"><td :colspan="workActions?9:8" role="alert">{{ worksError }} <button type="button" @click="loadWorks">Повторить</button></td></tr>
       <tr v-else-if="!visibleWorks.length&&!pendingWorks.length"><td :colspan="workActions?9:8">В этом договоре у выбранного сооружения пока нет сохранённых работ.</td></tr>
       <template v-else><tr v-for="(work,index) in visibleWorks" :key="work.id" tabindex="-1" v-reveal-work-row="highlight===work.id?'focus':false" :class="{'odis-work-highlight':highlight===work.id}" @click="highlight=work.id" @keydown.enter.self.prevent="detail=work" @dblclick="detail=work">
-       <td class="odis-status-cell"><WorkStatusIcon :status="work.status"/></td><td>{{ index+1 }}</td><td><button type="button" class="cw-name contract-cell-ellipsis" :title="work.name" @click="detail=work">{{ work.name }}</button></td>
+       <td class="odis-status-cell"><WorkStatusIcon :status="work.status"/></td><td data-label="№">{{ index+1 }}</td><td data-label="Код ИССО"><button type="button" class="cw-name contract-cell-ellipsis" :title="work.name" @click="detail=work">{{ work.name }}</button></td>
        <td>{{ date(work.planStart) }}</td><td>{{ date(work.planFinish) }}</td><td class="cs-hours">{{ work.planHours??'—' }}</td><td>{{ work.planExecutor||'—' }}</td><td><span class="contract-cell-ellipsis cs-note" :title="work.note">{{ work.note||'—' }}</span></td>
        <td v-if="workActions"><button v-if="canRemove" type="button" class="odis-remove-row" :disabled="saving||work.tripManaged" :aria-label="'Удалить работу '+work.name" :title="work.tripManaged?'Работа связана с командировкой':'Удалить работу по сооружению'" @click.stop="emit('removeWork',work)" @dblclick.stop><Icon name="lucide:trash-2"/></button></td>
       </tr>
@@ -205,4 +210,38 @@ onBeforeUnmount(()=>{listGeneration++;worksGeneration++;});
 .cs-filter-count{display:inline-block;margin-left:10px;font-size:12px;font-weight:400;color:var(--contract-text,#253647)}
 .contract-compact-table th.cs-filter-heading{vertical-align:top}
 
+
+.contract-structures-workspace { grid-template-columns: minmax(0,1fr); }
+.cs-list table, .cs-works table { table-layout: fixed; width: 100%; white-space: normal; }
+.cs-list .cs-col-check { width: 27px; }
+.cs-col-number { width: 3.4em; }
+.cs-col-code { width: 8%; }
+.cs-col-roadName { width: 17%; }
+.cs-col-location { width: 8%; }
+.cs-col-additionalId { width: 9%; }
+.cs-col-stage { width: 5em; }
+.cs-list .odis-column-filter, .cs-list .odis-filter-input-row input { min-width: 0; }
+.cs-list .odis-column-filter .odis-filter-toggle { white-space: normal; line-height: 1.2; overflow-wrap: anywhere; }
+.cs-list :is(td, th), .cs-works :is(td, th) { overflow-wrap: anywhere; }
+.cs-list .contract-cell-ellipsis, .cs-works .contract-cell-ellipsis { max-width: 100%; }
+.cs-list .cs-stage-control, .cs-list input.cs-stage-control { width: 100%; max-width: 100%; min-width: 0; }
+.cs-work-heading, .cs-work-heading .odis-work-heading-tools { flex-wrap: wrap; min-width: 0; }
+.cs-works th:nth-child(2) { width: 3.4em; }
+@media (max-width: 680px) {
+ .cs-list :is(th,td), .cs-works :is(th,td) { padding-inline: 2px; }
+ .cs-list :is(table, thead, tbody) { display: block; width: 100%; }
+ .cs-list colgroup, .cs-list thead th:not(.cs-check):not(.cs-filter-heading) { display: none; }
+ .cs-list tr { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+ .cs-list tr + tr { border-top: 2px solid var(--contract-line); }
+ .cs-list .cs-check, .cs-list th.cs-check { width: auto; text-align: left; }
+ .cs-list thead { position: static; }
+ .cs-list :is(td,th), .cs-list thead th { position: static; height: auto; min-width: 0; padding: 4px 6px; }
+ .cs-list td[data-label]::before { content: attr(data-label); display: block; font-size: 11px; opacity: .8; }
+ .cs-list td[colspan] { grid-column: 1/-1; }
+ .cs-list th.cs-check::after { content: "Выбрать всё"; margin-left: 5px; font-weight: 400; }
+ .cs-list .contract-cell-ellipsis { white-space: normal; }
+ .cs-list .cs-stage-control { max-width: 6em; }
+ .cs-works th:nth-child(2) { width: 2em; }
+
+}
 </style>

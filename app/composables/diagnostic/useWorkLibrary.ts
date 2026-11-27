@@ -1,3 +1,4 @@
+import { reportGroup } from '~~/shared/utils/diagnostic-report-parts';
 import { computed, ref, onMounted, watch } from 'vue';
 import type { WorkRecord, WorkInput, WorkCatalog, WorkCategory } from '~~/shared/types/diagnostic-works';
 import { parseWork } from '~~/shared/utils/diagnostic-works';
@@ -14,10 +15,10 @@ export function useWorkLibrary() {
   const search = ref(''), category = ref(0), group = ref(0);
   const sortKey = ref<'code' | 'name' | 'hours'>('code'), descending = ref(false);
   const filterCategories = computed(() => catalog.value.categories.filter(c => !group.value || c.groupId === group.value));
-  watch(group, () => { if (!filterCategories.value.some(c => c.id === category.value)) category.value = 0; });
+  watch(group, () => { if (category.value > 0 && !filterCategories.value.some(c => c.id === category.value)) category.value = 0; });
   const filtered = computed(() => {
     const q = search.value.trim().toLocaleLowerCase('ru-RU');
-    return rows.value.filter(r => (!category.value || (category.value === -1 ? r.fieldWork : r.categoryId === category.value)) && (!group.value || r.groupId === group.value) &&
+    return rows.value.filter(r => (!category.value || (category.value === -1 ? r.fieldWork : category.value === -2 ? reportGroup(r.reportPart) === 'АИС Конструктив' : r.categoryId === category.value)) && (!group.value || r.groupId === group.value) &&
       [r.code, r.name, r.group, r.category, r.hours, r.criteria, r.note].join(' ').toLocaleLowerCase('ru-RU').includes(q))
       .sort((a, b) => {
         const n = sortKey.value === 'code' ? a.groupId - b.groupId || a.sequence - b.sequence :

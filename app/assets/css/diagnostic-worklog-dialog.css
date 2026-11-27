@@ -1,0 +1,27 @@
+@import "./diagnostic-contracts.css";
+@import "./diagnostic-work-card.css";
+
+.diagnostic-contract-modal.odis-worklog-dialog { width: min(95vw, 38rem); }
+.diagnostic-contract-modal.odis-worklog-dialog.worklog-wide { width: min(96vw, 86rem); }
+.odis-worklog-dialog .ow-body { min-width: 0; min-height: 0; }
+.odis-worklog-dialog .ow-footer { flex-wrap: wrap; }
+.odis-worklog-dialog .worklog-file {
+  background: var(--contract-panel);
+  border: 1px solid var(--contract-line);
+  border-radius: 4px;
+  padding: 12px;
+}
+.odis-worklog-dialog .worklog-file small { font-size: 12px; }
+.odis-worklog-dialog .worklog-file input { width: 100%; }
+.odis-worklog-dialog .worklog-file ::file-selector-button {
+  padding: 4px 10px;
+  margin-right: 10px;
+  border: 1px solid var(--contract-line);
+  border-radius: 3px;
+  background: var(--contract-panel);
+  color: inherit;
+  cursor: pointer;
+}
+.odis-worklog-dialog .params label { min-width: 0; max-width: 100%; }
+.odis-worklog-dialog :is(input, select) { max-width: 100%; }
+.odis-worklog-dialog .ow-body button { border: 1px solid var(--contract-line); border-radius: 4px; padding: 3px 9px; background: var(--contract-field); }

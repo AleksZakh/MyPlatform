@@ -67,6 +67,7 @@ export async function readStructure(id:number):Promise<Omit<StructureDetail,'con
   if(!row)throw createError({statusCode:404,message:'Сооружение не найдено или удалено.'});
   const authors=await prisma.user.findMany({where:{id:{in:[...new Set([row.createdById,row.updatedById,...(row.lastImportedById?[row.lastImportedById]:[]),...row.legacyRows.map(r=>r.importedById)])]}},select:{id:true,fullName:true,login:true,deletedAt:true}});
   const names=new Map(authors.map(u=>[u.id,u.deletedAt?'Удалённый аккаунт':u.fullName||u.login||('Сотрудник #'+u.id)]));
+  names.set(0, 'Обновление ОДИС');
   return {id:String(row.id),version:row.version,issoCode:row.code??'',sourceFile:row.lastImportFile|| (row.legacyRows.length?'dis_build':'Space'),sourceRow:0,sourceOrdinal:'',
     management:row.management,structureName:row.structureName,issoType:row.issoType,additionalId:row.additionalId,
     roadName:row.roadName,location:row.location,placementType:row.placementType,obstacleType:row.obstacleType,obstacleName:row.obstacleName,

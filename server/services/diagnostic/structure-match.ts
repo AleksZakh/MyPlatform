@@ -1,3 +1,4 @@
+import { roadKey } from '../../../shared/utils/diagnostic-road-names.mjs';
 import type { Prisma } from '@prisma/client';
 import { locationKey, normalized } from '../../../shared/utils/diagnostic-worklog';
 import { structureLocationMetres } from '../../../shared/utils/diagnostic-structures';
@@ -11,7 +12,7 @@ export interface Lookup {
 }
 export function identity(r: Omit<Lookup, 'code'>) {
   return JSON.stringify([
-    normalized(r.roadName),
+    roadKey(r.roadName),
     locationKey(r.location),
     normalized(r.structureName),
     normalized(r.additionalId),
@@ -39,7 +40,7 @@ export async function structureMatcher(tx: Prisma.TransactionClient, rows: Looku
   }
   return (r: Lookup) => {
     const atPlace = (byPlace.get(locationKey(r.location)) || []).filter(
-      (s) => normalized(s.roadName) === normalized(r.roadName),
+      (s) => roadKey(s.roadName) === roadKey(r.roadName),
     );
     const exact = atPlace.filter((s) => identity(s) === identity(r));
     const coded = r.code ? byCode.get(r.code) : undefined;

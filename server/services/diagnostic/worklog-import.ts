@@ -1,3 +1,5 @@
+import { roadKey } from '../../../shared/utils/diagnostic-road-names.mjs';
+import { roadNameResolver } from './road-names';
 import { createHash } from 'node:crypto';
 import { createError, type H3Event } from 'h3';
 import type { Prisma } from '@prisma/client';
@@ -86,27 +88,32 @@ export async function worklogPlan(
   input: WorklogInput,
   employees: { name: string }[],
 ) {
-  const sourceKey = JSON.stringify([
-    normalized(input.road),
-    normalized(input.fileName),
-    normalized(input.sheet),
-  ]);
-  const sourceHash = hash([normalized(input.road), input.sheet, input.rows]);
-  // Without a selected ID, only a previously imported copy of this exact file may resolve the target.
-  // A filename can be reused by several contracts.
-  const copies = input.contractId
-    ? []
-    : await tx.diagnosticWorklogFile.findMany({
-        where: { OR: [{ sourceKey }, { hash: sourceHash }] },
-        select: { contractId: true, hash: true },
-      });
-  const exactTargets = [
-    ...new Set(
-      copies
-        .filter((f) => f.hash === sourceHash || f.hash === hash([f.contractId, sourceHash]))
-        .map((f) => f.contractId),
-    ),
-  ];
+  const resolveRoad = await roadNameResolver(tx, [input.road]);
+  const roadName = resolveRoad(input.road);
+  const file = normalized(input.fileName), sheet = normalized(input.sheet);
+  const sourceKey = JSON.stringify([normalized(roadName), file, sheet]);
+  const digest = (road: string) => hash([road, input.sheet, input.rows]);
+  const sourceHash = digest(normalized(roadName));
+  // Historical hashes include the spelling used at import. Read only archive metadata here.
+  const files = await tx.diagnosticWorklogFile.findMany({
+    where: input.contractId ? { contractId: input.contractId } : {},
+    select: { contractId: true, hash: true, sourceKey: true },
+    orderBy: { importedAt: 'desc' },
+  });
+  const key = roadKey(roadName);
+  const spellings = new Set([normalized(roadName), normalized(input.road)]);
+  const sourceKeys = new Set([sourceKey]);
+  for (const f of files) {
+    if (!f.sourceKey) continue;
+    let parts: unknown;
+    try { parts = JSON.parse(f.sourceKey); } catch { continue; }
+    if (!Array.isArray(parts) || typeof parts[0] !== 'string' || roadKey(parts[0]) !== key) continue;
+    spellings.add(parts[0]);
+    if (parts[1] === file && parts[2] === sheet) sourceKeys.add(f.sourceKey);
+  }
+  const hashes = [...spellings].map(digest);
+  const exact = files.filter(f => hashes.some(h => f.hash === h || f.hash === hash([f.contractId, h])));
+  const exactTargets = [...new Set(exact.map(f => f.contractId))];
   if (!input.contractId && exactTargets.length > 1)
     fail('Файл есть в нескольких договорах. Выберите договор по номеру и дате.');
   const targetId = input.contractId || exactTargets[0];
@@ -114,19 +121,11 @@ export async function worklogPlan(
   if (targetId && (!contract || contract.deletedAt || contract.direction !== 'INCOME'))
     fail('Выбранный доходный договор недоступен. Обновите список договоров.');
   const fingerprint = contract ? hash([contract.id, sourceHash]) : sourceHash;
-  const recorded = contract
-    ? await tx.diagnosticWorklogFile.findFirst({
-        where: { contractId: contract.id, hash: { in: [fingerprint, sourceHash] } },
-        select: { contractId: true },
-      })
-    : null;
-  const history = contract
-    ? await tx.diagnosticWorklogFile.findFirst({
-        where: { contractId: contract.id, sourceKey },
-        orderBy: { importedAt: 'desc' },
-        select: { rows: true },
-      })
-    : null;
+  const recorded = contract ? exact.find(f => f.contractId === contract.id) : undefined;
+  const lastFile = contract && files.find(f => f.contractId === contract.id && sourceKeys.has(f.sourceKey));
+  const history = lastFile ? await tx.diagnosticWorklogFile.findUnique({
+    where: { hash: lastFile.hash }, select: { rows: true },
+  }) : null;
   const former = new Map<number, number>();
   if (Array.isArray(history?.rows)) {
     for (const value of history.rows) {
@@ -143,7 +142,7 @@ export async function worklogPlan(
   const errors: string[] = [];
   if (!input.contractId && !recorded && isM4Worklog(input.fileName))
     errors.push('Для ведомости М-4 933–1024 выберите существующий договор ДСиР-2025-478 от 13.05.2025.');
-  if (!input.contractId && !contract && copies.length)
+  if (!input.contractId && !contract && files.some(f => sourceKeys.has(f.sourceKey)))
     errors.push('Ранее импортировался файл с таким именем. Для продолжения выберите существующий договор.');
   if (
     !contract &&
@@ -160,7 +159,7 @@ export async function worklogPlan(
   const workById = new Map(works.map((w) => [w.id, w]));
   const lookups = input.rows.map((r) => ({
     code: r.code,
-    roadName: input.road,
+    roadName,
     location: r.location,
     structureName: r.name,
     additionalId: r.additional,
@@ -361,7 +360,7 @@ export async function worklogPlan(
   const uniqueErrors = [...new Set(errors)];
   const signature = hash([
     fingerprint,
-    input.road,
+    roadName,
     input.number,
     input.date,
     input.counterparty,
@@ -377,6 +376,7 @@ export async function worklogPlan(
     sourceKey,
     sourceHash,
     recorded,
+    roadName,
     works,
     review,
     contract,
@@ -458,7 +458,7 @@ export async function processWorklog(
           const row = await tx.diagnosticStructure.create({
             data: {
               code: r.code || null,
-              roadName: input.road,
+              roadName: p.roadName,
               structureName: r.name,
               additionalId: r.additional,
               location: r.location,

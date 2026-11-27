@@ -1,3 +1,4 @@
+import type { ReportMembership } from "../../../shared/utils/diagnostic-report-parts";
 import { Prisma } from '@prisma/client';
 import { createError, type H3Event } from 'h3';
 import { prisma } from '../../utils/prisma';
@@ -9,10 +10,10 @@ import { WORK_RESOURCE } from './work-access';
 const include = { group: true, category: true } satisfies Prisma.DiagnosticWorkInclude;
 type Row = Prisma.DiagnosticWorkGetPayload<{ include: typeof include }>;
 const conflict = () => createError({ statusCode: 409, message: 'Данные изменены другим сотрудником. Обновите список и повторите действие.' });
-async function atomic<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+async function atomic<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>, timeout = 10000): Promise<T> {
   // Retry whole transactions only. Rolled-back numbers and audit entries are not committed.
   for (let attempt = 0; ; attempt++) {
-    try { return await prisma.$transaction(fn, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 10000 }); }
+    try { return await prisma.$transaction(fn, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout }); }
     catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError) {
         if (e.code === 'P2034' && attempt < 3) continue;
@@ -103,3 +104,30 @@ export async function deleteWork(event: H3Event, actorId: number, id: number, ve
   });
 }
 
+
+export async function saveReportMemberships(event: H3Event, actorId: number, edits: ReportMembership[]) {
+  return atomic(async tx => {
+    const ids = edits.map(r => r.id);
+    const before = await tx.diagnosticWork.findMany({
+      where: { id: { in: ids }, deletedAt: null },
+      select: { id: true, version: true, code: true, fieldWork: true, reportPart: true },
+    });
+    const byId = new Map(before.map(r => [r.id, r]));
+    for (const { id, version, fieldWork, reportPart } of edits.sort((a,b) => a.id - b.id)) {
+      const old = byId.get(id);
+      if (!old || old.version !== version) throw conflict();
+      if (old.fieldWork === fieldWork && old.reportPart === reportPart) continue;
+      const updated = await tx.diagnosticWork.updateMany({
+        where: { id, version, deletedAt: null },
+        data: { fieldWork, reportPart, version: { increment: 1 }, updatedById: actorId },
+      });
+      if (updated.count !== 1) throw conflict();
+      await writeAuditEvent({ event, db: tx, category: 'DATA', result: 'SUCCESS', action: 'UPDATE',
+        resourceKey: WORK_RESOURCE, entityType: 'DiagnosticWork', entityId: id, actorUserId: actorId,
+        note: 'Состав отчётных категорий · ' + old.code,
+        changes: computeAuditDelta({ fieldWork: old.fieldWork, reportPart: old.reportPart }, { fieldWork, reportPart }) });
+    }
+    const result = await tx.diagnosticWork.findMany({ where: { id: { in: ids } }, include });
+    return authors(result.map(serialize), tx);
+  }, 60000);
+}

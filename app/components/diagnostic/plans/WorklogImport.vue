@@ -248,7 +248,8 @@ async function run(apply: boolean) {
     title="Импорт «Хода работ»"
     description="Перенос сооружений и работ в доходный договор"
     :dismissible="!busy"
-    :ui="{ content: 'max-w-[1400px] w-[96vw]', body: 'min-h-0 overflow-auto' }"
+    :close="!busy"
+    :ui="{content: 'diagnostic-contract-modal odis-work-card odis-worklog-dialog' + (sheet && !result ? ' worklog-wide' : ''), header: 'ow-chrome', description: 'ow-number', body: 'ow-body', footer: 'ow-chrome ow-footer'}"
     @update:open="
       (v) => {
         if (!v && !busy) emit('close');
@@ -258,12 +259,12 @@ async function run(apply: boolean) {
     <template #body>
       <p v-if="result" role="status">
         {{ result }}
-        <UButton v-if="savedContract" variant="outline" @click="emit('reconcile', savedContract)"
-          >Сверка командировок</UButton
+        <button type="button" v-if="savedContract" @click="emit('reconcile', savedContract)"
+          >Сверка командировок</button
         >
       </p>
       <fieldset v-else class="wl-import" :disabled="busy">
-        <label>Файл Excel<input type="file" accept=".xlsx" @change="picked" /></label>
+        <label class="worklog-file"><span>Файл Excel</span><input type="file" accept=".xlsx" @change="picked" /><small>.xlsx · до 4 МБ</small></label>
         <template v-if="sheet">
           <div class="params">
             <label v-if="sheets.length > 1"
@@ -395,20 +396,16 @@ async function run(apply: boolean) {
       </fieldset>
       <p v-if="error" role="alert">{{ error }}</p>
     </template>
-    <template #footer
-      ><UButton variant="outline" :disabled="busy" @click="emit('close')">Закрыть</UButton>
-      <UButton v-if="!result" :disabled="busy || !sheet || !road || !ready" @click="run(false)"
-        >Проверить</UButton
-      >
-      <UButton
-        v-if="review && !review.alreadyImported && !result"
-        :disabled="busy || !!review.errors.length"
-        @click="run(true)"
-        >Импортировать</UButton
-      ></template
-    ></UModal
-  >
+    <template #footer>
+      <button type="button" :disabled="busy" @click="emit('close')">Закрыть</button>
+      <button v-if="!result" type="button" :class="{'ow-primary': !review}" :disabled="busy || !sheet || !road || !ready" @click="run(false)">Проверить</button>
+      <button v-if="review && !review.alreadyImported && !result" type="button" class="ow-primary" :disabled="busy || !!review.errors.length" @click="run(true)">Импортировать</button>
+    </template>
+  </UModal>
 </template>
+<style>
+@import "~/assets/css/diagnostic-worklog-dialog.css";
+</style>
 <style scoped>
 .wl-import {
   display: grid;
@@ -430,8 +427,8 @@ async function run(apply: boolean) {
 .wl-import input,
 .wl-import select,
 .pager button {
-  border: 1px solid var(--ui-border);
-  background: var(--ui-bg);
+  border: 1px solid var(--contract-line);
+  background: var(--contract-field);
   padding: 0.32rem 0.45rem;
   border-radius: 4px;
 }
@@ -448,12 +445,12 @@ async function run(apply: boolean) {
 .scroll th {
   padding: 0.32rem;
   text-align: left;
-  border: 1px solid var(--ui-border);
+  border: 1px solid var(--contract-line);
 }
 .scroll th {
   position: sticky;
   top: 0;
-  background: var(--ui-bg-elevated);
+  background: var(--contract-panel);
 }
 .marked {
   background: color-mix(in srgb, #469ca6 17%, transparent);

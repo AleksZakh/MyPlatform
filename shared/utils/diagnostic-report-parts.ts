@@ -8,3 +8,14 @@ export const reportParts = [
   { key: 'strengthEntry', group: 'АИС Конструктив', label: 'Внесение прочности бетона в АИС' },
   { key: 'construction', group: 'АИС Конструктив', label: 'Конструктив' },
 ] as const;
+
+export function reportGroup(key?: string) {
+  return reportParts.find(part => part.key === key)?.group;
+}
+
+export interface ReportMembership {
+  id: number;
+  version: number;
+  fieldWork: boolean;
+  reportPart: string;
+}

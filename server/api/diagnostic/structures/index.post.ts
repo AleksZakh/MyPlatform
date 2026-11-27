@@ -1,3 +1,4 @@
+import { roadNameResolver } from '../../../services/diagnostic/road-names';
 import { z } from 'zod';
 import { prisma } from '../../../utils/prisma';
 import { structureAccess } from '../../../services/diagnostic/structure-access';
@@ -39,6 +40,8 @@ export default defineEventHandler(async (event) => {
         throw createError({ statusCode: 409, message: 'Обновите карточку. Сооружение изменилось.' });
       if (old?.code && old.code !== data.code)
         throw createError({ statusCode: 400, message: 'Присвоенный код ИССО сохраняется за сооружением.' });
+      const road = await roadNameResolver(tx, [data.roadName]);
+      data.roadName = road(data.roadName);
       const lookup = await structureMatcher(tx, [data]);
       const match = lookup(data),
         natural = lookup({ ...data, code: '' });

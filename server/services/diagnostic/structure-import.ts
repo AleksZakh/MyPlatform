@@ -1,3 +1,4 @@
+import { roadNameResolver } from './road-names';
 import { createError, type H3Event } from 'h3';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../utils/prisma';
@@ -10,6 +11,7 @@ import { structureMatcher } from './structure-match';
 
 type Batch = ReturnType<typeof parseStructureImportBatch>;
 export async function reviewReference(tx: Prisma.TransactionClient, input: Batch) {
+  const road = await roadNameResolver(tx, input.records.map(r => r.data.roadName));
   const lookup = await structureMatcher(
     tx,
     input.records.map((item) => item.data),
@@ -28,12 +30,13 @@ export async function reviewReference(tx: Prisma.TransactionClient, input: Batch
     if (state === 'match' && old) {
       for (const field of ['code', ...importTextFields, 'lengthRaw'] as const) {
         const before = old[field] ?? '',
-          after = item.data[field] ?? '';
+          after = field === 'roadName' ? road(item.data.roadName) : item.data[field] ?? '';
         if ((after || item.present.includes(field)) && before !== after)
           changes.push({ field, before, after });
       }
     }
     return {
+      roadName: road(item.data.roadName),
       row: item.sourceRow,
       code: item.data.code,
       state,
@@ -64,7 +67,7 @@ export async function importStructureBatch(
       const seen = new Set<string>();
       for (const [index, item] of input.records.entries()) {
         const p = preview[index]!,
-          d = item.data,
+          d = { ...item.data, roadName: p.roadName },
           choice = item.choice;
         if (choice && (choice.id !== p.id || choice.version !== p.version || choice.state !== p.state))
           throw createError({ statusCode: 409, message: 'Справочник изменился. Повторите сверку файла.' });
